@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendário Bolsa Família 2026</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f4f4f4; margin: 20px; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .header { text-align: center; margin-bottom: 30px; }
+        h1 { color: #003366; margin-bottom: 10px; }
+        .search-box { margin-bottom: 25px; text-align: center; }
+        #searchInput { padding: 12px 20px; width: 80%; max-width: 500px; border: 2px solid #003366; border-radius: 25px; font-size: 16px; outline: none; }
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 800px; }
+        th, td { border: 1px solid #ddd; padding: 12px 8px; text-align: center; }
+        th { background-color: #003366; color: white; font-size: 13px; }
+        .nis-col { font-weight: bold; color: #d32f2f; background-color: #fdf2f2 !important; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        tr:hover { background-color: #f1f7ff; }
+        .footer-info { margin-top: 30px; padding: 20px; background-color: #e7f1ff; border-radius: 8px; font-size: 14px; line-height: 1.6; }
+        .contact-info { display: flex; justify-content: space-around; margin-top: 15px; font-weight: bold; color: #003366; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>Calendário Bolsa Família 2026</h1>
+        <p>Consulte sua data de pagamento pelo último dígito do NIS no seu cartão.</p>
+    </div>
+
+    <div class="search-box">
+        <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Busque pelo final do NIS ou mês...">
+    </div>
+
+    <div class="table-container">
+        <table id="calendarTable">
+            <thead>
+                <tr>
+                    <th>Final NIS</th>
+                    <th>JAN</th><th>FEV</th><th>MAR</th><th>ABR</th><th>MAI</th><th>JUN</th>
+                    <th>JUL</th><th>AGO</th><th>SET</th><th>OUT</th><th>NOV</th><th>DEZ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td class="nis-col">1</td><td>19</td><td>12</td><td>18</td><td>16</td><td>18</td><td>17</td><td>20</td><td>18</td><td>17</td><td>19</td><td>16</td><td>10</td></tr>
+                <tr><td class="nis-col">2</td><td>20</td><td>13</td><td>19</td><td>17</td><td>19</td><td>18</td><td>19</td><td>21</td><td>18</td><td>20</td><td>17</td><td>11</td></tr>
+                <tr><td class="nis-col">3</td><td>21</td><td>18</td><td>20</td><td>20</td><td>20</td><td>19</td><td>20</td><td>22</td><td>21</td><td>21</td><td>18</td><td>14</td></tr>
+                <tr><td class="nis-col">4</td><td>22</td><td>19</td><td>23</td><td>22</td><td>21</td><td>22</td><td>23</td><td>22</td><td>21</td><td>22</td><td>19</td><td>15</td></tr>
+                <tr><td class="nis-col">5</td><td>23</td><td>20</td><td>24</td><td>23</td><td>22</td><td>23</td><td>24</td><td>24</td><td>23</td><td>23</td><td>23</td><td>16</td></tr>
+                <tr><td class="nis-col">6</td><td>26</td><td>23</td><td>25</td><td>24</td><td>25</td><td>24</td><td>27</td><td>25</td><td>24</td><td>26</td><td>24</td><td>17</td></tr>
+                <tr><td class="nis-col">7</td><td>27</td><td>24</td><td>26</td><td>27</td><td>26</td><td>25</td><td>28</td><td>26</td><td>25</td><td>27</td><td>25</td><td>18</td></tr>
+                <tr><td class="nis-col">8</td><td>28</td><td>25</td><td>27</td><td>28</td><td>27</td><td>26</td><td>29</td><td>27</td><td>28</td><td>28</td><td>26</td><td>21</td></tr>
+                <tr><td class="nis-col">9</td><td>29</td><td>26</td><td>30</td><td>29</td><td>28</td><td>29</td><td>28</td><td>30</td><td>29</td><td>29</td><td>27</td><td>22</td></tr>
+                <tr><td class="nis-col">0</td><td>30</td><td>27</td><td>31</td><td>30</td><td>29</td><td>30</td><td>31</td><td>31</td><td>30</td><td>30</td><td>30</td><td>23</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="footer-info">
+        <strong>Informações Importantes:</strong>
+        <ul>
+            <li>Os benefícios são pagos nos últimos 10 dias úteis de cada mês[cite: 13].</li>
+            <li>Em dezembro, o cronograma é antecipado e encerra no dia 23[cite: 14].</li>
+            <li>As parcelas mensais podem ser sacadas em até 180 dias[cite: 154].</li>
+        </ul>
+        <div class="contact-info">
+            <span>Disque Social MDS: 121</span>
+            <span>Atendimento CAIXA: 111</span>
+        </div>
+    </div>
+</div>
+
+<script>
+function filterTable() {
+    var input = document.getElementById("searchInput");
+    var filter = input.value.toUpperCase();
+    var table = document.getElementById("calendarTable");
+    var tr = table.getElementsByTagName("tr");
+
+    for (var i = 1; i < tr.length; i++) {
+        var found = false;
+        var tds = tr[i].getElementsByTagName("td");
+        for (var j = 0; j < tds.length; j++) {
+            if (tds[j] && tds[j].textContent.toUpperCase().indexOf(filter) > -1) {
+                found = true;
+                break;
+            }
+        }
+        tr[i].style.display = found ? "" : "none";
+    }
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,27 @@
+{
+  "name": "Rede de Apoio - Boa Vista",
+  "short_name": "Rede Apoio",
+  "description": "Sistema de Gestão de Equipamentos Socioassistenciais e Rede de Apoio TEA em Boa Vista-RR.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#F8FAFC",
+  "theme_color": "#115E59",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

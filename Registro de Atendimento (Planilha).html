@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>RMA - Registro Mensal com Soma</title>
+    <style>
+        /* CONFIGURAÇÃO DE IMPRESSÃO */
+        @page { size: A4 landscape; margin: 0; }
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; padding: 0; margin: 0; }
+            .folha {
+                page-break-after: always;
+                padding: 5mm !important;
+                width: 100%;
+                display: block;
+                transform: scale(0.92); 
+                transform-origin: top left;
+            }
+            table { width: 100% !important; table-layout: fixed; border-collapse: collapse; }
+            th, td { font-size: 8pt !important; padding: 2px !important; border: 1px solid #000 !important; }
+            input { font-size: 8pt !important; }
+            .bg-orange, .bg-blue, .bg-green { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+
+        /* ESTILO PARA O ECRÃ */
+        * { box-sizing: border-box; }
+        body { font-family: "Times New Roman", serif; background-color: #525659; margin: 0; padding: 0; }
+        .no-print { 
+            display: flex; justify-content: center; gap: 15px; 
+            background: #222; padding: 15px; position: sticky; top: 0; z-index: 1000;
+        }
+        button { padding: 10px 20px; cursor: pointer; font-weight: bold; border-radius: 4px; border: none; }
+        .btn-save { background-color: #28a745; color: white; }
+        .btn-clear { background-color: #dc3545; color: white; }
+        .btn-print { background-color: #007bff; color: white; }
+        .folha { background: white; margin: 15px auto; padding: 10mm; width: 280mm; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #000; text-align: center; vertical-align: middle; padding: 3px; }
+        .bg-orange { background-color: #fdeada !important; }
+        .bg-blue { background-color: #c6d9f1 !important; }
+        .bg-green { background-color: #ebf1de !important; }
+        .col-info { text-align: left; width: 250px; font-weight: bold; font-size: 9pt; }
+        input { width: 100%; border: none; background: transparent; text-align: center; outline: none; }
+        input[readonly] { font-weight: bold; color: #000; }
+        .header-title { font-size: 14pt; font-weight: bold; margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="no-print">
+    <button class="btn-save" onclick="saveData()">💾 SALVAR DADOS</button>
+    <button class="btn-clear" onclick="clearData()">🗑️ APAGAR TUDO</button>
+    <button class="btn-print" onclick="window.print()">🖨️ IMPRIMIR</button>
+</div>
+
+<div class="folha">
+    <div class="header-title">FOLHA 1: BRASILEIROS - CRAS: <input type="text" style="width:300px; border-bottom:1px solid #000;" id="cras_f1"></div>
+    <table>
+        <thead>
+            <tr class="bg-orange">
+                <th rowspan="3" style="width:30px">Nº</th>
+                <th rowspan="3" class="col-info">INFORMAÇÕES MENSAIS</th>
+                <th rowspan="3" class="bg-blue" style="width:50px">TOTAL GERAL</th>
+                <th colspan="7">BRASILEIRO(S)</th>
+            </tr>
+            <tr class="bg-orange">
+                <th colspan="3">FEMININO</th><th colspan="3">MASCULINO</th><th rowspan="2" class="bg-green">TOTAL</th>
+            </tr>
+            <tr class="bg-orange">
+                <th>0-17</th><th>18-59</th><th>60+</th><th>0-17</th><th>18-59</th><th>60+</th>
+            </tr>
+        </thead>
+        <tbody id="body-br"></tbody>
+    </table>
+</div>
+
+<div class="folha">
+    <div class="header-title">FOLHA 2: VENEZUELANOS - CRAS: <input type="text" style="width:300px; border-bottom:1px solid #000;" id="cras_f2"></div>
+    <table>
+        <thead>
+            <tr class="bg-orange">
+                <th rowspan="3" style="width:30px">Nº</th>
+                <th rowspan="3" class="col-info">INFORMAÇÕES MENSAIS</th>
+                <th colspan="7">VENEZUELANO(S)</th>
+            </tr>
+            <tr class="bg-orange">
+                <th colspan="3">FEMININO</th><th colspan="3">MASCULINO</th><th rowspan="2" class="bg-green">TOTAL</th>
+            </tr>
+            <tr class="bg-orange">
+                <th>0-17</th><th>18-59</th><th>60+</th><th>0-17</th><th>18-59</th><th>60+</th>
+            </tr>
+        </thead>
+        <tbody id="body-ven"></tbody>
+    </table>
+</div>
+
+<div class="folha">
+    <div class="header-title">FOLHA 3: OUTRAS NACIONALIDADES - CRAS: <input type="text" style="width:300px; border-bottom:1px solid #000;" id="cras_f3"></div>
+    <table>
+        <thead>
+            <tr class="bg-orange">
+                <th rowspan="3" style="width:30px">Nº</th>
+                <th rowspan="3" class="col-info">INFORMAÇÕES MENSAIS</th>
+                <th colspan="7">OUTRAS NACIONALIDADES</th>
+                <th rowspan="3">OBSERVAÇÃO</th>
+            </tr>
+            <tr class="bg-orange">
+                <th colspan="3">FEMININO</th><th colspan="3">MASCULINO</th><th rowspan="2" class="bg-green">TOTAL</th>
+            </tr>
+            <tr class="bg-orange">
+                <th>0-17</th><th>18-59</th><th>60+</th><th>0-17</th><th>18-59</th><th>60+</th>
+            </tr>
+        </thead>
+        <tbody id="body-out"></tbody>
+    </table>
+</div>
+
+<script>
+    const itens = ["ATENDIMENTO RECEPÇÃO", "ATENDIMENTO RECEPÇÃO (REPETIDO)", "INCLUSÃO NO CADASTRO ÚNICO", "ATUALIZAÇÃO DO CADASTRO ÚNICO", "ACOMPANHAMENTO FAMILIAR – PAIF (A-1)", "ATENDIMENTO PAIF (ATENDIMENTO TÉCNICO)", "ATENDIMENTO PARTICULARIZADO GERAL", "INTEGRANTES ATIVOS NO CONVIVER", "INTEGRANTES ATIVOS NO CABELO DE PRATA", "INTEGRANTES ATIVOS NO FQA", "DECLARAÇÃO DE IDOSOS", "EMISSÃO DA CARTEIRA DA PESSOA IDOSA", "CESTA DE COMPLEMENTAÇÃO ALIMENTAR", "ENTREGA DE KIT DE HIGIENE", "ENTREGA DE KIT DE HIGIENE INFANTIL", "ENTREGA DO CARTÃO DO BEM", "ENTREGA DE ENXOVAL", "ENTREGA DE LATAS DE LEITE", "AUXÍLIO FUNERAL", "FAMÍLIAS ENCAMINHADAS PARA O CREAS", "GRUPO NO ÂMBITO DO PAIF", "ORIENTAÇÃO ACESSO AO BPC", "VISITAS DOMICILIARES REALIZADAS"];
+
+    function criarLinhas() {
+        itens.forEach((texto, i) => {
+            // Folha 1 (Brasileiros) + Total Geral
+            document.getElementById('body-br').innerHTML += `<tr data-row="${i}"><td>${i+1}</td><td class="col-info">${texto}</td><td><input type="number" class="total-geral" id="tg_${i}" readonly></td><td><input type="number" class="br-val"></td><td><input type="number" class="br-val"></td><td><input type="number" class="br-val"></td><td><input type="number" class="br-val"></td><td><input type="number" class="br-val"></td><td><input type="number" class="br-val"></td><td class="bg-green"><input type="number" class="total-br" id="tbr_${i}" readonly></td></tr>`;
+            // Folha 2 (Venezuelanos)
+            document.getElementById('body-ven').innerHTML += `<tr data-row="${i}"><td>${i+1}</td><td class="col-info">${texto}</td><td><input type="number" class="ven-val"></td><td><input type="number" class="ven-val"></td><td><input type="number" class="ven-val"></td><td><input type="number" class="ven-val"></td><td><input type="number" class="ven-val"></td><td><input type="number" class="ven-val"></td><td class="bg-green"><input type="number" class="total-ven" id="tven_${i}" readonly></td></tr>`;
+            // Folha 3 (Outros)
+            document.getElementById('body-out').innerHTML += `<tr data-row="${i}"><td>${i+1}</td><td class="col-info">${texto}</td><td><input type="number" class="out-val"></td><td><input type="number" class="out-val"></td><td><input type="number" class="out-val"></td><td><input type="number" class="out-val"></td><td><input type="number" class="out-val"></td><td><input type="number" class="out-val"></td><td class="bg-green"><input type="number" class="total-out" id="tout_${i}" readonly></td><td><input type="text"></td></tr>`;
+        });
+    }
+
+    criarLinhas();
+
+    // LÓGICA DE SOMA AUTOMÁTICA
+    document.addEventListener('input', function() {
+        itens.forEach((_, i) => {
+            const sumGroup = (selector) => {
+                let total = 0;
+                document.querySelectorAll(`tr[data-row="${i}"] .${selector}`).forEach(inp => {
+                    total += Number(inp.value) || 0;
+                });
+                return total;
+            };
+
+            const totalBR = sumGroup('br-val');
+            const totalVEN = sumGroup('ven-val');
+            const totalOUT = sumGroup('out-val');
+
+            document.getElementById(`tbr_${i}`).value = totalBR || "";
+            document.getElementById(`tven_${i}`).value = totalVEN || "";
+            document.getElementById(`tout_${i}`).value = totalOUT || "";
+            document.getElementById(`tg_${i}`).value = (totalBR + totalVEN + totalOUT) || "";
+        });
+    });
+
+    function saveData() {
+        const data = {};
+        document.querySelectorAll('input').forEach((inp, i) => data['v'+i] = inp.value);
+        localStorage.setItem('rma_backup_soma', JSON.stringify(data));
+        alert('Dados salvos!');
+    }
+
+    window.onload = () => {
+        const saved = JSON.parse(localStorage.getItem('rma_backup_soma'));
+        if(saved) {
+            document.querySelectorAll('input').forEach((inp, i) => inp.value = saved['v'+i] || '');
+        }
+    };
+
+    function clearData() {
+        if(confirm('Apagar tudo?')) {
+            document.querySelectorAll('input').forEach(inp => inp.value = '');
+            localStorage.removeItem('rma_backup_soma');
+        }
+    }
+</script>
+</body>
+</html>

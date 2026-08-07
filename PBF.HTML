@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendário PBF 2026 - Oficial (Sincronizado)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background-color: #e2e8f0; border: 1px solid #e2e8f0; }
+        .day-cell { min-height: 100px; background-color: white; transition: all 0.2s; cursor: pointer; position: relative; padding: 0.5rem; display: flex; flex-direction: column; }
+        .day-cell:hover { background-color: #f8fafc; }
+        .day-cell.selected { background-color: #eff6ff; border: 2px solid #3b82f6 !important; z-index: 10; }
+        .day-cell.empty { background-color: #f1f5f9; cursor: default; }
+        .month-active-badge { @apply px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider mb-1 inline-block; }
+        
+        /* Loader de sincronização */
+        .sync-loader { position: fixed; top: 1rem; right: 1rem; z-index: 100; display: none; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-900 flex flex-col">
+
+    <div id="syncStatus" class="sync-loader bg-white shadow-lg border border-slate-200 rounded-full px-4 py-2 flex items-center gap-2 text-[10px] font-bold text-slate-600 uppercase">
+        <div class="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+        Sincronizando Nuvem...
+    </div>
+
+    <header class="bg-blue-800 text-white p-4 shadow-lg flex justify-between items-center shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="bg-white/10 p-2 rounded-lg">
+                <i data-lucide="calendar-check" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold leading-none">Gestão PBF 2026</h1>
+                <p class="text-[10px] text-blue-200 uppercase tracking-widest mt-1 font-medium">Informe Nº 105/2026 - MDS</p>
+            </div>
+        </div>
+        <div class="text-right hidden sm:block">
+            <p class="text-xs font-semibold">Paulo Xavier</p>
+            <p class="text-[10px] text-blue-200">CRP-20-09816</p>
+        </div>
+    </header>
+
+    <main class="flex-1 p-4 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-4 gap-6">
+        
+        <div class="lg:col-span-1 space-y-4">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <i data-lucide="info" class="w-4 h-4 text-blue-600"></i> Destaques do Mês
+                </h2>
+                <div id="monthSummary" class="space-y-4"></div>
+            </div>
+
+            <div class="bg-blue-900 text-white rounded-2xl shadow-sm p-5">
+                <h3 class="text-[10px] font-bold uppercase opacity-60 mb-2 tracking-tighter">Legenda de Cores</h3>
+                <div class="grid grid-cols-1 gap-2 text-[10px] font-bold uppercase">
+                    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 bg-emerald-400 rounded-full"></span> Saúde</div>
+                    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 bg-amber-400 rounded-full"></span> Educação</div>
+                    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 bg-blue-400 rounded-full"></span> Sicon/Recursos</div>
+                    <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 bg-purple-400 rounded-full"></span> Interrupção</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-3 space-y-6">
+            <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+                <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-white">
+                    <button onclick="changeMonth(-1)" id="btnPrev" class="p-2 hover:bg-slate-100 rounded-full transition-colors disabled:opacity-20">
+                        <i data-lucide="chevron-left" class="w-6 h-6 text-slate-600"></i>
+                    </button>
+                    <h3 id="currentMonthLabel" class="text-2xl font-black text-slate-800 capitalize">Janeiro 2026</h3>
+                    <button onclick="changeMonth(1)" id="btnNext" class="p-2 hover:bg-slate-100 rounded-full transition-colors disabled:opacity-20">
+                        <i data-lucide="chevron-right" class="w-6 h-6 text-slate-600"></i>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-7 text-center text-[11px] font-bold text-slate-400 uppercase py-3 bg-slate-50/50">
+                    <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+                </div>
+
+                <div id="calendarGrid" class="calendar-grid"></div>
+            </div>
+
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row gap-8">
+                <div class="md:w-1/2 space-y-4">
+                    <div class="flex items-center gap-4">
+                        <div id="selectedDayBox" class="bg-blue-600 text-white w-14 h-14 flex items-center justify-center rounded-2xl font-black text-2xl shadow-lg shadow-blue-200">01</div>
+                        <div>
+                            <h2 id="selectedFullDate" class="text-lg font-bold text-slate-800 leading-tight">1 de Janeiro de 2026</h2>
+                            <p id="selectedDayName" class="text-sm text-slate-500 font-medium capitalize">Quinta-feira</p>
+                        </div>
+                    </div>
+                    <div id="eventList" class="space-y-3"></div>
+                </div>
+
+                <div class="md:w-1/2">
+                    <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100 h-full flex flex-col">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-2">
+                            <i data-lucide="sticky-note" class="w-3.5 h-3.5"></i> Observações Compartilhadas
+                        </label>
+                        <textarea id="noteInput" class="flex-1 w-full bg-transparent border-none focus:ring-0 text-sm resize-none" placeholder="Anotações para a equipe..."></textarea>
+                        <div class="mt-2 flex justify-end">
+                            <button id="btnSave" onclick="saveNote()" class="bg-slate-800 text-white px-6 py-2 rounded-xl text-xs font-bold hover:bg-slate-700 transition-all flex items-center gap-2">
+                                <i data-lucide="save" class="w-3 h-3"></i> Salvar na Nuvem
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- CONFIGURAÇÃO ---
+        const WEB_APP_URL = "SUA_URL_DO_GOOGLE_AQUI"; // COLE O LINK DO SEU APPS SCRIPT AQUI
+
+        const monthHighlights = { 0: [{ type: "saude", title: "Saúde: 1ª Vigência", desc: "Período de Coleta e Registro iniciado (Jan-Jun)." }, { type: "interrupt", title: "Interrupção", desc: "Mês de aplicação dos efeitos de Interrupção Temporária." }], 1: [{ type: "saude", title: "Saúde: 1ª Vigência", desc: "Período de Coleta em andamento." }, { type: "edu", title: "Educação: Início de Ciclo", desc: "Acompanhamento da frequência escolar (Fev/Mar)." }], 2: [{ type: "sicon", title: "Mês de Repercussão", desc: "Aplicação dos efeitos de não cumprimento (Ref: Out/Nov-25 e 2ª Vig Saúde-25)." }, { type: "saude", title: "Saúde: 1ª Vigência", desc: "Registro no sistema aberto." }], 3: [{ type: "edu", title: "Edu: Fev/Mar", desc: "Mês de encerramento do sistema de frequência." }], 4: [{ type: "sicon", title: "Mês de Repercussão", desc: "Aplicação dos efeitos de não cumprimento (Ref: Fev/Mar-26)." }], 5: [{ type: "saude", title: "Saúde: Final 1ª Vig", desc: "Mês final para coleta de dados da 1ª vigência." }], 6: [{ type: "saude", title: "Saúde: 2ª Vigência", desc: "Início da coleta da 2ª vigência (Jul-Dez)." }, { type: "sicon", title: "Mês de Repercussão", desc: "Aplicação dos efeitos de não cumprimento (Ref: Abr/Mai-26)." }], 8: [{ type: "sicon", title: "Mês de Repercussão", desc: "Aplicação dos efeitos de não cumprimento (Ref: Jun/Jul-26 e 1ª Vig Saúde-26)." }], 10: [{ type: "sicon", title: "Mês de Repercussão", desc: "Aplicação dos efeitos (Ref: Ago/Set-26)." }] };
+        const officialEvents = { "2026-01-01": [{ type: "saude", title: "Saúde: Início Coleta (1ª Vig)", desc: "Início do registro (Jan a Jun/2026)." }], "2026-02-17": [{ type: "saude", title: "Saúde: Abertura Sistema (1ª Vig)", desc: "Abertura do sistema para registro." }], "2026-06-30": [{ type: "saude", title: "Saúde: Final Coleta (1ª Vig)", desc: "Último dia para coleta da 1ª vigência." }], "2026-07-01": [{ type: "saude", title: "Saúde: Início Coleta (2ª Vig)", desc: "Início do registro (Jul a Dez/2026)." }], "2026-07-10": [{ type: "saude", title: "Saúde: Fechamento (1ª Vig)", desc: "Prazo final digitação 1ª Vigência." }], "2026-08-17": [{ type: "saude", title: "Saúde: Abertura (2ª Vig)", desc: "Abertura do sistema (2ª Vigência)." }], "2026-12-31": [{ type: "saude", title: "Saúde: Final Coleta (2ª Vig)", desc: "Fim da coleta 2ª vigência." }], "2026-03-16": [{ type: "edu", title: "Edu: Impressão (Fev/Mar)" }], "2026-03-31": [{ type: "edu", title: "Edu: Registro (Fev/Mar)" }], "2026-04-23": [{ type: "edu", title: "Edu: Fechamento (Fev/Mar)" }, { type: "sicon", title: "SICON: Recurso Mar/26", desc: "Prazo para registro de recursos no Sicon." }, { type: "interrupt", title: "Interrupt: Limite Abr", desc: "Data limite para vigência em Maio." }], "2026-05-18": [{ type: "edu", title: "Edu: Impressão (Abr/Mai)" }], "2026-05-29": [{ type: "edu", title: "Edu: Registro (Abr/Mai)" }], "2026-06-25": [{ type: "edu", title: "Edu: Fechamento (Abr/Mai)" }, { type: "sicon", title: "SICON: Recurso Mai/26" }, { type: "interrupt", title: "Interrupt: Limite Jun" }], "2026-07-15": [{ type: "edu", title: "Edu: Impressão (Jun/Jul)" }], "2026-07-31": [{ type: "edu", title: "Edu: Registro (Jun/Jul)" }], "2026-08-27": [{ type: "edu", title: "Edu: Fechamento (Jun/Jul)" }, { type: "sicon", title: "SICON: Recurso Jul/26" }, { type: "interrupt", title: "Interrupt: Limite Ago" }], "2026-09-14": [{ type: "edu", title: "Edu: Impressão (Ago/Set)" }], "2026-09-30": [{ type: "edu", title: "Edu: Registro (Ago/Set)" }], "2026-10-29": [{ type: "edu", title: "Edu: Fechamento (Ago/Set)" }, { type: "sicon", title: "SICON: Recurso Set/26" }, { type: "interrupt", title: "Interrupt: Limite Out" }], "2026-11-16": [{ type: "edu", title: "Edu: Impressão (Out/Nov)" }], "2026-11-30": [{ type: "edu", title: "Edu: Registro (Out/Nov)" }], "2026-12-18": [{ type: "edu", title: "Edu: Fechamento (Out/Nov)" }], "2026-01-31": [{ type: "interrupt", title: "Interrupt: Limite Jan" }], "2026-02-28": [{ type: "interrupt", title: "Interrupt: Limite Fev" }], "2026-03-31": [{ type: "interrupt", title: "Interrupt: Limite Mar" }], "2026-05-31": [{ type: "interrupt", title: "Interrupt: Limite Mai" }], "2026-07-31": [{ type: "interrupt", title: "Interrupt: Limite Jul" }], "2026-09-30": [{ type: "interrupt", title: "Interrupt: Limite Set" }], "2026-11-30": [{ type: "interrupt", title: "Interrupt: Limite Nov" }], "2026-12-31": [{ type: "interrupt", title: "Interrupt: Limite Dez" }] };
+        const eventStyles = { saude: { dot: "bg-emerald-500", text: "text-emerald-700", border: "border-emerald-500", bg: "bg-emerald-50", badge: "bg-emerald-100 text-emerald-800" }, edu: { dot: "bg-amber-500", text: "text-amber-700", border: "border-amber-500", bg: "bg-amber-50", badge: "bg-amber-100 text-amber-800" }, sicon: { dot: "bg-blue-600", text: "text-blue-700", border: "border-blue-600", bg: "bg-blue-50", badge: "bg-blue-100 text-blue-800" }, interrupt: { dot: "bg-purple-600", text: "text-purple-700", border: "border-purple-600", bg: "bg-purple-50", badge: "bg-purple-100 text-purple-800" } };
+
+        let currentMonth = new Date(2026, 0, 1);
+        let selectedDay = new Date(2026, 0, 1);
+        let notes = {};
+
+        async function init() {
+            lucide.createIcons();
+            await loadNotesOnline();
+            render();
+        }
+
+        async function loadNotesOnline() {
+            const loader = document.getElementById('syncStatus');
+            loader.style.display = 'flex';
+            try {
+                const response = await fetch(WEB_APP_URL);
+                notes = await response.json();
+            } catch (e) {
+                console.error("Falha ao carregar nuvem, tentando local...");
+                notes = JSON.parse(localStorage.getItem('pbf_notes_2026_v2') || '{}');
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+
+        async function saveNote() {
+            const val = document.getElementById('noteInput').value.trim();
+            const key = formatDate(selectedDay);
+            const btn = document.getElementById('btnSave');
+            
+            btn.disabled = true;
+            btn.innerHTML = `<span class="animate-spin h-3 w-3 border-2 border-white border-t-transparent rounded-full mr-2"></span> Sincronizando...`;
+
+            try {
+                // Envia para o Google
+                await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({date: key, note: val})
+                });
+                
+                // Atualiza localmente
+                notes[key] = val;
+                localStorage.setItem('pbf_notes_2026_v2', JSON.stringify(notes));
+                
+                btn.innerHTML = `<i data-lucide="check" class="w-3 h-3"></i> Sucesso!`;
+                btn.classList.replace('bg-slate-800', 'bg-emerald-600');
+                
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = `<i data-lucide="save" class="w-3 h-3"></i> Salvar na Nuvem`;
+                    btn.classList.replace('bg-emerald-600', 'bg-slate-800');
+                    lucide.createIcons();
+                    render();
+                }, 1500);
+
+            } catch (e) {
+                alert("Erro ao salvar online!");
+                btn.disabled = false;
+                btn.innerText = "Tentar de novo";
+            }
+        }
+
+        function render() {
+            const grid = document.getElementById('calendarGrid');
+            const summary = document.getElementById('monthSummary');
+            grid.innerHTML = '';
+            
+            const monthIdx = currentMonth.getMonth();
+            const year = currentMonth.getFullYear();
+            document.getElementById('currentMonthLabel').innerText = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(currentMonth);
+
+            const monthData = monthHighlights[monthIdx] || [];
+            summary.innerHTML = monthData.length ? monthData.map(item => `
+                <div class="border-l-2 pl-3 ${eventStyles[item.type].border}">
+                    <span class="month-active-badge ${eventStyles[item.type].badge}">${item.type}</span>
+                    <h4 class="text-[11px] font-bold text-slate-800">${item.title}</h4>
+                    <p class="text-[10px] text-slate-500 leading-tight mt-1">${item.desc}</p>
+                </div>
+            `).join('') : `<p class="text-[10px] text-slate-400 italic">Sem atividades listadas.</p>`;
+
+            const firstDay = new Date(year, monthIdx, 1).getDay();
+            const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+
+            for (let i = 0; i < firstDay; i++) grid.innerHTML += `<div class="day-cell empty"></div>`;
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(year, monthIdx, day);
+                const dateKey = formatDate(date);
+                const isSelected = formatDate(selectedDay) === dateKey;
+                const events = officialEvents[dateKey] || [];
+                const hasNote = notes[dateKey] && notes[dateKey].trim() !== "";
+
+                const cell = document.createElement('div');
+                cell.className = `day-cell ${isSelected ? 'selected' : ''}`;
+                cell.onclick = () => { selectedDay = date; render(); };
+
+                cell.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs font-black ${isSelected ? 'text-blue-600' : 'text-slate-400'}">${day}</span>
+                        ${hasNote ? '<div class="w-2 h-2 bg-blue-500 rounded-full shadow-[0_0_5px_rgba(59,130,246,0.6)] animate-pulse"></div>' : ''}
+                    </div>
+                    <div class="mt-2 flex flex-wrap gap-1">
+                        ${events.map(e => `<div class="w-1.5 h-1.5 rounded-full ${eventStyles[e.type].dot}"></div>`).join('')}
+                    </div>
+                    <div class="mt-auto">
+                        ${events.slice(0, 1).map(e => `<div class="text-[7px] font-bold uppercase truncate ${eventStyles[e.type].text}">${e.title.split(':')[1] || e.title}</div>`).join('')}
+                    </div>
+                `;
+                grid.appendChild(cell);
+            }
+            updateDetails();
+            updateNav();
+            lucide.createIcons();
+        }
+
+        function updateDetails() {
+            const key = formatDate(selectedDay);
+            const events = officialEvents[key] || [];
+            document.getElementById('selectedDayBox').innerText = selectedDay.getDate().toString().padStart(2, '0');
+            document.getElementById('selectedFullDate').innerText = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }).format(selectedDay);
+            document.getElementById('selectedDayName').innerText = new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }).format(selectedDay);
+            
+            const list = document.getElementById('eventList');
+            list.innerHTML = events.length ? events.map(e => `
+                <div class="p-3 rounded-xl border-l-4 ${eventStyles[e.type].border} ${eventStyles[e.type].bg}">
+                    <h4 class="text-xs font-black ${eventStyles[e.type].text} uppercase">${e.title}</h4>
+                    <p class="text-[10px] text-slate-600 mt-1">${e.desc || 'Prazo oficial.'}</p>
+                </div>
+            `).join('') : `<p class="text-slate-400 text-xs italic">Nenhum prazo oficial.</p>`;
+            document.getElementById('noteInput').value = notes[key] || '';
+        }
+
+        function changeMonth(offset) {
+            const newM = new Date(currentMonth);
+            newM.setMonth(newM.getMonth() + offset);
+            if (newM.getFullYear() === 2026) { currentMonth = newM; render(); }
+        }
+
+        function updateNav() {
+            document.getElementById('btnPrev').disabled = currentMonth.getMonth() === 0;
+            document.getElementById('btnNext').disabled = currentMonth.getMonth() === 11;
+        }
+
+        function formatDate(d) {
+            return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')}`;
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>

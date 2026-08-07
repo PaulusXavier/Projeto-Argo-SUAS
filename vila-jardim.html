@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_aa04617ec0752bb0f66f5d320080da00 {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+    
+                    <style>
+                        .foliumtooltip {
+                            
+                        }
+                       .foliumtooltip table{
+                            margin: auto;
+                        }
+                        .foliumtooltip tr{
+                            text-align: left;
+                        }
+                        .foliumtooltip th{
+                            padding: 2px; padding-right: 8px;
+                        }
+                    </style>
+            
+    
+                    <style>
+                        .foliumpopup {
+                            margin: auto;
+                        }
+                       .foliumpopup table{
+                            margin: auto;
+                        }
+                        .foliumpopup tr{
+                            text-align: left;
+                        }
+                        .foliumpopup th{
+                            padding: 2px; padding-right: 8px;
+                        }
+                    </style>
+            
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-search@2.9.7/dist/leaflet-search.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-search@2.9.7/dist/leaflet-search.min.css"/>
+</head>
+<body>
+    
+    
+     <div style="position: fixed; bottom: 30px; left: 30px; width: 280px; 
+     background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(5px);
+     border: 1px solid #ccc; z-index:9999; font-size:12px; padding: 15px; border-radius: 15px;">
+     <b style="font-size: 14px;">Residencial Vila Jardim</b><br>
+     Boa Vista - Roraima<hr>
+     <strong>SETRABES:</strong><br>
+     <a href='https://setrabes.rr.gov.br/' target='_blank' style='color: #007BFF; font-weight: bold;'>Acesse o Site da Setrabes</a>
+     </div>
+     
+    
+            <div class="folium-map" id="map_aa04617ec0752bb0f66f5d320080da00" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_aa04617ec0752bb0f66f5d320080da00 = L.map(
+                "map_aa04617ec0752bb0f66f5d320080da00",
+                {
+                    center: [2.8425, -60.7555],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 18,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_074f5ccdf2a8cd675add4159914ee5ad = L.tileLayer(
+                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 19,
+  "maxNativeZoom": 19,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_074f5ccdf2a8cd675add4159914ee5ad.addTo(map_aa04617ec0752bb0f66f5d320080da00);
+        
+    
+            var marker_655df7fe7b0c3a540abdb805b8f66dad = L.marker(
+                [2.842161, -60.756969],
+                {
+}
+            ).addTo(map_aa04617ec0752bb0f66f5d320080da00);
+        
+    
+            var div_icon_383d7a8c2fe102a910cc0b406917b7c3 = L.divIcon({
+  "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: #3399FF;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eUBS Bernardo Alem\u003c/div\u003e",
+  "iconSize": [350, 30],
+  "iconAnchor": [175, 30],
+  "className": "empty",
+});
+        
+    
+                marker_655df7fe7b0c3a540abdb805b8f66dad.setIcon(div_icon_383d7a8c2fe102a910cc0b406917b7c3);
+            
+    
+            var marker_bcefb9489d059f78191efcbcad67c6b8 = L.marker(
+                [2.844625, -60.754255],
+                {
+}
+            ).addTo(map_aa04617ec0752bb0f66f5d320080da00);
+        
+    
+            var div_icon_7880eb73647bc3f83f7dd4c666aa4c54 = L.divIcon({
+  "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 13pt;\n                color: #00FFFF;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eCAS - Vila Jardim\u003c/div\u003e",
+  "iconSize": [350, 30],
+  "iconAnchor": [175, 45],
+  "className": "empty",
+});
+        
+    
+                marker_bcefb9489d059f78191efcbcad67c6b8.setIcon(div_icon_7880eb73647bc3f83f7dd4c666aa4c54);
+            
+    
+            var marker_70729d57da9b43f7ef5b8f318221a27d = L.marker(
+                [2.844196, -60.756788],
+                {
+}
+            ).addTo(map_aa04617ec0752bb0f66f5d320080da00);
+        
+    
+            var div_icon_4e651f932f0ffdb0f839029c16425391 = L.divIcon({
+  "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: red;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003e1\u00b0 Batalh\u00e3o da PM\u003c/div\u003e",
+  "iconSize": [350, 30],
+  "iconAnchor": [175, 30],
+  "className": "empty",
+});
+        
+    
+                marker_70729d57da9b43f7ef5b8f318221a27d.setIcon(div_icon_4e651f932f0ffdb0f839029c16425391);
+            
+    
+            var marker_c1fd0b365f2c4c762dddb65e18328370 = L.marker(
+                [2.842453, -60.756506],
+                {
+}
+            ).addTo(map_aa04617ec0752bb0f66f5d320080da00);
+        
+    
+            var div_icon_106dfd8e5e7238b442cda73bf86ab0a9 = L.divIcon({
+  "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: gold;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eEscola Mun. Vila Jardim\u003c/div\u003e",
+  "iconSize": [350, 30],
+  "iconAnchor": [175, 30],
+  "className": "empty",
+});
+        
+    
+                marker_c1fd0b365f2c4c762dddb65e18328370.setIcon(div_icon_106dfd8e5e7238b442cda73bf86ab0a9);
+            
+    
+            var marker_1177ffec6360d0dca0c48a340ba56966 = L.marker(
+                [2.844796, -60.754599],
+                {
+}
+            ).addTo(map_aa04617ec0752bb0f66f5d320080da00);
+        
+    
+            var div_icon_01b8ab0e1f07256dec608c381eaac228 = L.divIcon({
+  "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: #90EE90;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eCEM III - Maria Teresa\u003c/div\u003e",
+  "iconSize": [350, 30],
+  "iconAnchor": [175, 30],
+  "className": "empty",
+});
+        
+    
+                marker_1177ffec6360d0dca0c48a340ba56966.setIcon(div_icon_01b8ab0e1f07256dec608c381eaac228);
+            
+    
+            var marker_d0f03a4013e62e134a8868d32d415933 = L.marker(
+                [2.846724, -60.755578],
+                {
+}
+            ).addTo(map_aa04617ec0752bb0f66f5d320080da00);
+        
+    
+            var div_icon_76f08a41f0f9286998aa346cbd5110ce = L.divIcon({
+  "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: yellow;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eIp\u00ea Amarelo\u003c/div\u003e",
+  "iconSize": [350, 30],
+  "iconAnchor": [175, 30],
+  "className": "empty",
+});
+        
+    
+                marker_d0f03a4013e62e134a8868d32d415933.setIcon(div_icon_76f08a41f0f9286998aa346cbd5110ce);
+            
+    
+            var marker_a67f87864c0d3278c870ff7074e8cb3e = L.marker(
+                [2.846168, -60.755596],
+                {
+}
+            ).addTo(map_aa04617ec0752bb0f66f5d320080da00);
+        
+    
+            var div_icon_dae71a111105c560c8e43d7daab2cdb9 = L.divIcon({
+  "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: green;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eSama\u00fama\u003c/div\u003e",
+  "iconSize": [350, 30],
+  "iconAnchor": [175, 30],
+  "className": "empty",
+});
+        
+    
+                marker_a67f87864c0d3278c870ff7074e8cb3e.setIcon(div_icon_dae71a111105c560c8e43d7daab2cdb9);
+            
+    
+            var marker_9f7380b4f38334e4f9cd2c4ed932a396 = L.marker(
+                [2.845237, -60.755723],
+                {
+}
+            ).addTo(map_aa04617ec0752bb0f66f5d320080da00);
+        
+    
+            var div_icon_b7c873c9a34f25bd6b44e115779e4325 = L.divIcon({
+  "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: brown;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eAndiroba\u003c/div\u003e",
+  "iconSize": [350, 30],
+  "iconAnchor": [175, 30],
+  "className": "empty",
+});
+        
+    
+                marker_9f7380b4f38334e4f9cd2c4ed932a396.setIcon(div_icon_b7c873c9a34f25bd6b44e115779e4325);
+            
+    
+            var marker_bcb57316955dd220c027c68b78e2b281 = L.marker(
+                [2.843252, -60.757093],
+                {
+}
+            ).addTo(map_aa04617ec0752bb0f66f5d320080da00);
+        
+    
+            var div_icon_06165c8549855d0d7e44922940bb219c = L.divIcon({
+  "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: #FF7F7F;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eAra\u00e7\u00e1\u003c/div\u003e",
+  "iconSize": [350, 30],
+  "iconAnchor": [175, 30],
+  "className": "empty",
+});
+        
+    
+                marker_bcb57316955dd220c027c68b78e2b281.setIcon(div_icon_06165c8549855d0d7e44922940bb219c);
+            
+    
+            var marker_4ac63a6f7d54a2f6015aa6ed4762e22e = L.marker(
+                [2.841263, -60.757249],
+                {
+}
+            ).addTo(map_aa04617ec0752bb0f66f5d320080da00);
+        
+    
+            var div_icon_31381f7e60a58ae9e85cd1b8eb8b042c = L.divIcon({
+  "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: #CD853F;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eUrucum\u003c/div\u003e",
+  "iconSize": [350, 30],
+  "iconAnchor": [175, 30],
+  "className": "empty",
+});
+        
+    
+                marker_4ac63a6f7d54a2f6015aa6ed4762e22e.setIcon(div_icon_31381f7e60a58ae9e85cd1b8eb8b042c);
+            
+    
+            var marker_c7ea629c1d80115b5d6334b7f0104c0c = L.marker(
+                [2.838492, -60.756384],
+                {
+}
+            ).addTo(map_aa04617ec0752bb0f66f5d320080da00);
+        
+    
+            var div_icon_4407d938f24b805f289b6824f6d6ee12 = L.divIcon({
+  "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: purple;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eBuriti\u003c/div\u003e",
+  "iconSize": [350, 30],
+  "iconAnchor": [175, 30],
+  "className": "empty",
+});
+        
+    
+                marker_c7ea629c1d80115b5d6334b7f0104c0c.setIcon(div_icon_4407d938f24b805f289b6824f6d6ee12);
+            
+    
+            var marker_593b334eea89c1a4a0c3af896934feaa = L.marker(
+                [2.84629, -60.754044],
+                {
+}
+            ).addTo(map_aa04617ec0752bb0f66f5d320080da00);
+        
+    
+            var div_icon_bbd46b0f08dcc90dbd43bf84b2396b49 = L.divIcon({
+  "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: brown;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eCedro\u003c/div\u003e",
+  "iconSize": [350, 30],
+  "iconAnchor": [175, 30],
+  "className": "empty",
+});
+        
+    
+                marker_593b334eea89c1a4a0c3af896934feaa.setIcon(div_icon_bbd46b0f08dcc90dbd43bf84b2396b49);
+            
+    
+            var marker_b597171f276392ea18e8c40e3c8a0bc1 = L.marker(
+                [2.843783, -60.754726],
+                {
+}
+            ).addTo(map_aa04617ec0752bb0f66f5d320080da00);
+        
+    
+            var div_icon_bc697af3239fc61ba2431744b2571eb8 = L.divIcon({
+  "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: #87CEEB;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eIng\u00e1\u003c/div\u003e",
+  "iconSize": [350, 30],
+  "iconAnchor": [175, 30],
+  "className": "empty",
+});
+        
+    
+                marker_b597171f276392ea18e8c40e3c8a0bc1.setIcon(div_icon_bc697af3239fc61ba2431744b2571eb8);
+            
+    
+            var marker_c25b752fa57ca22d3f567e3da1a876dd = L.marker(
+                [2.842502, -60.755364],
+                {
+}
+            ).addTo(map_aa04617ec0752bb0f66f5d320080da00);
+        
+    
+            var div_icon_f9f634882a437e9a5093baf140387e81 = L.divIcon({
+  "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: gray;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eJatob\u00e1\u003c/div\u003e",
+  "iconSize": [350, 30],
+  "iconAnchor": [175, 30],
+  "className": "empty",
+});
+        
+    
+                marker_c25b752fa57ca22d3f567e3da1a876dd.setIcon(div_icon_f9f634882a437e9a5093baf140387e81);
+            
+    
+            var marker_5b478ce5a23e8d31ee40cb679b560c84 = L.marker(
+                [2.841938, -60.755426],
+                {
+}
+            ).addTo(map_aa04617ec0752bb0f66f5d320080da00);
+        
+    
+            var div_icon_fe4e9b05b1115fe27afd55823eaccb06 = L.divIcon({
+  "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: yellow;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eAngelim\u003c/div\u003e",
+  "iconSize": [350, 30],
+  "iconAnchor": [175, 30],
+  "className": "empty",
+});
+        
+    
+                marker_5b478ce5a23e8d31ee40cb679b560c84.setIcon(div_icon_fe4e9b05b1115fe27afd55823eaccb06);
+            
+    
+            var marker_d8c65213f22d8376b7195abeb33251de = L.marker(
+                [2.841204, -60.755709],
+                {
+}
+            ).addTo(map_aa04617ec0752bb0f66f5d320080da00);
+        
+    
+            var div_icon_1d4a1bdb2b8875469ec78ae84447700e = L.divIcon({
+  "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: orange;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003ePupunha\u003c/div\u003e",
+  "iconSize": [350, 30],
+  "iconAnchor": [175, 30],
+  "className": "empty",
+});
+        
+    
+                marker_d8c65213f22d8376b7195abeb33251de.setIcon(div_icon_1d4a1bdb2b8875469ec78ae84447700e);
+            
+    
+            var marker_110a5c4efc512114f70bb633e56b865c = L.marker(
+                [2.839949, -60.7562],
+                {
+}
+            ).addTo(map_aa04617ec0752bb0f66f5d320080da00);
+        
+    
+            var div_icon_c42e721f3039e375ed29aa45db6a2044 = L.divIcon({
+  "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: pink;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eA\u00e7a\u00ed\u003c/div\u003e",
+  "iconSize": [350, 30],
+  "iconAnchor": [175, 30],
+  "className": "empty",
+});
+        
+    
+                marker_110a5c4efc512114f70bb633e56b865c.setIcon(div_icon_c42e721f3039e375ed29aa45db6a2044);
+            
+    
+        function geo_json_9a25dbec417cc7162fd07ad1b9302269_pointToLayer(feature, latlng) {
+            var opts = {
+  "stroke": true,
+  "color": "#3388ff",
+  "weight": 3,
+  "opacity": 1.0,
+  "lineCap": "round",
+  "lineJoin": "round",
+  "dashArray": null,
+  "dashOffset": null,
+  "fill": true,
+  "fillColor": "#3388ff",
+  "fillOpacity": 0.8,
+  "fillRule": "evenodd",
+  "bubblingMouseEvents": true,
+  "radius": 6,
+};
+            
+            return new L.CircleMarker(latlng, opts)
+        }
+
+        function geo_json_9a25dbec417cc7162fd07ad1b9302269_onEachFeature(feature, layer) {
+
+            layer.on({
+            });
+        };
+        var geo_json_9a25dbec417cc7162fd07ad1b9302269 = L.geoJson(null, {
+                onEachFeature: geo_json_9a25dbec417cc7162fd07ad1b9302269_onEachFeature,
+            
+                pointToLayer: geo_json_9a25dbec417cc7162fd07ad1b9302269_pointToLayer,
+            ...{
+}
+        });
+
+        function geo_json_9a25dbec417cc7162fd07ad1b9302269_add (data) {
+            geo_json_9a25dbec417cc7162fd07ad1b9302269
+                .addData(data);
+        }
+            geo_json_9a25dbec417cc7162fd07ad1b9302269_add({"features": [{"geometry": {"coordinates": [-60.756969, 2.842161], "type": "Point"}, "properties": {"name": "UBS Bernardo Alem", "popup": "\n    \u003cdiv style=\"\n        font-family: \u0027Segoe UI\u0027, sans-serif; width: 280px; border-radius: 15px; \n        overflow: hidden; box-shadow: 0px 8px 20px rgba(0,0,0,0.3);\n        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px);\n        border: 1px solid rgba(255, 255, 255, 0.3);\n    \"\u003e\n        \u003cdiv style=\"background: linear-gradient(135deg, blue, #222); color: white; padding: 12px; font-weight: bold; text-align: center; text-transform: uppercase; font-size: 10pt;\"\u003e\n            UBS Bernardo Alem\n        \u003c/div\u003e\n        \u003cdiv style=\"padding: 15px; font-size: 10pt; line-height: 1.5; text-align: justify; color: #1a1a1a;\"\u003e\n            Unidade de Porte 4 (4 mil atendimentos/m\u00eas). Conta com equipes de ESF, Sa\u00fade Bucal e Psic\u00f3logos especializados em sa\u00fade mental, grupos terap\u00eauticos e apoio matricial.\n            \u003cdiv style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 9pt;\"\u003e\n                \u003ci class=\"fa fa-map-marker\" style=\"color:blue\"\u003e\u003c/i\u003e \u003cb\u003eENDERE\u00c7O:\u003c/b\u003e\u003cbr\u003e\n                \u003cspan style=\"color: #444;\"\u003eRua Josemar Batista de Souza, Cidade Sat\u00e9lite\u003c/span\u003e\n            \u003c/div\u003e\n        \u003c/div\u003e\n    \u003c/div\u003e\n    "}, "type": "Feature"}, {"geometry": {"coordinates": [-60.754255, 2.844625], "type": "Point"}, "properties": {"name": "CAS - Vila Jardim", "popup": "\n    \u003cdiv style=\"\n        font-family: \u0027Segoe UI\u0027, sans-serif; width: 280px; border-radius: 15px; \n        overflow: hidden; box-shadow: 0px 8px 20px rgba(0,0,0,0.3);\n        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px);\n        border: 1px solid rgba(255, 255, 255, 0.3);\n    \"\u003e\n        \u003cdiv style=\"background: linear-gradient(135deg, darkblue, #222); color: white; padding: 12px; font-weight: bold; text-align: center; text-transform: uppercase; font-size: 10pt;\"\u003e\n            CAS - Vila Jardim\n        \u003c/div\u003e\n        \u003cdiv style=\"padding: 15px; font-size: 10pt; line-height: 1.5; text-align: justify; color: #1a1a1a;\"\u003e\n            Espa\u00e7o comunit\u00e1rio voltado \u00e0 promo\u00e7\u00e3o do bem-estar social, inclus\u00e3o e fortalecimento das rela\u00e7\u00f5es familiares. Oferece atividades coletivas, educativas, culturais e esportivas.\n            \u003cdiv style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 9pt;\"\u003e\n                \u003ci class=\"fa fa-map-marker\" style=\"color:darkblue\"\u003e\u003c/i\u003e \u003cb\u003eENDERE\u00c7O:\u003c/b\u003e\u003cbr\u003e\n                \u003cspan style=\"color: #444;\"\u003eRua James Meirelles Sobreiro J\u00fanior, n\u00b01876\u003c/span\u003e\n            \u003c/div\u003e\n        \u003c/div\u003e\n    \u003c/div\u003e\n    "}, "type": "Feature"}, {"geometry": {"coordinates": [-60.756788, 2.844196], "type": "Point"}, "properties": {"name": "1\u00b0 Batalh\u00e3o da PM", "popup": "\n    \u003cdiv style=\"\n        font-family: \u0027Segoe UI\u0027, sans-serif; width: 280px; border-radius: 15px; \n        overflow: hidden; box-shadow: 0px 8px 20px rgba(0,0,0,0.3);\n        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px);\n        border: 1px solid rgba(255, 255, 255, 0.3);\n    \"\u003e\n        \u003cdiv style=\"background: linear-gradient(135deg, darkred, #222); color: white; padding: 12px; font-weight: bold; text-align: center; text-transform: uppercase; font-size: 10pt;\"\u003e\n            1\u00b0 Batalh\u00e3o da PM\n        \u003c/div\u003e\n        \u003cdiv style=\"padding: 15px; font-size: 10pt; line-height: 1.5; text-align: justify; color: #1a1a1a;\"\u003e\n            Seguran\u00e7a P\u00fablica.\n            \u003cdiv style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 9pt;\"\u003e\n                \u003ci class=\"fa fa-map-marker\" style=\"color:darkred\"\u003e\u003c/i\u003e \u003cb\u003eENDERE\u00c7O:\u003c/b\u003e\u003cbr\u003e\n                \u003cspan style=\"color: #444;\"\u003eAvenida Jardim - Cidade Sat\u00e9lite\u003c/span\u003e\n            \u003c/div\u003e\n        \u003c/div\u003e\n    \u003c/div\u003e\n    "}, "type": "Feature"}, {"geometry": {"coordinates": [-60.756506, 2.842453], "type": "Point"}, "properties": {"name": "Escola Mun. Vila Jardim", "popup": "\n    \u003cdiv style=\"\n        font-family: \u0027Segoe UI\u0027, sans-serif; width: 280px; border-radius: 15px; \n        overflow: hidden; box-shadow: 0px 8px 20px rgba(0,0,0,0.3);\n        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px);\n        border: 1px solid rgba(255, 255, 255, 0.3);\n    \"\u003e\n        \u003cdiv style=\"background: linear-gradient(135deg, orange, #222); color: white; padding: 12px; font-weight: bold; text-align: center; text-transform: uppercase; font-size: 10pt;\"\u003e\n            Escola Mun. Vila Jardim\n        \u003c/div\u003e\n        \u003cdiv style=\"padding: 15px; font-size: 10pt; line-height: 1.5; text-align: justify; color: #1a1a1a;\"\u003e\n            Ensino Fundamental I.\n            \u003cdiv style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 9pt;\"\u003e\n                \u003ci class=\"fa fa-map-marker\" style=\"color:orange\"\u003e\u003c/i\u003e \u003cb\u003eENDERE\u00c7O:\u003c/b\u003e\u003cbr\u003e\n                \u003cspan style=\"color: #444;\"\u003eAv. Jardim, s/n Conj Vila\u003c/span\u003e\n            \u003c/div\u003e\n        \u003c/div\u003e\n    \u003c/div\u003e\n    "}, "type": "Feature"}, {"geometry": {"coordinates": [-60.754599, 2.844796], "type": "Point"}, "properties": {"name": "CEM III - Maria Teresa", "popup": "\n    \u003cdiv style=\"\n        font-family: \u0027Segoe UI\u0027, sans-serif; width: 280px; border-radius: 15px; \n        overflow: hidden; box-shadow: 0px 8px 20px rgba(0,0,0,0.3);\n        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px);\n        border: 1px solid rgba(255, 255, 255, 0.3);\n    \"\u003e\n        \u003cdiv style=\"background: linear-gradient(135deg, green, #222); color: white; padding: 12px; font-weight: bold; text-align: center; text-transform: uppercase; font-size: 10pt;\"\u003e\n            CEM III - Maria Teresa\n        \u003c/div\u003e\n        \u003cdiv style=\"padding: 15px; font-size: 10pt; line-height: 1.5; text-align: justify; color: #1a1a1a;\"\u003e\n            Col\u00e9gio Militarizado.\n            \u003cdiv style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 9pt;\"\u003e\n                \u003ci class=\"fa fa-map-marker\" style=\"color:green\"\u003e\u003c/i\u003e \u003cb\u003eENDERE\u00c7O:\u003c/b\u003e\u003cbr\u003e\n                \u003cspan style=\"color: #444;\"\u003eAvenida Jardim, n\u00b0 1004\u003c/span\u003e\n            \u003c/div\u003e\n        \u003c/div\u003e\n    \u003c/div\u003e\n    "}, "type": "Feature"}, {"geometry": {"coordinates": [-60.755578, 2.846724], "type": "Point"}, "properties": {"name": "Ip\u00ea Amarelo", "popup": "\n    \u003cdiv style=\"\n        font-family: \u0027Segoe UI\u0027, sans-serif; width: 280px; border-radius: 15px; \n        overflow: hidden; box-shadow: 0px 8px 20px rgba(0,0,0,0.3);\n        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px);\n        border: 1px solid rgba(255, 255, 255, 0.3);\n    \"\u003e\n        \u003cdiv style=\"background: linear-gradient(135deg, orange, #222); color: white; padding: 12px; font-weight: bold; text-align: center; text-transform: uppercase; font-size: 10pt;\"\u003e\n            Ip\u00ea Amarelo\n        \u003c/div\u003e\n        \u003cdiv style=\"padding: 15px; font-size: 10pt; line-height: 1.5; text-align: justify; color: #1a1a1a;\"\u003e\n            Blocos: 15 | Aptos: 240\n            \u003cdiv style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 9pt;\"\u003e\n                \u003ci class=\"fa fa-map-marker\" style=\"color:orange\"\u003e\u003c/i\u003e \u003cb\u003eENDERE\u00c7O:\u003c/b\u003e\u003cbr\u003e\n                \u003cspan style=\"color: #444;\"\u003eResidencial Vila Jardim\u003c/span\u003e\n            \u003c/div\u003e\n        \u003c/div\u003e\n    \u003c/div\u003e\n    "}, "type": "Feature"}, {"geometry": {"coordinates": [-60.755596, 2.846168], "type": "Point"}, "properties": {"name": "Sama\u00fama", "popup": "\n    \u003cdiv style=\"\n        font-family: \u0027Segoe UI\u0027, sans-serif; width: 280px; border-radius: 15px; \n        overflow: hidden; box-shadow: 0px 8px 20px rgba(0,0,0,0.3);\n        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px);\n        border: 1px solid rgba(255, 255, 255, 0.3);\n    \"\u003e\n        \u003cdiv style=\"background: linear-gradient(135deg, green, #222); color: white; padding: 12px; font-weight: bold; text-align: center; text-transform: uppercase; font-size: 10pt;\"\u003e\n            Sama\u00fama\n        \u003c/div\u003e\n        \u003cdiv style=\"padding: 15px; font-size: 10pt; line-height: 1.5; text-align: justify; color: #1a1a1a;\"\u003e\n            Blocos: 14 | Aptos: 240\n            \u003cdiv style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 9pt;\"\u003e\n                \u003ci class=\"fa fa-map-marker\" style=\"color:green\"\u003e\u003c/i\u003e \u003cb\u003eENDERE\u00c7O:\u003c/b\u003e\u003cbr\u003e\n                \u003cspan style=\"color: #444;\"\u003eResidencial Vila Jardim\u003c/span\u003e\n            \u003c/div\u003e\n        \u003c/div\u003e\n    \u003c/div\u003e\n    "}, "type": "Feature"}, {"geometry": {"coordinates": [-60.755723, 2.845237], "type": "Point"}, "properties": {"name": "Andiroba", "popup": "\n    \u003cdiv style=\"\n        font-family: \u0027Segoe UI\u0027, sans-serif; width: 280px; border-radius: 15px; \n        overflow: hidden; box-shadow: 0px 8px 20px rgba(0,0,0,0.3);\n        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px);\n        border: 1px solid rgba(255, 255, 255, 0.3);\n    \"\u003e\n        \u003cdiv style=\"background: linear-gradient(135deg, brown, #222); color: white; padding: 12px; font-weight: bold; text-align: center; text-transform: uppercase; font-size: 10pt;\"\u003e\n            Andiroba\n        \u003c/div\u003e\n        \u003cdiv style=\"padding: 15px; font-size: 10pt; line-height: 1.5; text-align: justify; color: #1a1a1a;\"\u003e\n            Blocos: 13 | Aptos: 208\n            \u003cdiv style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 9pt;\"\u003e\n                \u003ci class=\"fa fa-map-marker\" style=\"color:brown\"\u003e\u003c/i\u003e \u003cb\u003eENDERE\u00c7O:\u003c/b\u003e\u003cbr\u003e\n                \u003cspan style=\"color: #444;\"\u003eResidencial Vila Jardim\u003c/span\u003e\n            \u003c/div\u003e\n        \u003c/div\u003e\n    \u003c/div\u003e\n    "}, "type": "Feature"}, {"geometry": {"coordinates": [-60.757093, 2.843252], "type": "Point"}, "properties": {"name": "Ara\u00e7\u00e1", "popup": "\n    \u003cdiv style=\"\n        font-family: \u0027Segoe UI\u0027, sans-serif; width: 280px; border-radius: 15px; \n        overflow: hidden; box-shadow: 0px 8px 20px rgba(0,0,0,0.3);\n        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px);\n        border: 1px solid rgba(255, 255, 255, 0.3);\n    \"\u003e\n        \u003cdiv style=\"background: linear-gradient(135deg, red, #222); color: white; padding: 12px; font-weight: bold; text-align: center; text-transform: uppercase; font-size: 10pt;\"\u003e\n            Ara\u00e7\u00e1\n        \u003c/div\u003e\n        \u003cdiv style=\"padding: 15px; font-size: 10pt; line-height: 1.5; text-align: justify; color: #1a1a1a;\"\u003e\n            Blocos: 18 | Aptos: 288\n            \u003cdiv style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 9pt;\"\u003e\n                \u003ci class=\"fa fa-map-marker\" style=\"color:red\"\u003e\u003c/i\u003e \u003cb\u003eENDERE\u00c7O:\u003c/b\u003e\u003cbr\u003e\n                \u003cspan style=\"color: #444;\"\u003eResidencial Vila Jardim\u003c/span\u003e\n            \u003c/div\u003e\n        \u003c/div\u003e\n    \u003c/div\u003e\n    "}, "type": "Feature"}, {"geometry": {"coordinates": [-60.757249, 2.841263], "type": "Point"}, "properties": {"name": "Urucum", "popup": "\n    \u003cdiv style=\"\n        font-family: \u0027Segoe UI\u0027, sans-serif; width: 280px; border-radius: 15px; \n        overflow: hidden; box-shadow: 0px 8px 20px rgba(0,0,0,0.3);\n        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px);\n        border: 1px solid rgba(255, 255, 255, 0.3);\n    \"\u003e\n        \u003cdiv style=\"background: linear-gradient(135deg, orange, #222); color: white; padding: 12px; font-weight: bold; text-align: center; text-transform: uppercase; font-size: 10pt;\"\u003e\n            Urucum\n        \u003c/div\u003e\n        \u003cdiv style=\"padding: 15px; font-size: 10pt; line-height: 1.5; text-align: justify; color: #1a1a1a;\"\u003e\n            Blocos: 15 | Aptos: 240\n            \u003cdiv style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 9pt;\"\u003e\n                \u003ci class=\"fa fa-map-marker\" style=\"color:orange\"\u003e\u003c/i\u003e \u003cb\u003eENDERE\u00c7O:\u003c/b\u003e\u003cbr\u003e\n                \u003cspan style=\"color: #444;\"\u003eResidencial Vila Jardim\u003c/span\u003e\n            \u003c/div\u003e\n        \u003c/div\u003e\n    \u003c/div\u003e\n    "}, "type": "Feature"}, {"geometry": {"coordinates": [-60.756384, 2.838492], "type": "Point"}, "properties": {"name": "Buriti", "popup": "\n    \u003cdiv style=\"\n        font-family: \u0027Segoe UI\u0027, sans-serif; width: 280px; border-radius: 15px; \n        overflow: hidden; box-shadow: 0px 8px 20px rgba(0,0,0,0.3);\n        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px);\n        border: 1px solid rgba(255, 255, 255, 0.3);\n    \"\u003e\n        \u003cdiv style=\"background: linear-gradient(135deg, purple, #222); color: white; padding: 12px; font-weight: bold; text-align: center; text-transform: uppercase; font-size: 10pt;\"\u003e\n            Buriti\n        \u003c/div\u003e\n        \u003cdiv style=\"padding: 15px; font-size: 10pt; line-height: 1.5; text-align: justify; color: #1a1a1a;\"\u003e\n            Blocos: 15 | Aptos: 240\n            \u003cdiv style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 9pt;\"\u003e\n                \u003ci class=\"fa fa-map-marker\" style=\"color:purple\"\u003e\u003c/i\u003e \u003cb\u003eENDERE\u00c7O:\u003c/b\u003e\u003cbr\u003e\n                \u003cspan style=\"color: #444;\"\u003eResidencial Vila Jardim\u003c/span\u003e\n            \u003c/div\u003e\n        \u003c/div\u003e\n    \u003c/div\u003e\n    "}, "type": "Feature"}, {"geometry": {"coordinates": [-60.754044, 2.84629], "type": "Point"}, "properties": {"name": "Cedro", "popup": "\n    \u003cdiv style=\"\n        font-family: \u0027Segoe UI\u0027, sans-serif; width: 280px; border-radius: 15px; \n        overflow: hidden; box-shadow: 0px 8px 20px rgba(0,0,0,0.3);\n        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px);\n        border: 1px solid rgba(255, 255, 255, 0.3);\n    \"\u003e\n        \u003cdiv style=\"background: linear-gradient(135deg, brown, #222); color: white; padding: 12px; font-weight: bold; text-align: center; text-transform: uppercase; font-size: 10pt;\"\u003e\n            Cedro\n        \u003c/div\u003e\n        \u003cdiv style=\"padding: 15px; font-size: 10pt; line-height: 1.5; text-align: justify; color: #1a1a1a;\"\u003e\n            Blocos: 18 | Aptos: 288\n            \u003cdiv style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 9pt;\"\u003e\n                \u003ci class=\"fa fa-map-marker\" style=\"color:brown\"\u003e\u003c/i\u003e \u003cb\u003eENDERE\u00c7O:\u003c/b\u003e\u003cbr\u003e\n                \u003cspan style=\"color: #444;\"\u003eResidencial Vila Jardim\u003c/span\u003e\n            \u003c/div\u003e\n        \u003c/div\u003e\n    \u003c/div\u003e\n    "}, "type": "Feature"}, {"geometry": {"coordinates": [-60.754726, 2.843783], "type": "Point"}, "properties": {"name": "Ing\u00e1", "popup": "\n    \u003cdiv style=\"\n        font-family: \u0027Segoe UI\u0027, sans-serif; width: 280px; border-radius: 15px; \n        overflow: hidden; box-shadow: 0px 8px 20px rgba(0,0,0,0.3);\n        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px);\n        border: 1px solid rgba(255, 255, 255, 0.3);\n    \"\u003e\n        \u003cdiv style=\"background: linear-gradient(135deg, cadetblue, #222); color: white; padding: 12px; font-weight: bold; text-align: center; text-transform: uppercase; font-size: 10pt;\"\u003e\n            Ing\u00e1\n        \u003c/div\u003e\n        \u003cdiv style=\"padding: 15px; font-size: 10pt; line-height: 1.5; text-align: justify; color: #1a1a1a;\"\u003e\n            Blocos: 14 | Aptos: 224\n            \u003cdiv style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 9pt;\"\u003e\n                \u003ci class=\"fa fa-map-marker\" style=\"color:cadetblue\"\u003e\u003c/i\u003e \u003cb\u003eENDERE\u00c7O:\u003c/b\u003e\u003cbr\u003e\n                \u003cspan style=\"color: #444;\"\u003eResidencial Vila Jardim\u003c/span\u003e\n            \u003c/div\u003e\n        \u003c/div\u003e\n    \u003c/div\u003e\n    "}, "type": "Feature"}, {"geometry": {"coordinates": [-60.755364, 2.842502], "type": "Point"}, "properties": {"name": "Jatob\u00e1", "popup": "\n    \u003cdiv style=\"\n        font-family: \u0027Segoe UI\u0027, sans-serif; width: 280px; border-radius: 15px; \n        overflow: hidden; box-shadow: 0px 8px 20px rgba(0,0,0,0.3);\n        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px);\n        border: 1px solid rgba(255, 255, 255, 0.3);\n    \"\u003e\n        \u003cdiv style=\"background: linear-gradient(135deg, gray, #222); color: white; padding: 12px; font-weight: bold; text-align: center; text-transform: uppercase; font-size: 10pt;\"\u003e\n            Jatob\u00e1\n        \u003c/div\u003e\n        \u003cdiv style=\"padding: 15px; font-size: 10pt; line-height: 1.5; text-align: justify; color: #1a1a1a;\"\u003e\n            Blocos: 17 | Aptos: 272\n            \u003cdiv style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 9pt;\"\u003e\n                \u003ci class=\"fa fa-map-marker\" style=\"color:gray\"\u003e\u003c/i\u003e \u003cb\u003eENDERE\u00c7O:\u003c/b\u003e\u003cbr\u003e\n                \u003cspan style=\"color: #444;\"\u003eResidencial Vila Jardim\u003c/span\u003e\n            \u003c/div\u003e\n        \u003c/div\u003e\n    \u003c/div\u003e\n    "}, "type": "Feature"}, {"geometry": {"coordinates": [-60.755426, 2.841938], "type": "Point"}, "properties": {"name": "Angelim", "popup": "\n    \u003cdiv style=\"\n        font-family: \u0027Segoe UI\u0027, sans-serif; width: 280px; border-radius: 15px; \n        overflow: hidden; box-shadow: 0px 8px 20px rgba(0,0,0,0.3);\n        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px);\n        border: 1px solid rgba(255, 255, 255, 0.3);\n    \"\u003e\n        \u003cdiv style=\"background: linear-gradient(135deg, orange, #222); color: white; padding: 12px; font-weight: bold; text-align: center; text-transform: uppercase; font-size: 10pt;\"\u003e\n            Angelim\n        \u003c/div\u003e\n        \u003cdiv style=\"padding: 15px; font-size: 10pt; line-height: 1.5; text-align: justify; color: #1a1a1a;\"\u003e\n            Blocos: 16 | Aptos: 256\n            \u003cdiv style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 9pt;\"\u003e\n                \u003ci class=\"fa fa-map-marker\" style=\"color:orange\"\u003e\u003c/i\u003e \u003cb\u003eENDERE\u00c7O:\u003c/b\u003e\u003cbr\u003e\n                \u003cspan style=\"color: #444;\"\u003eResidencial Vila Jardim\u003c/span\u003e\n            \u003c/div\u003e\n        \u003c/div\u003e\n    \u003c/div\u003e\n    "}, "type": "Feature"}, {"geometry": {"coordinates": [-60.755709, 2.841204], "type": "Point"}, "properties": {"name": "Pupunha", "popup": "\n    \u003cdiv style=\"\n        font-family: \u0027Segoe UI\u0027, sans-serif; width: 280px; border-radius: 15px; \n        overflow: hidden; box-shadow: 0px 8px 20px rgba(0,0,0,0.3);\n        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px);\n        border: 1px solid rgba(255, 255, 255, 0.3);\n    \"\u003e\n        \u003cdiv style=\"background: linear-gradient(135deg, orange, #222); color: white; padding: 12px; font-weight: bold; text-align: center; text-transform: uppercase; font-size: 10pt;\"\u003e\n            Pupunha\n        \u003c/div\u003e\n        \u003cdiv style=\"padding: 15px; font-size: 10pt; line-height: 1.5; text-align: justify; color: #1a1a1a;\"\u003e\n            Blocos: 14 | Aptos: 224\n            \u003cdiv style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 9pt;\"\u003e\n                \u003ci class=\"fa fa-map-marker\" style=\"color:orange\"\u003e\u003c/i\u003e \u003cb\u003eENDERE\u00c7O:\u003c/b\u003e\u003cbr\u003e\n                \u003cspan style=\"color: #444;\"\u003eResidencial Vila Jardim\u003c/span\u003e\n            \u003c/div\u003e\n        \u003c/div\u003e\n    \u003c/div\u003e\n    "}, "type": "Feature"}, {"geometry": {"coordinates": [-60.7562, 2.839949], "type": "Point"}, "properties": {"name": "A\u00e7a\u00ed", "popup": "\n    \u003cdiv style=\"\n        font-family: \u0027Segoe UI\u0027, sans-serif; width: 280px; border-radius: 15px; \n        overflow: hidden; box-shadow: 0px 8px 20px rgba(0,0,0,0.3);\n        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px);\n        border: 1px solid rgba(255, 255, 255, 0.3);\n    \"\u003e\n        \u003cdiv style=\"background: linear-gradient(135deg, pink, #222); color: white; padding: 12px; font-weight: bold; text-align: center; text-transform: uppercase; font-size: 10pt;\"\u003e\n            A\u00e7a\u00ed\n        \u003c/div\u003e\n        \u003cdiv style=\"padding: 15px; font-size: 10pt; line-height: 1.5; text-align: justify; color: #1a1a1a;\"\u003e\n            Blocos: 18 | Aptos: 288\n            \u003cdiv style=\"margin-top: 10px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 9pt;\"\u003e\n                \u003ci class=\"fa fa-map-marker\" style=\"color:pink\"\u003e\u003c/i\u003e \u003cb\u003eENDERE\u00c7O:\u003c/b\u003e\u003cbr\u003e\n                \u003cspan style=\"color: #444;\"\u003eResidencial Vila Jardim\u003c/span\u003e\n            \u003c/div\u003e\n        \u003c/div\u003e\n    \u003c/div\u003e\n    "}, "type": "Feature"}], "type": "FeatureCollection"});
+        geo_json_9a25dbec417cc7162fd07ad1b9302269.setStyle(function(feature) {return feature.properties.style;});
+
+        
+    
+    geo_json_9a25dbec417cc7162fd07ad1b9302269.bindTooltip(
+    function(layer){
+    let div = L.DomUtil.create('div');
+    
+    let handleObject = feature => {
+        if (feature === null) {
+            return '';
+        } else if (typeof(feature)=='object') {
+            return JSON.stringify(feature);
+        } else {
+            return feature;
+        }
+    }
+    let fields = ["name"];
+    let aliases = ["name"];
+    let table = '<table>' +
+        String(
+        fields.map(
+        (v,i)=>
+        `<tr>
+            <td>${handleObject(layer.feature.properties[v])}</td>
+        </tr>`).join(''))
+    +'</table>';
+    div.innerHTML=table;
+    
+    return div
+    }
+    ,{
+  "sticky": true,
+  "className": "foliumtooltip",
+});
+                     
+    
+    geo_json_9a25dbec417cc7162fd07ad1b9302269.bindPopup(
+    function(layer){
+    let div = L.DomUtil.create('div');
+    
+    let handleObject = feature => {
+        if (feature === null) {
+            return '';
+        } else if (typeof(feature)=='object') {
+            return JSON.stringify(feature);
+        } else {
+            return feature;
+        }
+    }
+    let fields = ["popup"];
+    let aliases = ["popup"];
+    let table = '<table>' +
+        String(
+        fields.map(
+        (v,i)=>
+        `<tr>
+            <td>${handleObject(layer.feature.properties[v]).toLocaleString()}</td>
+        </tr>`).join(''))
+    +'</table>';
+    div.innerHTML=table;
+    
+    return div
+    }
+    ,{
+  "className": "foliumpopup",
+});
+                     
+    
+            geo_json_9a25dbec417cc7162fd07ad1b9302269.addTo(map_aa04617ec0752bb0f66f5d320080da00);
+        
+    
+            var geo_json_9a25dbec417cc7162fd07ad1b9302269searchControl = new L.Control.Search({
+                layer: geo_json_9a25dbec417cc7162fd07ad1b9302269,
+                
+                propertyName: 'name',
+                
+                collapsed: false,
+                textPlaceholder: '🔎 Pesquisar...',
+                position:'topleft',
+            
+                initial: false,
+                
+                zoom: 19,
+                
+                hideMarkerOnCollapse: true
+            
+                });
+                geo_json_9a25dbec417cc7162fd07ad1b9302269searchControl.on('search:locationfound', function(e) {
+                    geo_json_9a25dbec417cc7162fd07ad1b9302269.setStyle(function(feature){
+                        return feature.properties.style
+                    })
+                    
+                    if(e.layer._popup)
+                        e.layer.openPopup();
+                })
+                geo_json_9a25dbec417cc7162fd07ad1b9302269searchControl.on('search:collapsed', function(e) {
+                        geo_json_9a25dbec417cc7162fd07ad1b9302269.setStyle(function(feature){
+                            return feature.properties.style
+                    });
+                });
+            map_aa04617ec0752bb0f66f5d320080da00.addControl( geo_json_9a25dbec417cc7162fd07ad1b9302269searchControl );
+
+        
+</script>
+</html>
