@@ -4330,6 +4330,16 @@ async function fitPrintNote() {
   }
 }
 
+function truncateForPrint(text, maxLen) {
+  const clean = stripHtml(text).trim();
+  if (!clean) return '';
+  if (clean.length <= maxLen) return escapeHtml(clean);
+  let cut = clean.slice(0, maxLen);
+  const lastSpace = cut.lastIndexOf(' ');
+  if (lastSpace > maxLen * 0.6) cut = cut.slice(0, lastSpace);
+  return escapeHtml(cut) + '…';
+}
+
 async function printGuide(id) {
   const i = DATA.find(x => x.id === id);
   const note = safeStorage.get('note_'+id) || 'Avaliação técnica e conduta especializada indicadas.';
@@ -4346,6 +4356,10 @@ async function printGuide(id) {
   const descRaw = cleanPrintField(i.desc, '');
   const descDisplay = descRaw ? formatInformeDesc(descRaw) : '';
   const catDisplay = (i.cat || []).map(c => CATEGORY_LABELS_PRINT[c] || c).join(' · ');
+
+  // Resumo compacto de serviços + descrição (uma linha só, para sobrar espaço)
+  const summaryLine = [truncateForPrint(servicesDisplay, 100), truncateForPrint(descDisplay, 140)]
+    .filter(Boolean).join(' — ');
 
   const countLines = (txt) => (String(txt).match(/<br>/g) || []).length + 1;
   const addressLines = countLines(addressDisplay);
@@ -4396,13 +4410,18 @@ async function printGuide(id) {
 
           <div style="display:flex; flex-direction:column; min-height:0; border-right:1.5px solid #0F172A; padding:14px;">
             <span style="font-size:0.65rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em;">Unidade de Destino</span>
-            <h2 style="margin:4px 0 12px 0; font-size:1.25rem; color:#0091C2; font-family:'Lora', serif; font-weight:700; border-bottom:1px solid #CBD5E1; padding-bottom:10px;">${i.fullName}</h2>
+
+            <!-- Sigla em destaque + Nome completo -->
+            <div style="display:flex; align-items:baseline; gap:10px; margin:4px 0 10px 0; border-bottom:1px solid #CBD5E1; padding-bottom:10px;">
+              <span style="flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; padding:3px 10px; border-radius:5px; background:#0091C2; color:#fff; font-weight:800; font-size:0.85rem; letter-spacing:0.02em; white-space:nowrap;">${i.name}</span>
+              <h2 style="margin:0; font-size:1.18rem; line-height:1.25; color:#0F172A; font-family:'Lora', serif; font-weight:700;">${i.fullName}</h2>
+            </div>
 
             <span style="font-size:0.65rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:6px; display:block;">Informações da Unidade e Conduta Técnica</span>
             <div id="printNoteBox" style="flex-grow:1; padding:12px 14px; border:1.5px solid #0F172A; border-radius:4px; font-size:15px; line-height:1.4; background:rgba(17,94,89,0.02); overflow:hidden;">
-              ${servicesDisplay ? `<div style="margin-bottom:0.6em;"><strong style="display:block; font-size:0.6em; text-transform:uppercase; letter-spacing:0.03em; color:#0091C2;">Serviços Disponíveis</strong>${servicesDisplay}</div>` : ''}
-              ${descDisplay ? `<div style="margin-bottom:0.6em;"><strong style="display:block; font-size:0.6em; text-transform:uppercase; letter-spacing:0.03em; color:#475569;">Sobre a Unidade</strong>${descDisplay}</div>` : ''}
-              <div><strong style="display:block; font-size:0.6em; text-transform:uppercase; letter-spacing:0.03em; color:#0F172A;">Conduta e Orientações Técnicas</strong><span style="white-space:pre-wrap;">${escapeHtml(note)}</span></div>
+              ${summaryLine ? `<div style="margin-bottom:0.6em; padding-bottom:0.5em; border-bottom:1px dashed #CBD5E1; font-size:0.72em; color:#475569;"><strong style="color:#0091C2;">Unidade:</strong> ${summaryLine}</div>` : ''}
+              <strong style="display:block; font-size:0.6em; text-transform:uppercase; letter-spacing:0.03em; color:#0F172A; margin-bottom:2px;">Conduta e Orientações Técnicas</strong>
+              <span style="white-space:pre-wrap;">${escapeHtml(note)}</span>
             </div>
             ${pdfAttach ? `<div style="margin-top:8px; font-size:0.72rem; font-weight:700; color:#475569;">📎 Anexo digital em PDF: ${escapeHtml(pdfAttach.name || 'documento.pdf')} (incluído na página seguinte desta impressão${/iphone|ipad|ipod/i.test(navigator.userAgent) ? ' — no iOS, use o link "Abrir PDF" do cartão caso a página apareça em branco' : ''}).</div>` : ''}
           </div>
