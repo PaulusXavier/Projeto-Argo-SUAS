@@ -970,7 +970,8 @@
   .cas-badge,
   .cras-badge,
   .police-badge,
-  .notes-badge {
+  .notes-badge,
+  .interior-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -986,6 +987,7 @@
   .cras-badge { color: var(--brand-cras); background: rgba(13, 148, 136, 0.1); }
   .police-badge { color: var(--brand-police-light); background: rgba(30, 58, 138, 0.1); }
   .notes-badge { color: var(--brand-notes); background: rgba(190, 18, 60, 0.1); }
+  .interior-badge { color: var(--brand-interior); background: rgba(180, 133, 6, 0.1); }
 
   .informe-box {
     font-size: 0.85rem;
@@ -1176,6 +1178,8 @@
     --brand-cras-light: #14B8A6;
     --brand-police: #1E3A8A;
     --brand-police-light: #2563EB;
+    --brand-interior: #B45906;
+    --brand-interior-light: #EA580C;
   }
 
   .cas-card {
@@ -1378,6 +1382,36 @@
     letter-spacing: 0.03em;
     color: var(--brand-police-light);
     background: rgba(30, 58, 138, 0.08);
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    margin-top: 0.5rem;
+  }
+
+  /* Cartões da categoria "CRAS/CREAS Interior" — visual de rede
+     municipal do interior, usando o acento laranja-terroso
+     (--brand-interior) para diferenciar das unidades da Capital. */
+  .interior-card {
+    border-top: 3px solid var(--brand-interior);
+  }
+
+  .interior-card .card-top {
+    background: linear-gradient(180deg, rgba(180, 89, 6, 0.07), rgba(180, 89, 6, 0) 80%);
+  }
+
+  .interior-card .card-top h2 {
+    color: var(--brand-interior-light);
+  }
+
+  .interior-group-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--brand-interior-light);
+    background: rgba(180, 89, 6, 0.08);
     padding: 0.25rem 0.6rem;
     border-radius: 999px;
     margin-top: 0.5rem;
@@ -2355,6 +2389,11 @@
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11 6.5 6.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11"/><rect x="2" y="11" width="20" height="7" rx="2"/><circle cx="7" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/></svg></span>
           <span>Mobilidade</span>
           <span class="chip-count" id="count-mobilidade">0</span>
+        </button>
+        <button class="filter-chip" data-cat="interior" role="tab" aria-selected="false">
+          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg></span>
+          <span>CRAS/CREAS Interior</span>
+          <span class="chip-count" id="count-interior">0</span>
         </button>
         <button class="filter-chip" data-cat="informes" role="tab" aria-selected="false">
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
@@ -4413,6 +4452,354 @@ const DATA = [
     desc: "A Tarifa Social de Água e Esgoto, prevista na Lei Federal nº 14.898/2024 e regulamentada localmente pela CAER (Companhia de Águas e Esgotos de Roraima), garante desconto de 50% sobre a tarifa de água e esgoto até um determinado volume mensal de consumo para famílias de baixa renda.<br>Requisitos: • Família inscrita no CadÚnico com renda mensal por pessoa de até meio salário mínimo, ou com integrante beneficiário do BPC/LOAS; • Cadastro atualizado no CadÚnico; • Unidade consumidora sem débitos pendentes com a CAER; • Em caso de imóvel alugado, apresentar contrato de locação vigente.<br>⚠️ Observações técnicas: a concessão pode ser cancelada caso vistoria constate divergência entre os dados declarados e a situação real do imóvel, retornando o usuário à tarifa residencial normal; a CAER também realiza ações itinerantes em bairros para cadastramento de famílias e renegociação de débitos.<br>Canais para solicitação: • E-mail: atendimento@caer.com.br; • Central telefônica: 0800-280-9520; • Presencialmente em uma Loja de Atendimento da CAER, com CadÚnico atualizado e documentos pessoais."
   },
   {
+    id: "cras-azul-alto-alegre",
+    name: "CRAS Azul",
+    fullName: "Centro de Referência de Assistência Social - Azul (Alto Alegre)",
+    cat: ["interior"],
+    group: "Alto Alegre",
+    address: "Av. Santos Dumont, 56 - Azul, Alto Alegre-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 98408-2735"],
+    services: "CadÚnico, PAIF, Acompanhamento Familiar.",
+    desc: "CRAS do município de Alto Alegre, interior de Roraima. Área de abrangência: sede e adjacências."
+  },
+  {
+    id: "cras-sao-silvestre-alto-alegre",
+    name: "CRAS São Silvestre",
+    fullName: "Centro de Referência de Assistência Social - São Silvestre (Alto Alegre)",
+    cat: ["interior"],
+    group: "Alto Alegre",
+    address: "Av. Raul Torreias, s/nº - Vila São Silvestre, Alto Alegre-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 99164-3745"],
+    services: "CadÚnico, PAIF, Acompanhamento Familiar.",
+    desc: "CRAS do município de Alto Alegre, interior de Roraima. Área de abrangência: Vila São Silvestre e adjacências."
+  },
+  {
+    id: "creas-alto-alegre",
+    name: "CREAS Alto Alegre",
+    fullName: "Centro de Referência Especializado de Assistência Social - Alto Alegre",
+    cat: ["interior"],
+    group: "Alto Alegre",
+    address: "Rua 13 de Setembro, 79 - Azul, Alto Alegre-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 99132-1921"],
+    services: "Proteção Social Especial, Acompanhamento de Violações.",
+    desc: "CREAS do município de Alto Alegre, interior de Roraima. Referência de Proteção Social Especial de Média Complexidade."
+  },
+  {
+    id: "cras-amajari",
+    name: "CRAS Amajarí",
+    fullName: "Centro de Referência de Assistência Social - Amajarí",
+    cat: ["interior"],
+    group: "Amajarí",
+    address: "Rua Santa Luzia, s/nº - Centro, Amajarí-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 98419-4098"],
+    services: "CadÚnico, PAIF, Acompanhamento Familiar.",
+    desc: "CRAS do município de Amajarí, interior de Roraima. Área de abrangência: todo o território de Amajarí."
+  },
+  {
+    id: "creas-amajari",
+    name: "CREAS Amajarí",
+    fullName: "Centro de Referência Especializado de Assistência Social - Amajarí",
+    cat: ["interior"],
+    group: "Amajarí",
+    address: "Rua Albino Tavares, s/nº - Centro, Amajarí-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 98404-0389"],
+    services: "Proteção Social Especial, Acompanhamento de Violações.",
+    desc: "CREAS do município de Amajarí, interior de Roraima. Referência de Proteção Social Especial de Média Complexidade."
+  },
+  {
+    id: "cras-bonfim",
+    name: "CRAS Bonfim",
+    fullName: "Centro de Referência de Assistência Social - Bonfim",
+    cat: ["interior"],
+    group: "Bonfim",
+    address: "Rua Maria Deolinda Franco Megias, s/nº - Centro, Bonfim-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 98406-7425"],
+    services: "CadÚnico, PAIF, Acompanhamento Familiar.",
+    desc: "CRAS do município de Bonfim, interior de Roraima, na fronteira com a Guiana. Área de abrangência: sede e adjacências."
+  },
+  {
+    id: "creas-bonfim",
+    name: "CREAS Bonfim",
+    fullName: "Centro de Referência Especializado de Assistência Social - Bonfim",
+    cat: ["interior"],
+    group: "Bonfim",
+    address: "Rua João Lopes, nº 10 - Centro, Bonfim-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 98108-0990"],
+    services: "Proteção Social Especial, Acompanhamento de Violações.",
+    desc: "CREAS do município de Bonfim, interior de Roraima, na fronteira com a Guiana. Referência de Proteção Social Especial de Média Complexidade."
+  },
+  {
+    id: "cras-canta",
+    name: "CRAS Cantá",
+    fullName: "Centro de Referência de Assistência Social - Cantá",
+    cat: ["interior"],
+    group: "Cantá",
+    address: "Rua Francisco Alves Gondim, s/nº - Centro, Cantá-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 3553-1153", "(95) 99171-7362"],
+    services: "CadÚnico, PAIF, Acompanhamento Familiar.",
+    desc: "CRAS do município de Cantá, interior de Roraima, próximo a Boa Vista. Área de abrangência: todo o território do Cantá."
+  },
+  {
+    id: "creas-canta",
+    name: "CREAS Geanderson Lima Franco",
+    fullName: "Centro de Referência Especializado de Assistência Social - Geanderson Lima Franco (Cantá)",
+    cat: ["interior"],
+    group: "Cantá",
+    address: "Rua Francisco Alves Gondim, 100 - Antônio Chagas Pinto, Cantá-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 99171-7362"],
+    services: "Proteção Social Especial, Acompanhamento de Violações.",
+    desc: "CREAS do município de Cantá, interior de Roraima. Referência de Proteção Social Especial de Média Complexidade."
+  },
+  {
+    id: "cras-beatriz-guedelha-caracarai",
+    name: "CRAS Beatriz Guedelha de Freitas",
+    fullName: "Centro de Referência de Assistência Social - Beatriz Guedelha de Freitas (Caracaraí)",
+    cat: ["interior"],
+    group: "Caracaraí",
+    address: "Rua José Cândido de Sá, 428 - Nossa Senhora do Livramento, Caracaraí-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 99115-7403"],
+    services: "CadÚnico, PAIF, Acompanhamento Familiar.",
+    desc: "CRAS do município de Caracaraí, interior de Roraima. Área de abrangência: todo o território de Caracaraí."
+  },
+  {
+    id: "cras-rural-caracarai",
+    name: "CRAS Rural",
+    fullName: "Centro de Referência de Assistência Social - Rural (Caracaraí, Vila Vista Alegre)",
+    cat: ["interior"],
+    group: "Caracaraí",
+    address: "Vila Vista Alegre, s/nº, Caracaraí-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 99155-0390"],
+    services: "CadÚnico, PAIF, Atendimento Rural.",
+    desc: "CRAS rural do município de Caracaraí, interior de Roraima. Área de abrangência: Vila Vista Alegre e adjacências."
+  },
+  {
+    id: "creas-caracarai",
+    name: "CREAS João Eduardo de Oliveira Bezerra",
+    fullName: "Centro de Referência Especializado de Assistência Social - João Eduardo de Oliveira Bezerra (Caracaraí)",
+    cat: ["interior"],
+    group: "Caracaraí",
+    address: "Rua T 20, 371 - Nossa Senhora do Livramento, Caracaraí-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 98400-7075", "(95) 99114-8752"],
+    services: "Proteção Social Especial, Acompanhamento de Violações.",
+    desc: "CREAS do município de Caracaraí, interior de Roraima. Referência de Proteção Social Especial de Média Complexidade."
+  },
+  {
+    id: "cras-caroebe",
+    name: "CRAS Caroebe",
+    fullName: "Centro de Referência de Assistência Social - Caroebe",
+    cat: ["interior"],
+    group: "Caroebe",
+    address: "BR 210, s/nº - Centro, Caroebe-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 98413-2762"],
+    services: "CadÚnico, PAIF, Acompanhamento Familiar.",
+    desc: "CRAS do município de Caroebe, interior de Roraima. Área de abrangência: todo o território de Caroebe."
+  },
+  {
+    id: "creas-caroebe",
+    name: "CREAS Caroebe",
+    fullName: "Centro de Referência Especializado de Assistência Social - Caroebe",
+    cat: ["interior"],
+    group: "Caroebe",
+    address: "Av. Paulino Gomes Da Costa, s/nº - Centro, Caroebe-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 98400-1260"],
+    services: "Proteção Social Especial, Acompanhamento de Violações.",
+    desc: "CREAS do município de Caroebe, interior de Roraima. Referência de Proteção Social Especial de Média Complexidade."
+  },
+  {
+    id: "cras-iracema",
+    name: "CRAS Iracema",
+    fullName: "Centro de Referência de Assistência Social - Iracema",
+    cat: ["interior"],
+    group: "Iracema",
+    address: "Rua Getúlio Vargas, s/nº - Centro, Iracema-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 98402-5628"],
+    services: "CadÚnico, PAIF, Acompanhamento Familiar.",
+    desc: "CRAS do município de Iracema, interior de Roraima. Área de abrangência: todo o território de Iracema."
+  },
+  {
+    id: "creas-iracema",
+    name: "CREAS Iracema",
+    fullName: "Centro de Referência Especializado de Assistência Social - Iracema",
+    cat: ["interior"],
+    group: "Iracema",
+    address: "Rua Floriano Peixoto, 2210 - Centro, Iracema-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["N/A - sem coordenação no momento"],
+    services: "Proteção Social Especial, Acompanhamento de Violações.",
+    desc: "CREAS do município de Iracema, interior de Roraima. Referência de Proteção Social Especial de Média Complexidade."
+  },
+  {
+    id: "cras-mucajai",
+    name: "CRAS Mucajaí",
+    fullName: "Centro de Referência de Assistência Social - Mucajaí",
+    cat: ["interior"],
+    group: "Mucajaí",
+    address: "Rua Padre Tobias, 22 - Centro, Mucajaí-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 98402-8165"],
+    services: "CadÚnico, PAIF, Acompanhamento Familiar.",
+    desc: "CRAS do município de Mucajaí, interior de Roraima. Área de abrangência: todo o território de Mucajaí."
+  },
+  {
+    id: "creas-mucajai",
+    name: "CREAS Mucajaí",
+    fullName: "Centro de Referência Especializado de Assistência Social - Mucajaí",
+    cat: ["interior"],
+    group: "Mucajaí",
+    address: "Rua Manoel Agostinho, 89 - Centro, Mucajaí-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 99129-2699"],
+    services: "Proteção Social Especial, Acompanhamento de Violações.",
+    desc: "CREAS do município de Mucajaí, interior de Roraima. Referência de Proteção Social Especial de Média Complexidade."
+  },
+  {
+    id: "cras-normandia",
+    name: "CRAS Normandia",
+    fullName: "Centro de Referência de Assistência Social - Normandia",
+    cat: ["interior"],
+    group: "Normandia",
+    address: "Av. Maurício Habert, s/nº - Centro, Normandia-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 99122-3434"],
+    services: "CadÚnico, PAIF, Acompanhamento Familiar.",
+    desc: "CRAS do município de Normandia, interior de Roraima, na fronteira com a Guiana. Área de abrangência: todo o território de Normandia."
+  },
+  {
+    id: "creas-normandia",
+    name: "CREAS Normandia",
+    fullName: "Centro de Referência Especializado de Assistência Social - Normandia",
+    cat: ["interior"],
+    group: "Normandia",
+    address: "Rua José Mariscado, 05 - Centro, Normandia-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 98125-1477"],
+    services: "Proteção Social Especial, Acompanhamento de Violações.",
+    desc: "CREAS do município de Normandia, interior de Roraima. Referência de Proteção Social Especial de Média Complexidade."
+  },
+  {
+    id: "cras-pacaraima",
+    name: "CRAS Pacaraima",
+    fullName: "Centro de Referência de Assistência Social - Pacaraima",
+    cat: ["interior"],
+    group: "Pacaraima",
+    address: "Rua Ilzo Montenegro Peixoto, s/nº, Pacaraima-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 99168-1652"],
+    services: "CadÚnico, PAIF, Acompanhamento Familiar.",
+    desc: "CRAS do município de Pacaraima, interior de Roraima, na fronteira com a Venezuela. Área de abrangência: todo o território de Pacaraima."
+  },
+  {
+    id: "creas-pacaraima",
+    name: "CREAS Pacaraima",
+    fullName: "Centro de Referência Especializado de Assistência Social - Pacaraima",
+    cat: ["interior"],
+    group: "Pacaraima",
+    address: "Rua Paramaribo, 295 - Vila Nova, Pacaraima-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(92) 99479-1921"],
+    services: "Proteção Social Especial, Acompanhamento de Violações.",
+    desc: "CREAS do município de Pacaraima, interior de Roraima, na fronteira com a Venezuela. Referência de Proteção Social Especial de Média Complexidade."
+  },
+  {
+    id: "cras-rorainopolis",
+    name: "CRAS Rorainópolis",
+    fullName: "Centro de Referência de Assistência Social - Rorainópolis",
+    cat: ["interior"],
+    group: "Rorainópolis",
+    address: "Rua Pedro Daniel da Silva, s/nº - Cidade Nova, Rorainópolis-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 99135-5439"],
+    services: "CadÚnico, PAIF, Acompanhamento Familiar.",
+    desc: "CRAS do município de Rorainópolis, interior de Roraima. Área de abrangência: todo o território de Rorainópolis."
+  },
+  {
+    id: "creas-rorainopolis",
+    name: "CREAS Raimunda Silva Santana",
+    fullName: "Centro de Referência Especializado de Assistência Social - Raimunda Silva Santana (Rorainópolis)",
+    cat: ["interior"],
+    group: "Rorainópolis",
+    address: "Av. Ayrton Senna, s/nº - Suelândia, Rorainópolis-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 99112-4199"],
+    services: "Proteção Social Especial, Acompanhamento de Violações.",
+    desc: "CREAS do município de Rorainópolis, interior de Roraima. Referência de Proteção Social Especial de Média Complexidade."
+  },
+  {
+    id: "cras-sao-joao-da-baliza",
+    name: "CRAS São João da Baliza",
+    fullName: "Centro de Referência de Assistência Social - São João da Baliza",
+    cat: ["interior"],
+    group: "São João da Baliza",
+    address: "Rua São Cristóvão, s/nº - Centro, São João da Baliza-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 99905-3521"],
+    services: "CadÚnico, PAIF, Acompanhamento Familiar.",
+    desc: "CRAS do município de São João da Baliza, interior de Roraima. Área de abrangência: todo o território de São João da Baliza."
+  },
+  {
+    id: "creas-sao-joao-da-baliza",
+    name: "CREAS São João da Baliza",
+    fullName: "Centro de Referência Especializado de Assistência Social - São João da Baliza",
+    cat: ["interior"],
+    group: "São João da Baliza",
+    address: "Rua Santo Antônio, s/nº - Centro, São João da Baliza-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 98411-5767"],
+    services: "Proteção Social Especial, Acompanhamento de Violações.",
+    desc: "CREAS do município de São João da Baliza, interior de Roraima. Referência de Proteção Social Especial de Média Complexidade."
+  },
+  {
+    id: "cras-sao-luiz",
+    name: "CRAS São Luiz",
+    fullName: "Centro de Referência de Assistência Social - São Luiz",
+    cat: ["interior"],
+    group: "São Luiz",
+    address: "Rua 09, s/nº - Morbatlantida, São Luiz-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 98801-6833"],
+    services: "CadÚnico, PAIF, Acompanhamento Familiar.",
+    desc: "CRAS do município de São Luiz do Anauá, interior de Roraima. Área de abrangência: todo o território de São Luiz."
+  },
+  {
+    id: "cras-uiramuta",
+    name: "CRAS Uiramutã",
+    fullName: "Centro de Referência de Assistência Social - Uiramutã",
+    cat: ["interior"],
+    group: "Uiramutã",
+    address: "Rua Cici Mota, s/nº - Centro, Uiramutã-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 98413-9483"],
+    services: "CadÚnico, PAIF, Acompanhamento Familiar.",
+    desc: "CRAS do município de Uiramutã, interior de Roraima, na fronteira com a Venezuela. Área de abrangência: todo o território de Uiramutã."
+  },
+  {
+    id: "creas-uiramuta",
+    name: "CREAS Uiramutã",
+    fullName: "Centro de Referência Especializado de Assistência Social - Uiramutã",
+    cat: ["interior"],
+    group: "Uiramutã",
+    address: "Rua Martiniano Vieira, s/nº - Centro, Uiramutã-RR",
+    hours: "Segunda a sexta, conforme unidade",
+    phones: ["(95) 99166-9678"],
+    services: "Proteção Social Especial, Acompanhamento de Violações.",
+    desc: "CREAS do município de Uiramutã, interior de Roraima, na fronteira com a Venezuela. Referência de Proteção Social Especial de Média Complexidade."
+  },
+  {
     id: "equipe-cras-cristiana",
     name: "Equipe Técnica",
     fullName: "CRAS Cristiana Vicente Nunes - Equipe de Referência Territorial e Equipe Volante",
@@ -4535,7 +4922,8 @@ const ICONS = {
   excel: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><line x1="8" y1="13" x2="12" y2="18"/><line x1="12" y1="13" x2="8" y2="18"/></svg>',
   cloud: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>',
   pdf: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><text x="6.5" y="17.5" font-size="6.5" fill="currentColor" stroke="none" font-family="Inter, sans-serif" font-weight="800">PDF</text></svg>',
-  police: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="M9.5 12.5l1.8 1.8 3.2-3.6"/></svg>'
+  police: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="M9.5 12.5l1.8 1.8 3.2-3.6"/></svg>',
+  home: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg>'
 };
 
 const MAX_ATTACH_BYTES = 3.5 * 1024 * 1024;
@@ -4653,7 +5041,7 @@ function informeMetaRow(icon, label, value) {
 const CATEGORY_LABELS_PRINT = {
   saude: 'RAPS', tea: 'TEA / PcD', social: 'Assistência Social', educacao: 'Educação',
   juridico: 'Sistema Judicial', conselho: 'Conselho Tutelar', delegacias: 'Delegacias', bancos: 'Rede Bancária',
-  previdencia: 'Previdência', habitacao: 'Habitação', mobilidade: 'Mobilidade', informes: 'Informes', equipe: 'Equipe Técnica',
+  previdencia: 'Previdência', habitacao: 'Habitação', mobilidade: 'Mobilidade', interior: 'CRAS/CREAS Interior', informes: 'Informes', equipe: 'Equipe Técnica',
   cas: 'Atendimento CAS', cras: 'Atendimento CRAS'
 };
 
@@ -4931,7 +5319,7 @@ function renderCrasCard(i, query) {
 function updateChipCounts() {
   const counts = {
     all: DATA.length, saude: 0, tea: 0, social: 0, educacao: 0, juridico: 0,
-    conselho: 0, delegacias: 0, bancos: 0, previdencia: 0, documentacao: 0, habitacao: 0, mobilidade: 0, informes: 0, equipe: 0, cas: 0,
+    conselho: 0, delegacias: 0, bancos: 0, previdencia: 0, documentacao: 0, habitacao: 0, mobilidade: 0, interior: 0, informes: 0, equipe: 0, cas: 0,
     cras: 0
   };
   DATA.forEach(i => {
@@ -4947,6 +5335,7 @@ function updateChipCounts() {
     if (i.cat.includes('documentacao')) counts.documentacao++;
     if (i.cat.includes('habitacao')) counts.habitacao++;
     if (i.cat.includes('mobilidade')) counts.mobilidade++;
+    if (i.cat.includes('interior')) counts.interior++;
     if (i.cat.includes('informes')) counts.informes++;
     if (i.cat.includes('equipe')) counts.equipe++;
     if (i.cat.includes('cas')) counts.cas++;
@@ -4971,6 +5360,7 @@ function updateChipCounts() {
   setCount('count-documentacao', counts.documentacao);
   setCount('count-habitacao', counts.habitacao);
   setCount('count-mobilidade', counts.mobilidade);
+  setCount('count-interior', counts.interior);
   setCount('count-informes', counts.informes);
   setCount('count-equipe', counts.equipe);
   setCount('count-cas', counts.cas);
@@ -5035,7 +5425,8 @@ function render() {
          i.address.toLowerCase().includes(query) ||
          i.desc.toLowerCase().includes(query) ||
          servicesText.includes(query) ||
-         phonesText.includes(query));
+         phonesText.includes(query) ||
+         (i.group || '').toLowerCase().includes(query));
     const matchCat = cat === 'all' ||
                      (cat === 'social' ? (i.cat.includes('social') || i.cat.includes('idoso')) :
                      i.cat.includes(cat));
@@ -5094,6 +5485,7 @@ function render() {
 
     const isInforme = i.cat.includes('informes');
     const isPolice = i.cat.includes('delegacias');
+    const isInterior = i.cat.includes('interior');
 
     if (isInforme) {
       const metaRows = [
@@ -5134,14 +5526,16 @@ function render() {
     }
 
     return `
-    <div class="tech-card${isPolice ? ' police-card' : ''}">
+    <div class="tech-card${isPolice ? ' police-card' : ''}${isInterior ? ' interior-card' : ''}">
       <div class="card-top">
         <div style="display:flex; align-items:center; gap:0.55rem;">
           ${isPolice ? `<span class="police-badge">${ICONS.police}</span>` : ''}
+          ${isInterior ? `<span class="interior-badge">${ICONS.home}</span>` : ''}
           <h2>${i.name}</h2>
         </div>
         <span class="subtitle">${i.fullName}</span>
         ${isPolice && i.group ? `<span class="police-group-tag">${ICONS.shield} ${i.group}</span>` : ''}
+        ${isInterior && i.group ? `<span class="interior-group-tag">${ICONS.home} Município: ${i.group}</span>` : ''}
       </div>
       <div class="card-body">
         <div class="info-group"><span class="info-icon">${ICONS.map}</span><div><span class="label-tech">Localização</span>${i.address}</div></div>
