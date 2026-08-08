@@ -29,6 +29,11 @@
     --radius-ui: 12px;
     --font-sans: 'Inter', -apple-system, sans-serif;
     --font-serif: 'Lora', serif;
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+    --shadow-sm: 0 2px 8px -2px rgba(15, 23, 42, 0.08);
+    --shadow-md: 0 12px 28px -8px rgba(15, 23, 42, 0.16);
+    --shadow-lg: 0 24px 48px -12px rgba(15, 23, 42, 0.28);
   }
 
   @media (prefers-color-scheme: dark) {
@@ -38,11 +43,31 @@
       --bg-main: #020617;
       --bg-card: #0F172A;
       --border-ui: #1E293B;
+      --shadow-xs: 0 0 0 1px rgba(255, 255, 255, 0.045);
+      --shadow-sm: 0 4px 16px -4px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      --shadow-md: 0 14px 32px -8px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06);
+      --shadow-lg: 0 26px 56px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
     }
   }
 
   html {
     scroll-behavior: smooth;
+    scrollbar-color: var(--border-ui) var(--bg-main);
+    scrollbar-width: thin;
+  }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg-main); }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-ui);
+    border-radius: 999px;
+    border: 2px solid var(--bg-main);
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--brand-primary-light); }
+
+  ::selection {
+    background: var(--brand-primary);
+    color: #fff;
   }
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -108,12 +133,14 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: var(--shadow-xs);
+    transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease), border-color 0.25s var(--ease);
   }
 
   .tech-card:hover {
-    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
-    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-3px);
+    border-color: #CBD5E1;
   }
 
   .container { max-width: 1400px; margin: 0 auto; padding: 0 1.5rem; }
@@ -177,6 +204,17 @@
   .argo-emblem .sun-core {
     fill: #FEDD00;
     opacity: 0.95;
+    transform-origin: center;
+    animation: heroSunPulse 4s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .argo-emblem .sun-core { animation: none; }
+  }
+
+  @keyframes heroSunPulse {
+    0%, 100% { opacity: 0.95; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.12); }
   }
 
   .argo-emblem .sun-ray {
@@ -274,6 +312,63 @@
     margin-top: 1.25rem;
   }
 
+  .hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #29ABE2;
+    margin: 0 0 1.15rem;
+  }
+
+  .hero-eyebrow svg { flex-shrink: 0; }
+
+  .hero-stats {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 1.75rem;
+    margin-top: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .hero-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .hero-stat-value {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 1.65rem;
+    color: #fff;
+    line-height: 1;
+  }
+
+  .hero-stat-label {
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #94A3B8;
+  }
+
+  .hero-stat-divider {
+    width: 1px;
+    height: 32px;
+    background: rgba(148, 163, 184, 0.25);
+  }
+
+  @media (max-width: 640px) {
+    .hero-stats { gap: 1.1rem; margin-top: 1.5rem; }
+    .hero-stat-divider { display: none; }
+  }
+
   .controls {
     position: sticky;
     top: 0;
@@ -300,12 +395,13 @@
     color: var(--text-main);
     font-family: var(--font-sans);
     font-size: 1rem;
-    transition: all 0.2s;
+    box-shadow: var(--shadow-xs);
+    transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
   }
 
   .search-input:focus {
     border-color: var(--brand-primary);
-    box-shadow: 0 0 0 3px rgba(0, 145, 194, 0.1);
+    box-shadow: 0 0 0 3px rgba(0, 145, 194, 0.12);
   }
 
   .filter-bar-wrapper {
@@ -358,14 +454,14 @@
       background: var(--border-ui);
     }
 
-    /* separador antes de Favoritos */
-    .filter-chip[data-cat="fav"] {
+    /* separador antes de Anotações */
+    .filter-chip[data-cat="anotacoes"] {
       margin-left: 0.75rem;
       padding-left: calc(1rem + 0.75rem);
       position: relative;
     }
 
-    .filter-chip[data-cat="fav"]::before {
+    .filter-chip[data-cat="anotacoes"]::before {
       content: "";
       position: absolute;
       left: 0;
@@ -387,7 +483,7 @@
     font-weight: 600;
     cursor: pointer;
     color: var(--text-muted);
-    transition: all 0.2s;
+    transition: background 0.2s var(--ease), color 0.2s var(--ease), border-color 0.2s var(--ease), box-shadow 0.2s var(--ease), transform 0.15s var(--ease);
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
@@ -467,6 +563,11 @@
     background: var(--brand-primary);
     color: white;
     border-color: var(--brand-primary);
+    box-shadow: 0 3px 10px -3px rgba(0, 145, 194, 0.45);
+  }
+
+  .filter-chip:active {
+    transform: scale(0.96);
   }
 
   .filter-chip[aria-pressed="true"] .chip-count {
@@ -477,11 +578,23 @@
   .empty-state {
     grid-column: 1 / -1;
     text-align: center;
-    padding: 3rem 1.5rem;
+    padding: 3.5rem 1.5rem;
     color: var(--text-muted);
     border: 1.5px dashed var(--border-ui);
     border-radius: var(--radius-ui);
     background: var(--bg-card);
+  }
+
+  .empty-state-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: rgba(0, 145, 194, 0.08);
+    color: var(--brand-primary);
+    margin-bottom: 1.1rem;
   }
 
   .empty-state strong {
@@ -505,12 +618,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 8px 20px -4px rgba(0,0,0,0.35);
+    box-shadow: var(--shadow-md);
     opacity: 0;
     transform: translateY(12px);
     pointer-events: none;
     visibility: hidden;
-    transition: opacity 0.2s, transform 0.2s, background 0.2s, visibility 0.2s;
+    transition: opacity 0.2s var(--ease), transform 0.2s var(--ease), background 0.2s var(--ease), visibility 0.2s, box-shadow 0.2s var(--ease);
     z-index: 200;
   }
 
@@ -523,6 +636,8 @@
 
   .back-to-top:hover {
     background: var(--brand-primary-light);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
   }
 
   .equipment-grid {
@@ -566,14 +681,26 @@
 
   .info-group {
     display: grid;
-    grid-template-columns: 24px 1fr;
+    grid-template-columns: 30px 1fr;
     gap: 0.75rem;
     font-size: 0.9rem;
+    align-items: start;
+  }
+
+  .info-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(0, 145, 194, 0.1);
+    color: var(--brand-primary);
+    flex-shrink: 0;
   }
 
   .info-group svg {
-    color: var(--brand-primary);
-    margin-top: 0.2rem;
+    color: inherit;
   }
 
   .label-tech {
@@ -589,8 +716,9 @@
     font-size: 0.85rem;
     color: var(--text-muted);
     background: var(--bg-main);
-    padding: 1rem;
-    border-radius: 8px;
+    border-left: 3px solid var(--border-ui);
+    padding: 1rem 1rem 1rem 0.85rem;
+    border-radius: 4px 8px 8px 4px;
     margin-top: 0.5rem;
   }
 
@@ -605,6 +733,13 @@
     color: var(--text-main);
     resize: none;
     min-height: 100px;
+    transition: border-color 0.2s var(--ease), background 0.2s var(--ease);
+  }
+
+  .tech-notes:focus {
+    border-style: solid;
+    border-color: var(--brand-primary);
+    background: var(--bg-main);
   }
 
   .image-attach-wrapper {
@@ -634,6 +769,7 @@
     border-radius: 8px;
     overflow: hidden;
     background: var(--bg-main);
+    box-shadow: var(--shadow-xs);
   }
 
   .image-preview img {
@@ -660,10 +796,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: background 0.2s var(--ease), transform 0.15s var(--ease);
   }
 
   .image-preview .image-remove-btn:hover {
     background: #DC2626;
+    transform: scale(1.08);
   }
 
   .image-error-msg {
@@ -682,6 +820,7 @@
     border-radius: 8px;
     padding: 0.85rem 1rem;
     background: var(--bg-main);
+    box-shadow: var(--shadow-xs);
   }
 
   .pdf-preview .pdf-icon-box {
@@ -751,6 +890,7 @@
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
     background: rgba(0,0,0,0.02);
+    border-top: 1px solid var(--border-ui);
   }
 
   .btn-tech {
@@ -764,13 +904,15 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    transition: all 0.2s;
+    transition: background 0.2s var(--ease), color 0.2s var(--ease), border-color 0.2s var(--ease), transform 0.12s var(--ease), box-shadow 0.2s var(--ease);
   }
 
-  .btn-primary { background: var(--brand-primary); color: white; border-color: var(--brand-primary); }
-  .btn-primary:hover { background: var(--brand-primary-light); }
+  .btn-tech:active { transform: scale(0.97); }
+
+  .btn-primary { background: var(--brand-primary); color: white; border-color: var(--brand-primary); box-shadow: var(--shadow-xs); }
+  .btn-primary:hover { background: var(--brand-primary-light); box-shadow: var(--shadow-sm); }
   .btn-secondary { background: var(--bg-card); color: var(--text-main); }
-  .btn-secondary:hover { background: var(--bg-main); }
+  .btn-secondary:hover { background: var(--bg-main); border-color: #CBD5E1; }
 
   .btn-tech.btn-link {
     text-decoration: none;
@@ -823,13 +965,27 @@
     color: var(--brand-info-light);
   }
 
-  .informe-badge {
+  .informe-badge,
+  .team-badge,
+  .cas-badge,
+  .cras-badge,
+  .police-badge,
+  .notes-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: var(--brand-info);
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
     flex-shrink: 0;
   }
+
+  .informe-badge { color: var(--brand-info); background: rgba(180, 83, 9, 0.1); }
+  .team-badge { color: var(--brand-team); background: rgba(108, 92, 231, 0.1); }
+  .cas-badge { color: var(--brand-cas); background: rgba(0, 151, 57, 0.1); }
+  .cras-badge { color: var(--brand-cras); background: rgba(13, 148, 136, 0.1); }
+  .police-badge { color: var(--brand-police-light); background: rgba(30, 58, 138, 0.1); }
+  .notes-badge { color: var(--brand-notes); background: rgba(190, 18, 60, 0.1); }
 
   .informe-box {
     font-size: 0.85rem;
@@ -858,6 +1014,14 @@
     color: var(--brand-info-light);
     font-weight: 700;
     word-break: break-all;
+    text-decoration-color: transparent;
+    text-underline-offset: 2px;
+    transition: text-decoration-color 0.2s var(--ease), color 0.2s var(--ease);
+  }
+
+  .informe-box a:hover {
+    color: var(--brand-info);
+    text-decoration-color: currentColor;
   }
 
   .informe-meta {
@@ -885,14 +1049,6 @@
     color: var(--brand-team);
   }
 
-  .team-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--brand-team);
-    flex-shrink: 0;
-  }
-
   .team-tables {
     display: grid;
     grid-template-columns: 2fr 1fr;
@@ -909,6 +1065,12 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    box-shadow: var(--shadow-xs);
+    transition: box-shadow 0.25s var(--ease);
+  }
+
+  .team-subcard:hover {
+    box-shadow: var(--shadow-sm);
   }
 
   .team-subcard-header {
@@ -959,6 +1121,11 @@
     padding: 0.65rem 1.1rem;
     border-top: 1px solid var(--border-ui);
     vertical-align: top;
+    transition: background 0.15s var(--ease);
+  }
+
+  .team-table tbody tr:hover td {
+    background: var(--bg-main);
   }
 
   .team-name {
@@ -1024,14 +1191,6 @@
     color: var(--brand-cas);
   }
 
-  .cas-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--brand-cas);
-    flex-shrink: 0;
-  }
-
   .cas-groups {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1048,6 +1207,12 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    box-shadow: var(--shadow-xs);
+    transition: box-shadow 0.25s var(--ease);
+  }
+
+  .cas-group:hover {
+    box-shadow: var(--shadow-sm);
   }
 
   .cas-group-header {
@@ -1075,11 +1240,16 @@
     color: var(--text-main);
     font-size: 0.85rem;
     font-weight: 600;
-    transition: background 0.15s;
+    transition: background 0.2s var(--ease);
   }
 
   .cas-link-item:hover {
     background: var(--bg-main);
+  }
+
+  .cas-link-item:hover .cas-link-arrow {
+    opacity: 1;
+    transform: translateX(2px);
   }
 
   .cas-link-item svg {
@@ -1091,6 +1261,7 @@
     margin-left: auto;
     color: var(--text-muted);
     opacity: 0.6;
+    transition: opacity 0.2s var(--ease), transform 0.2s var(--ease);
   }
 
   /* Cartão da categoria "Atendimento CRAS" — painel de acesso rápido a
@@ -1109,14 +1280,6 @@
     color: var(--brand-cras);
   }
 
-  .cras-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--brand-cras);
-    flex-shrink: 0;
-  }
-
   .cras-groups {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1133,6 +1296,12 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    box-shadow: var(--shadow-xs);
+    transition: box-shadow 0.25s var(--ease);
+  }
+
+  .cras-group:hover {
+    box-shadow: var(--shadow-sm);
   }
 
   .cras-group-header {
@@ -1160,11 +1329,16 @@
     color: var(--text-main);
     font-size: 0.85rem;
     font-weight: 600;
-    transition: background 0.15s;
+    transition: background 0.2s var(--ease);
   }
 
   .cras-link-item:hover {
     background: var(--bg-main);
+  }
+
+  .cras-link-item:hover .cras-link-arrow {
+    opacity: 1;
+    transform: translateX(2px);
   }
 
   .cras-link-item svg {
@@ -1176,6 +1350,7 @@
     margin-left: auto;
     color: var(--text-muted);
     opacity: 0.6;
+    transition: opacity 0.2s var(--ease), transform 0.2s var(--ease);
   }
 
   /* Cartões da categoria "Delegacias" — visual de segurança pública,
@@ -1193,14 +1368,6 @@
     color: var(--brand-police-light);
   }
 
-  .police-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--brand-police-light);
-    flex-shrink: 0;
-  }
-
   .police-group-tag {
     display: inline-flex;
     align-items: center;
@@ -1216,6 +1383,59 @@
     margin-top: 0.5rem;
   }
 
+  /* Cartão da aba "Anotações" — espaço livre de anotação para encaminhamentos
+     gerais, sem vínculo a uma unidade específica. Usa o acento rosa
+     (--brand-notes) para diferenciar das demais categorias. */
+  :root {
+    --brand-notes: #BE123C;
+    --brand-notes-light: #E11D48;
+  }
+
+  .notes-card {
+    border-top: 3px solid var(--brand-notes);
+    grid-column: 1 / -1;
+  }
+
+  .notes-card .card-top {
+    background: linear-gradient(180deg, rgba(190, 18, 60, 0.07), rgba(190, 18, 60, 0) 80%);
+  }
+
+  .notes-card .card-top h2 {
+    color: var(--brand-notes-light);
+  }
+
+  .notes-textarea {
+    width: 100%;
+    min-height: 260px;
+    background: var(--bg-main);
+    border: 1.5px solid var(--border-ui);
+    border-radius: 8px;
+    padding: 1rem;
+    font-family: var(--font-sans);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    color: var(--text-main);
+    resize: vertical;
+    transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+  }
+
+  .notes-textarea:focus {
+    border-color: var(--brand-notes);
+    box-shadow: 0 0 0 3px rgba(190, 18, 60, 0.12);
+    outline: none;
+  }
+
+  .notes-save-status {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .notes-save-status svg { color: var(--brand-notes); flex-shrink: 0; }
+
   .external-resource-card {
     display: flex;
     align-items: center;
@@ -1228,6 +1448,13 @@
     border-radius: var(--radius-ui);
     padding: 1.25rem 1.5rem;
     margin-top: 1.5rem;
+    box-shadow: var(--shadow-xs);
+    transition: box-shadow 0.25s var(--ease), transform 0.25s var(--ease);
+  }
+
+  .external-resource-card:hover {
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
   }
 
   .external-resource-card .external-resource-text h3 {
@@ -1269,12 +1496,107 @@
     opacity: 0.85;
   }
 
-  .footer-inner {
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr 1fr;
+    gap: 2.5rem;
+    padding: 2.75rem 1.5rem 2.25rem;
+  }
+
+  @media (max-width: 760px) {
+    .footer-grid {
+      grid-template-columns: 1fr;
+      gap: 1.85rem;
+      text-align: center;
+      padding: 2.25rem 1.5rem 1.75rem;
+    }
+  }
+
+  .footer-col-title {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #64748B;
+    margin-bottom: 0.9rem;
+  }
+
+  .footer-col-brand .footer-brand-mark {
+    display: block;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 700;
+    font-size: 1.4rem;
+    color: var(--brand-primary-light);
+  }
+
+  .footer-col-brand .footer-brand-suas {
+    font-family: var(--font-sans);
+    font-style: normal;
+    font-weight: 700;
+    font-size: 0.55em;
+    color: #94A3B8;
+    letter-spacing: 0.05em;
+    margin-left: 0.3em;
+  }
+
+  .footer-col-brand .footer-tagline {
+    margin: 0.4rem 0 0.9rem;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748B;
+  }
+
+  .footer-mission {
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: #94A3B8;
+    max-width: 320px;
+  }
+
+  @media (max-width: 760px) {
+    .footer-mission { margin: 0 auto; }
+  }
+
+  .footer-link-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  @media (max-width: 760px) {
+    .footer-link-list { align-items: center; }
+  }
+
+  .footer-link-list a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: #CBD5E1;
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: color 0.15s;
+  }
+
+  .footer-link-list a:hover {
+    color: var(--brand-primary-light);
+  }
+
+  .footer-credit-row {
     display: flex;
     align-items: center;
-    gap: 1.25rem;
-    padding: 2.25rem 1.5rem 2.5rem;
-    flex-wrap: wrap;
+    gap: 0.85rem;
+  }
+
+  @media (max-width: 760px) {
+    .footer-credit-row { justify-content: center; }
   }
 
   .footer-badge {
@@ -1330,61 +1652,24 @@
     margin: 0 0.5rem;
   }
 
-  .footer-brand {
+  .footer-bottom {
+    border-top: 1px solid rgba(148, 163, 184, 0.15);
+    background: rgba(0, 0, 0, 0.15);
+  }
+
+  .footer-bottom-inner {
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.2rem;
-    margin-left: auto;
-    padding-left: 1.5rem;
-    border-left: 1px solid rgba(148, 163, 184, 0.18);
-    text-align: right;
-  }
-
-  .footer-brand-mark {
-    font-family: var(--font-serif);
-    font-style: italic;
-    font-weight: 700;
-    font-size: 1rem;
-    color: var(--brand-primary-light);
-  }
-
-  .footer-brand-suas {
-    font-family: var(--font-sans);
-    font-style: normal;
-    font-weight: 700;
-    font-size: 0.6em;
-    color: #94A3B8;
-    letter-spacing: 0.05em;
-    margin-left: 0.3em;
-  }
-
-  .footer-tagline {
-    font-size: 0.66rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.9rem 1.5rem;
+    font-size: 0.72rem;
     color: #64748B;
+    text-align: center;
   }
 
-  @media (max-width: 640px) {
-    .footer-inner {
-      flex-direction: column;
-      text-align: center;
-      gap: 1.1rem;
-      padding: 2rem 1.5rem 2.25rem;
-    }
-    .footer-text { align-items: center; }
-    .footer-brand {
-      align-items: center;
-      text-align: center;
-      margin-left: 0;
-      padding-left: 0;
-      border-left: none;
-      border-top: 1px solid rgba(148, 163, 184, 0.18);
-      padding-top: 1.1rem;
-      width: 100%;
-    }
-  }
+  .footer-bottom-sep { color: #475569; }
 
   .sr-only {
     position: absolute;
@@ -1448,9 +1733,468 @@
     .hero h1 { font-size: 2rem; }
     .external-resource-card { flex-direction: column; align-items: stretch; text-align: center; }
   }
+
+  /* ===================== Tela de Login ===================== */
+  #loginScreen {
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    background: var(--brand-secondary);
+    display: flex;
+    align-items: center;
+    align-items: safe center;
+    justify-content: center;
+    padding: 1.5rem;
+    overflow-y: auto;
+  }
+
+  #loginScreen[hidden] { display: none; }
+
+  .login-shell {
+    position: relative;
+    width: 100%;
+    max-width: 900px;
+    margin: auto;
+    display: grid;
+    grid-template-columns: 1fr 1.05fr;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 30px 70px -15px rgba(0, 0, 0, 0.55);
+    background: var(--bg-card);
+  }
+
+  @media (max-width: 760px) {
+    .login-shell {
+      grid-template-columns: 1fr;
+      max-width: 420px;
+    }
+  }
+
+  /* ---- Painel esquerdo: identidade Argo SUAS ---- */
+  .login-story {
+    position: relative;
+    background: var(--brand-secondary);
+    color: #fff;
+    padding: 2.5rem 2.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 1.5rem;
+    overflow: hidden;
+    min-height: 460px;
+  }
+
+  @media (max-width: 760px) {
+    .login-story {
+      min-height: unset;
+      padding: 1.6rem 1.5rem;
+      gap: 0.9rem;
+    }
+  }
+
+  .login-story-stripe {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 5px;
+    background: linear-gradient(
+      90deg,
+      #0091C2 0%, #0091C2 34%,
+      #FFFFFF 34%, #FFFFFF 40%,
+      #009739 40%, #009739 92%,
+      #ED1C24 92%, #ED1C24 100%
+    );
+  }
+
+  .login-story-glow {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(480px circle at 18% 15%, rgba(0, 145, 194, 0.3), transparent 62%),
+      radial-gradient(420px circle at 88% 92%, rgba(0, 151, 57, 0.22), transparent 60%);
+    pointer-events: none;
+  }
+
+  .login-story-emblem {
+    position: absolute;
+    right: -10%;
+    bottom: -8%;
+    width: 78%;
+    max-width: 340px;
+    height: auto;
+    opacity: 0.92;
+    pointer-events: none;
+  }
+
+  @media (max-width: 760px) {
+    .login-story-emblem {
+      width: 44%;
+      max-width: 160px;
+      right: -6%;
+      bottom: -18%;
+      opacity: 0.5;
+    }
+  }
+
+  .login-story-emblem .river-wave { fill: none; stroke-linecap: round; }
+  .login-story-emblem .river-wave.wave-blue { stroke: #0091C2; stroke-width: 2.5; opacity: 0.4; }
+  .login-story-emblem .river-wave.wave-green { stroke: #009739; stroke-width: 2.5; opacity: 0.32; }
+  .login-story-emblem .embrace-hull { fill: none; stroke: url(#loginHullGradient); stroke-width: 7; stroke-linecap: round; }
+  .login-story-emblem .embrace-hull.inner { stroke-width: 2.5; opacity: 0.55; }
+  .login-story-emblem .hand-hint { fill: none; stroke: url(#loginHullGradient); stroke-width: 3; stroke-linecap: round; opacity: 0.75; }
+  .login-story-emblem .sun-core {
+    fill: #FEDD00;
+    opacity: 0.95;
+    transform-origin: center;
+    animation: loginSunPulse 4s ease-in-out infinite;
+  }
+  .login-story-emblem .sun-ray { stroke: #FEDD00; stroke-width: 2; stroke-linecap: round; opacity: 0.55; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .login-story-emblem .sun-core { animation: none; }
+  }
+
+  @keyframes loginSunPulse {
+    0%, 100% { opacity: 0.95; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.14); }
+  }
+
+  .login-story-top {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .login-story-top svg { flex-shrink: 0; }
+
+  .login-story-eyebrow {
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #94A3B8;
+  }
+
+  .login-story-content { position: relative; z-index: 1; }
+
+  .login-story-brand {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-style: italic;
+    font-size: 2.1rem;
+    margin: 0 0 0.35rem;
+    letter-spacing: 0.01em;
+    line-height: 1.1;
+  }
+
+  .login-story-brand span {
+    font-family: var(--font-sans);
+    font-style: normal;
+    font-weight: 700;
+    font-size: 0.42em;
+    color: #29ABE2;
+    vertical-align: middle;
+    margin-left: 0.3em;
+  }
+
+  .login-story-tagline {
+    margin: 0 0 0.9rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94A3B8;
+  }
+
+  .login-story-desc {
+    margin: 0;
+    max-width: 320px;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: #CBD5E1;
+  }
+
+  @media (max-width: 760px) {
+    .login-story-desc { display: none; }
+    .login-story-content { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
+    .login-story-brand { font-size: 1.4rem; margin: 0; }
+    .login-story-tagline { margin: 0; font-size: 0.6rem; }
+  }
+
+  /* ---- Painel direito: formulário ---- */
+  .login-panel {
+    position: relative;
+    background: var(--bg-card);
+    padding: 2.75rem 2.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  @media (max-width: 760px) {
+    .login-panel { padding: 2rem 1.75rem 1.85rem; }
+  }
+
+  .login-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--brand-primary);
+    margin-bottom: 0.65rem;
+  }
+
+  .login-title {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 1.55rem;
+    color: var(--text-main);
+    margin: 0 0 0.7rem;
+    line-height: 1.2;
+  }
+
+  .login-river {
+    display: block;
+    width: 84px;
+    height: 10px;
+    margin-bottom: 1.1rem;
+    overflow: visible;
+  }
+
+  .login-river path {
+    stroke: var(--brand-primary);
+    opacity: 0.45;
+    fill: none;
+  }
+
+  .login-sub {
+    margin: 0 0 1.75rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .login-field { text-align: left; margin-bottom: 1rem; }
+
+  .login-field label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    margin-bottom: 0.4rem;
+  }
+
+  .login-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .login-input-wrapper svg {
+    position: absolute;
+    left: 0.95rem;
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+
+  #loginPassword {
+    width: 100%;
+    background: var(--bg-main);
+    border: 1.5px solid var(--border-ui);
+    padding: 0.8rem 2.7rem;
+    border-radius: 9px;
+    color: var(--text-main);
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    transition: all 0.2s;
+  }
+
+  #loginPassword:focus {
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 3px rgba(0, 145, 194, 0.15);
+    outline: none;
+  }
+
+  .login-toggle-visibility {
+    position: absolute;
+    right: 0.5rem;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .login-toggle-visibility:hover {
+    background: var(--border-ui);
+    color: var(--text-main);
+  }
+
+  .login-error {
+    display: none;
+    align-items: center;
+    gap: 0.4rem;
+    text-align: left;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #DC2626;
+    background: rgba(220, 38, 38, 0.08);
+    border: 1px solid rgba(220, 38, 38, 0.25);
+    border-radius: 7px;
+    padding: 0.6rem 0.8rem;
+    margin-bottom: 1rem;
+  }
+
+  .login-error.visible { display: flex; }
+
+  .login-error.shake { animation: loginShake 0.4s; }
+
+  @keyframes loginShake {
+    10%, 90% { transform: translateX(-1px); }
+    20%, 80% { transform: translateX(2px); }
+    30%, 50%, 70% { transform: translateX(-4px); }
+    40%, 60% { transform: translateX(4px); }
+  }
+
+  .login-submit {
+    width: 100%;
+    padding: 0.85rem;
+    border-radius: 9px;
+    border: none;
+    background: var(--brand-primary);
+    color: white;
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: background 0.2s, transform 0.15s;
+  }
+
+  .login-submit:hover { background: var(--brand-primary-light); }
+  .login-submit:active { transform: scale(0.98); }
+  .login-submit:disabled { opacity: 0.7; cursor: default; }
+
+  .login-footnote {
+    margin: 1.6rem 0 0;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.45rem;
+  }
+
+  .login-footnote svg { flex-shrink: 0; margin-top: 0.15rem; color: var(--text-muted); }
+  .login-footnote strong { color: var(--text-main); }
+
+  #appRoot[data-locked="true"] {
+    display: none;
+  }
 </style>
 </head>
 <body>
+
+<div id="loginScreen" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+  <div class="login-shell">
+
+    <div class="login-story" aria-hidden="true">
+      <div class="login-story-stripe"></div>
+      <div class="login-story-glow"></div>
+
+      <svg class="login-story-emblem" viewBox="0 0 320 230" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="loginHullGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#0091C2"/>
+            <stop offset="50%" stop-color="#29ABE2"/>
+            <stop offset="100%" stop-color="#009739"/>
+          </linearGradient>
+        </defs>
+        <path class="river-wave wave-blue" d="M0,178 C40,164 70,192 110,178 C150,164 180,192 220,178 C250,167 285,186 320,175"/>
+        <path class="river-wave wave-green" d="M0,196 C45,183 80,208 125,195 C165,183 200,208 240,196 C270,186 300,202 320,193"/>
+        <path class="river-wave wave-blue" d="M0,212 C50,200 90,222 135,210 C175,199 215,222 255,211 C280,203 305,215 320,209" style="opacity:0.2;"/>
+        <path class="embrace-hull" d="M42,86 C58,132 100,178 152,190 C165,193 175,193 168,193 C205,193 250,150 278,86"/>
+        <path class="embrace-hull inner" d="M60,92 C76,128 112,164 160,174 C204,164 240,128 260,92"/>
+        <path class="hand-hint" d="M42,86 C36,72 34,58 40,44"/>
+        <path class="hand-hint" d="M55,74 C51,60 51,48 58,36" style="opacity:0.5;"/>
+        <path class="hand-hint" d="M278,86 C284,72 286,58 280,44"/>
+        <path class="hand-hint" d="M265,74 C269,60 269,48 262,36" style="opacity:0.5;"/>
+        <circle class="sun-core" cx="160" cy="46" r="11"/>
+        <line class="sun-ray" x1="160" y1="18" x2="160" y2="6"/>
+        <line class="sun-ray" x1="136" y1="28" x2="126" y2="18"/>
+        <line class="sun-ray" x1="184" y1="28" x2="194" y2="18"/>
+      </svg>
+
+      <div class="login-story-top">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#29ABE2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span class="login-story-eyebrow">Acesso Restrito</span>
+      </div>
+
+      <div class="login-story-content">
+        <p class="login-story-brand">Argo<span>SUAS</span></p>
+        <p class="login-story-tagline">Rede de Políticas Públicas de Roraima</p>
+        <p class="login-story-desc">Diretório técnico de equipamentos socioassistenciais e suporte à rede RAPS de Boa Vista, para uso exclusivo da equipe.</p>
+      </div>
+    </div>
+
+    <div class="login-panel">
+      <span class="login-eyebrow">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Equipe Técnica
+      </span>
+      <h1 id="loginTitle" class="login-title">Entrar no painel</h1>
+      <svg class="login-river" viewBox="0 0 84 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M0,5 C10,0 15,10 25,5 C35,0 40,10 50,5 C60,0 65,10 75,5 C78,4 81,5 84,5" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <p class="login-sub">Use a senha compartilhada da equipe para acessar o diretório de equipamentos.</p>
+
+      <form id="loginForm" autocomplete="off" novalidate>
+        <div class="login-field">
+          <label for="loginPassword">Senha de acesso</label>
+          <div class="login-input-wrapper">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <input type="password" id="loginPassword" name="password" placeholder="Digite a senha da equipe" autocomplete="current-password" required>
+            <button type="button" id="loginToggleVisibility" class="login-toggle-visibility" aria-label="Mostrar senha">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div id="loginError" class="login-error" role="alert">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="loginErrorText">Senha incorreta. Tente novamente.</span>
+        </div>
+
+        <button type="submit" class="login-submit">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+          Entrar
+        </button>
+      </form>
+
+      <p class="login-footnote">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <span>Acesso destinado à <strong>equipe técnica do SUAS</strong> em Boa Vista - RR. Em caso de dúvida sobre a senha, contate a coordenação.</span>
+      </p>
+    </div>
+
+  </div>
+</div>
+
+<div id="appRoot" data-locked="true">
 
 <a href="#mainContent" class="skip-link">Pular para o conteúdo</a>
 
@@ -1482,6 +2226,10 @@
     <line class="sun-ray" x1="184" y1="28" x2="194" y2="18"/>
   </svg>
   <div class="container">
+    <p class="hero-eyebrow">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
+      <span>Sistema Único de Assistência Social · Boa Vista, Roraima</span>
+    </p>
     <div class="hero-top">
       <div class="flag-group">
         <svg viewBox="0 0 400 280" width="52" height="36" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bandeira de Roraima">
@@ -1501,6 +2249,23 @@
       </h1>
     </div>
     <p>Diretório técnico de equipamentos socioassistenciais e suporte à rede RAPS de Boa Vista, Roraima. Gestão centralizada para profissionais de saúde e assistência.</p>
+
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <span class="hero-stat-value" id="heroStatTotal">0</span>
+        <span class="hero-stat-label">Unidades e recursos</span>
+      </div>
+      <div class="hero-stat-divider" aria-hidden="true"></div>
+      <div class="hero-stat">
+        <span class="hero-stat-value" id="heroStatCategories">0</span>
+        <span class="hero-stat-label">Categorias de acesso</span>
+      </div>
+      <div class="hero-stat-divider" aria-hidden="true"></div>
+      <div class="hero-stat">
+        <span class="hero-stat-value">24h</span>
+        <span class="hero-stat-label">Consulta a qualquer hora</span>
+      </div>
+    </div>
   </div>
 </header>
 <div class="flag-stripe"></div>
@@ -1519,6 +2284,9 @@
       </a>
       <button class="btn-tech btn-secondary" onclick="exportData()" title="Backup de Dados" aria-label="Baixar backup das anotações técnicas">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>
+      <button class="btn-tech btn-secondary" onclick="logout()" title="Sair" aria-label="Sair e bloquear o acesso novamente">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       </button>
     </div>
     <div class="filter-bar-wrapper">
@@ -1573,6 +2341,11 @@
           <span>Previdência</span>
           <span class="chip-count" id="count-previdencia">0</span>
         </button>
+        <button class="filter-chip" data-cat="documentacao" role="tab" aria-selected="false">
+          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M15 9h3"/><path d="M15 13h3"/><path d="M6 17c.5-1.8 2-3 3-3s2.5 1.2 3 3"/></svg></span>
+          <span>Documentação</span>
+          <span class="chip-count" id="count-documentacao">0</span>
+        </button>
         <button class="filter-chip" data-cat="habitacao" role="tab" aria-selected="false">
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 10v10a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1V10"/></svg></span>
           <span>Habitação</span>
@@ -1603,10 +2376,9 @@
           <span>Atendimento CRAS</span>
           <span class="chip-count" id="count-cras-panel">0</span>
         </button>
-        <button class="filter-chip" data-cat="fav" role="tab" aria-selected="false">
-          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
-          <span>Favoritos</span>
-          <span class="chip-count" id="count-fav">0</span>
+        <button class="filter-chip" data-cat="anotacoes" role="tab" aria-selected="false">
+          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></span>
+          <span>Anotações</span>
         </button>
       </div>
     </div>
@@ -1614,7 +2386,8 @@
 </div>
 
 <main class="container" id="mainContent">
-  <div id="resultsInfo" role="status" aria-live="polite" style="margin-top: 1.5rem; display:inline-flex; align-items:center; gap:0.4rem; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: var(--brand-primary); background: rgba(0, 145, 194, 0.08); padding: 0.4rem 0.9rem; border-radius: 999px;">
+  <div id="resultsInfo" role="status" aria-live="polite" style="margin-top: 1.5rem; display:inline-flex; align-items:center; gap:0.4rem; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: var(--brand-primary); background: rgba(0, 145, 194, 0.08); padding: 0.4rem 0.9rem; border-radius: 999px; box-shadow: var(--shadow-xs);">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
     <span id="counter">0</span> registros localizados
   </div>
 
@@ -1633,21 +2406,69 @@
 
 <footer class="site-footer">
   <div class="footer-flag-line" aria-hidden="true"></div>
-  <div class="container footer-inner">
-    <div class="footer-badge" aria-hidden="true">Ψ</div>
-    <div class="footer-text">
-      <p class="footer-name">Paulo Xavier</p>
-      <p class="footer-meta">
-        <span>CRP-20/09816</span>
-        <span class="footer-sep">·</span>
-        <span>Psicólogo</span>
-        <span class="footer-sep">·</span>
-        <span>Boa Vista, RR</span>
-      </p>
-    </div>
-    <div class="footer-brand">
+  <div class="container footer-grid">
+
+    <div class="footer-col-brand">
       <span class="footer-brand-mark">Argo<span class="footer-brand-suas">SUAS</span></span>
-      <span class="footer-tagline">Rede de Políticas Públicas de Roraima</span>
+      <p class="footer-tagline">Rede de Políticas Públicas de Roraima</p>
+      <p class="footer-mission">Diretório técnico colaborativo com equipamentos socioassistenciais, de saúde e proteção social de Boa Vista, para consulta rápida da equipe em campo.</p>
+    </div>
+
+    <div class="footer-col-links">
+      <span class="footer-col-title">Atalhos</span>
+      <ul class="footer-link-list">
+        <li>
+          <a href="#mainContent">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg>
+            Voltar ao topo
+          </a>
+        </li>
+        <li>
+          <a href="https://mapa-social.mds.gov.br/" target="_blank" rel="noopener noreferrer">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            Mapa Social (MDS)
+          </a>
+        </li>
+        <li>
+          <a href="javascript:void(0)" onclick="exportData()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Backup de anotações
+          </a>
+        </li>
+        <li>
+          <a href="javascript:void(0)" onclick="logout()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Sair
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="footer-col-credit">
+      <span class="footer-col-title">Responsável Técnico</span>
+      <div class="footer-credit-row">
+        <div class="footer-badge" aria-hidden="true">Ψ</div>
+        <div class="footer-text">
+          <p class="footer-name">Paulo Xavier</p>
+          <p class="footer-meta">
+            <span>CRP-20/09816</span>
+            <span class="footer-sep">·</span>
+            <span>Psicólogo</span>
+          </p>
+          <p class="footer-meta">Boa Vista, RR</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer-bottom">
+    <div class="footer-bottom-inner">
+      <span>Argo SUAS</span>
+      <span class="footer-bottom-sep">·</span>
+      <span>Uso interno da equipe técnica</span>
+      <span class="footer-bottom-sep">·</span>
+      <span id="footerItemCount">0 registros no diretório</span>
     </div>
   </div>
 </footer>
@@ -1656,9 +2477,84 @@
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg>
 </button>
 
+</div>
+
 <div id="print-area"></div>
 
 <script>
+/* ===================== Autenticação (Tela de Login) =====================
+   Senha única compartilhada pela equipe. Para trocar a senha, edite o
+   valor de APP_PASSWORD abaixo. O acesso NÃO fica salvo entre visitas:
+   a senha é pedida sempre que a página é aberta ou recarregada. O
+   desbloqueio vale apenas para a sessão atual da aba, em memória — isso
+   não é uma autenticação segura de servidor, é apenas uma barreira de
+   acesso local, adequada para uso interno da equipe. */
+const APP_PASSWORD = 'Paulus';
+
+function unlockApp() {
+  const appRoot = document.getElementById('appRoot');
+  const loginScreen = document.getElementById('loginScreen');
+  if (appRoot) appRoot.dataset.locked = 'false';
+  if (loginScreen) loginScreen.hidden = true;
+  document.body.style.overflow = '';
+}
+
+function lockApp() {
+  const appRoot = document.getElementById('appRoot');
+  const loginScreen = document.getElementById('loginScreen');
+  if (appRoot) appRoot.dataset.locked = 'true';
+  if (loginScreen) {
+    loginScreen.hidden = false;
+    const pwField = document.getElementById('loginPassword');
+    if (pwField) {
+      pwField.value = '';
+      setTimeout(() => pwField.focus(), 50);
+    }
+  }
+  document.body.style.overflow = 'hidden';
+}
+
+function initAuth() {
+  lockApp();
+
+  const form = document.getElementById('loginForm');
+  const pwField = document.getElementById('loginPassword');
+  const errorEl = document.getElementById('loginError');
+  const toggleBtn = document.getElementById('loginToggleVisibility');
+
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const value = (pwField.value || '').trim();
+
+      if (value.length > 0 && value === APP_PASSWORD) {
+        errorEl.classList.remove('visible');
+        unlockApp();
+      } else {
+        errorEl.classList.add('visible');
+        errorEl.classList.remove('shake');
+        void errorEl.offsetWidth;
+        errorEl.classList.add('shake');
+        pwField.value = '';
+        pwField.focus();
+      }
+    });
+  }
+
+  if (toggleBtn && pwField) {
+    toggleBtn.addEventListener('click', function() {
+      const showing = pwField.type === 'text';
+      pwField.type = showing ? 'password' : 'text';
+      toggleBtn.setAttribute('aria-label', showing ? 'Mostrar senha' : 'Ocultar senha');
+      pwField.focus();
+    });
+  }
+}
+
+function logout() {
+  lockApp();
+}
+
 const DATA = [
   {
     id: "ceac",
@@ -2351,13 +3247,13 @@ const DATA = [
     id: "pf-rr",
     name: "Polícia Federal",
     fullName: "Superintendência Regional da Polícia Federal em Roraima (SR/PF/RR)",
-    cat: ["delegacias"],
+    cat: ["delegacias", "documentacao"],
     group: "Delegacias e Unidades Federais",
     address: "Av. Brasil, 551 - 13 de Setembro, Boa Vista-RR – CEP 69308-050",
     hours: "Segunda a sexta, 08:00 às 17:00 (Migração: 08:00 às 12:00 / 13:00 às 16:00)",
     phones: ["(95) 3621-1515"],
-    services: "Passaportes, Controle de Imigração, SINARM, Crimes Federais.",
-    desc: "Responsável por emissão de passaportes, controle de imigração, regulação de armas (SINARM) e investigação de crimes federais, transnacionais ou desvios de verbas públicas."
+    services: "Passaportes, CRNM (documento de migrante), Controle de Imigração, SINARM, Crimes Federais.",
+    desc: "Responsável por emissão de passaportes, pela Carteira de Registro Nacional Migratório (CRNM) - documento oficial de identificação de pessoas migrantes e refugiadas no Brasil -, controle de imigração, regulação de armas (SINARM) e investigação de crimes federais, transnacionais ou desvios de verbas públicas. Agendamento para CRNM pelo sistema SISMIGRA (servicos.pf.gov.br); em Boa Vista, o atendimento inicial de triagem para migrantes venezuelanos costuma ser feito no PITRIG, ao lado desta unidade."
   },
   {
     id: "prf-rr",
@@ -3223,7 +4119,7 @@ const DATA = [
     name: "SESAU",
     fullName: "Secretaria de Estado da Saúde de Roraima",
     cat: ["saude"],
-    address: "R. Madrid, 180 - Aeroporto, Boa Vista-RR",
+    address: "R. Madrid, 180 - Aeroporto, Boa Vista-RR, 69310-043",
     hours: "07:30 às 12:00 / 14:00 às 18:00",
     phones: ["N/A"],
     services: "Regulação (SISREG), Especialidades, Alto Custo, TFD.",
@@ -3234,7 +4130,7 @@ const DATA = [
     name: "SMSA",
     fullName: "Secretaria Municipal de Saúde de Boa Vista",
     cat: ["saude"],
-    address: "R. Cel. Mota, 418 - Centro, Boa Vista-RR",
+    address: "R. Cel. Mota, 356 - Centro, Boa Vista-RR, 69301-120",
     hours: "Segunda a sexta, 08:00 às 14:00",
     phones: ["156"],
     services: "Atenção Primária (UBS), Hospital da Criança, SAMU.",
@@ -3328,6 +4224,50 @@ const DATA = [
     phones: ["135"],
     services: "Aposentadoria, Auxílio-doença, BPC/LOAS, Pensão por Morte, Perícia Médica.",
     desc: "Agência federal de previdência social; atendimento presencial exclusivamente mediante agendamento pela Central 135 ou Meu INSS."
+  },
+  {
+    id: "iioc-rr",
+    name: "IIOC",
+    fullName: "Instituto de Identificação Odílio Cruz",
+    cat: ["documentacao"],
+    address: "Av. Venezuela, 2083 - Liberdade, Boa Vista-RR, 69309-005",
+    hours: "Segunda a sexta, 07:30 às 18:30 (dois turnos, sem fechar para o almoço)",
+    phones: ["(95) 2121-3403", "(95) 2121-3401"],
+    services: "1ª e 2ª via de RG, Carteira de Identidade Nacional (CIN).",
+    desc: "Órgão da Polícia Civil de Roraima responsável pela emissão da Carteira de Identidade (RG) e da nova Carteira de Identidade Nacional (CIN), que unifica RG e CPF em um único número. Agendamento pelo site da Polícia Civil de Roraima (policiacivil.rr.gov.br). Documentos necessários: certidão de nascimento ou casamento, CPF e comprovante de residência. A 2ª via do RG estadual exige pagamento prévio de DARE (SEFAZ), que pode ser apresentado aqui ou na Casa do Cidadão."
+  },
+  {
+    id: "casa-cidadao-rr",
+    name: "Casa do Cidadão",
+    fullName: "Casa do Cidadão - Emissão de Documentos (SEFAZ/RR)",
+    cat: ["documentacao"],
+    address: "R. Izidio Galdino da Silva, 2469 - Sen. Hélio Campos, Boa Vista-RR, 69316-358",
+    hours: "N/A",
+    phones: ["(95) 3625-9737"],
+    services: "2ª via de RG mediante DARE (Cédula de Identidade).",
+    desc: "Posto de atendimento vinculado à SEFAZ/RR que recebe o comprovante de pagamento do DARE para emissão da 2ª via da Carteira de Identidade (RG). O DARE deve ser gerado previamente pelo site da SEFAZ-RR."
+  },
+  {
+    id: "receita-federal-cac",
+    name: "Receita Federal (CAC)",
+    fullName: "Centro de Atendimento ao Contribuinte - Receita Federal do Brasil",
+    cat: ["documentacao"],
+    address: "Av. Governador Anchieta, 618 - Caçari, Boa Vista-RR, 69307-775",
+    hours: "Segunda a sexta, 08:00 às 16:00 (contínuo, preferencialmente com agendamento)",
+    phones: ["N/A"],
+    services: "Inscrição e 2ª via de CPF, regularização de pendências, Imposto de Renda.",
+    desc: "Unidade da Receita Federal responsável pela emissão e regularização do CPF, entre outros serviços fiscais. Agendamento recomendado pelo site ou aplicativo da Receita Federal (gov.br/receitafederal); parte dos serviços de CPF também pode ser resolvida sem deslocamento em agências dos Correios, Banco do Brasil ou Caixa Econômica Federal, incluindo as agências da Caixa já listadas neste diretório."
+  },
+  {
+    id: "pitrig-bv",
+    name: "PITRIG",
+    fullName: "Posto de Interiorização e Triagem (PITRIG) - Operação Acolhida",
+    cat: ["documentacao"],
+    address: "Av. Brasil, 551 - Pricumã, Boa Vista-RR, 69308-050 (ao lado da Polícia Federal)",
+    hours: "Segunda a sexta, a partir das 07:00 (chegar cedo; recomenda-se a partir das 06:00)",
+    phones: ["(95) 3621-3100"],
+    services: "Documentação para pessoas refugiadas e migrantes (registro, CRNM/protocolo, apoio à regularização).",
+    desc: "Estrutura conjunta da Operação Acolhida, ACNUR (ONU) e Polícia Federal voltada à documentação e triagem de pessoas refugiadas e migrantes, principalmente venezuelanas, em Boa Vista. Auxilia no agendamento e acompanhamento do processo de Registro Nacional Migratório (CRNM) junto à Polícia Federal, além de orientação sobre interiorização e acesso a direitos. Atendimento sujeito a grande demanda; senha por ordem de chegada."
   },
   {
     id: "siga-antenado",
@@ -3707,7 +4647,7 @@ function informeMetaRow(icon, label, value) {
 
   clean = stripHtml(display).trim();
   if (!clean || clean.toUpperCase() === 'N/A') return '';
-  return `<div class="info-group">${icon}<div><span class="label-tech">${label}</span>${display}</div></div>`;
+  return `<div class="info-group"><span class="info-icon">${icon}</span><div><span class="label-tech">${label}</span>${display}</div></div>`;
 }
 
 const CATEGORY_LABELS_PRINT = {
@@ -3768,8 +4708,8 @@ function renderTeamCard(i, query) {
         <span class="subtitle">👥 Equipe Técnica · SEMADS - Prefeitura de Boa Vista</span>
       </div>
       <div class="card-body">
-        <div class="info-group">${ICONS.map}<div><span class="label-tech">Localização</span>${i.address}</div></div>
-        <div class="info-group">${ICONS.phone}<div><span class="label-tech">Contato Técnico</span>${i.phones.join(' · ')}</div></div>
+        <div class="info-group"><span class="info-icon">${ICONS.map}</span><div><span class="label-tech">Localização</span>${i.address}</div></div>
+        <div class="info-group"><span class="info-icon">${ICONS.phone}</span><div><span class="label-tech">Contato Técnico</span>${i.phones.join(' · ')}</div></div>
         <div class="desc-box">
           <span class="label-tech">Escopo de Atuação</span>
           ${i.desc}
@@ -3866,8 +4806,8 @@ function renderCasCard(i, query) {
         <span class="subtitle">🗂️ Atendimento CAS · Acesso Rápido a Sistemas e Arquivos</span>
       </div>
       <div class="card-body">
-        <div class="info-group">${ICONS.map}<div><span class="label-tech">Localização</span>${i.address}</div></div>
-        <div class="info-group">${ICONS.clock}<div><span class="label-tech">Disponibilidade</span>${i.hours}</div></div>
+        <div class="info-group"><span class="info-icon">${ICONS.map}</span><div><span class="label-tech">Localização</span>${i.address}</div></div>
+        <div class="info-group"><span class="info-icon">${ICONS.clock}</span><div><span class="label-tech">Disponibilidade</span>${i.hours}</div></div>
         <div class="desc-box">
           <span class="label-tech">Escopo do Painel</span>
           ${i.desc}
@@ -3940,8 +4880,8 @@ function renderCrasCard(i, query) {
         <span class="subtitle">🏢 Atendimento CRAS · Sistemas Municipais, Federais e RMA</span>
       </div>
       <div class="card-body">
-        <div class="info-group">${ICONS.map}<div><span class="label-tech">Localização</span>${i.address}</div></div>
-        <div class="info-group">${ICONS.clock}<div><span class="label-tech">Disponibilidade</span>${i.hours}</div></div>
+        <div class="info-group"><span class="info-icon">${ICONS.map}</span><div><span class="label-tech">Localização</span>${i.address}</div></div>
+        <div class="info-group"><span class="info-icon">${ICONS.clock}</span><div><span class="label-tech">Disponibilidade</span>${i.hours}</div></div>
         <div class="desc-box">
           <span class="label-tech">Escopo do Painel</span>
           ${i.desc}
@@ -3989,11 +4929,10 @@ function renderCrasCard(i, query) {
 }
 
 function updateChipCounts() {
-  const favs = safeStorage.getJSON('favs', []);
   const counts = {
     all: DATA.length, saude: 0, tea: 0, social: 0, educacao: 0, juridico: 0,
-    conselho: 0, delegacias: 0, bancos: 0, previdencia: 0, habitacao: 0, mobilidade: 0, informes: 0, equipe: 0, cas: 0,
-    cras: 0, fav: favs.length
+    conselho: 0, delegacias: 0, bancos: 0, previdencia: 0, documentacao: 0, habitacao: 0, mobilidade: 0, informes: 0, equipe: 0, cas: 0,
+    cras: 0
   };
   DATA.forEach(i => {
     if (i.cat.includes('saude')) counts.saude++;
@@ -4005,6 +4944,7 @@ function updateChipCounts() {
     if (i.cat.includes('delegacias')) counts.delegacias++;
     if (i.cat.includes('bancos')) counts.bancos++;
     if (i.cat.includes('previdencia')) counts.previdencia++;
+    if (i.cat.includes('documentacao')) counts.documentacao++;
     if (i.cat.includes('habitacao')) counts.habitacao++;
     if (i.cat.includes('mobilidade')) counts.mobilidade++;
     if (i.cat.includes('informes')) counts.informes++;
@@ -4028,22 +4968,33 @@ function updateChipCounts() {
   setCount('count-delegacias', counts.delegacias);
   setCount('count-bancos', counts.bancos);
   setCount('count-previdencia', counts.previdencia);
+  setCount('count-documentacao', counts.documentacao);
   setCount('count-habitacao', counts.habitacao);
   setCount('count-mobilidade', counts.mobilidade);
   setCount('count-informes', counts.informes);
   setCount('count-equipe', counts.equipe);
   setCount('count-cas', counts.cas);
   setCount('count-cras-panel', counts.cras);
-  setCount('count-fav', counts.fav);
 }
 
 function render() {
   const query = document.getElementById('mainSearch').value.toLowerCase();
   const cat = document.querySelector('.filter-chip.active').dataset.cat;
-  const favs = safeStorage.getJSON('favs', []);
   const grid = document.getElementById('grid');
+  const resultsInfo = document.getElementById('resultsInfo');
 
   updateChipCounts();
+
+  const clearBtn = document.getElementById('searchClearBtn');
+  if (clearBtn) clearBtn.classList.toggle('visible', query.length > 0);
+
+  if (cat === 'anotacoes') {
+    if (resultsInfo) resultsInfo.style.display = 'none';
+    grid.innerHTML = renderNotesCard();
+    return;
+  }
+
+  if (resultsInfo) resultsInfo.style.display = '';
 
   const filtered = DATA.filter(i => {
     const isEquipe = i.cat.includes('equipe');
@@ -4085,22 +5036,20 @@ function render() {
          i.desc.toLowerCase().includes(query) ||
          servicesText.includes(query) ||
          phonesText.includes(query));
-    const isFav = favs.includes(i.id);
     const matchCat = cat === 'all' ||
-                     (cat === 'fav' ? isFav :
                      (cat === 'social' ? (i.cat.includes('social') || i.cat.includes('idoso')) :
-                     i.cat.includes(cat)));
+                     i.cat.includes(cat));
     return matchSearch && matchCat;
   });
 
   document.getElementById('counter').textContent = filtered.length;
 
-  const clearBtn = document.getElementById('searchClearBtn');
-  if (clearBtn) clearBtn.classList.toggle('visible', query.length > 0);
-
   if (filtered.length === 0) {
     grid.innerHTML = `
       <div class="empty-state">
+        <span class="empty-state-icon" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </span>
         <strong>Nenhum registro encontrado</strong>
         Tente ajustar os termos da busca ou selecionar outra categoria.
       </div>`;
@@ -4156,12 +5105,9 @@ function render() {
       return `
       <div class="tech-card informe-card">
         <div class="card-top">
-          <div style="display:flex; justify-content:space-between; align-items:start;">
-            <div style="display:flex; align-items:center; gap:0.55rem;">
-              <span class="informe-badge">${ICONS.info}</span>
-              <h2 style="margin:0;">${i.name}</h2>
-            </div>
-            <button onclick="toggleFav('${i.id}')" aria-label="${favs.includes(i.id) ? 'Remover ' + i.name + ' dos favoritos' : 'Adicionar ' + i.name + ' aos favoritos'}" aria-pressed="${favs.includes(i.id)}" style="background:none; border:none; cursor:pointer; color:${favs.includes(i.id) ? '#FEDD00' : '#CBD5E1'}">${ICONS.star}</button>
+          <div style="display:flex; align-items:center; gap:0.55rem;">
+            <span class="informe-badge">${ICONS.info}</span>
+            <h2 style="margin:0;">${i.name}</h2>
           </div>
           <span class="subtitle">📋 Informe · ${i.fullName}</span>
         </div>
@@ -4190,20 +5136,17 @@ function render() {
     return `
     <div class="tech-card${isPolice ? ' police-card' : ''}">
       <div class="card-top">
-        <div style="display:flex; justify-content:space-between; align-items:start;">
-          <div style="display:flex; align-items:center; gap:0.55rem;">
-            ${isPolice ? `<span class="police-badge">${ICONS.police}</span>` : ''}
-            <h2>${i.name}</h2>
-          </div>
-          <button onclick="toggleFav('${i.id}')" aria-label="${favs.includes(i.id) ? 'Remover ' + i.name + ' dos favoritos' : 'Adicionar ' + i.name + ' aos favoritos'}" aria-pressed="${favs.includes(i.id)}" style="background:none; border:none; cursor:pointer; color:${favs.includes(i.id) ? '#FEDD00' : '#CBD5E1'}">${ICONS.star}</button>
+        <div style="display:flex; align-items:center; gap:0.55rem;">
+          ${isPolice ? `<span class="police-badge">${ICONS.police}</span>` : ''}
+          <h2>${i.name}</h2>
         </div>
         <span class="subtitle">${i.fullName}</span>
         ${isPolice && i.group ? `<span class="police-group-tag">${ICONS.shield} ${i.group}</span>` : ''}
       </div>
       <div class="card-body">
-        <div class="info-group">${ICONS.map}<div><span class="label-tech">Localização</span>${i.address}</div></div>
-        <div class="info-group">${ICONS.clock}<div><span class="label-tech">Disponibilidade</span>${i.hours}</div></div>
-        <div class="info-group">${ICONS.phone}<div><span class="label-tech">Contato Técnico</span>${i.phones.join(' · ')}</div></div>
+        <div class="info-group"><span class="info-icon">${ICONS.map}</span><div><span class="label-tech">Localização</span>${i.address}</div></div>
+        <div class="info-group"><span class="info-icon">${ICONS.clock}</span><div><span class="label-tech">Disponibilidade</span>${i.hours}</div></div>
+        <div class="info-group"><span class="info-icon">${ICONS.phone}</span><div><span class="label-tech">Contato Técnico</span>${i.phones.join(' · ')}</div></div>
         <div class="desc-box">
           <span class="label-tech">Escopo de Atuação</span>
           ${i.desc}
@@ -4303,13 +5246,6 @@ function saveNote(id, value) {
   }
 }
 
-function toggleFav(id) {
-  let f = safeStorage.getJSON('favs', []);
-  f = f.includes(id) ? f.filter(x => x !== id) : [...f, id];
-  safeStorage.set('favs', JSON.stringify(f));
-  render();
-}
-
 function share(id) {
   const i = DATA.find(x => x.id === id);
   const t = `*UNIDADE:* ${i.fullName}\n*ENDEREÇO:* ${stripHtml(i.address)}\n*CONTATO:* ${stripHtml(i.phones.join(' / '))}`;
@@ -4340,6 +5276,132 @@ function truncateForPrint(text, maxLen) {
   return escapeHtml(cut) + '…';
 }
 
+const GENERAL_NOTE_KEY = 'nota_geral_encaminhamento';
+
+function renderNotesCard() {
+  const savedNote = safeStorage.get(GENERAL_NOTE_KEY, '');
+
+  return `
+    <div class="tech-card notes-card">
+      <div class="card-top">
+        <div style="display:flex; align-items:center; gap:0.55rem;">
+          <span class="notes-badge">${ICONS.form}</span>
+          <h2 style="margin:0;">Anotação Geral</h2>
+        </div>
+        <span class="subtitle">📝 Campo livre para encaminhamento geral</span>
+      </div>
+      <div class="card-body">
+        <label for="generalNoteArea" class="sr-only">Anotação geral / encaminhamento</label>
+        <textarea id="generalNoteArea" class="notes-textarea" placeholder="Escreva aqui um encaminhamento geral, resumo do caso ou observações que não pertencem a uma unidade específica..." oninput="saveGeneralNote(this.value)">${escapeHtml(savedNote)}</textarea>
+        <div class="notes-save-status" id="generalNoteStatus" aria-live="polite">
+          ${ICONS.info}
+          <span>As anotações ficam salvas automaticamente neste navegador.</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <button class="btn-tech btn-secondary" onclick="shareGeneralNote()">Compartilhar</button>
+        <button class="btn-tech btn-primary" onclick="printGeneralNote()">Gerar Guia</button>
+      </div>
+    </div>
+  `;
+}
+
+function saveGeneralNote(value) {
+  const statusEl = document.getElementById('generalNoteStatus');
+  if (!safeStorage.set(GENERAL_NOTE_KEY, value)) {
+    if (statusEl) {
+      statusEl.innerHTML = `${ICONS.info}<span style="color:#DC2626;">Não foi possível salvar (armazenamento indisponível ou cheio).</span>`;
+    }
+  }
+}
+
+function shareGeneralNote() {
+  const note = safeStorage.get(GENERAL_NOTE_KEY, '').trim();
+  if (!note) {
+    alert('Escreva uma anotação antes de compartilhar.');
+    return;
+  }
+  const t = `*ENCAMINHAMENTO GERAL*\n\n${note}`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(t)}`, '_blank', 'noopener,noreferrer');
+}
+
+async function printGeneralNote() {
+  const note = safeStorage.get(GENERAL_NOTE_KEY, '').trim() || 'Nenhuma anotação registrada.';
+  const date = new Date().toLocaleDateString('pt-BR', {day:'numeric', month:'long', year:'numeric'});
+  const watermark = buildPrintWatermark();
+
+  const firstPage = `
+    <div class="print-page" style="padding:0; position:relative; font-family:'Inter', sans-serif; color:#0F172A; box-sizing:border-box; display:flex; flex-direction:column; background:white; border:2px solid #0F172A;">
+      ${watermark}
+
+      <div style="position:absolute; inset:0.25cm; border:1px solid #94A3B8; z-index:0; pointer-events:none;"></div>
+
+      <div style="position:relative; z-index:1; display:flex; flex-direction:column; height:100%; padding:0.7cm 0.9cm; box-sizing:border-box;">
+
+        <table style="width:100%; border-collapse:collapse; margin-bottom:8px; table-layout:fixed;">
+          <tr>
+            <td style="border:1.5px solid #0F172A; padding:8px 14px; vertical-align:middle;">
+              <div>
+                <div style="font-size:1.25rem; font-weight:800; letter-spacing:0.02em; color:#0F172A;">ENCAMINHAMENTO GERAL</div>
+                <div style="font-size:0.68rem; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.04em; margin-top:2px;">Argo SUAS · Sistema Único de Assistência Social do Estado de Roraima</div>
+              </div>
+            </td>
+            <td style="border:1.5px solid #0F172A; padding:8px 14px; text-align:center; width:180px;">
+              <div style="font-size:0.65rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em;">Data de Emissão</div>
+              <div style="font-size:1.05rem; font-weight:800; color:#0F172A;">${date}</div>
+            </td>
+          </tr>
+        </table>
+
+        <table style="width:100%; border-collapse:collapse; margin-bottom:8px; table-layout:fixed;">
+          <tr>
+            <td style="border:1.5px solid #0F172A; background:#F1F5F9; padding:6px 12px; font-size:0.65rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; width:220px;">Profissional Responsável</td>
+            <td style="border:1.5px solid #0F172A; padding:6px 12px; font-size:0.92rem; font-weight:700; color:#0F172A;">Paulo Xavier — Psicólogo, CRP-20/09816</td>
+          </tr>
+        </table>
+
+        <div style="flex-grow:1; display:flex; flex-direction:column; min-height:0; border:1.5px solid #0F172A; border-top:none; padding:16px;">
+          <span style="font-size:0.65rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:8px; display:block;">Observações e Encaminhamento</span>
+          <div id="printNoteBox" style="flex-grow:1; padding:14px 16px; border:1.5px solid #0F172A; border-radius:4px; font-size:15px; line-height:1.5; background:rgba(17,94,89,0.02); overflow:hidden; white-space:pre-wrap;">${escapeHtml(note)}</div>
+        </div>
+
+        <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:flex-end; flex-shrink:0;">
+          <div>
+            <p style="margin:0; font-size:0.82rem; font-weight:700; color:#334155;">Boa Vista - RR, ${date}.</p>
+          </div>
+          <div style="text-align:center; width:280px;">
+            <div style="border-top:2px solid #0F172A; margin-bottom:6px;"></div>
+            <p style="margin:0; font-size:1rem; font-weight:800; color:#0F172A;">Paulo Xavier</p>
+            <p style="margin:0; font-size:0.85rem; color:#475569; font-weight:700;">Psicólogo · CRP-20/09816</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const printArea = document.getElementById('print-area');
+  printArea.innerHTML = firstPage;
+
+  printArea.style.cssText = 'display:block; position:fixed; top:-10000px; left:-10000px; visibility:hidden;';
+
+  await fitPrintNote();
+
+  printArea.style.cssText = '';
+
+  window.print();
+}
+
+function buildPrintWatermark() {
+  const wmPositions = [
+    [10, 18], [37, 14], [64, 18], [91, 14],
+    [23, 50], [50, 46], [77, 50],
+    [10, 82], [37, 86], [64, 82], [91, 86]
+  ];
+  return wmPositions.map(([x, y]) => `
+    <div style="position:absolute; top:${y}%; left:${x}%; transform:translate(-50%,-50%) rotate(-18deg); opacity:0.055; z-index:0; font-size:6.5rem; line-height:1; font-family:'Lora', serif; font-weight:700; color:#0091C2; user-select:none; pointer-events:none;">Ψ</div>
+  `).join('');
+}
+
 async function printGuide(id) {
   const i = DATA.find(x => x.id === id);
   const note = safeStorage.get('note_'+id) || 'Avaliação técnica e conduta especializada indicadas.';
@@ -4367,14 +5429,7 @@ async function printGuide(id) {
   const addressFontSize = addressLines <= 2 ? 13 : addressLines <= 4 ? 10.5 : 8.5;
   const phoneFontSize = phoneLines <= 1 ? 16 : phoneLines <= 3 ? 11.5 : 9;
 
-  const wmPositions = [
-    [10, 18], [37, 14], [64, 18], [91, 14],
-    [23, 50], [50, 46], [77, 50],
-    [10, 82], [37, 86], [64, 82], [91, 86]
-  ];
-  const watermark = wmPositions.map(([x, y]) => `
-    <div style="position:absolute; top:${y}%; left:${x}%; transform:translate(-50%,-50%) rotate(-18deg); opacity:0.055; z-index:0; font-size:6.5rem; line-height:1; font-family:'Lora', serif; font-weight:700; color:#0091C2; user-select:none; pointer-events:none;">Ψ</div>
-  `).join('');
+  const watermark = buildPrintWatermark();
 
   const firstPage = `
     <div class="print-page" style="padding:0; position:relative; font-family:'Inter', sans-serif; color:#0F172A; box-sizing:border-box; display:flex; flex-direction:column; background:white; border:2px solid #0F172A;">
@@ -4560,6 +5615,23 @@ backToTopBtn.addEventListener('click', () => {
   document.getElementById('mainSearch').focus();
 });
 
+function updateHeaderFooterStats() {
+  const totalEl = document.getElementById('heroStatTotal');
+  const catEl = document.getElementById('heroStatCategories');
+  const footerCountEl = document.getElementById('footerItemCount');
+
+  if (totalEl) totalEl.textContent = DATA.length;
+
+  if (catEl) {
+    const chips = document.querySelectorAll('.filter-chip[data-cat]:not([data-cat="all"]):not([data-cat="anotacoes"])');
+    catEl.textContent = chips.length;
+  }
+
+  if (footerCountEl) {
+    footerCountEl.textContent = `${DATA.length} registros no diretório`;
+  }
+}
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').catch(() => {
@@ -4568,6 +5640,8 @@ if ('serviceWorker' in navigator) {
 }
 
 render();
+initAuth();
+updateHeaderFooterStats();
 </script>
 </body>
 </html>
