@@ -5190,6 +5190,7 @@ function renderTeamCard(i, query) {
           </div>
         </div>
 
+        ${renderUserDataFields(i.id)}
         <label for="notes-${i.id}" class="sr-only">Anotações técnicas para ${i.fullName}</label>
         <textarea id="notes-${i.id}" class="tech-notes" placeholder="Anotações Técnicas / Conduta..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
       </div>
@@ -5263,6 +5264,7 @@ function renderCasCard(i, query) {
           </div>
         </div>
 
+        ${renderUserDataFields(i.id)}
         <label for="notes-${i.id}" class="sr-only">Anotações técnicas para ${i.name}</label>
         <textarea id="notes-${i.id}" class="tech-notes" placeholder="Anotações Técnicas / Conduta..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
       </div>
@@ -5344,6 +5346,7 @@ function renderCrasCard(i, query) {
           </div>
         </div>
 
+        ${renderUserDataFields(i.id)}
         <label for="notes-${i.id}" class="sr-only">Anotações técnicas para ${i.name}</label>
         <textarea id="notes-${i.id}" class="tech-notes" placeholder="Anotações Técnicas / Conduta..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
       </div>
@@ -5549,6 +5552,7 @@ function render() {
             ${Array.isArray(i.services) ? i.services.join(', ') : i.services}
             ${formatInformeDesc(i.desc)}
           </div>
+          ${renderUserDataFields(i.id)}
           <label for="notes-${i.id}" class="sr-only">Anotações técnicas para ${i.name}</label>
           <textarea id="notes-${i.id}" class="tech-notes" placeholder="Anotações Técnicas / Conduta..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
           <div class="image-attach-wrapper" id="img-wrap-${i.id}">
@@ -5586,6 +5590,7 @@ function render() {
           <div style="margin-top:0.5rem; font-weight:600; color:var(--brand-primary); font-size:0.75rem;">SERVIÇOS: ${Array.isArray(i.services) ? i.services.join(', ') : i.services}</div>
           ${i.cat.includes('educacao') ? BF_HIGHLIGHT_HTML : ''}
         </div>
+        ${renderUserDataFields(i.id)}
         <label for="notes-${i.id}" class="sr-only">Anotações técnicas para ${i.name}</label>
         <textarea id="notes-${i.id}" class="tech-notes" placeholder="Anotações Técnicas / Conduta..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
         <div class="image-attach-wrapper" id="img-wrap-${i.id}">
@@ -5679,6 +5684,36 @@ function saveNote(id, value) {
   }
 }
 
+function getUserData(id) {
+  return safeStorage.getJSON('userdata_'+id, {nome:'', endereco:'', nis:''});
+}
+
+function saveUserDataField(id, field, value) {
+  const data = getUserData(id);
+  data[field] = value;
+  safeStorage.set('userdata_'+id, JSON.stringify(data));
+}
+
+function renderUserDataFields(id) {
+  const d = getUserData(id);
+  return `
+    <div class="user-data-fields">
+      <div class="user-data-field">
+        <label for="nome-${id}">Nome Completo</label>
+        <input type="text" id="nome-${id}" value="${escapeHtml(d.nome)}" placeholder="Nome completo do(a) usuário(a)" oninput="saveUserDataField('${id}','nome',this.value)">
+      </div>
+      <div class="user-data-field">
+        <label for="endereco-${id}">Endereço / Bairro</label>
+        <input type="text" id="endereco-${id}" value="${escapeHtml(d.endereco)}" placeholder="Endereço ou bairro" oninput="saveUserDataField('${id}','endereco',this.value)">
+      </div>
+      <div class="user-data-field">
+        <label for="nis-${id}">Nº NIS</label>
+        <input type="text" id="nis-${id}" value="${escapeHtml(d.nis)}" placeholder="NIS" oninput="saveUserDataField('${id}','nis',this.value)">
+      </div>
+    </div>
+  `;
+}
+
 function share(id) {
   const i = DATA.find(x => x.id === id);
   const t = `*UNIDADE:* ${i.fullName}\n*ENDEREÇO:* ${stripHtml(i.address)}\n*CONTATO:* ${stripHtml(i.phones.join(' / '))}`;
@@ -5724,6 +5759,7 @@ function renderNotesCard() {
         <span class="subtitle">📝 Campo livre para encaminhamento geral</span>
       </div>
       <div class="card-body">
+        ${renderUserDataFields('geral')}
         <label for="generalNoteArea" class="sr-only">Anotação geral / encaminhamento</label>
         <textarea id="generalNoteArea" class="notes-textarea" placeholder="Escreva aqui um encaminhamento geral, resumo do caso ou observações que não pertencem a uma unidade específica..." oninput="saveGeneralNote(this.value)">${escapeHtml(savedNote)}</textarea>
         <div class="notes-save-status" id="generalNoteStatus" aria-live="polite">
@@ -5761,6 +5797,7 @@ function shareGeneralNote() {
 async function printGeneralNote() {
   const note = safeStorage.get(GENERAL_NOTE_KEY, '').trim() || 'Nenhuma anotação registrada.';
   const date = new Date().toLocaleDateString('pt-BR', {day:'numeric', month:'long', year:'numeric'});
+  const userData = getUserData('geral');
   const watermark = buildPrintWatermark();
 
   const firstPage = `
@@ -5775,8 +5812,9 @@ async function printGeneralNote() {
           <tr>
             <td style="border:1.5px solid #0F172A; padding:8px 14px; vertical-align:middle;">
               <div>
-                <div style="font-size:1.25rem; font-weight:800; letter-spacing:0.02em; color:#0F172A;">ENCAMINHAMENTO GERAL</div>
-                <div style="font-size:0.68rem; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.04em; margin-top:2px;">Argo SUAS · Sistema Único de Assistência Social do Estado de Roraima</div>
+                <div style="font-size:0.7rem; font-weight:800; letter-spacing:0.04em; color:#0091C2; text-transform:uppercase;">Sistema Único de Assistência Social (SUAS)</div>
+                <div style="font-size:0.62rem; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-top:1px;">Proteção Social Básica</div>
+                <div style="font-size:1.15rem; font-weight:800; letter-spacing:0.02em; color:#0F172A; margin-top:4px;">ENCAMINHAMENTO GERAL</div>
               </div>
             </td>
             <td style="border:1.5px solid #0F172A; padding:8px 14px; text-align:center; width:180px;">
@@ -5788,30 +5826,20 @@ async function printGeneralNote() {
 
         <table style="width:100%; border-collapse:collapse; margin-bottom:8px; table-layout:fixed;">
           <tr>
-            <td style="border:1.5px solid #0F172A; background:#F1F5F9; padding:6px 12px; font-size:0.65rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; width:220px;">Profissional Responsável</td>
-            <td style="border:1.5px solid #0F172A; padding:6px 12px;">
-              <div style="font-size:0.92rem; font-weight:700; color:#0F172A;">Paulo Xavier — Psicólogo, CRP-20/09816</div>
-              <div style="font-size:0.66rem; font-weight:600; color:#475569; margin-top:2px;">Proteção Social Básica · Estado de Roraima (RR)</div>
-            </td>
-          </tr>
-        </table>
-
-        <table style="width:100%; border-collapse:collapse; margin-bottom:8px; table-layout:fixed;">
-          <tr>
             <td colspan="3" style="border:1.5px solid #0F172A; border-bottom:none; background:#F1F5F9; padding:4px 12px; font-size:0.6rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#0F172A;">Dados do(a) Usuário(a) Encaminhado(a)</td>
           </tr>
           <tr>
             <td style="border:1.5px solid #0F172A; padding:8px 12px; width:44%; vertical-align:top;">
               <div style="font-size:0.6rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:12px;">Nome Completo</div>
-              <div style="border-bottom:1px solid #94A3B8;">&nbsp;</div>
+              <div style="border-bottom:1px solid #94A3B8; font-size:0.85rem; font-weight:700; color:#0F172A; min-height:1.2em;">${userData.nome ? escapeHtml(userData.nome) : '&nbsp;'}</div>
             </td>
             <td style="border:1.5px solid #0F172A; border-left:none; padding:8px 12px; width:36%; vertical-align:top;">
               <div style="font-size:0.6rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:12px;">Endereço / Bairro</div>
-              <div style="border-bottom:1px solid #94A3B8;">&nbsp;</div>
+              <div style="border-bottom:1px solid #94A3B8; font-size:0.85rem; font-weight:700; color:#0F172A; min-height:1.2em;">${userData.endereco ? escapeHtml(userData.endereco) : '&nbsp;'}</div>
             </td>
             <td style="border:1.5px solid #0F172A; border-left:none; padding:8px 12px; width:20%; vertical-align:top;">
               <div style="font-size:0.6rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:12px;">Nº NIS</div>
-              <div style="border-bottom:1px solid #94A3B8;">&nbsp;</div>
+              <div style="border-bottom:1px solid #94A3B8; font-size:0.85rem; font-weight:700; color:#0F172A; min-height:1.2em;">${userData.nis ? escapeHtml(userData.nis) : '&nbsp;'}</div>
             </td>
           </tr>
         </table>
@@ -5823,7 +5851,7 @@ async function printGeneralNote() {
 
         <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:flex-end; flex-shrink:0;">
           <div>
-            <p style="margin:0; font-size:0.82rem; font-weight:700; color:#334155;">Boa Vista - RR, ${date}.</p>
+            <p style="margin:0; font-size:0.82rem; font-weight:700; color:#334155;">Boa Vista, Roraima, ${date}.</p>
           </div>
           <div style="text-align:center; width:280px;">
             <div style="border-top:2px solid #0F172A; margin-bottom:6px;"></div>
@@ -5865,6 +5893,7 @@ async function printGuide(id) {
   const imgData = (attach && attach.type === 'image') ? attach.data : null;
   const pdfAttach = (attach && attach.type === 'pdf') ? attach : null;
   const date = new Date().toLocaleDateString('pt-BR', {day:'numeric', month:'long', year:'numeric'});
+  const userData = getUserData(id);
 
   const addressDisplay = cleanPrintField(i.address, 'Endereço não informado — consultar coordenação.');
   const hoursDisplay = cleanPrintField(i.hours, 'A confirmar diretamente com a unidade.');
@@ -5899,8 +5928,9 @@ async function printGuide(id) {
           <tr>
             <td style="border:1.5px solid #0F172A; padding:8px 14px; vertical-align:middle;">
               <div>
-                <div style="font-size:1.25rem; font-weight:800; letter-spacing:0.02em; color:#0F172A;">FICHA DE ENCAMINHAMENTO TÉCNICO</div>
-                <div style="font-size:0.68rem; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.04em; margin-top:2px;">Argo SUAS · Sistema Único de Assistência Social do Estado de Roraima</div>
+                <div style="font-size:0.7rem; font-weight:800; letter-spacing:0.04em; color:#0091C2; text-transform:uppercase;">Sistema Único de Assistência Social (SUAS)</div>
+                <div style="font-size:0.62rem; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-top:1px;">Proteção Social Básica</div>
+                <div style="font-size:1.15rem; font-weight:800; letter-spacing:0.02em; color:#0F172A; margin-top:4px;">FICHA DE ENCAMINHAMENTO TÉCNICO</div>
               </div>
             </td>
             <td style="border:1.5px solid #0F172A; padding:8px 14px; text-align:center; width:180px;">
@@ -5912,30 +5942,20 @@ async function printGuide(id) {
 
         <table style="width:100%; border-collapse:collapse; margin-bottom:8px; table-layout:fixed;">
           <tr>
-            <td style="border:1.5px solid #0F172A; background:#F1F5F9; padding:6px 12px; font-size:0.65rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; width:220px;">Profissional Responsável</td>
-            <td style="border:1.5px solid #0F172A; padding:6px 12px;">
-              <div style="font-size:0.92rem; font-weight:700; color:#0F172A;">Paulo Xavier — Psicólogo, CRP-20/09816</div>
-              <div style="font-size:0.66rem; font-weight:600; color:#475569; margin-top:2px;">Proteção Social Básica · Estado de Roraima (RR)</div>
-            </td>
-          </tr>
-        </table>
-
-        <table style="width:100%; border-collapse:collapse; margin-bottom:8px; table-layout:fixed;">
-          <tr>
             <td colspan="3" style="border:1.5px solid #0F172A; border-bottom:none; background:#F1F5F9; padding:4px 12px; font-size:0.6rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#0F172A;">Dados do(a) Usuário(a) Encaminhado(a)</td>
           </tr>
           <tr>
             <td style="border:1.5px solid #0F172A; padding:8px 12px; width:44%; vertical-align:top;">
               <div style="font-size:0.6rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:12px;">Nome Completo</div>
-              <div style="border-bottom:1px solid #94A3B8;">&nbsp;</div>
+              <div style="border-bottom:1px solid #94A3B8; font-size:0.85rem; font-weight:700; color:#0F172A; min-height:1.2em;">${userData.nome ? escapeHtml(userData.nome) : '&nbsp;'}</div>
             </td>
             <td style="border:1.5px solid #0F172A; border-left:none; padding:8px 12px; width:36%; vertical-align:top;">
               <div style="font-size:0.6rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:12px;">Endereço / Bairro</div>
-              <div style="border-bottom:1px solid #94A3B8;">&nbsp;</div>
+              <div style="border-bottom:1px solid #94A3B8; font-size:0.85rem; font-weight:700; color:#0F172A; min-height:1.2em;">${userData.endereco ? escapeHtml(userData.endereco) : '&nbsp;'}</div>
             </td>
             <td style="border:1.5px solid #0F172A; border-left:none; padding:8px 12px; width:20%; vertical-align:top;">
               <div style="font-size:0.6rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:12px;">Nº NIS</div>
-              <div style="border-bottom:1px solid #94A3B8;">&nbsp;</div>
+              <div style="border-bottom:1px solid #94A3B8; font-size:0.85rem; font-weight:700; color:#0F172A; min-height:1.2em;">${userData.nis ? escapeHtml(userData.nis) : '&nbsp;'}</div>
             </td>
           </tr>
         </table>
@@ -5984,7 +6004,7 @@ async function printGuide(id) {
 
         <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:flex-end; flex-shrink:0;">
           <div>
-            <p style="margin:0; font-size:0.82rem; font-weight:700; color:#334155;">Boa Vista - RR, ${date}.</p>
+            <p style="margin:0; font-size:0.82rem; font-weight:700; color:#334155;">Boa Vista, Roraima, ${date}.</p>
           </div>
           <div style="text-align:center; width:280px;">
             <div style="border-top:2px solid #0F172A; margin-bottom:6px;"></div>
