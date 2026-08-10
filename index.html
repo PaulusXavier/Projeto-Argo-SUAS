@@ -5726,11 +5726,11 @@ async function fitPrintNote() {
   }
   const noteBox = document.getElementById('printNoteBox');
   if (!noteBox) return;
-  let fontSize = 10;
-  noteBox.style.fontSize = fontSize + 'pt';
-  while (noteBox.scrollHeight > noteBox.clientHeight && fontSize > 6) {
+  let fontSize = 15;
+  noteBox.style.fontSize = fontSize + 'px';
+  while (noteBox.scrollHeight > noteBox.clientHeight && fontSize > 8) {
     fontSize -= 0.5;
-    noteBox.style.fontSize = fontSize + 'pt';
+    noteBox.style.fontSize = fontSize + 'px';
   }
 }
 
@@ -5801,7 +5801,7 @@ async function printGeneralNote() {
   const watermark = buildPrintWatermark();
 
   const firstPage = `
-    <div class="print-page" style="padding:0; position:relative; font-family:'Times New Roman', Times, serif; color:#0F172A; box-sizing:border-box; display:flex; flex-direction:column; background:white; border:2px solid #0F172A;">
+    <div class="print-page" style="padding:0; position:relative; font-family:'Inter', sans-serif; color:#0F172A; box-sizing:border-box; display:flex; flex-direction:column; background:white; border:2px solid #0F172A;">
       ${watermark}
 
       <div style="position:absolute; inset:0.25cm; border:1px solid #94A3B8; z-index:0; pointer-events:none;"></div>
@@ -5812,13 +5812,13 @@ async function printGeneralNote() {
           <tr>
             <td style="border:1.5px solid #0F172A; padding:8px 14px; vertical-align:middle;">
               <div>
-                <div style="font-size:12pt; font-weight:bold; letter-spacing:0.04em; color:#0091C2; text-transform:uppercase; text-align:justify; line-height:1.5;">Sistema Único de Assistência Social (SUAS)</div>
-                <div style="font-size:12pt; font-weight:bold; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-top:1px; text-align:justify; line-height:1.5;">Proteção Social Básica</div>
-                <div style="font-size:12pt; font-weight:bold; letter-spacing:0.02em; color:#0F172A; margin-top:4px; text-align:justify; line-height:1.5;">ENCAMINHAMENTO GERAL</div>
+                <div style="font-size:0.7rem; font-weight:800; letter-spacing:0.04em; color:#0091C2; text-transform:uppercase;">Sistema Único de Assistência Social (SUAS)</div>
+                <div style="font-size:0.62rem; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-top:1px;">Proteção Social Básica</div>
+                <div style="font-size:1.15rem; font-weight:800; letter-spacing:0.02em; color:#0F172A; margin-top:4px;">ENCAMINHAMENTO GERAL</div>
               </div>
             </td>
             <td style="border:1.5px solid #0F172A; padding:8px 14px; text-align:center; width:180px;">
-              <div style="font-size:12pt; font-weight:bold; color:#475569; text-transform:uppercase; letter-spacing:0.03em; text-align:justify; line-height:1.5;">Data de Emissão</div>
+              <div style="font-size:0.65rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em;">Data de Emissão</div>
               <div style="font-size:1.05rem; font-weight:800; color:#0F172A;">${date}</div>
             </td>
           </tr>
@@ -5826,27 +5826,27 @@ async function printGeneralNote() {
 
         <table style="width:100%; border-collapse:collapse; margin-bottom:8px; table-layout:fixed;">
           <tr>
-            <td colspan="3" style="border:1.5px solid #0F172A; border-bottom:none; background:#F1F5F9; padding:4px 12px; font-size:12pt; font-weight:bold; text-transform:uppercase; letter-spacing:0.03em; color:#0F172A; text-align:justify; line-height:1.5;">Dados do(a) Usuário(a) Encaminhado(a)</td>
+            <td colspan="3" style="border:1.5px solid #0F172A; border-bottom:none; background:#F1F5F9; padding:4px 12px; font-size:0.6rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#0F172A;">Dados do(a) Usuário(a) Encaminhado(a)</td>
           </tr>
           <tr>
             <td style="border:1.5px solid #0F172A; padding:8px 12px; width:44%; vertical-align:top;">
-              <div style="font-size:12pt; font-weight:bold; color:#475569; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:12px; text-align:justify; line-height:1.5;">Nome Completo</div>
+              <div style="font-size:0.6rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:12px;">Nome Completo</div>
               <div style="border-bottom:1px solid #94A3B8; font-size:0.85rem; font-weight:700; color:#0F172A; min-height:1.2em;">${userData.nome ? escapeHtml(userData.nome) : '&nbsp;'}</div>
             </td>
             <td style="border:1.5px solid #0F172A; border-left:none; padding:8px 12px; width:36%; vertical-align:top;">
-              <div style="font-size:12pt; font-weight:bold; color:#475569; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:12px; text-align:justify; line-height:1.5;">Endereço / Bairro</div>
+              <div style="font-size:0.6rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:12px;">Endereço / Bairro</div>
               <div style="border-bottom:1px solid #94A3B8; font-size:0.85rem; font-weight:700; color:#0F172A; min-height:1.2em;">${userData.endereco ? escapeHtml(userData.endereco) : '&nbsp;'}</div>
             </td>
             <td style="border:1.5px solid #0F172A; border-left:none; padding:8px 12px; width:20%; vertical-align:top;">
-              <div style="font-size:12pt; font-weight:bold; color:#475569; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:12px; text-align:justify; line-height:1.5;">Nº NIS</div>
+              <div style="font-size:0.6rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:12px;">Nº NIS</div>
               <div style="border-bottom:1px solid #94A3B8; font-size:0.85rem; font-weight:700; color:#0F172A; min-height:1.2em;">${userData.nis ? escapeHtml(userData.nis) : '&nbsp;'}</div>
             </td>
           </tr>
         </table>
 
         <div style="flex-grow:1; display:flex; flex-direction:column; min-height:0; border:1.5px solid #0F172A; border-top:none; padding:16px;">
-          <span style="font-size:12pt; font-weight:bold; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:8px; display:block; text-align:justify; line-height:1.5;">Observações e Encaminhamento</span>
-          <div id="printNoteBox" style="flex-grow:1; padding:14px 16px; border:1.5px solid #0F172A; border-radius:4px; font-size:10pt; font-weight:normal; text-align:justify; line-height:1.5; background:rgba(17,94,89,0.02); overflow:hidden; white-space:pre-wrap;">${escapeHtml(note)}</div>
+          <span style="font-size:0.65rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:8px; display:block;">Observações e Encaminhamento</span>
+          <div id="printNoteBox" style="flex-grow:1; padding:14px 16px; border:1.5px solid #0F172A; border-radius:4px; font-size:15px; line-height:1.5; background:rgba(17,94,89,0.02); overflow:hidden; white-space:pre-wrap;">${escapeHtml(note)}</div>
         </div>
 
         <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:flex-end; flex-shrink:0;">
@@ -5911,13 +5911,13 @@ async function printGuide(id) {
   const countLines = (txt) => (String(txt).match(/<br>/g) || []).length + 1;
   const addressLines = countLines(addressDisplay);
   const phoneLines = countLines(phonesDisplay);
-  const addressFontSize = addressLines <= 2 ? 14.5 : addressLines <= 4 ? 12 : 10;
-  const phoneFontSize = phoneLines <= 1 ? 18 : phoneLines <= 3 ? 13.5 : 11;
+  const addressFontSize = addressLines <= 2 ? 13 : addressLines <= 4 ? 10.5 : 8.5;
+  const phoneFontSize = phoneLines <= 1 ? 16 : phoneLines <= 3 ? 11.5 : 9;
 
   const watermark = buildPrintWatermark();
 
   const firstPage = `
-    <div class="print-page" style="padding:0; position:relative; font-family:'Times New Roman', Times, serif; color:#0F172A; box-sizing:border-box; display:flex; flex-direction:column; background:white; border:2px solid #0F172A;">
+    <div class="print-page" style="padding:0; position:relative; font-family:'Inter', sans-serif; color:#0F172A; box-sizing:border-box; display:flex; flex-direction:column; background:white; border:2px solid #0F172A;">
       ${watermark}
 
       <div style="position:absolute; inset:0.25cm; border:1px solid #94A3B8; z-index:0; pointer-events:none;"></div>
@@ -5928,13 +5928,13 @@ async function printGuide(id) {
           <tr>
             <td style="border:1.5px solid #0F172A; padding:8px 14px; vertical-align:middle;">
               <div>
-                <div style="font-size:12pt; font-weight:bold; letter-spacing:0.04em; color:#0091C2; text-transform:uppercase; text-align:justify; line-height:1.5;">Sistema Único de Assistência Social (SUAS)</div>
-                <div style="font-size:12pt; font-weight:bold; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-top:1px; text-align:justify; line-height:1.5;">Proteção Social Básica</div>
-                <div style="font-size:12pt; font-weight:bold; letter-spacing:0.02em; color:#0F172A; margin-top:4px; text-align:justify; line-height:1.5;">FICHA DE ENCAMINHAMENTO TÉCNICO</div>
+                <div style="font-size:0.7rem; font-weight:800; letter-spacing:0.04em; color:#0091C2; text-transform:uppercase;">Sistema Único de Assistência Social (SUAS)</div>
+                <div style="font-size:0.62rem; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-top:1px;">Proteção Social Básica</div>
+                <div style="font-size:1.15rem; font-weight:800; letter-spacing:0.02em; color:#0F172A; margin-top:4px;">FICHA DE ENCAMINHAMENTO TÉCNICO</div>
               </div>
             </td>
             <td style="border:1.5px solid #0F172A; padding:8px 14px; text-align:center; width:180px;">
-              <div style="font-size:12pt; font-weight:bold; color:#475569; text-transform:uppercase; letter-spacing:0.03em; text-align:justify; line-height:1.5;">Data de Emissão</div>
+              <div style="font-size:0.65rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em;">Data de Emissão</div>
               <div style="font-size:1.05rem; font-weight:800; color:#0F172A;">${date}</div>
             </td>
           </tr>
@@ -5942,19 +5942,19 @@ async function printGuide(id) {
 
         <table style="width:100%; border-collapse:collapse; margin-bottom:8px; table-layout:fixed;">
           <tr>
-            <td colspan="3" style="border:1.5px solid #0F172A; border-bottom:none; background:#F1F5F9; padding:4px 12px; font-size:12pt; font-weight:bold; text-transform:uppercase; letter-spacing:0.03em; color:#0F172A; text-align:justify; line-height:1.5;">Dados do(a) Usuário(a) Encaminhado(a)</td>
+            <td colspan="3" style="border:1.5px solid #0F172A; border-bottom:none; background:#F1F5F9; padding:4px 12px; font-size:0.6rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#0F172A;">Dados do(a) Usuário(a) Encaminhado(a)</td>
           </tr>
           <tr>
             <td style="border:1.5px solid #0F172A; padding:8px 12px; width:44%; vertical-align:top;">
-              <div style="font-size:12pt; font-weight:bold; color:#475569; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:12px; text-align:justify; line-height:1.5;">Nome Completo</div>
+              <div style="font-size:0.6rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:12px;">Nome Completo</div>
               <div style="border-bottom:1px solid #94A3B8; font-size:0.85rem; font-weight:700; color:#0F172A; min-height:1.2em;">${userData.nome ? escapeHtml(userData.nome) : '&nbsp;'}</div>
             </td>
             <td style="border:1.5px solid #0F172A; border-left:none; padding:8px 12px; width:36%; vertical-align:top;">
-              <div style="font-size:12pt; font-weight:bold; color:#475569; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:12px; text-align:justify; line-height:1.5;">Endereço / Bairro</div>
+              <div style="font-size:0.6rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:12px;">Endereço / Bairro</div>
               <div style="border-bottom:1px solid #94A3B8; font-size:0.85rem; font-weight:700; color:#0F172A; min-height:1.2em;">${userData.endereco ? escapeHtml(userData.endereco) : '&nbsp;'}</div>
             </td>
             <td style="border:1.5px solid #0F172A; border-left:none; padding:8px 12px; width:20%; vertical-align:top;">
-              <div style="font-size:12pt; font-weight:bold; color:#475569; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:12px; text-align:justify; line-height:1.5;">Nº NIS</div>
+              <div style="font-size:0.6rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:12px;">Nº NIS</div>
               <div style="border-bottom:1px solid #94A3B8; font-size:0.85rem; font-weight:700; color:#0F172A; min-height:1.2em;">${userData.nis ? escapeHtml(userData.nis) : '&nbsp;'}</div>
             </td>
           </tr>
@@ -5963,7 +5963,7 @@ async function printGuide(id) {
         <div style="display:grid; grid-template-columns: 1fr 300px; flex-grow:1; min-height:0; border:1.5px solid #0F172A; border-top:none;">
 
           <div style="display:flex; flex-direction:column; min-height:0; border-right:1.5px solid #0F172A; padding:14px;">
-            <span style="font-size:12pt; font-weight:bold; color:#475569; text-transform:uppercase; letter-spacing:0.03em; text-align:justify; line-height:1.5;">Unidade de Destino</span>
+            <span style="font-size:0.65rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em;">Unidade de Destino</span>
 
             <!-- Sigla em destaque + Nome completo -->
             <div style="display:flex; align-items:baseline; gap:10px; margin:4px 0 10px 0; border-bottom:1px solid #CBD5E1; padding-bottom:10px;">
@@ -5971,32 +5971,34 @@ async function printGuide(id) {
               <h2 style="margin:0; font-size:1.18rem; line-height:1.25; color:#0F172A; font-family:'Lora', serif; font-weight:700;">${i.fullName}</h2>
             </div>
 
-            <span style="font-size:12pt; font-weight:bold; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:6px; display:block; text-align:justify; line-height:1.5;">Informações da Unidade e Conduta Técnica</span>
-            <div id="printNoteBox" style="flex-grow:1; padding:12px 14px; border:1.5px solid #0F172A; border-radius:4px; font-size:10pt; font-weight:normal; text-align:justify; line-height:1.5; background:rgba(17,94,89,0.02); overflow:hidden;">
+            <span style="font-size:0.65rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:6px; display:block;">Informações da Unidade e Conduta Técnica</span>
+            <div id="printNoteBox" style="flex-grow:1; padding:12px 14px; border:1.5px solid #0F172A; border-radius:4px; font-size:15px; line-height:1.4; background:rgba(17,94,89,0.02); overflow:hidden;">
               ${summaryLine ? `<div style="margin-bottom:0.6em; padding-bottom:0.5em; border-bottom:1px dashed #CBD5E1; font-size:0.72em; color:#475569;"><strong style="color:#0091C2;">Unidade:</strong> ${summaryLine}</div>` : ''}
-              <strong style="display:block; font-size:12pt; font-weight:bold; text-transform:uppercase; letter-spacing:0.03em; color:#0F172A; margin-bottom:2px; text-align:justify; line-height:1.5;">Conduta e Orientações Técnicas</strong>
+              <strong style="display:block; font-size:0.6em; text-transform:uppercase; letter-spacing:0.03em; color:#0F172A; margin-bottom:2px;">Conduta e Orientações Técnicas</strong>
               <span style="white-space:pre-wrap;">${escapeHtml(note)}</span>
             </div>
             ${pdfAttach ? `<div style="margin-top:8px; font-size:0.72rem; font-weight:700; color:#475569;">📎 Anexo digital em PDF: ${escapeHtml(pdfAttach.name || 'documento.pdf')} (incluído na página seguinte desta impressão${/iphone|ipad|ipod/i.test(navigator.userAgent) ? ' — no iOS, use o link "Abrir PDF" do cartão caso a página apareça em branco' : ''}).</div>` : ''}
           </div>
 
           <div style="display:flex; flex-direction:column; height:100%;">
-            ${catDisplay ? `<div style="border-bottom:1.5px solid #0F172A;">
-              <div style="background:#F1F5F9; padding:6px 10px 4px; font-size:12pt; font-weight:bold; text-transform:uppercase; letter-spacing:0.02em; text-align:justify; line-height:1.5; color:#0F172A;">Categoria</div>
-              <div style="padding:4px 10px 10px; font-size:0.85rem; line-height:1.4; color:#1E293B; font-weight:700;">${catDisplay}</div>
-            </div>` : ''}
-            <div style="border-bottom:1.5px solid #0F172A;">
-              <div style="background:#F1F5F9; padding:6px 10px 4px; font-size:12pt; font-weight:bold; text-transform:uppercase; letter-spacing:0.02em; text-align:justify; line-height:1.5; color:#0F172A;">Endereço</div>
-              <div style="padding:4px 10px 10px; font-size:${addressFontSize}px; line-height:1.4; color:#1E293B; font-weight:700;">${addressDisplay}</div>
-            </div>
-            <div style="border-bottom:1.5px solid #0F172A;">
-              <div style="background:#F1F5F9; padding:6px 10px 4px; font-size:12pt; font-weight:bold; text-transform:uppercase; letter-spacing:0.02em; text-align:justify; line-height:1.5; color:#0F172A;">Horário</div>
-              <div style="padding:4px 10px 10px; font-size:0.9rem; line-height:1.4; color:#1E293B; font-weight:700;">${hoursDisplay}</div>
-            </div>
-            <div style="flex-grow:1; display:flex; flex-direction:column; min-height:0;">
-              <div style="background:#F1F5F9; padding:6px 10px 4px; font-size:12pt; font-weight:bold; text-transform:uppercase; letter-spacing:0.02em; text-align:justify; line-height:1.5; color:#0F172A;">Contato</div>
-              <div style="padding:4px 10px 10px; font-size:${phoneFontSize}px; line-height:1.4; color:#0091C2; font-weight:800;">${phonesDisplay}</div>
-            </div>
+            <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
+              ${catDisplay ? `<tr>
+                <td style="background:#F1F5F9; border-bottom:1.5px solid #0F172A; padding:8px 8px; font-size:0.6rem; font-weight:800; text-transform:uppercase; letter-spacing:0.02em; width:64px; white-space:nowrap; vertical-align:top;">Categoria</td>
+                <td style="border-bottom:1.5px solid #0F172A; padding:8px 10px; font-size:0.78rem; line-height:1.4; vertical-align:top; color:#1E293B; font-weight:700;">${catDisplay}</td>
+              </tr>` : ''}
+              <tr>
+                <td style="background:#F1F5F9; border-bottom:1.5px solid #0F172A; padding:8px 8px; font-size:0.6rem; font-weight:800; text-transform:uppercase; letter-spacing:0.02em; width:64px; white-space:nowrap; vertical-align:top;">Endereço</td>
+                <td style="border-bottom:1.5px solid #0F172A; padding:8px 10px; font-size:${addressFontSize}px; line-height:1.4; vertical-align:top; color:#1E293B; font-weight:700;">${addressDisplay}</td>
+              </tr>
+              <tr>
+                <td style="background:#F1F5F9; border-bottom:1.5px solid #0F172A; padding:8px 8px; font-size:0.6rem; font-weight:800; text-transform:uppercase; letter-spacing:0.02em; white-space:nowrap; vertical-align:top;">Horário</td>
+                <td style="border-bottom:1.5px solid #0F172A; padding:8px 10px; font-size:0.82rem; vertical-align:top; color:#1E293B; font-weight:700;">${hoursDisplay}</td>
+              </tr>
+              <tr>
+                <td style="background:#F1F5F9; padding:8px 8px; font-size:0.6rem; font-weight:800; text-transform:uppercase; letter-spacing:0.02em; white-space:nowrap; vertical-align:top;">Contato</td>
+                <td style="padding:8px 10px; font-size:${phoneFontSize}px; line-height:1.4; vertical-align:top; color:#0091C2; font-weight:800;">${phonesDisplay}</td>
+              </tr>
+            </table>
           </div>
         </div>
 
@@ -6021,7 +6023,7 @@ async function printGuide(id) {
         <table style="width:100%; border-collapse:collapse; margin-bottom:10px; table-layout:fixed;">
           <tr>
             <td style="border:1.5px solid #0F172A; padding:8px 14px;">
-              <div style="font-size:12pt; font-weight:bold; color:#0F172A; font-family:'Times New Roman', Times, serif; text-align:justify; line-height:1.5;">ANEXO FOTOGRÁFICO</div>
+              <div style="font-size:1rem; font-weight:800; color:#0F172A;">ANEXO FOTOGRÁFICO</div>
               <div style="font-size:0.68rem; font-weight:700; color:#475569; text-transform:uppercase;">${i.fullName}</div>
             </td>
           </tr>
