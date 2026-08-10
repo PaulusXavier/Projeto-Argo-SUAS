@@ -1719,6 +1719,34 @@
 
   #print-area { display: none; }
 
+  .ficha-page {
+    font-family: 'Inter', sans-serif;
+    color: #0F172A;
+    background: white;
+    box-sizing: border-box;
+    padding: 1cm 1.4cm;
+    display: flex;
+    flex-direction: column;
+    border: 1.5px solid #0F172A;
+  }
+  .ficha-header { text-align: center; margin-bottom: 0.5cm; border-bottom: 2px solid #0F172A; padding-bottom: 0.35cm; }
+  .ficha-header h1 { font-family: 'Lora', serif; font-size: 1.5rem; font-weight: 700; margin: 0 0 0.15cm; letter-spacing: 0.01em; }
+  .ficha-subtitle { margin: 0; font-style: italic; font-size: 0.85rem; color: #475569; }
+  .ficha-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 1cm; flex-grow: 1; min-height: 0; }
+  .ficha-col { display: flex; flex-direction: column; gap: 0.5cm; min-height: 0; }
+  .ficha-section h2 { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; margin: 0 0 0.3cm; padding-bottom: 0.12cm; border-bottom: 1px solid #CBD5E1; color: #0F172A; }
+  .ficha-section p { margin: 0 0 0.1cm; font-size: 0.85rem; line-height: 1.4; }
+  .ficha-blank-line { border-bottom: 1px solid #94A3B8; height: 0.55cm; margin-bottom: 0.25cm; }
+  .ficha-blank-lines { border-bottom: 1px solid #CBD5E1; height: 0.7cm; }
+  .ficha-section-grow { flex-grow: 1; display: flex; flex-direction: column; min-height: 0; }
+  .ficha-ref-box { display: flex; flex-direction: column; gap: 0.12cm; font-size: 0.78rem; color: #334155; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 4px; padding: 0.3cm 0.4cm; margin-top: 0.2cm; }
+  .ficha-motivo-box { flex-grow: 1; border: 1px solid #94A3B8; border-radius: 4px; padding: 0.35cm 0.4cm; font-size: 15px; line-height: 1.5; overflow: hidden; }
+  .ficha-footer { margin-top: 0.5cm; display: flex; justify-content: space-between; align-items: flex-end; flex-shrink: 0; }
+  .ficha-footer p { margin: 0; font-size: 0.82rem; }
+  .ficha-signature { text-align: center; width: 7cm; }
+  .ficha-sign-line { border-top: 1.5px solid #0F172A; margin-bottom: 0.15cm; }
+  .ficha-attach-note { margin-top: 0.25cm; font-size: 0.7rem; font-weight: 700; color: #475569; }
+
   /* Dimensões da página impressa (A4 paisagem: 29,7cm x 21cm, menos 0,5cm
      de margem de cada lado definida em @page = 28,7cm x 20cm de área útil).
      Isso precisa valer FORA de @media print também: a função printGuide()
@@ -5720,68 +5748,61 @@ function shareGeneralNote() {
 }
 
 async function printGeneralNote() {
-  const note = safeStorage.get(GENERAL_NOTE_KEY, '').trim() || 'Nenhuma anotação registrada.';
+  const note = safeStorage.get(GENERAL_NOTE_KEY, '').trim();
   const date = new Date().toLocaleDateString('pt-BR', {day:'numeric', month:'long', year:'numeric'});
-  const watermark = buildPrintWatermark();
-
+  const motivoContent = note
+    ? `<span style="white-space:pre-wrap;">${escapeHtml(note)}</span>`
+    : `<div class="ficha-blank-lines"></div><div class="ficha-blank-lines"></div><div class="ficha-blank-lines"></div><div class="ficha-blank-lines"></div>`;
   const firstPage = `
-    <div class="print-page" style="padding:0; position:relative; font-family:'Inter', sans-serif; color:#0F172A; box-sizing:border-box; display:flex; flex-direction:column; background:white; border:2px solid #0F172A;">
-      ${watermark}
-
-      <div style="position:absolute; inset:0.25cm; border:1px solid #94A3B8; z-index:0; pointer-events:none;"></div>
-
-      <div style="position:relative; z-index:1; display:flex; flex-direction:column; height:100%; padding:0.7cm 0.9cm; box-sizing:border-box;">
-
-        <table style="width:100%; border-collapse:collapse; margin-bottom:8px; table-layout:fixed;">
-          <tr>
-            <td style="border:1.5px solid #0F172A; padding:8px 14px; vertical-align:middle;">
-              <div>
-                <div style="font-size:1.25rem; font-weight:800; letter-spacing:0.02em; color:#0F172A;">ENCAMINHAMENTO GERAL</div>
-                <div style="font-size:0.68rem; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.04em; margin-top:2px;">Argo SUAS · Sistema Único de Assistência Social do Estado de Roraima</div>
-              </div>
-            </td>
-            <td style="border:1.5px solid #0F172A; padding:8px 14px; text-align:center; width:180px;">
-              <div style="font-size:0.65rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em;">Data de Emissão</div>
-              <div style="font-size:1.05rem; font-weight:800; color:#0F172A;">${date}</div>
-            </td>
-          </tr>
-        </table>
-
-        <table style="width:100%; border-collapse:collapse; margin-bottom:8px; table-layout:fixed;">
-          <tr>
-            <td style="border:1.5px solid #0F172A; background:#F1F5F9; padding:6px 12px; font-size:0.65rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; width:220px;">Profissional Responsável</td>
-            <td style="border:1.5px solid #0F172A; padding:6px 12px; font-size:0.92rem; font-weight:700; color:#0F172A;">Paulo Xavier — Psicólogo, CRP-20/09816</td>
-          </tr>
-        </table>
-
-        <div style="flex-grow:1; display:flex; flex-direction:column; min-height:0; border:1.5px solid #0F172A; border-top:none; padding:16px;">
-          <span style="font-size:0.65rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:8px; display:block;">Observações e Encaminhamento</span>
-          <div id="printNoteBox" style="flex-grow:1; padding:14px 16px; border:1.5px solid #0F172A; border-radius:4px; font-size:15px; line-height:1.5; background:rgba(17,94,89,0.02); overflow:hidden; white-space:pre-wrap;">${escapeHtml(note)}</div>
+    <div class="print-page ficha-page">
+      <div class="ficha-header">
+        <h1>FICHA DE ENCAMINHAMENTO</h1>
+        <p class="ficha-subtitle">Sistema Único de Assistência Social · Roraima</p>
+      </div>
+      <div class="ficha-columns">
+        <div class="ficha-col">
+          <div class="ficha-section">
+            <h2>1. Identificação do Órgão Encaminhador</h2>
+            <p><strong>Serviço/Unidade:</strong> Proteção Social Básica</p>
+            <p><strong>Estado:</strong> Roraima (RR)</p>
+            <p><strong>Profissional Responsável:</strong> Paulo Xavier</p>
+            <p><strong>Cargo/Profissão:</strong> Psicólogo</p>
+            <p><strong>Registro Profissional (CRP):</strong> CRP-20/09816</p>
+          </div>
+          <div class="ficha-section">
+            <h2>2. Dados do(a) Usuário(a)</h2>
+            <p><strong>Nome Completo:</strong></p><div class="ficha-blank-line"></div>
+            <p><strong>Endereço:</strong></p><div class="ficha-blank-line"></div>
+            <p><strong>Bairro:</strong></p><div class="ficha-blank-line"></div>
+            <p><strong>Nº NIS (se houver):</strong></p><div class="ficha-blank-line"></div>
+          </div>
         </div>
-
-        <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:flex-end; flex-shrink:0;">
-          <div>
-            <p style="margin:0; font-size:0.82rem; font-weight:700; color:#334155;">Boa Vista - RR, ${date}.</p>
+        <div class="ficha-col">
+          <div class="ficha-section">
+            <h2>3. Instituição/Serviço Destinatário (a quem se destina)</h2>
+            <p><strong>Órgão / Serviço / Rede:</strong></p><div class="ficha-blank-line"></div>
           </div>
-          <div style="text-align:center; width:280px;">
-            <div style="border-top:2px solid #0F172A; margin-bottom:6px;"></div>
-            <p style="margin:0; font-size:1rem; font-weight:800; color:#0F172A;">Paulo Xavier</p>
-            <p style="margin:0; font-size:0.85rem; color:#475569; font-weight:700;">Psicólogo · CRP-20/09816</p>
+          <div class="ficha-section ficha-section-grow">
+            <h2>4. Motivo do Encaminhamento</h2>
+            <div id="printNoteBox" class="ficha-motivo-box">${motivoContent}</div>
           </div>
+        </div>
+      </div>
+      <div class="ficha-footer">
+        <p>Boa Vista - RR, ${date}.</p>
+        <div class="ficha-signature">
+          <div class="ficha-sign-line"></div>
+          <p><strong>Paulo Xavier</strong></p>
+          <p>Psicólogo · CRP-20/09816</p>
         </div>
       </div>
     </div>
   `;
-
   const printArea = document.getElementById('print-area');
   printArea.innerHTML = firstPage;
-
   printArea.style.cssText = 'display:block; position:fixed; top:-10000px; left:-10000px; visibility:hidden;';
-
-  await fitPrintNote();
-
+  if (note) { await fitPrintNote(); }
   printArea.style.cssText = '';
-
   window.print();
 }
 
