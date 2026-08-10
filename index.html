@@ -1470,6 +1470,45 @@
 
   .notes-save-status svg { color: var(--brand-notes); flex-shrink: 0; }
 
+  .user-data-fields {
+    display: grid;
+    grid-template-columns: 1.4fr 1.1fr 0.7fr;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  @media (max-width: 640px) {
+    .user-data-fields { grid-template-columns: 1fr; }
+  }
+
+  .user-data-field label {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+    margin-bottom: 0.35rem;
+  }
+
+  .user-data-field input {
+    width: 100%;
+    background: var(--bg-main);
+    border: 1.5px solid var(--border-ui);
+    border-radius: 8px;
+    padding: 0.65rem 0.8rem;
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+    color: var(--text-main);
+    transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+  }
+
+  .user-data-field input:focus {
+    border-color: var(--brand-notes);
+    box-shadow: 0 0 0 3px rgba(190, 18, 60, 0.12);
+    outline: none;
+  }
+
   .external-resource-card {
     display: flex;
     align-items: center;
