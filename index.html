@@ -5971,10 +5971,10 @@ async function printGuide(id) {
               <h2 style="margin:0; font-size:1.18rem; line-height:1.25; color:#0F172A; font-family:'Lora', serif; font-weight:700;">${i.fullName}</h2>
             </div>
 
-            <span style="font-size:0.65rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:6px; display:block;">Informações da Unidade e Conduta Técnica</span>
+            <span style="font-size:0.65rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:6px; display:block;">Informações da Unidade</span>
+            ${summaryLine ? `<div style="margin-bottom:8px; padding:8px 12px; border:1.5px solid #0F172A; border-radius:4px; font-size:0.78rem; line-height:1.4; color:#475569; background:rgba(17,94,89,0.02);"><strong style="color:#0091C2;">Unidade:</strong> ${summaryLine}</div>` : ''}
+            <span style="font-size:0.65rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:6px; display:block;">Motivo do Encaminhamento</span>
             <div id="printNoteBox" style="flex-grow:1; padding:12px 14px; border:1.5px solid #0F172A; border-radius:4px; font-size:15px; line-height:1.4; background:rgba(17,94,89,0.02); overflow:hidden;">
-              ${summaryLine ? `<div style="margin-bottom:0.6em; padding-bottom:0.5em; border-bottom:1px dashed #CBD5E1; font-size:0.72em; color:#475569;"><strong style="color:#0091C2;">Unidade:</strong> ${summaryLine}</div>` : ''}
-              <strong style="display:block; font-size:0.6em; text-transform:uppercase; letter-spacing:0.03em; color:#0F172A; margin-bottom:2px;">Conduta e Orientações Técnicas</strong>
               <span style="white-space:pre-wrap;">${escapeHtml(note)}</span>
             </div>
             ${pdfAttach ? `<div style="margin-top:8px; font-size:0.72rem; font-weight:700; color:#475569;">📎 Anexo digital em PDF: ${escapeHtml(pdfAttach.name || 'documento.pdf')} (incluído na página seguinte desta impressão${/iphone|ipad|ipod/i.test(navigator.userAgent) ? ' — no iOS, use o link "Abrir PDF" do cartão caso a página apareça em branco' : ''}).</div>` : ''}
