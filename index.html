@@ -158,8 +158,8 @@
     top: 50%;
     right: 4%;
     transform: translateY(-50%);
-    width: 320px;
-    height: 230px;
+    width: 460px;
+    height: 330px;
     opacity: 0.9;
     pointer-events: none;
   }
@@ -2443,11 +2443,6 @@
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
           <span>Informes</span>
           <span class="chip-count" id="count-informes">0</span>
-        </button>
-        <button class="filter-chip" data-cat="equipe" role="tab" aria-selected="false">
-          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
-          <span>Equipe Técnica</span>
-          <span class="chip-count" id="count-equipe">0</span>
         </button>
         <button class="filter-chip" data-cat="cas" role="tab" aria-selected="false">
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
@@ -5116,7 +5111,7 @@ function informeMetaRow(icon, label, value) {
 const CATEGORY_LABELS_PRINT = {
   saude: 'RAPS', tea: 'TEA / PcD', social: 'Assistência Social', educacao: 'Educação',
   juridico: 'Sistema Judicial', conselho: 'Conselho Tutelar', delegacias: 'Delegacias', bancos: 'Rede Bancária',
-  previdencia: 'Previdência', trabalho: 'Trabalho e Renda', habitacao: 'Habitação', mobilidade: 'Mobilidade', interior: 'CRAS/CREAS Interior', informes: 'Informes', equipe: 'Equipe Técnica',
+  previdencia: 'Previdência', trabalho: 'Trabalho e Renda', habitacao: 'Habitação', mobilidade: 'Mobilidade', interior: 'CRAS/CREAS Interior', informes: 'Informes',
   cas: 'Atendimento CAS', cras: 'Atendimento CRAS'
 };
 
@@ -5477,7 +5472,7 @@ function renderCrasCard(i, query) {
 function updateChipCounts() {
   const counts = {
     all: DATA.length, saude: 0, tea: 0, social: 0, educacao: 0, juridico: 0,
-    conselho: 0, delegacias: 0, bancos: 0, previdencia: 0, trabalho: 0, documentacao: 0, habitacao: 0, mobilidade: 0, interior: 0, informes: 0, equipe: 0, cas: 0,
+    conselho: 0, delegacias: 0, bancos: 0, previdencia: 0, trabalho: 0, documentacao: 0, habitacao: 0, mobilidade: 0, interior: 0, informes: 0, cas: 0,
     cras: 0
   };
   DATA.forEach(i => {
@@ -5496,7 +5491,6 @@ function updateChipCounts() {
     if (i.cat.includes('mobilidade')) counts.mobilidade++;
     if (i.cat.includes('interior')) counts.interior++;
     if (i.cat.includes('informes')) counts.informes++;
-    if (i.cat.includes('equipe')) counts.equipe++;
     if (i.cat.includes('cas')) counts.cas++;
     if (i.cat.includes('cras')) counts.cras++;
   });
@@ -5522,7 +5516,6 @@ function updateChipCounts() {
   setCount('count-mobilidade', counts.mobilidade);
   setCount('count-interior', counts.interior);
   setCount('count-informes', counts.informes);
-  setCount('count-equipe', counts.equipe);
   setCount('count-cas', counts.cas);
   setCount('count-cras-panel', counts.cras);
 }
