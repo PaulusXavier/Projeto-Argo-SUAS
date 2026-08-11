@@ -5886,6 +5886,52 @@ function buildPrintWatermark() {
   `).join('');
 }
 
+/* Converte o PDF anexado em imagens (uma por página) para que a impressão
+   siga exatamente o mesmo mecanismo já usado para o anexo de foto (<img>
+   dentro de um .print-page). O <embed type="application/pdf"> antigo não
+   é renderizado pelo motor de impressão de vários navegadores/dispositivos
+   e resultava em página em branco — convertendo para imagem, o anexo em
+   PDF passa a imprimir de forma confiável, igual à foto. */
+let pdfJsLoadingPromise = null;
+function ensurePdfJsLoaded() {
+  if (window.pdfjsLib) return Promise.resolve();
+  if (pdfJsLoadingPromise) return pdfJsLoadingPromise;
+  pdfJsLoadingPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.js';
+    script.onload = () => {
+      try {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js';
+        resolve();
+      } catch (e) {
+        reject(e);
+      }
+    };
+    script.onerror = () => reject(new Error('Não foi possível carregar o leitor de PDF.'));
+    document.head.appendChild(script);
+  });
+  return pdfJsLoadingPromise;
+}
+
+async function pdfDataUrlToImages(dataUrl) {
+  await ensurePdfJsLoaded();
+  const pdf = await window.pdfjsLib.getDocument({ url: dataUrl }).promise;
+  const images = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const viewport = page.getViewport({ scale: 2.2 });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.ceil(viewport.width);
+    canvas.height = Math.ceil(viewport.height);
+    const ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    images.push(canvas.toDataURL('image/jpeg', 0.92));
+    canvas.width = 0;
+    canvas.height = 0;
+  }
+  return images;
+}
+
 async function printGuide(id) {
   const i = DATA.find(x => x.id === id);
   const note = safeStorage.get('note_'+id) || 'Avaliação técnica e conduta especializada indicadas.';
@@ -5897,7 +5943,7 @@ async function printGuide(id) {
 
   const addressDisplay = cleanPrintField(i.address, 'Endereço não informado — consultar coordenação.');
   const hoursDisplay = cleanPrintField(i.hours, 'A confirmar diretamente com a unidade.');
-  const phonesDisplay = cleanPrintField(i.phones.join('<br>'), 'Não informado — consultar coordenação.');
+  const phonesDisplay = cleanPrintField(i.phones.join('<br>'), '—');
   const servicesRaw = Array.isArray(i.services) ? i.services.join(', ') : i.services;
   const servicesDisplay = cleanPrintField(servicesRaw, '');
   const descRaw = cleanPrintField(i.desc, '');
@@ -5934,8 +5980,7 @@ async function printGuide(id) {
               </div>
             </td>
             <td style="border:1.5px solid #0F172A; padding:8px 14px; text-align:center; width:180px;">
-              <div style="font-size:0.65rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em;">Data de Emissão</div>
-              <div style="font-size:1.05rem; font-weight:800; color:#0F172A;">${date}</div>
+              <div style="font-size:2.4rem; font-weight:800; color:#0091C2; line-height:1;">&Psi;</div>
             </td>
           </tr>
         </table>
@@ -5977,10 +6022,10 @@ async function printGuide(id) {
             <div id="printNoteBox" style="flex-grow:1; padding:12px 14px; border:1.5px solid #0F172A; border-radius:4px; font-size:15px; line-height:1.4; background:rgba(17,94,89,0.02); overflow:hidden;">
               <span style="white-space:pre-wrap;">${escapeHtml(note)}</span>
             </div>
-            ${pdfAttach ? `<div style="margin-top:8px; font-size:0.72rem; font-weight:700; color:#475569;">📎 Anexo digital em PDF: ${escapeHtml(pdfAttach.name || 'documento.pdf')} (incluído na página seguinte desta impressão${/iphone|ipad|ipod/i.test(navigator.userAgent) ? ' — no iOS, use o link "Abrir PDF" do cartão caso a página apareça em branco' : ''}).</div>` : ''}
+            ${pdfAttach ? `<div style="margin-top:8px; font-size:0.72rem; font-weight:700; color:#475569;">📎 Anexo digital em PDF: ${escapeHtml(pdfAttach.name || 'documento.pdf')} (incluído nas páginas seguintes desta impressão).</div>` : ''}
           </div>
 
-          <div style="display:flex; flex-direction:column; height:100%;">
+          <div style="display:flex; flex-direction:column; height:100%; padding-top:28px;">
             <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
               ${catDisplay ? `<tr>
                 <td style="background:#F1F5F9; border-bottom:1.5px solid #0F172A; padding:8px 8px; font-size:0.6rem; font-weight:800; text-transform:uppercase; letter-spacing:0.02em; width:64px; white-space:nowrap; vertical-align:top;">Categoria</td>
@@ -6035,11 +6080,35 @@ async function printGuide(id) {
     </div>
   ` : '';
 
-  const pdfPage = pdfAttach ? `
-    <div class="print-page" style="padding:0; margin:0; background:white;">
-      <embed id="printPdfEmbed" src="${pdfAttach.data}" type="application/pdf" style="width:100%; height:100%; display:block;">
-    </div>
-  ` : '';
+  const pdfPage = pdfAttach ? await (async () => {
+    try {
+      const pdfImages = await pdfDataUrlToImages(pdfAttach.data);
+      return pdfImages.map((imgSrc, idx) => `
+        <div class="print-page" style="position:relative; padding:0.9cm 1.1cm; box-sizing:border-box; display:flex; flex-direction:column; background:white; border:2px solid #0F172A;">
+          <div style="position:absolute; inset:0.25cm; border:1px solid #94A3B8; pointer-events:none;"></div>
+          <div style="position:relative; z-index:1; display:flex; flex-direction:column; height:100%;">
+            <table style="width:100%; border-collapse:collapse; margin-bottom:10px; table-layout:fixed;">
+              <tr>
+                <td style="border:1.5px solid #0F172A; padding:8px 14px;">
+                  <div style="font-size:1rem; font-weight:800; color:#0F172A;">ANEXO EM PDF${pdfImages.length > 1 ? ` — Página ${idx + 1} de ${pdfImages.length}` : ''}</div>
+                  <div style="font-size:0.68rem; font-weight:700; color:#475569; text-transform:uppercase;">${i.fullName}</div>
+                </td>
+              </tr>
+            </table>
+            <div style="flex-grow:1; display:flex; align-items:center; justify-content:center; border:1.5px solid #0F172A; border-radius:4px; overflow:hidden; background:#F8FAFC;">
+              <img src="${imgSrc}" style="max-width:100%; max-height:100%; object-fit:contain;">
+            </div>
+          </div>
+        </div>
+      `).join('');
+    } catch (err) {
+      return `
+        <div class="print-page" style="position:relative; padding:0.9cm 1.1cm; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; justify-content:center; background:white; border:2px solid #0F172A;">
+          <div style="font-size:1rem; font-weight:800; color:#0F172A; text-align:center;">Não foi possível carregar o anexo em PDF para impressão.<br>Verifique a conexão com a internet e tente novamente.</div>
+        </div>
+      `;
+    }
+  })() : '';
 
   const printArea = document.getElementById('print-area');
   printArea.innerHTML = firstPage + secondPage + pdfPage;
@@ -6050,21 +6119,7 @@ async function printGuide(id) {
 
   printArea.style.cssText = '';
 
-  if (pdfAttach) {
-    const embedEl = document.getElementById('printPdfEmbed');
-    let printed = false;
-    const triggerPrint = () => {
-      if (printed) return;
-      printed = true;
-      window.print();
-    };
-    if (embedEl) {
-      embedEl.addEventListener('load', triggerPrint, { once: true });
-    }
-    setTimeout(triggerPrint, 900);
-  } else {
-    window.print();
-  }
+  window.print();
 }
 
 function exportData() {
