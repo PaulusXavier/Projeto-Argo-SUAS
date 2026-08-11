@@ -5876,14 +5876,32 @@ async function printGeneralNote() {
 }
 
 function buildPrintWatermark() {
-  const wmPositions = [
-    [10, 18], [37, 14], [64, 18], [91, 14],
-    [23, 50], [50, 46], [77, 50],
-    [10, 82], [37, 86], [64, 82], [91, 86]
-  ];
-  return wmPositions.map(([x, y]) => `
-    <div style="position:absolute; top:${y}%; left:${x}%; transform:translate(-50%,-50%) rotate(-18deg); opacity:0.055; z-index:0; font-size:6.5rem; line-height:1; font-family:'Lora', serif; font-weight:700; color:#0091C2; user-select:none; pointer-events:none;">Ψ</div>
-  `).join('');
+  return `
+    <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:0; opacity:0.07; pointer-events:none;">
+      <svg viewBox="0 0 320 230" width="640" height="460" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <linearGradient id="argoPrintGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#0091C2"/>
+            <stop offset="50%" stop-color="#29ABE2"/>
+            <stop offset="100%" stop-color="#009739"/>
+          </linearGradient>
+        </defs>
+        <path d="M0,178 C40,164 70,192 110,178 C150,164 180,192 220,178 C250,167 285,186 320,175" stroke="url(#argoPrintGradient)" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <path d="M0,196 C45,183 80,208 125,195 C165,183 200,208 240,196 C270,186 300,202 320,193" stroke="url(#argoPrintGradient)" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.85"/>
+        <path d="M0,212 C50,200 90,222 135,210 C175,199 215,222 255,211 C280,203 305,215 320,209" stroke="url(#argoPrintGradient)" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.5"/>
+        <path d="M42,86 C58,132 100,178 152,190 C165,193 175,193 168,193 C205,193 250,150 278,86" fill="url(#argoPrintGradient)"/>
+        <path d="M60,92 C76,128 112,164 160,174 C204,164 240,128 260,92" fill="#FFFFFF" opacity="0.4"/>
+        <path d="M42,86 C36,72 34,58 40,44" stroke="url(#argoPrintGradient)" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <path d="M55,74 C51,60 51,48 58,36" stroke="url(#argoPrintGradient)" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.5"/>
+        <path d="M278,86 C284,72 286,58 280,44" stroke="url(#argoPrintGradient)" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <path d="M265,74 C269,60 269,48 262,36" stroke="url(#argoPrintGradient)" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.5"/>
+        <circle cx="160" cy="46" r="11" fill="url(#argoPrintGradient)"/>
+        <line x1="160" y1="18" x2="160" y2="6" stroke="url(#argoPrintGradient)" stroke-width="4" stroke-linecap="round"/>
+        <line x1="136" y1="28" x2="126" y2="18" stroke="url(#argoPrintGradient)" stroke-width="4" stroke-linecap="round"/>
+        <line x1="184" y1="28" x2="194" y2="18" stroke="url(#argoPrintGradient)" stroke-width="4" stroke-linecap="round"/>
+      </svg>
+    </div>
+  `;
 }
 
 /* Converte o PDF anexado em imagens (uma por página) para que a impressão
@@ -5898,10 +5916,10 @@ function ensurePdfJsLoaded() {
   if (pdfJsLoadingPromise) return pdfJsLoadingPromise;
   pdfJsLoadingPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.js';
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
     script.onload = () => {
       try {
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js';
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         resolve();
       } catch (e) {
         reject(e);
