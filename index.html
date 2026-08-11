@@ -4416,11 +4416,11 @@ const DATA = [
     name: "Passe Livre (ANTT)",
     fullName: "Passe Livre Interestadual para Pessoas com Deficiência (ANTT)",
     cat: ["informes"],
-    address: "N/A - Solicitação manual ou eletrônica",
+    address: "N/A - Solicitação 100% digital pelo Gov.br",
     hours: "N/A",
-    phones: ["N/A"],
+    phones: ["N/A - Ouvidoria ANTT: 166"],
     services: "Passe Livre interestadual para pessoas com deficiência.",
-    desc: "Duas formas de solicitação: manual (envio da documentação pelos Correios) ou eletrônica. Documentos necessários: • Formulário de requerimento do benefício; • Atestado médico padrão do Passe Livre; • 1 foto 3x4 colorida, com fundo branco; • Documento de identificação com CPF; • Caso possua acompanhante: documento de identificação com CPF.<br>Link para solicitação: https://passelivre.antt.gov.br/"
+    desc: "Desde 2024 a emissão é totalmente digital, sem necessidade de envio de documentos pelos Correios. Requisitos (basta atender a um): • Estar inscrito no Cadastro-Inclusão (Registro de Referência da Pessoa com Deficiência) e no CadÚnico; • Ou ter um médico com registro ativo no CRM atestando a condição de pessoa com deficiência diretamente no sistema. Etapas: • Acessar o sistema com conta Gov.br (nível Bronze, Prata ou Ouro); • Preencher a solicitação e aguardar a validação; • A credencial digital é emitida automaticamente e pode ser impressa ou apresentada pelo celular.<br>⚠️ Observações técnicas: a credencial não tem mais prazo de validade fixo; a ANTT prorrogou até 31/12/2026 a validade das credenciais que venceriam em 31/12/2025.<br>Link para solicitação: https://passelivre.antt.gov.br/"
   },
   {
     id: "projeto-artcanto",
@@ -4486,7 +4486,7 @@ const DATA = [
     hours: "N/A",
     phones: ["N/A - consultar SAC no verso da fatura de energia"],
     services: "Desconto na conta de luz para famílias de baixa renda.",
-    desc: "A Tarifa Social de Energia Elétrica (TSEE) reduz o valor da conta de luz para famílias de baixa renda, com base em normas da ANEEL atualizadas pela Lei nº 15.269/2025. Requisitos (basta atender a um): • Família inscrita no CadÚnico com renda mensal por pessoa de até meio salário mínimo; • Família com idoso ou pessoa com deficiência beneficiário do BPC/LOAS; • Família inscrita no CadÚnico com renda de até 3 salários mínimos, que tenha morador com doença ou deficiência cujo tratamento exija uso contínuo de aparelhos elétricos (mediante laudo médico); • Famílias indígenas ou quilombolas inscritas no CadÚnico, sem exigência de renda.<br>Desde 2026, existe também o Desconto Social, para famílias com renda per capita entre meio e 1 salário mínimo, com tarifa reduzida até 120 kWh de consumo.<br>Atividades: famílias com consumo de até 80 kWh/mês têm 100% de desconto na tarifa de energia; acima disso, paga-se apenas o valor excedente. O desconto incide só sobre a tarifa de energia — encargos, tributos e iluminação pública continuam sendo cobrados.<br>⚠️ Observações técnicas: a conta de luz precisa estar no nome de alguém da família beneficiada, com o mesmo CPF cadastrado no CadÚnico; o cadastro social precisa estar atualizado (prazo máximo de 24 meses) para o benefício não ser suspenso; cada família tem direito ao benefício em apenas uma unidade consumidora.<br>Canais para solicitação: • Verificar se a fatura já traz a classificação 'RESIDENCIAL BAIXA RENDA'; • Caso não conste, procurar o CRAS do bairro para atualizar o CadÚnico (ou o INSS, se o critério for o BPC) e depois contatar a Âmbar Energia (distribuidora local) para regularizar o cadastro tarifário."
+    desc: "A Tarifa Social de Energia Elétrica (TSEE) reduz o valor da conta de luz para famílias de baixa renda, com regras atualizadas pelo Governo Federal a partir de julho de 2025 (Programa Luz do Povo) e regulamentadas pela ANEEL. Requisitos (basta atender a um): • Família inscrita no CadÚnico com renda mensal por pessoa de até meio salário mínimo; • Família com idoso ou pessoa com deficiência beneficiário do BPC/LOAS; • Família inscrita no CadÚnico com renda de até 3 salários mínimos, que tenha morador com doença ou deficiência cujo tratamento exija uso contínuo de aparelhos elétricos (mediante laudo médico); • Famílias indígenas ou quilombolas inscritas no CadÚnico, sem exigência de renda.<br>Desde 2026, existe também o Desconto Social, para famílias com renda per capita entre meio e 1 salário mínimo, com tarifa reduzida até 120 kWh de consumo.<br>Atividades: famílias com consumo de até 80 kWh/mês têm 100% de desconto na tarifa de energia; acima disso, paga-se apenas o valor excedente. O desconto incide só sobre a tarifa de energia — encargos, tributos e iluminação pública continuam sendo cobrados.<br>⚠️ Observações técnicas: a conta de luz precisa estar no nome de alguém da família beneficiada, com o mesmo CPF cadastrado no CadÚnico; o cadastro social precisa estar atualizado (prazo máximo de 24 meses) para o benefício não ser suspenso; cada família tem direito ao benefício em apenas uma unidade consumidora.<br>Canais para solicitação: • Verificar se a fatura já traz a classificação 'RESIDENCIAL BAIXA RENDA'; • Caso não conste, procurar o CRAS do bairro para atualizar o CadÚnico (ou o INSS, se o critério for o BPC) e depois contatar a Âmbar Energia (distribuidora local) para regularizar o cadastro tarifário."
   },
   {
     id: "tarifa-social-agua-caer",
@@ -6007,22 +6007,23 @@ async function printGuide(id) {
               </div>
             </td>
             <td style="border:1.5px solid #0F172A; padding:8px 14px; text-align:center; width:180px;">
-              <svg width="52" height="52" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:0 auto;">
+              <svg width="56" height="56" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:0 auto;">
                 <defs>
                   <linearGradient id="psiHeaderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stop-color="#29ABE2"/>
+                    <stop offset="55%" stop-color="#0091C2"/>
                     <stop offset="100%" stop-color="#075985"/>
                   </linearGradient>
+                  <radialGradient id="psiHeaderSheen" cx="35%" cy="28%" r="70%">
+                    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.30"/>
+                    <stop offset="55%" stop-color="#ffffff" stop-opacity="0"/>
+                  </radialGradient>
                 </defs>
                 <circle cx="50" cy="50" r="47" fill="url(#psiHeaderGrad)"/>
+                <circle cx="50" cy="50" r="47" fill="url(#psiHeaderSheen)"/>
                 <circle cx="50" cy="50" r="47" fill="none" stroke="#0F172A" stroke-width="1.5"/>
-                <circle cx="50" cy="50" r="40" fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1"/>
-                <g fill="none" stroke="#ffffff" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M28,20 C28,40 38,44 50,52"/>
-                  <path d="M72,20 C72,40 62,44 50,52"/>
-                  <path d="M50,18 L50,52"/>
-                  <path d="M50,52 L50,82"/>
-                </g>
+                <circle cx="50" cy="50" r="39.5" fill="none" stroke="#ffffff" stroke-opacity="0.4" stroke-width="1"/>
+                <text x="50" y="67" text-anchor="middle" font-family="'Lora', Georgia, serif" font-size="62" font-weight="700" fill="#ffffff" fill-opacity="0.97">&#968;</text>
               </svg>
             </td>
           </tr>
@@ -6095,6 +6096,7 @@ async function printGuide(id) {
             <p style="margin:0; font-size:0.82rem; font-weight:700; color:#334155;">Boa Vista, Roraima, ${date}.</p>
           </div>
           <div style="text-align:center; width:280px;">
+            <div style="height:52px;"></div>
             <div style="border-top:2px solid #0F172A; margin-bottom:6px;"></div>
             <p style="margin:0; font-size:1rem; font-weight:800; color:#0F172A;">Paulo Xavier</p>
             <p style="margin:0; font-size:0.85rem; color:#475569; font-weight:700;">Psicólogo · CRP-20/09816</p>
