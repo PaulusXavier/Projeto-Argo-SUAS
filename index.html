@@ -2525,7 +2525,16 @@
     <div class="footer-col-credit">
       <span class="footer-col-title">Responsável Técnico</span>
       <div class="footer-credit-row">
-        <div class="footer-badge" aria-hidden="true">Ψ</div>
+        <div class="footer-badge" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <g fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M28,20 C28,40 38,44 50,52"/>
+              <path d="M72,20 C72,40 62,44 50,52"/>
+              <path d="M50,18 L50,52"/>
+              <path d="M50,52 L50,82"/>
+            </g>
+          </svg>
+        </div>
         <div class="footer-text">
           <p class="footer-name">Paulo Xavier</p>
           <p class="footer-meta">
@@ -5998,7 +6007,23 @@ async function printGuide(id) {
               </div>
             </td>
             <td style="border:1.5px solid #0F172A; padding:8px 14px; text-align:center; width:180px;">
-              <div style="font-size:2.4rem; font-weight:800; color:#0091C2; line-height:1;">&Psi;</div>
+              <svg width="52" height="52" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:0 auto;">
+                <defs>
+                  <linearGradient id="psiHeaderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#29ABE2"/>
+                    <stop offset="100%" stop-color="#075985"/>
+                  </linearGradient>
+                </defs>
+                <circle cx="50" cy="50" r="47" fill="url(#psiHeaderGrad)"/>
+                <circle cx="50" cy="50" r="47" fill="none" stroke="#0F172A" stroke-width="1.5"/>
+                <circle cx="50" cy="50" r="40" fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1"/>
+                <g fill="none" stroke="#ffffff" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M28,20 C28,40 38,44 50,52"/>
+                  <path d="M72,20 C72,40 62,44 50,52"/>
+                  <path d="M50,18 L50,52"/>
+                  <path d="M50,52 L50,82"/>
+                </g>
+              </svg>
             </td>
           </tr>
         </table>
