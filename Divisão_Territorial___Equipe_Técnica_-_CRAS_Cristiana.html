@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <title>Consulta Técnica - CRAS Cristiana Vicente Nunes</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0056a3;
+            --primary-light: #e8f1f9;
+            --volante: #6c5ce7;
+            --volante-light: #f3f0ff;
+            --bg: #f0f2f5;
+            --text-dark: #1a1c1e;
+            --text-muted: #64748b;
+            --white: #ffffff;
+            --shadow: 0 4px 20px rgba(0,0,0,0.08);
+            --radius: 12px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-dark);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* --- HEADER --- */
+        header {
+            background: var(--white);
+            padding: 30px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 25px;
+            border-top: 6px solid var(--primary);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        h1 { margin: 0; font-size: 26px; color: var(--primary); }
+        
+        .info-contato {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .desc-institucional {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #edf2f7;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #4a5568;
+        }
+
+        /* --- BUSCA --- */
+        .search-box {
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        #searchInput {
+            width: 100%;
+            padding: 16px 25px 16px 55px;
+            font-size: 16px;
+            border: 2px solid transparent;
+            border-radius: 50px;
+            background: var(--white);
+            box-shadow: var(--shadow);
+            outline: none;
+            transition: 0.3s;
+        }
+
+        #searchInput:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(0, 86, 163, 0.1);
+        }
+
+        .search-box::before {
+            content: "🔍";
+            position: absolute;
+            left: 22px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+            opacity: 0.5;
+        }
+
+        /* --- GRIDS --- */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+
+        @media (min-width: 992px) {
+            .main-grid { grid-template-columns: 2fr 1fr; }
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-header {
+            padding: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 18px;
+        }
+
+        .header-fixa { background: var(--primary-light); color: var(--primary); }
+        .header-volante { background: var(--volante-light); color: var(--volante); }
+
+        /* --- TABELAS --- */
+        table { width: 100%; border-collapse: collapse; }
+        
+        th {
+            text-align: left;
+            padding: 12px 20px;
+            background: #f8fafc;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        td {
+            padding: 15px 20px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 14px;
+        }
+
+        tr:hover td { background-color: #fcfdfe; }
+
+        .tech-name { font-weight: 700; color: var(--text-dark); display: block; }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .badge-azul { background: #e0f2fe; color: #0369a1; }
+        .badge-roxo { background: #f5f3ff; color: #6d28d9; }
+
+        /* --- FOOTER INFO --- */
+        .card-footer {
+            padding: 20px;
+            background: #f8fafc;
+            border-top: 1px solid #eee;
+            font-size: 13px;
+        }
+
+        .tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .tag {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            padding: 4px 10px;
+            border-radius: 4px;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        /* No Results State */
+        .empty-state {
+            display: none;
+            text-align: center;
+            padding: 50px;
+            background: var(--white);
+            border-radius: var(--radius);
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="header-top">
+            <div>
+                <h1>CRAS CRISTIANA VICENTE NUNES</h1>
+                <p style="margin: 5px 0; font-weight: 600; color: var(--text-muted);">SEMADS - Prefeitura de Boa Vista</p>
+            </div>
+            <div class="info-contato">
+                <span>📍 Rua Santo Agostinho, 193 - Centenário</span>
+                <span>📞 (95) 98402-6617</span>
+            </div>
+        </div>
+        <div class="desc-institucional">
+            O <strong>CRAS (Centro de Referência de Assistência Social)</strong> é a porta de entrada do SUAS. 
+            Nossa equipe técnica composta por assistentes sociais e psicólogos atua no atendimento a famílias em vulnerabilidade social, 
+            realizando o PAIF, busca ativa, acompanhamento e articulação em rede.
+        </div>
+    </header>
+
+    <div class="search-box">
+        <input type="text" id="searchInput" onkeyup="search()" placeholder="Procure por bairro, nome de técnico ou formação...">
+    </div>
+
+    <div class="main-grid">
+        
+        <div class="card">
+            <div class="card-header header-fixa">📍 Equipe de Referência Territorial</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Técnico(a)</th>
+                        <th>Formação</th>
+                        <th>Bairros de Referência</th>
+                    </tr>
+                </thead>
+                <tbody id="fixedTable">
+                    <tr>
+                        <td><span class="tech-name">Fernanda Gomes</span></td>
+                        <td><span class="badge badge-azul">Psicóloga</span></td>
+                        <td>Buritis e Caimbé</td>
+                    </tr>
+                    <tr>
+                        <td><span class="tech-name">Cléo Sousa</span></td>
+                        <td><span class="badge badge-azul">Assistente Social</span></td>
+                        <td>Liberdade e Pricumã</td>
+                    </tr>
+                    <tr>
+                        <td><span class="tech-name">Bárbara Parente</span></td>
+                        <td><span class="badge badge-azul">Assistente Social</span></td>
+                        <td>Tancredo Neves, Cambará e Olímpico</td>
+                    </tr>
+                    <tr>
+                        <td><span class="tech-name">Susy Andrade</span></td>
+                        <td><span class="badge badge-azul">Pedagoga</span></td>
+                        <td>Centenário e Nova Canaã</td>
+                    </tr>
+                    <tr>
+                        <td><span class="tech-name">Paloma de Assis</span></td>
+                        <td><span class="badge badge-azul">Assistente Social</span></td>
+                        <td>Cinturão Verde e Jóquei Clube</td>
+                    </tr>
+                    <tr>
+                        <td><span class="tech-name">Rafaela Garcia</span></td>
+                        <td><span class="badge badge-azul">Assistente Social</span></td>
+                        <td>Asa Branca</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="card-footer">
+                <strong>Abrangência Geral:</strong>
+                <div class="tag-list">
+                    <span class="tag">13 de Setembro</span><span class="tag">Asa Branca</span><span class="tag">Buritis</span>
+                    <span class="tag">Caimbé</span><span class="tag">Cambará</span><span class="tag">Centenário</span>
+                    <span class="tag">Cinturão Verde</span><span class="tag">Jóquei Clube</span><span class="tag">Liberdade</span>
+                    <span class="tag">Marechal Rondon</span><span class="tag">Nova Canaã</span><span class="tag">Olímpico</span>
+                    <span class="tag">Pricumã</span><span class="tag">Araceli Souto Maior</span><span class="tag">Tancredo Neves</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header header-volante">🚗 Equipe Volante</div>
+            <div style="padding: 15px 20px; font-size: 13px; background: #fbfbff; border-bottom: 1px solid #eee;">
+                Responsável por levar serviços (PAIF, CadÚnico) a áreas de difícil acesso e populações dispersas.
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Técnico(a)</th>
+                        <th>Formação</th>
+                    </tr>
+                </thead>
+                <tbody id="volanteTable">
+                    <tr>
+                        <td>
+                            <span class="tech-name">Keomara Teles</span>
+                            <small style="color:var(--text-muted)">Atendimento Itinerante</small>
+                        </td>
+                        <td><span class="badge badge-roxo">Assistente Social</span></td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span class="tech-name">Danilo Braga</span>
+                            <small style="color:var(--text-muted)">Atendimento Itinerante</small>
+                        </td>
+                        <td><span class="badge badge-roxo">Psicólogo</span></td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span class="tech-name">Paulo Xavier</span>
+                            <small style="color:var(--text-muted)">Atendimento Itinerante</small>
+                        </td>
+                        <td><span class="badge badge-roxo">Psicólogo</span></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="card-footer" style="flex-grow: 1;">
+                <strong>Território Volante:</strong>
+                <p style="margin: 8px 0; color: var(--text-muted); font-size: 12px;">Professora Araceli Souto Maior, 13 de Setembro e Ocupação Nova Vida.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="noResults" class="empty-state">
+        Nenhum dado encontrado para sua busca. Tente outro termo.
+    </div>
+
+    <footer>
+        <p><strong>Prefeitura de Boa Vista | SEMADS</strong></p>
+        <p>Sistema Único de Assistência Social (SUAS)</p>
+    </footer>
+</div>
+
+<script>
+function search() {
+    const input = document.getElementById("searchInput");
+    const filter = input.value.toUpperCase();
+    const tables = ["fixedTable", "volanteTable"];
+    let anyFound = false;
+
+    tables.forEach(tableId => {
+        const tbody = document.getElementById(tableId);
+        const rows = tbody.getElementsByTagName("tr");
+        
+        for (let row of rows) {
+            const text = row.textContent.toUpperCase();
+            if (text.indexOf(filter) > -1) {
+                row.style.display = "";
+                anyFound = true;
+            } else {
+                row.style.display = "none";
+            }
+        }
+    });
+
+    document.getElementById("noResults").style.display = anyFound ? "none" : "block";
+}
+</script>
+
+</body>
+</html>
