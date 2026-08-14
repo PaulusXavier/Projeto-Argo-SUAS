@@ -1532,6 +1532,46 @@
     transition: box-shadow 0.25s var(--ease), transform 0.25s var(--ease);
   }
 
+  .category-info-banner {
+    background: var(--bg-card);
+    border: 1px solid var(--border-ui);
+    border-left: 4px solid var(--brand-primary);
+    border-radius: var(--radius-ui);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+    box-shadow: var(--shadow-xs);
+    font-size: 0.85rem;
+    line-height: 1.55;
+    color: var(--text-muted);
+  }
+
+  .category-info-banner strong {
+    color: var(--brand-primary);
+  }
+
+  .category-info-banner .cib-title {
+    display: block;
+    margin: 0 0 0.4rem 0;
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--brand-primary);
+  }
+
+  .category-info-banner details {
+    margin-top: 0.5rem;
+  }
+
+  .category-info-banner summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--brand-primary);
+  }
+
+  .category-info-banner ul {
+    margin: 0.5rem 0 0 0;
+    padding-left: 1.1rem;
+  }
+
   .external-resource-card:hover {
     box-shadow: var(--shadow-sm);
     transform: translateY(-1px);
@@ -2376,6 +2416,11 @@
           <span>Todos os Equipamentos</span>
           <span class="chip-count" id="count-all">0</span>
         </button>
+        <button class="filter-chip" data-cat="hospitalar" role="tab" aria-selected="false">
+          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v12"/><path d="M6 12h12"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg></span>
+          <span>Saúde</span>
+          <span class="chip-count" id="count-hospitalar">0</span>
+        </button>
         <button class="filter-chip" data-cat="saude" role="tab" aria-selected="false">
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
           <span>RAPS</span>
@@ -2486,6 +2531,7 @@
     </a>
   </div>
 
+  <div class="category-info-banner" id="categoryInfoBanner" style="display:none;"></div>
   <div class="equipment-grid" id="grid" aria-live="polite"></div>
 </main>
 
@@ -2741,6 +2787,61 @@ function clearAllLocalData() {
 
 const DATA = [
   {
+    id: "hospital-crianca-santo-antonio",
+    name: "Hospital da Criança Santo Antônio",
+    fullName: "Hospital da Criança Santo Antônio (HCSA)",
+    cat: ["hospitalar"],
+    address: "Av. das Guianas, 1645 - Treze de Setembro, Boa Vista-RR, 69308-160",
+    hours: "Urgência/emergência 24h. Ambulatórios conforme agenda.",
+    phones: ["(95) 3624-2423"],
+    services: "Pediatria de média e alta complexidade, urgência e emergência infantil, internação, cirurgias e mais de 30 especialidades pediátricas.",
+    desc: "Hospital municipal e única unidade de média/alta complexidade dedicada exclusivamente a crianças em Roraima, atendendo de 29 dias a 12 anos. Recebe pacientes de todo o estado, áreas indígenas e regiões de fronteira."
+  },
+  {
+    id: "hospital-coronel-mota",
+    name: "Hospital Coronel Mota",
+    fullName: "Hospital Coronel Mota",
+    cat: ["hospitalar"],
+    address: "R. Coronel Pinto, 636 - Centro, Boa Vista-RR, 69301-081",
+    hours: "Conforme unidade (confirmar com a unidade)",
+    phones: ["N/A"],
+    services: "Atendimento hospitalar estadual, cirurgias eletivas e de pequeno porte, especialidades clínicas e cirúrgicas.",
+    desc: "Unidade hospitalar da rede estadual de saúde (SESAU-RR), referência histórica no atendimento hospitalar da capital."
+  },
+  {
+    id: "hospital-cosme-silva",
+    name: "Hospital Cosme e Silva",
+    fullName: "Pronto Atendimento Cosme e Silva (PACS)",
+    cat: ["hospitalar"],
+    address: "R. Delman Veras, S/N - Pintolândia, Boa Vista-RR",
+    hours: "24 horas, todos os dias",
+    phones: ["N/A"],
+    services: "Urgência e emergência geral, avaliações médicas e psicológicas, exames de imagem e laboratoriais.",
+    desc: "Unidade estadual de pronto atendimento (SESAU-RR) que atende principalmente a zona Oeste de Boa Vista, com grande volume diário de atendimentos de urgência e emergência."
+  },
+  {
+    id: "hospital-universitario",
+    name: "Hospital Universitário",
+    fullName: "Hospital Universitário da UFRR (HU-UFRR / Ebserh)",
+    cat: ["hospitalar"],
+    address: "Av. Nazaré Filgueiras, 2096 - Dr. Silvio Botelho, Boa Vista-RR, 69314-550",
+    hours: "Conforme unidade (confirmar com a unidade)",
+    phones: ["N/A"],
+    services: "Atendimento hospitalar federal (Rede Ebserh/UFRR), pronto-socorro e unidades hospitalares para urgência, ensino e pesquisa em saúde.",
+    desc: "Hospital vinculado à Universidade Federal de Roraima (UFRR), administrado pela Empresa Brasileira de Serviços Hospitalares (Ebserh), com foco em assistência, ensino e pesquisa, incluindo atenção à saúde indígena."
+  },
+  {
+    id: "centro-zoonoses",
+    name: "Centro de Zoonoses",
+    fullName: "Unidade de Vigilância e Controle de Zoonoses (UVCZ)",
+    cat: ["hospitalar"],
+    address: "Av. Centenário, 469 - Centenário, Boa Vista-RR, 69312-377",
+    hours: "Segunda a sexta, 08h às 12h e 14h às 18h",
+    phones: ["(95) 3623-1585"],
+    services: "Vacinação antirrábica de cães e gatos, controle e prevenção de zoonoses, orientação sobre posse responsável de animais, atendimento a acidentes com animais.",
+    desc: "Anexo da Secretaria Municipal de Saúde (SMSA) responsável pela vigilância, prevenção e controle de zoonoses e acidentes com animais em Boa Vista, conforme a Portaria 1.138/2014/MS."
+  },
+  {
     id: "ceac",
     name: "CEAC",
     fullName: "Centro de Atendimento ao Cidadão",
@@ -2875,9 +2976,9 @@ const DATA = [
   {
     id: "ubs-sandra-maria",
     name: "UBS Dra. Sandra Maria",
-    fullName: "Unidade Básica de Saúde Dra. Sandra Maria",
+    fullName: "Unidade Básica de Saúde Dra. Sandra Maria Lacerda Fernandes",
     cat: ["saude"],
-    address: "31 de Março, Boa Vista-RR",
+    address: "R. Maj. Carlos Mardel, 466 - Trinta e Um de Março, Boa Vista-RR, 69305-290",
     hours: "Segunda a sexta, conforme unidade",
     phones: ["N/A"],
     services: "Acolhimento em saúde mental, grupos terapêuticos, apoio a grupos operativos, atendimento individual de curto prazo, visita domiciliar, apoio matricial.",
@@ -2888,7 +2989,7 @@ const DATA = [
     name: "UBS Dr. Silvio Botelho",
     fullName: "Unidade Básica de Saúde Dr. Silvio Botelho",
     cat: ["saude"],
-    address: "Bairro dos Estados, Boa Vista-RR",
+    address: "Av. Minas Gerais, 512 - Paraviana, Boa Vista-RR",
     hours: "Segunda a sexta, conforme unidade",
     phones: ["N/A"],
     services: "Acolhimento em saúde mental, grupos terapêuticos, apoio a grupos operativos, atendimento individual de curto prazo, visita domiciliar, apoio matricial.",
@@ -2899,7 +3000,7 @@ const DATA = [
     name: "UBS Mecejana",
     fullName: "Unidade Básica de Saúde Mecejana",
     cat: ["saude"],
-    address: "Mecejana, Boa Vista-RR",
+    address: "R. Pavão, 195 - Mecejana, Boa Vista-RR, 69304-451",
     hours: "Segunda a sexta, conforme unidade",
     phones: ["N/A"],
     services: "Acolhimento em saúde mental, grupos terapêuticos, apoio a grupos operativos, atendimento individual de curto prazo, visita domiciliar, apoio matricial.",
@@ -2921,7 +3022,7 @@ const DATA = [
     name: "UBS Dr. Silvio Leite",
     fullName: "Unidade Básica de Saúde Dr. Silvio Leite",
     cat: ["saude"],
-    address: "Silvio Leite, Boa Vista-RR",
+    address: "R. Vicente Tavares de Melo, 615 - Nova Canaã, Boa Vista-RR",
     hours: "Segunda a sexta, conforme unidade",
     phones: ["N/A"],
     services: "Acolhimento em saúde mental, grupos terapêuticos, apoio a grupos operativos, atendimento individual de curto prazo, visita domiciliar, apoio matricial.",
@@ -2930,9 +3031,9 @@ const DATA = [
   {
     id: "ubs-jorge-gurjao",
     name: "UBS Jorge André Gurjão",
-    fullName: "Unidade Básica de Saúde Jorge André Gurjão",
+    fullName: "Unidade Básica de Saúde Jorge André Gurjão Vieira",
     cat: ["saude"],
-    address: "Laura Moreira, Boa Vista-RR",
+    address: "R. CC 24, 341 - Laura Moreira, Boa Vista-RR, 69318-115",
     hours: "Segunda a sexta, conforme unidade",
     phones: ["N/A"],
     services: "Acolhimento em saúde mental, grupos terapêuticos, apoio a grupos operativos, atendimento individual de curto prazo, visita domiciliar, apoio matricial.",
@@ -2943,7 +3044,7 @@ const DATA = [
     name: "UBS Asa Branca",
     fullName: "Unidade Básica de Saúde Asa Branca",
     cat: ["saude"],
-    address: "Asa Branca, Boa Vista-RR",
+    address: "R. Francisco Custódio de Andrade, 505 - Asa Branca, Boa Vista-RR, 69312-258",
     hours: "Segunda a sexta, conforme unidade",
     phones: ["N/A"],
     services: "Acolhimento em saúde mental, grupos terapêuticos, apoio a grupos operativos, atendimento individual de curto prazo, visita domiciliar, apoio matricial.",
@@ -2954,7 +3055,7 @@ const DATA = [
     name: "UBS Buritis",
     fullName: "Unidade Básica de Saúde Buritis",
     cat: ["saude"],
-    address: "Buritis, Boa Vista-RR",
+    address: "R. Raimundo Figueiras, 661 - Buritis, Boa Vista-RR, 69309-221",
     hours: "Segunda a sexta, conforme unidade",
     phones: ["N/A"],
     services: "Acolhimento em saúde mental, grupos terapêuticos, apoio a grupos operativos, atendimento individual de curto prazo, visita domiciliar, apoio matricial.",
@@ -2964,7 +3065,7 @@ const DATA = [
     id: "ubs-centenario",
     name: "UBS Centenário",
     fullName: "Unidade Básica de Saúde Pr. Luciano Galdino Rabelo (Centenário)",
-    cat: ["saude"],
+    cat: ["hospitalar"],
     address: "Rua Bréscia, Centenário, Boa Vista-RR",
     hours: "Segunda a sexta-feira, das 07h às 19h",
     phones: ["(95) 3626-4293"],
@@ -2976,7 +3077,7 @@ const DATA = [
     name: "UBS Santa Luzia",
     fullName: "Unidade Básica de Saúde Santa Luzia",
     cat: ["saude"],
-    address: "Santa Luzia, Boa Vista-RR",
+    address: "Av. Abel Monteiro Reis, 1786 - Pintolândia, Boa Vista-RR, 69316-398",
     hours: "Segunda a sexta, conforme unidade",
     phones: ["N/A"],
     services: "Acolhimento em saúde mental, grupos terapêuticos, apoio a grupos operativos, atendimento individual de curto prazo, visita domiciliar, apoio matricial.",
@@ -2985,9 +3086,9 @@ const DATA = [
   {
     id: "ubs-sayonara",
     name: "UBS Sayonara",
-    fullName: "Unidade Básica de Saúde Sayonara",
+    fullName: "Unidade Básica de Saúde Sayonara Maria Dantas Licarião Matos",
     cat: ["saude"],
-    address: "Senador Hélio Campos, Boa Vista-RR",
+    address: "Av. Raimundo Rodrigues Coelho, 2280 - Dr. Silvio Botelho, Boa Vista-RR, 69316-762",
     hours: "Segunda a sexta, conforme unidade",
     phones: ["N/A"],
     services: "Acolhimento em saúde mental, grupos terapêuticos, apoio a grupos operativos, atendimento individual de curto prazo, visita domiciliar, apoio matricial.",
@@ -2996,9 +3097,9 @@ const DATA = [
   {
     id: "ubs-bernardo-alem",
     name: "UBS Bernardo Alem",
-    fullName: "Unidade Básica de Saúde Bernardo Alem",
+    fullName: "Unidade Básica de Saúde Enfermeiro Bernardo Alem (UBS Vila Jardim)",
     cat: ["saude"],
-    address: "R. Josemar Batista de Souza - Cidade Satélite, Boa Vista-RR",
+    address: "R. Josemar Batista de Souza, 1200 - Cidade Satélite (Conj. Vila Jardim), Boa Vista-RR",
     hours: "Segunda a sexta, até 19h (confirmar horário completo com a unidade)",
     phones: ["N/A"],
     services: "Atenção Básica em Saúde - acompanhamento clínico geral. Atendimento psicológico disponível na própria unidade.",
@@ -3013,29 +3114,29 @@ const DATA = [
     hours: "N/A",
     phones: ["N/A"],
     services: "Cuidados básicos de saúde, redução de danos, articulação com a rede socioassistencial.",
-    desc: "Componente de Atenção Básica em Saúde da RAPS voltado a populações em situações específicas."
+    desc: "Componente de Atenção Básica em Saúde da RAPS (Equipe de Consultório na Rua - eCR), voltado a populações em situações específicas. Atua de forma itinerante para ampliar o acesso ao cuidado, incluindo pessoas com transtornos mentais e/ou problemas em decorrência do uso de álcool e outras drogas em situação de rua, com estratégias de redução de danos, em articulação com UBS, CAPS e demais pontos da rede."
   },
   {
     id: "caps-ad-iii",
     name: "CAPS AD III",
-    fullName: "Centro de Atenção Psicossocial - Álcool e Drogas",
+    fullName: "Centro de Atenção Psicossocial - Álcool e Drogas III (24 horas)",
     cat: ["saude"],
     address: "R. José Bonifácio, 630 - Aparecida, Boa Vista-RR",
-    hours: "Atendimento 24 horas",
+    hours: "Porta aberta diurna; acolhimento noturno com até 12 leitos de observação/monitoramento",
     phones: ["(95) 98407-2238"],
     services: ["Tratamento de Dependência Química", "Apoio Psicossocial"],
-    desc: "Unidade RAPS de acolhimento noturno e tratamento para pessoas com uso abusivo de álcool e outras drogas. Referência para todas as macroáreas (1 a 8): Cidade Satélite, Murilo Teixeira, Piscicultura, Santa Tereza, Jardim Caranã, União (M1); Aeroporto, Jardim Floresta, Caranã, Cauamé, Said Salomão (M2); 31 de Março, São Francisco, Nossa Sra. Aparecida, Bairro dos Estados, Paraviana, Cacari, São Vicente, Calungá, Canarinho, Centro, São Pedro, Mecejana (M3); Dr. Sílvio Leite, Jardim Primavera, Alvorada, Equatorial, Laura Moreira (M4); Asa Branca, Cambará, Nova Canaã, Olímpico, Jóquei Clube, Prof. Aracelis, Tancredo Neves, Caimbé (M5); 13 de Setembro, Buritis, Centenário, Cinturão Verde, Liberdade, Pricumã (M6); Jardim Tropical, Senador Hélio Campos, Pintolândia, Dr. Sílvio Botelho, Santa Luzia (M7); Nova Cidade, Operário, Airton Rocha, Gov. Aquilino Mota Duarte, Raiar do Sol, Bela Vista, São Bento (M8)."
+    desc: "Unidade RAPS de atenção psicossocial especializada (Portaria de Consolidação n.º 3/2017, alterada pela Portaria n.º 3.588/2017) para pessoas com necessidades decorrentes do uso de álcool e outras drogas. Funciona 24h, incluindo feriados e fins de semana, com até 12 leitos para observação/monitoramento.<br>⚠️ Na maioria dos CAPS III/AD III a \"porta aberta\" não é obrigatória no período noturno: novos acolhimentos costumam ser diurnos, com arranjos junto à rede local para cobertura noturna de urgências.<br>Referência para todas as macroáreas (1 a 8): Cidade Satélite, Murilo Teixeira, Piscicultura, Santa Tereza, Jardim Caranã, União (M1); Aeroporto, Jardim Floresta, Caranã, Cauamé, Said Salomão (M2); 31 de Março, São Francisco, Nossa Sra. Aparecida, Bairro dos Estados, Paraviana, Cacari, São Vicente, Calungá, Canarinho, Centro, São Pedro, Mecejana (M3); Dr. Sílvio Leite, Jardim Primavera, Alvorada, Equatorial, Laura Moreira (M4); Asa Branca, Cambará, Nova Canaã, Olímpico, Jóquei Clube, Prof. Aracelis, Tancredo Neves, Caimbé (M5); 13 de Setembro, Buritis, Centenário, Cinturão Verde, Liberdade, Pricumã (M6); Jardim Tropical, Senador Hélio Campos, Pintolândia, Dr. Sílvio Botelho, Santa Luzia (M7); Nova Cidade, Operário, Airton Rocha, Gov. Aquilino Mota Duarte, Raiar do Sol, Bela Vista, São Bento (M8)."
   },
   {
     id: "caps-iii",
     name: "CAPS III",
-    fullName: "Centro de Atenção Psicossocial III",
+    fullName: "Centro de Atenção Psicossocial III (24 horas)",
     cat: ["saude"],
     address: "Av. Cap. Ene Garcês, 497 - Centro, Boa Vista-RR",
-    hours: "Atendimento 24 horas",
+    hours: "Porta aberta diurna; acolhimento noturno para pacientes já em acompanhamento",
     phones: ["(95) 98404-4219"],
     services: ["Saúde Mental Grave", "Acompanhamento Intensivo"],
-    desc: "Referência RAPS para transtornos mentais graves e persistentes (Macroáreas 4, 5, 7 e 8). Bairros: Dr. Sílvio Leite, Jardim Primavera, Alvorada, Equatorial, Laura Moreira (M4); Asa Branca, Cambará, Nova Canaã, Olímpico, Jóquei Clube, Prof. Aracelis, Tancredo Neves, Caimbé (M5); Jardim Tropical, Senador Hélio Campos, Pintolândia, Dr. Sílvio Botelho, Santa Luzia (M7); Nova Cidade, Operário, Airton Rocha, Gov. Aquilino Mota Duarte, Raiar do Sol, Bela Vista, São Bento (M8)."
+    desc: "Serviço da Atenção Psicossocial Especializada da RAPS (Lei n.º 10.216/2001; Portaria de Consolidação n.º 3/2017), voltado a pessoas com transtornos mentais graves e persistentes, com Projeto Terapêutico Singular (PTS) como eixo do cuidado. Proporciona retaguarda clínica e, nos feriados/fins de semana, acolhimento noturno de até 5 leitos para repouso e observação.<br>⚠️ O funcionamento 24h não significa \"pronto-socorro psiquiátrico\": a porta aberta para novos casos costuma ser diurna, sendo o acolhimento noturno voltado principalmente a quem já está em tratamento na unidade.<br>Referência RAPS para as macroáreas 4, 5, 7 e 8. Bairros: Dr. Sílvio Leite, Jardim Primavera, Alvorada, Equatorial, Laura Moreira (M4); Asa Branca, Cambará, Nova Canaã, Olímpico, Jóquei Clube, Prof. Aracelis, Tancredo Neves, Caimbé (M5); Jardim Tropical, Senador Hélio Campos, Pintolândia, Dr. Sílvio Botelho, Santa Luzia (M7); Nova Cidade, Operário, Airton Rocha, Gov. Aquilino Mota Duarte, Raiar do Sol, Bela Vista, São Bento (M8)."
   },
   {
     id: "caps-ii",
@@ -3043,10 +3144,10 @@ const DATA = [
     fullName: "Centro de Atenção Psicossocial II",
     cat: ["saude"],
     address: "R. Pavão, 295 - Mecejana, Boa Vista-RR",
-    hours: "Segunda a sexta, 08:00 às 18:00",
+    hours: "Segunda a sexta, 08:00 às 18:00 (pode se estender a um 3º turno até 21h)",
     phones: ["(95) 3624-2384"],
     services: ["Saúde Mental", "Atendimento Multidisciplinar"],
-    desc: "Referência RAPS para transtornos mentais graves e persistentes (Macroáreas 1, 2, 3 e 6). Bairros: Cidade Satélite, Murilo Teixeira, Piscicultura, Santa Tereza, Jardim Caranã, União (M1); Aeroporto, Jardim Floresta, Caranã, Cauamé, Said Salomão (M2); 31 de Março, São Francisco, Nossa Sra. Aparecida, Bairro dos Estados, Paraviana, Cacari, São Vicente, Calungá, Canarinho, Centro, São Pedro, Mecejana (M3); 13 de Setembro, Buritis, Centenário, Cinturão Verde, Liberdade, Pricumã (M6)."
+    desc: "Serviço da Atenção Psicossocial Especializada da RAPS, indicado para municípios/regiões acima de 70 mil habitantes, com equipe multiprofissional (psiquiatra, enfermeiro, psicólogo, assistente social e demais profissionais conforme projeto técnico). Atende pessoas com transtornos mentais graves e persistentes por meio de atendimento intensivo, semi-intensivo e não intensivo, com Projeto Terapêutico Singular (PTS) construído com o usuário e a família.<br>Referência RAPS para as macroáreas 1, 2, 3 e 6. Bairros: Cidade Satélite, Murilo Teixeira, Piscicultura, Santa Tereza, Jardim Caranã, União (M1); Aeroporto, Jardim Floresta, Caranã, Cauamé, Said Salomão (M2); 31 de Março, São Francisco, Nossa Sra. Aparecida, Bairro dos Estados, Paraviana, Cacari, São Vicente, Calungá, Canarinho, Centro, São Pedro, Mecejana (M3); 13 de Setembro, Buritis, Centenário, Cinturão Verde, Liberdade, Pricumã (M6)."
   },
   {
     id: "samu",
@@ -3057,7 +3158,7 @@ const DATA = [
     hours: "Atendimento 24 horas",
     phones: ["192"],
     services: "Atendimento pré-hospitalar móvel de urgência.",
-    desc: "Componente de Atenção de Urgência e Emergência da RAPS."
+    desc: "Componente de Atenção às Urgências e Emergências da RAPS. Deve atender também às urgências em saúde mental (manejo de crise, agitação/situação de violência, intoxicação e abstinência alcoólica), seguindo protocolos clínicos nacionais e referenciando o paciente conforme o fluxo local da rede."
   },
   {
     id: "uaa",
@@ -3067,8 +3168,8 @@ const DATA = [
     address: "R. Bahia, 162-277 - Bairro dos Estados, Boa Vista-RR",
     hours: "Atendimento 24 horas",
     phones: ["N/A"],
-    services: "Cuidados contínuos de saúde em ambiente residencial.",
-    desc: "Componente de Atenção Residencial de Caráter Transitório da RAPS. Atende pessoas maiores de 18 anos com necessidades decorrentes do uso abusivo de álcool e/ou outras drogas."
+    services: "Cuidados contínuos de saúde em ambiente residencial protetivo.",
+    desc: "Componente de Atenção Residencial de Caráter Transitório da RAPS (Portaria de Consolidação n.º 3/2017). Acolhe até 15 adultos (18+) em situação de extrema vulnerabilidade psicossocial e vínculos familiares/territoriais fragilizados, decorrente do uso de álcool e outras drogas.<br>O acesso só ocorre por encaminhamento do CAPS de referência, que constrói o Projeto Terapêutico Singular (PTS) junto com o usuário e a família. A permanência prevista é de até 6 meses, a depender do PTS."
   },
   {
     id: "ambulatorio-coronel-mota",
@@ -3089,8 +3190,63 @@ const DATA = [
     address: "Av. Brigadeiro Eduardo Gomes, 1364 - Aeroporto, Boa Vista-RR",
     hours: "N/A",
     phones: ["(95) 92121-0633"],
-    services: "Atenção Hospitalar - atendimento a situações de crise e internação de curta permanência.",
-    desc: "Trabalha com situações de crise, atendimento a usuários de médio e alto risco após esgotados os demais recursos terapêuticos, e internação de curta permanência."
+    services: "Atenção Hospitalar - atendimento a situações de crise, internação de curta permanência e leitos de saúde mental em hospital geral.",
+    desc: "Componente de Atenção Hospitalar da RAPS (leitos de saúde mental em Hospital Geral). Serve de retaguarda para os demais serviços da rede, com internações de curta duração (regra geral: inferior a 90 dias), até a estabilidade clínica do usuário.<br>Conforme a Lei n.º 10.216/2001 (art. 6º), a internação pode ser voluntária, involuntária (a pedido de terceiro, com comunicação ao Ministério Público em até 72h) ou compulsória (determinada pela Justiça). Em caso de internação involuntária, o CFM (Resoluções n.º 2.056/2013 e 2.057/2013) exige critérios clínicos objetivos, como incapacidade grave de autocuidado ou risco à vida, à saúde ou a terceiros."
+  },
+  {
+    id: "sesau-rr",
+    name: "SESAU",
+    fullName: "Secretaria de Estado da Saúde de Roraima",
+    cat: ["saude"],
+    address: "R. Madrid, 180 - Aeroporto, Boa Vista-RR, 69310-043",
+    hours: "07:30 às 12:00 / 14:00 às 18:00",
+    phones: ["N/A"],
+    services: "Regulação (SISREG), Especialidades, Alto Custo, TFD.",
+    desc: "Gestão da saúde estadual, regulação de exames e hospitais de referência."
+  },
+  {
+    id: "smsa-bv",
+    name: "SMSA",
+    fullName: "Secretaria Municipal de Saúde de Boa Vista",
+    cat: ["saude"],
+    address: "R. Cel. Mota, 356 - Centro, Boa Vista-RR, 69301-120",
+    hours: "Segunda a sexta, 08:00 às 14:00",
+    phones: ["156"],
+    services: "Atenção Primária (UBS), Hospital da Criança, SAMU.",
+    desc: "Gestão da saúde municipal e unidades básicas de atendimento."
+  },
+  {
+    id: "sap-ufrr",
+    name: "SAP/UFRR",
+    fullName: "Serviço de Atendimento Psicológico (SAP) - UFRR",
+    cat: ["saude"],
+    address: "Rua Paris, em frente à Prefeitura Universitária, Campus Paricarana, Boa Vista-RR",
+    hours: "Segunda-feira: 14h30 às 17h · Quinta-feira: 14h30 às 17h · Sexta-feira: 8h30 às 11h",
+    phones: ["(95) 98113-0623"],
+    services: "Plantão Psicológico - acolhimento pontual de demandas emocionais emergenciais, por ordem de chegada, sem agendamento prévio.",
+    desc: "Serviço de Atendimento Psicológico (SAP) da Universidade Federal de Roraima, ofertado como Estágio Clínico do Curso de Psicologia (supervisão da Profª Drª Joelma Ana Gutierrez Espíndula). O Plantão Psicológico busca atender, de forma pontual, demandas emocionais emergenciais, promovendo o bem-estar e a autonomia pessoal dos indivíduos.<br>Público-alvo: estudantes, técnicos, docentes e colaboradores da UFRR e comunidade externa. Pessoas a partir de 12 anos podem ser atendidas, desde que acompanhadas por um responsável legal.<br>Como participar: atendimento por ordem de chegada, sem necessidade de agendamento prévio; a ficha é preenchida presencialmente, no local."
+  },
+  {
+    id: "servico-escola-psicologia-estacio",
+    name: "Serviço-Escola Estácio",
+    fullName: "Serviço-Escola de Psicologia - Centro Universitário Estácio da Amazônia",
+    cat: ["saude"],
+    address: "Rua Jornalista Humberto Silva, 308 - União, Boa Vista-RR, 69313-792",
+    hours: "Cadastro por formulário online (agenda aberta)",
+    phones: ["(95) 98103-5587"],
+    services: "Cadastro para atendimentos psicológicos - agenda aberta para novos pacientes.",
+    desc: "O Serviço-Escola de Psicologia do Centro Universitário Estácio da Amazônia está com cadastro aberto para pacientes interessados em atendimento psicológico.<br>Para se cadastrar, basta preencher o formulário no link: <a href=\"https://forms.gle/ZJaJn6JzjppyNar17\" target=\"_blank\" rel=\"noopener noreferrer\">forms.gle/ZJaJn6JzjppyNar17</a>."
+  },
+  {
+    id: "clinica-escola-psicologia-cathedral",
+    name: "Clínica Escola de Psicologia - Cathedral",
+    fullName: "Clínica Escola de Psicologia da Faculdade Cathedral",
+    cat: ["saude"],
+    address: "Av. Luís Canuto Chaves, 293 - Caçari, Boa Vista-RR, 69307-053",
+    hours: "Segunda a sexta-feira, 14h às 20h",
+    phones: ["(95) 2121-3473"],
+    services: "Escuta qualificada, triagem e psicoterapia gratuitas, atendimento presencial e virtual (conforme disponibilidade de vagas/editais).",
+    desc: "A Clínica Escola de Psicologia da Faculdade Cathedral oferece atendimento psicológico gratuito e de apoio à comunidade, prestado por estudantes da graduação (a partir do 8º semestre) sob supervisão de professores Mestres e Especialistas da área.<br>Público-alvo: pessoas a partir de 12 anos.<br>Contato: (95) 2121-3473 ou clinicapsicologia@cathedral.edu.br, com atendimento também via WhatsApp."
   },
   {
     id: "ciapd",
@@ -4475,26 +4631,92 @@ const DATA = [
     desc: "Campus do Instituto Federal de Roraima na zona oeste da cidade, localizado no bairro Laura Moreira (Conjunto Cidadão)."
   },
   {
-    id: "sesau-rr",
-    name: "SESAU",
-    fullName: "Secretaria de Estado da Saúde de Roraima",
-    cat: ["saude"],
-    address: "R. Madrid, 180 - Aeroporto, Boa Vista-RR, 69310-043",
-    hours: "07:30 às 12:00 / 14:00 às 18:00",
-    phones: ["N/A"],
-    services: "Regulação (SISREG), Especialidades, Alto Custo, TFD.",
-    desc: "Gestão da saúde estadual, regulação de exames e hospitais de referência."
+    id: "ufrr",
+    name: "UFRR",
+    fullName: "Universidade Federal de Roraima",
+    cat: ["educacao"],
+    address: "Av. Cap. Ene Garcez, 2413 - Aeroporto, Campus Paricarana, Boa Vista-RR, 69304-000",
+    hours: "Segunda a sexta-feira, horário administrativo",
+    phones: ["(95) 3621-3100"],
+    services: "Graduação, mestrado e doutorado - 47 cursos superiores, 13 mestrados e 4 doutorados, distribuídos entre os campi Paricarana, Cauamé e Murupu.",
+    desc: "Implantada em 1989, a UFRR é a primeira instituição federal de ensino superior de Roraima. Além do Campus Paricarana (sede), possui o Campus Cauamé (BR 174, Km 12, Monte Cristo) e o Campus Murupu (BR 174, Km 37), além de campi avançados no interior do estado."
   },
   {
-    id: "smsa-bv",
-    name: "SMSA",
-    fullName: "Secretaria Municipal de Saúde de Boa Vista",
-    cat: ["saude"],
-    address: "R. Cel. Mota, 356 - Centro, Boa Vista-RR, 69301-120",
-    hours: "Segunda a sexta, 08:00 às 14:00",
-    phones: ["156"],
-    services: "Atenção Primária (UBS), Hospital da Criança, SAMU.",
-    desc: "Gestão da saúde municipal e unidades básicas de atendimento."
+    id: "uerr",
+    name: "UERR",
+    fullName: "Universidade Estadual de Roraima",
+    cat: ["educacao"],
+    address: "Rua 7 de Setembro, 231 - Canarinho, Boa Vista-RR, 69306-530",
+    hours: "Segunda a sexta-feira, horário administrativo",
+    phones: ["(95) 2121-0900"],
+    services: "Graduação e pós-graduação - cursos como Administração, Agronomia, Direito, Enfermagem, Engenharia Florestal, Pedagogia, Serviço Social, entre outros.",
+    desc: "Criada em 2005, a UERR é uma fundação pública estadual presente em diversos municípios de Roraima (Pacaraima, Caracaraí, São João da Baliza, Alto Alegre, Rorainópolis, entre outros), além do Campus sede em Boa Vista."
+  },
+  {
+    id: "claretiano-boa-vista",
+    name: "Claretiano",
+    fullName: "Claretiano - Faculdade / Colégio Boa Vista",
+    cat: ["educacao"],
+    address: "R. Antônio Augusto Martins, 52 - São Francisco, Boa Vista-RR, 69305-270",
+    hours: "Segunda a sexta-feira, 08h às 21h30 · Sábado, 08h às 15h",
+    phones: ["(95) 3621-7200"],
+    services: "Educação básica, graduação presencial e EAD, pós-graduação.",
+    desc: "Unidade da Rede de Educação Claretiano em Boa Vista, com atuação em ensino médio, cursos técnicos e superiores (presenciais e a distância)."
+  },
+  {
+    id: "estacio-boa-vista",
+    name: "Estácio",
+    fullName: "Centro Universitário Estácio da Amazônia",
+    cat: ["educacao"],
+    address: "Rua Jornalista Humberto Silva, 308 - União, Boa Vista-RR, 69313-792",
+    hours: "Segunda a sexta-feira, 08h às 22h · Sábado, 08h às 18h",
+    phones: ["(95) 2121-5500"],
+    services: "Graduação presencial e EAD, pós-graduação - cursos como Administração, Agronegócio, Ciências Contábeis, Direito, Psicologia, entre outros.",
+    desc: "Unidade do Centro Universitário Estácio da Amazônia em Boa Vista, com cursos de graduação e pós-graduação nas áreas de negócios, saúde, tecnologia e direito."
+  },
+  {
+    id: "cathedral-boa-vista",
+    name: "Faculdade Cathedral",
+    fullName: "Faculdade Cathedral",
+    cat: ["educacao"],
+    address: "Av. Luís Canuto Chaves, 293 - Caçari, Boa Vista-RR, 69307-053",
+    hours: "Segunda a sexta-feira, horário administrativo",
+    phones: ["(95) 2121-3460"],
+    services: "Graduação e pós-graduação em diversas áreas, incluindo Psicologia, Direito, Saúde e Odontologia.",
+    desc: "Instituição privada de ensino superior em Boa Vista, com cursos de graduação, pós-graduação e a Clínica Escola de Psicologia (atendimento gratuito à comunidade)."
+  },
+  {
+    id: "unama-boa-vista",
+    name: "Unama",
+    fullName: "Universidade da Amazônia (Unama) - Unidade Boa Vista",
+    cat: ["educacao"],
+    address: "Rua Araújo Filho, 803 - Centro, Boa Vista-RR",
+    hours: "Segunda a sexta-feira, horário administrativo",
+    phones: ["(95) 4020-9734"],
+    services: "Graduação presencial e EAD, pós-graduação.",
+    desc: "Unidade da Universidade da Amazônia (Unama) em Boa Vista, ofertando cursos de graduação e pós-graduação."
+  },
+  {
+    id: "faceten-boa-vista",
+    name: "Faceten",
+    fullName: "Faculdade de Ciências, Educação e Teologia do Norte do Brasil (Faceten)",
+    cat: ["educacao"],
+    address: "Av. dos Bandeirantes, 900 - Pricumã, Boa Vista-RR, 69309-100",
+    hours: "N/A",
+    phones: ["(95) 3625-5477", "(95) 99177-6671"],
+    services: "Graduação em Pedagogia, Teologia e Normal Superior, entre outros.",
+    desc: "Faculdade privada confessional (mantida pela Igreja Evangélica Assembleia de Deus de Boa Vista), com foco em cursos de Pedagogia e Teologia."
+  },
+  {
+    id: "unip-boa-vista",
+    name: "UNIP",
+    fullName: "Universidade Paulista (UNIP) - Boa Vista",
+    cat: ["educacao"],
+    address: "Av. Mário Homem de Melo, 5008 - Caimbé, Boa Vista-RR, 69312-155",
+    hours: "N/A",
+    phones: ["0800 010 9000"],
+    services: "Graduação presencial e EAD, pós-graduação - cursos como Administração, Ciências Contábeis, Pedagogia, Serviço Social, Farmácia, entre outros.",
+    desc: "Unidade da Universidade Paulista (UNIP) em Boa Vista, com ampla oferta de cursos de graduação tradicional, tecnológica e a distância."
   },
   {
     id: "codesaima",
@@ -5382,7 +5604,7 @@ function informeMetaRow(icon, label, value) {
 }
 
 const CATEGORY_LABELS_PRINT = {
-  saude: 'RAPS', tea: 'TEA / PcD', social: 'Assistência Social', educacao: 'Educação',
+  hospitalar: 'Saúde (Hospitais)', saude: 'RAPS', tea: 'TEA / PcD', social: 'Assistência Social', educacao: 'Educação',
   juridico: 'Sistema Judicial', conselho: 'Conselho Tutelar', delegacias: 'Delegacias', bancos: 'Rede Bancária',
   previdencia: 'Previdência', trabalho: 'Trabalho e Renda', habitacao: 'Habitação', mobilidade: 'Mobilidade', interior: 'CRAS/CREAS Interior', informes: 'Informes',
   cas: 'Atendimento CAS', cras: 'Atendimento CRAS'
@@ -5744,11 +5966,12 @@ function renderCrasCard(i, query) {
 
 function updateChipCounts() {
   const counts = {
-    all: DATA.length, saude: 0, tea: 0, social: 0, educacao: 0, juridico: 0,
+    all: DATA.length, hospitalar: 0, saude: 0, tea: 0, social: 0, educacao: 0, juridico: 0,
     conselho: 0, delegacias: 0, bancos: 0, previdencia: 0, trabalho: 0, documentacao: 0, habitacao: 0, mobilidade: 0, interior: 0, informes: 0, cas: 0,
     cras: 0
   };
   DATA.forEach(i => {
+    if (i.cat.includes('hospitalar')) counts.hospitalar++;
     if (i.cat.includes('saude')) counts.saude++;
     if (i.cat.includes('tea')) counts.tea++;
     if (i.cat.includes('social') || i.cat.includes('idoso')) counts.social++;
@@ -5774,6 +5997,7 @@ function updateChipCounts() {
   };
 
   setCount('count-all', counts.all);
+  setCount('count-hospitalar', counts.hospitalar);
   setCount('count-saude', counts.saude);
   setCount('count-tea', counts.tea);
   setCount('count-social', counts.social);
@@ -5808,6 +6032,35 @@ function render() {
     if (resultsInfo) resultsInfo.style.display = 'none';
     grid.innerHTML = renderNotesCard();
     return;
+  }
+
+  const infoBanner = document.getElementById('categoryInfoBanner');
+  if (infoBanner) {
+    if (cat === 'saude') {
+      infoBanner.style.display = '';
+      infoBanner.innerHTML = `
+        <span class="cib-title">📘 Rede de Atenção Psicossocial (RAPS) — base legal</span>
+        A RAPS foi instituída pela Portaria GM/MS n.º 3.088/2011 (hoje consolidada na Portaria de Consolidação n.º 3/2017, Anexo V), com alterações da Portaria n.º 3.588/2017, para dar efeito à <strong>Lei n.º 10.216/2001</strong>, que protege os direitos das pessoas com transtornos mentais e redirecionou o modelo assistencial para uma lógica comunitária, territorial e antimanicomial.
+        <details>
+          <summary>Ver os 7 componentes da RAPS e os direitos garantidos por lei</summary>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Componentes da RAPS</strong> (Instrutivo Técnico RAPS/SUS, Ministério da Saúde, 2022):</p>
+          <ul>
+            <li>Atenção Básica em Saúde (UBS, eSF, Consultório na Rua)</li>
+            <li>Atenção Psicossocial Especializada (CAPS e Equipes Multiprofissionais de Saúde Mental)</li>
+            <li>Atenção de Urgência e Emergência (SAMU 192, UPA, Sala de Estabilização, Pronto-Socorro)</li>
+            <li>Atenção Residencial de Caráter Transitório (Unidades de Acolhimento e Comunidades Terapêuticas)</li>
+            <li>Atenção Hospitalar (leitos de saúde mental em Hospital Geral e em hospitais psiquiátricos)</li>
+            <li>Estratégias de Desinstitucionalização (Serviços Residenciais Terapêuticos e Programa De Volta para Casa)</li>
+            <li>Reabilitação Psicossocial (geração de trabalho e renda)</li>
+          </ul>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Direitos garantidos pela Lei n.º 10.216/2001 (art. 2º)</strong>, entre outros: acesso ao melhor tratamento disponível; tratamento com humanidade e respeito; proteção contra abuso e exploração; sigilo das informações; direito à presença médica a qualquer tempo para esclarecer internação involuntária; tratamento pelos meios menos invasivos possíveis; preferência por serviços comunitários de saúde mental.</p>
+          <p style="margin:0.6rem 0 0;">A internação psiquiátrica só é indicada quando os recursos extra-hospitalares se mostram insuficientes (art. 4º) e pode ser <em>voluntária</em>, <em>involuntária</em> (a pedido de terceiro, com comunicação obrigatória ao Ministério Público em até 72h) ou <em>compulsória</em> (determinada pela Justiça) — art. 6º.</p>
+        </details>
+      `;
+    } else {
+      infoBanner.style.display = 'none';
+      infoBanner.innerHTML = '';
+    }
   }
 
   if (resultsInfo) resultsInfo.style.display = '';
