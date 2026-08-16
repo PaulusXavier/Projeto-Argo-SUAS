@@ -1,4 +1,8 @@
-const CACHE_NAME = 'rede-apoio-bv-v1';
+// Troque este número toda vez que publicar uma alteração no app.
+// É essa mudança de versão que dispara a atualização automática.
+const CACHE_VERSION = 'v2';
+const CACHE_NAME = `rede-apoio-bv-${CACHE_VERSION}`;
+
 const ASSETS = [
   './',
   './index.html',
@@ -13,31 +17,37 @@ const ASSETS = [
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 ];
 
-// Instalação do Service Worker e Cache dos arquivos
+// INSTALAÇÃO: baixa os arquivos novos e já assume o controle,
+// sem esperar todas as abas antigas fecharem.
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(ASSETS);
-    })
+    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
   );
+  self.skipWaiting();
 });
 
-// Ativação e limpeza de caches antigos
+// ATIVAÇÃO: apaga qualquer cache de versão antiga e assume
+// controle imediato de todas as abas abertas.
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys => {
-      return Promise.all(
+    caches.keys().then(keys =>
+      Promise.all(
         keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
-      );
-    })
+      )
+    ).then(() => self.clients.claim())
   );
 });
 
-// Intercepta as requisições para servir o conteúdo do cache offline
+// FETCH: tenta buscar da rede primeiro (para pegar o mais novo);
+// se estiver offline, cai para o cache.
 self.addEventListener('fetch', event => {
   event.respondWith(
-    caches.match(event.request).then(cachedResponse => {
-      return cachedResponse || fetch(event.request);
-    })
+    fetch(event.request)
+      .then(response => {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
