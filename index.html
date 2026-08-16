@@ -6916,9 +6916,35 @@ function updateHeaderFooterStats() {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+
+      // Já existe uma atualização baixada esperando para entrar em ação?
+      if (reg.waiting) ativarAtualizacao(reg.waiting);
+
+      // Fica de olho em novas atualizações encontradas a partir de agora
+      reg.addEventListener('updatefound', () => {
+        const novoWorker = reg.installing;
+        novoWorker.addEventListener('statechange', () => {
+          if (novoWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            ativarAtualizacao(novoWorker);
+          }
+        });
+      });
+    }).catch(() => {
+    });
+
+    // Quando o novo Service Worker assume o controle, recarrega a página sozinho
+    let jaRecarregou = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (jaRecarregou) return;
+      jaRecarregou = true;
+      window.location.reload();
     });
   });
+}
+
+function ativarAtualizacao(worker) {
+  worker.postMessage({ type: 'SKIP_WAITING' });
 }
 
 render();
