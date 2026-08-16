@@ -2486,11 +2486,6 @@
           <span>Mobilidade</span>
           <span class="chip-count" id="count-mobilidade">0</span>
         </button>
-        <button class="filter-chip" data-cat="interior" role="tab" aria-selected="false">
-          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg></span>
-          <span>CRAS/CREAS Interior</span>
-          <span class="chip-count" id="count-interior">0</span>
-        </button>
         <button class="filter-chip" data-cat="informes" role="tab" aria-selected="false">
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
           <span>Informes</span>
@@ -2952,6 +2947,123 @@ const DATA = [
     desc: "Unidade especializada em defesa criminal e acompanhamento de custodiados."
   },
   {
+    id: "caps-i-canta",
+    name: "CAPS I Cantá",
+    fullName: "Centro de Atenção Psicossocial I - Cantá",
+    cat: ["saude", "interior"],
+    group: "Cantá",
+    address: "Rua Lúcia Eduardo Queiroz, 637 - Bairro Novo, Cantá-RR, 69390-000",
+    hours: "Segunda a sexta, 08:00 às 18:00",
+    phones: ["(95) 3553-1235"],
+    services: ["Saúde Mental", "Atendimento Psicossocial"],
+    desc: "CAPS I do município de Cantá, interior de Roraima (dado CNES). Referência para acompanhamento de saúde mental e transtornos decorrentes do uso de álcool e outras drogas no município."
+  },
+  {
+    id: "caps-i-caracarai",
+    name: "CAPS I Caracaraí",
+    fullName: "Centro de Atenção Psicossocial I - Caracaraí",
+    cat: ["saude", "interior"],
+    group: "Caracaraí",
+    address: "Avenida Doutor Zanny, s/nº - Centro, Caracaraí-RR, 69360-000",
+    hours: "Segunda a sexta, 08:00 às 17:00",
+    phones: ["(95) 3532-1484"],
+    services: ["Saúde Mental", "Atendimento Psicossocial"],
+    desc: "CAPS I do município de Caracaraí, interior de Roraima (dado CNES). Referência para acompanhamento de saúde mental e transtornos decorrentes do uso de álcool e outras drogas no município."
+  },
+  {
+    id: "caps-i-alto-alegre",
+    name: "CAPS I Raimunda da Silva Abreu",
+    fullName: "Centro de Atenção Psicossocial I Raimunda da Silva Abreu (Alto Alegre)",
+    cat: ["saude", "interior"],
+    group: "Alto Alegre",
+    address: "Rua Fabian Pereira de Melo, s/nº - Azul, Alto Alegre-RR, 69350-000",
+    hours: "Segunda a sexta, 08:00 às 18:00",
+    phones: ["N/A"],
+    services: ["Saúde Mental", "Atendimento Psicossocial"],
+    desc: "CAPS I do município de Alto Alegre, interior de Roraima (dado CNES). Referência para acompanhamento de saúde mental e transtornos decorrentes do uso de álcool e outras drogas no município."
+  },
+  {
+    id: "caps-i-bonfim",
+    name: "CAPS I Bonfim",
+    fullName: "Centro de Atenção Psicossocial I - Bonfim",
+    cat: ["saude", "interior"],
+    group: "Bonfim",
+    address: "Rua Estevão Cabral Silva, 203 - Getúlio Vargas, Bonfim-RR, 69380-000",
+    hours: "Segunda a sexta, 08:00 às 17:30",
+    phones: ["N/A"],
+    services: ["Saúde Mental", "Atendimento Psicossocial"],
+    desc: "CAPS I do município de Bonfim, interior de Roraima (dado CNES). Referência para acompanhamento de saúde mental e transtornos decorrentes do uso de álcool e outras drogas no município, na fronteira com a Guiana."
+  },
+  {
+    id: "caps-i-mucajai",
+    name: "CAPS I João Costa da Silva",
+    fullName: "Centro de Atenção Psicossocial I João Costa da Silva (Mucajaí)",
+    cat: ["saude", "interior"],
+    group: "Mucajaí",
+    address: "Rua do Açaí, 104 - Centro, Mucajaí-RR, 69340-000",
+    hours: "Segunda a sexta, 08:00 às 12:00 e 14:00 às 18:00",
+    phones: ["(95) 3542-1766"],
+    services: ["Saúde Mental", "Atendimento Psicossocial"],
+    desc: "CAPS I do município de Mucajaí, interior de Roraima (dado CNES). Equipe multidisciplinar com psiquiatra, psicólogo, assistente social, farmacêutico e enfermagem; oferece escuta qualificada, psicoterapia e oficinas terapêuticas."
+  },
+  {
+    id: "caps-i-pacaraima",
+    name: "CAPS I Pacaraima",
+    fullName: "Centro de Atenção Psicossocial I - Pacaraima",
+    cat: ["saude", "interior"],
+    group: "Pacaraima",
+    address: "Rua Paramaribo, s/nº - Vila Nova (próx. SEMSA), Pacaraima-RR, 69345-000",
+    hours: "Segunda a sexta, 08:00 às 12:00 e 14:00 às 18:00",
+    phones: ["(95) 3592-1008"],
+    services: ["Saúde Mental", "Atendimento Psicossocial"],
+    desc: "CAPS I do município de Pacaraima, interior de Roraima (dado CNES). Referência para acompanhamento de saúde mental e transtornos decorrentes do uso de álcool e outras drogas no município, na fronteira com a Venezuela."
+  },
+  {
+    id: "caps-i-rorainopolis",
+    name: "CAPS Martinha de Jesus Silva",
+    fullName: "Centro de Atenção Psicossocial Martinha de Jesus Silva (Rorainópolis)",
+    cat: ["saude", "interior"],
+    group: "Rorainópolis",
+    address: "Avenida Dr. Yandara, s/nº - próx. Feira do Produtor Gentil Carneiro, Rorainópolis-RR, 69373-000",
+    hours: "Segunda a sexta, 07:00 às 17:30",
+    phones: ["(95) 3238-1247"],
+    services: ["Saúde Mental", "Atendimento Psicossocial"],
+    desc: "CAPS do município de Rorainópolis, interior de Roraima (dado CNES). Referência para acompanhamento de saúde mental e transtornos decorrentes do uso de álcool e outras drogas no município."
+  },
+  {
+    id: "caps-ad-iii",
+    name: "CAPS AD III",
+    fullName: "Centro de Atenção Psicossocial - Álcool e Drogas III (24 horas)",
+    cat: ["saude"],
+    address: "R. José Bonifácio, 630 - Aparecida, Boa Vista-RR",
+    hours: "Porta aberta diurna; acolhimento noturno com até 12 leitos de observação/monitoramento",
+    phones: ["(95) 98407-2238"],
+    services: ["Tratamento de Dependência Química", "Apoio Psicossocial"],
+    desc: "Unidade RAPS de atenção psicossocial especializada (Portaria de Consolidação n.º 3/2017, alterada pela Portaria n.º 3.588/2017) para pessoas com necessidades decorrentes do uso de álcool e outras drogas. Funciona 24h, incluindo feriados e fins de semana, com até 12 leitos para observação/monitoramento.<br>⚠️ Na maioria dos CAPS III/AD III a \"porta aberta\" não é obrigatória no período noturno: novos acolhimentos costumam ser diurnos, com arranjos junto à rede local para cobertura noturna de urgências.<br>Referência para todas as macroáreas (1 a 8): Cidade Satélite, Murilo Teixeira, Piscicultura, Santa Tereza, Jardim Caranã, União (M1); Aeroporto, Jardim Floresta, Caranã, Cauamé, Said Salomão (M2); 31 de Março, São Francisco, Nossa Sra. Aparecida, Bairro dos Estados, Paraviana, Cacari, São Vicente, Calungá, Canarinho, Centro, São Pedro, Mecejana (M3); Dr. Sílvio Leite, Jardim Primavera, Alvorada, Equatorial, Laura Moreira (M4); Asa Branca, Cambará, Nova Canaã, Olímpico, Jóquei Clube, Prof. Aracelis, Tancredo Neves, Caimbé (M5); 13 de Setembro, Buritis, Centenário, Cinturão Verde, Liberdade, Pricumã (M6); Jardim Tropical, Senador Hélio Campos, Pintolândia, Dr. Sílvio Botelho, Santa Luzia (M7); Nova Cidade, Operário, Airton Rocha, Gov. Aquilino Mota Duarte, Raiar do Sol, Bela Vista, São Bento (M8)."
+  },
+  {
+    id: "caps-iii",
+    name: "CAPS III",
+    fullName: "Centro de Atenção Psicossocial III (24 horas)",
+    cat: ["saude"],
+    address: "Av. Cap. Ene Garcês, 497 - Centro, Boa Vista-RR",
+    hours: "Porta aberta diurna; acolhimento noturno para pacientes já em acompanhamento",
+    phones: ["(95) 98404-4219"],
+    services: ["Saúde Mental Grave", "Acompanhamento Intensivo"],
+    desc: "Serviço da Atenção Psicossocial Especializada da RAPS (Lei n.º 10.216/2001; Portaria de Consolidação n.º 3/2017), voltado a pessoas com transtornos mentais graves e persistentes, com Projeto Terapêutico Singular (PTS) como eixo do cuidado. Proporciona retaguarda clínica e, nos feriados/fins de semana, acolhimento noturno de até 5 leitos para repouso e observação.<br>⚠️ O funcionamento 24h não significa \"pronto-socorro psiquiátrico\": a porta aberta para novos casos costuma ser diurna, sendo o acolhimento noturno voltado principalmente a quem já está em tratamento na unidade.<br>Referência RAPS para as macroáreas 4, 5, 7 e 8. Bairros: Dr. Sílvio Leite, Jardim Primavera, Alvorada, Equatorial, Laura Moreira (M4); Asa Branca, Cambará, Nova Canaã, Olímpico, Jóquei Clube, Prof. Aracelis, Tancredo Neves, Caimbé (M5); Jardim Tropical, Senador Hélio Campos, Pintolândia, Dr. Sílvio Botelho, Santa Luzia (M7); Nova Cidade, Operário, Airton Rocha, Gov. Aquilino Mota Duarte, Raiar do Sol, Bela Vista, São Bento (M8)."
+  },
+  {
+    id: "caps-ii",
+    name: "CAPS II",
+    fullName: "Centro de Atenção Psicossocial II",
+    cat: ["saude"],
+    address: "R. Pavão, 295 - Mecejana, Boa Vista-RR",
+    hours: "Segunda a sexta, 08:00 às 18:00 (pode se estender a um 3º turno até 21h)",
+    phones: ["(95) 3624-2384"],
+    services: ["Saúde Mental", "Atendimento Multidisciplinar"],
+    desc: "Serviço da Atenção Psicossocial Especializada da RAPS, indicado para municípios/regiões acima de 70 mil habitantes, com equipe multiprofissional (psiquiatra, enfermeiro, psicólogo, assistente social e demais profissionais conforme projeto técnico). Atende pessoas com transtornos mentais graves e persistentes por meio de atendimento intensivo, semi-intensivo e não intensivo, com Projeto Terapêutico Singular (PTS) construído com o usuário e a família.<br>Referência RAPS para as macroáreas 1, 2, 3 e 6. Bairros: Cidade Satélite, Murilo Teixeira, Piscicultura, Santa Tereza, Jardim Caranã, União (M1); Aeroporto, Jardim Floresta, Caranã, Cauamé, Said Salomão (M2); 31 de Março, São Francisco, Nossa Sra. Aparecida, Bairro dos Estados, Paraviana, Cacari, São Vicente, Calungá, Canarinho, Centro, São Pedro, Mecejana (M3); 13 de Setembro, Buritis, Centenário, Cinturão Verde, Liberdade, Pricumã (M6)."
+  },
+  {
     id: "ubs-helio-macedo",
     name: "UBS Dr. Hélio Macedo",
     fullName: "Unidade Básica de Saúde Dr. Hélio Macedo",
@@ -3137,39 +3249,6 @@ const DATA = [
     phones: ["N/A"],
     services: "Cuidados básicos de saúde, redução de danos, articulação com a rede socioassistencial.",
     desc: "Componente de Atenção Básica em Saúde da RAPS (Equipe de Consultório na Rua - eCR), voltado a populações em situações específicas. Atua de forma itinerante para ampliar o acesso ao cuidado, incluindo pessoas com transtornos mentais e/ou problemas em decorrência do uso de álcool e outras drogas em situação de rua, com estratégias de redução de danos, em articulação com UBS, CAPS e demais pontos da rede."
-  },
-  {
-    id: "caps-ad-iii",
-    name: "CAPS AD III",
-    fullName: "Centro de Atenção Psicossocial - Álcool e Drogas III (24 horas)",
-    cat: ["saude"],
-    address: "R. José Bonifácio, 630 - Aparecida, Boa Vista-RR",
-    hours: "Porta aberta diurna; acolhimento noturno com até 12 leitos de observação/monitoramento",
-    phones: ["(95) 98407-2238"],
-    services: ["Tratamento de Dependência Química", "Apoio Psicossocial"],
-    desc: "Unidade RAPS de atenção psicossocial especializada (Portaria de Consolidação n.º 3/2017, alterada pela Portaria n.º 3.588/2017) para pessoas com necessidades decorrentes do uso de álcool e outras drogas. Funciona 24h, incluindo feriados e fins de semana, com até 12 leitos para observação/monitoramento.<br>⚠️ Na maioria dos CAPS III/AD III a \"porta aberta\" não é obrigatória no período noturno: novos acolhimentos costumam ser diurnos, com arranjos junto à rede local para cobertura noturna de urgências.<br>Referência para todas as macroáreas (1 a 8): Cidade Satélite, Murilo Teixeira, Piscicultura, Santa Tereza, Jardim Caranã, União (M1); Aeroporto, Jardim Floresta, Caranã, Cauamé, Said Salomão (M2); 31 de Março, São Francisco, Nossa Sra. Aparecida, Bairro dos Estados, Paraviana, Cacari, São Vicente, Calungá, Canarinho, Centro, São Pedro, Mecejana (M3); Dr. Sílvio Leite, Jardim Primavera, Alvorada, Equatorial, Laura Moreira (M4); Asa Branca, Cambará, Nova Canaã, Olímpico, Jóquei Clube, Prof. Aracelis, Tancredo Neves, Caimbé (M5); 13 de Setembro, Buritis, Centenário, Cinturão Verde, Liberdade, Pricumã (M6); Jardim Tropical, Senador Hélio Campos, Pintolândia, Dr. Sílvio Botelho, Santa Luzia (M7); Nova Cidade, Operário, Airton Rocha, Gov. Aquilino Mota Duarte, Raiar do Sol, Bela Vista, São Bento (M8)."
-  },
-  {
-    id: "caps-iii",
-    name: "CAPS III",
-    fullName: "Centro de Atenção Psicossocial III (24 horas)",
-    cat: ["saude"],
-    address: "Av. Cap. Ene Garcês, 497 - Centro, Boa Vista-RR",
-    hours: "Porta aberta diurna; acolhimento noturno para pacientes já em acompanhamento",
-    phones: ["(95) 98404-4219"],
-    services: ["Saúde Mental Grave", "Acompanhamento Intensivo"],
-    desc: "Serviço da Atenção Psicossocial Especializada da RAPS (Lei n.º 10.216/2001; Portaria de Consolidação n.º 3/2017), voltado a pessoas com transtornos mentais graves e persistentes, com Projeto Terapêutico Singular (PTS) como eixo do cuidado. Proporciona retaguarda clínica e, nos feriados/fins de semana, acolhimento noturno de até 5 leitos para repouso e observação.<br>⚠️ O funcionamento 24h não significa \"pronto-socorro psiquiátrico\": a porta aberta para novos casos costuma ser diurna, sendo o acolhimento noturno voltado principalmente a quem já está em tratamento na unidade.<br>Referência RAPS para as macroáreas 4, 5, 7 e 8. Bairros: Dr. Sílvio Leite, Jardim Primavera, Alvorada, Equatorial, Laura Moreira (M4); Asa Branca, Cambará, Nova Canaã, Olímpico, Jóquei Clube, Prof. Aracelis, Tancredo Neves, Caimbé (M5); Jardim Tropical, Senador Hélio Campos, Pintolândia, Dr. Sílvio Botelho, Santa Luzia (M7); Nova Cidade, Operário, Airton Rocha, Gov. Aquilino Mota Duarte, Raiar do Sol, Bela Vista, São Bento (M8)."
-  },
-  {
-    id: "caps-ii",
-    name: "CAPS II",
-    fullName: "Centro de Atenção Psicossocial II",
-    cat: ["saude"],
-    address: "R. Pavão, 295 - Mecejana, Boa Vista-RR",
-    hours: "Segunda a sexta, 08:00 às 18:00 (pode se estender a um 3º turno até 21h)",
-    phones: ["(95) 3624-2384"],
-    services: ["Saúde Mental", "Atendimento Multidisciplinar"],
-    desc: "Serviço da Atenção Psicossocial Especializada da RAPS, indicado para municípios/regiões acima de 70 mil habitantes, com equipe multiprofissional (psiquiatra, enfermeiro, psicólogo, assistente social e demais profissionais conforme projeto técnico). Atende pessoas com transtornos mentais graves e persistentes por meio de atendimento intensivo, semi-intensivo e não intensivo, com Projeto Terapêutico Singular (PTS) construído com o usuário e a família.<br>Referência RAPS para as macroáreas 1, 2, 3 e 6. Bairros: Cidade Satélite, Murilo Teixeira, Piscicultura, Santa Tereza, Jardim Caranã, União (M1); Aeroporto, Jardim Floresta, Caranã, Cauamé, Said Salomão (M2); 31 de Março, São Francisco, Nossa Sra. Aparecida, Bairro dos Estados, Paraviana, Cacari, São Vicente, Calungá, Canarinho, Centro, São Pedro, Mecejana (M3); 13 de Setembro, Buritis, Centenário, Cinturão Verde, Liberdade, Pricumã (M6)."
   },
   {
     id: "samu",
@@ -6001,7 +6080,7 @@ function renderCrasCard(i, query) {
 function updateChipCounts() {
   const counts = {
     all: DATA.length, hospitalar: 0, saude: 0, tea: 0, social: 0, educacao: 0, juridico: 0,
-    conselho: 0, delegacias: 0, bancos: 0, previdencia: 0, trabalho: 0, documentacao: 0, habitacao: 0, mobilidade: 0, interior: 0, informes: 0, cas: 0,
+    conselho: 0, delegacias: 0, bancos: 0, previdencia: 0, trabalho: 0, documentacao: 0, habitacao: 0, mobilidade: 0, informes: 0, cas: 0,
     cras: 0
   };
   DATA.forEach(i => {
@@ -6019,7 +6098,6 @@ function updateChipCounts() {
     if (i.cat.includes('documentacao')) counts.documentacao++;
     if (i.cat.includes('habitacao')) counts.habitacao++;
     if (i.cat.includes('mobilidade')) counts.mobilidade++;
-    if (i.cat.includes('interior')) counts.interior++;
     if (i.cat.includes('informes')) counts.informes++;
     if (i.cat.includes('cas')) counts.cas++;
     if (i.cat.includes('cras')) counts.cras++;
@@ -6045,7 +6123,6 @@ function updateChipCounts() {
   setCount('count-documentacao', counts.documentacao);
   setCount('count-habitacao', counts.habitacao);
   setCount('count-mobilidade', counts.mobilidade);
-  setCount('count-interior', counts.interior);
   setCount('count-informes', counts.informes);
   setCount('count-cas', counts.cas);
   setCount('count-cras-panel', counts.cras);
