@@ -5455,6 +5455,28 @@ const DATA = [
       { label: "Paulo", url: "https://drive.google.com/drive/folders/1uC3Gt5FCm7xMg0Z-mxU_7V51RxZpBPVv" }
     ]
   },
+  {
+    id: "cadunico-consulta",
+    name: "Consultar CadÚnico",
+    fullName: "Consultar dados do Cadastro Único (CadÚnico) - Consulta Simples e Completa",
+    cat: ["social"],
+    address: "N/A - Consulta online (app ou web)",
+    hours: "N/A",
+    phones: ["121"],
+    services: "Consulta ao NIS, código familiar, situação cadastral, datas de atualização e emissão de comprovante de inscrição.",
+    desc: "Serviço oficial do MDS para o cidadão inscrito no Cadastro Único consultar seus próprios dados. Consulta Simples: sem login gov.br, informando Nome Completo, Data de Nascimento, Nome da Mãe e UF/Município. Consulta Completa (formulário, despesas, integrantes da família): exige login gov.br nível Bronze, Prata ou Ouro. Também emite comprovante de cadastro e localiza postos de atendimento.<br>Site: https://cadunico.dataprev.gov.br/<br>Dúvidas: Central 121 (ligação gratuita, fixo ou celular)."
+  },
+  {
+    id: "cadunico-visdata",
+    name: "Vis Data (MDS)",
+    fullName: "Vis Data – Painel de Indicadores do Cadastro Único e do Bolsa Família",
+    cat: ["social"],
+    address: "N/A - Painel online",
+    hours: "N/A",
+    phones: ["N/A"],
+    services: "Consulta e download de indicadores públicos do CadÚnico (famílias e pessoas por faixa de renda) e do Bolsa Família, por estado, ano e mês.",
+    desc: "Ferramenta pública do MDS/Cidadania para explorar e baixar (CSV) séries históricas de indicadores do Cadastro Único e do Programa Bolsa Família, filtráveis por Unidade da Federação, região, ano e mês. Útil para embasar diagnósticos territoriais e relatórios técnicos do CRAS.<br>Site: https://aplicacoes.cidadania.gov.br/vis/data3/data-explorer.php"
+  },
 ];
 
 const ICONS = {
@@ -6055,6 +6077,52 @@ function render() {
           </ul>
           <p style="margin:0.6rem 0 0.3rem 0;"><strong>Direitos garantidos pela Lei n.º 10.216/2001 (art. 2º)</strong>, entre outros: acesso ao melhor tratamento disponível; tratamento com humanidade e respeito; proteção contra abuso e exploração; sigilo das informações; direito à presença médica a qualquer tempo para esclarecer internação involuntária; tratamento pelos meios menos invasivos possíveis; preferência por serviços comunitários de saúde mental.</p>
           <p style="margin:0.6rem 0 0;">A internação psiquiátrica só é indicada quando os recursos extra-hospitalares se mostram insuficientes (art. 4º) e pode ser <em>voluntária</em>, <em>involuntária</em> (a pedido de terceiro, com comunicação obrigatória ao Ministério Público em até 72h) ou <em>compulsória</em> (determinada pela Justiça) — art. 6º.</p>
+        </details>
+      `;
+    } else if (cat === 'educacao') {
+      infoBanner.style.display = '';
+      infoBanner.innerHTML = `
+        <span class="cib-title">📘 Bolsa Família — condicionalidade de Educação (base legal)</span>
+        O Programa Bolsa Família (PBF), instituído pela <strong>Lei n.º 14.601/2023</strong> e regulamentado pelo <strong>Decreto n.º 12.064/2024</strong>, condiciona a permanência da família no Programa ao cumprimento de compromissos de frequência escolar, além dos de saúde. A gestão das condicionalidades é regulada pela <strong>Portaria MDS n.º 1.058/2025</strong>.
+        <details>
+          <summary>Ver os percentuais exigidos, o fluxo de acompanhamento e as consequências do descumprimento</summary>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Frequência escolar mínima exigida</strong> (Lei n.º 14.601/2023, art. 10, e Portaria MDS n.º 1.058/2025):</p>
+          <ul>
+            <li><strong>60%</strong> da carga horária escolar mensal — beneficiários de 4 a 6 anos incompletos</li>
+            <li><strong>75%</strong> da carga horária escolar mensal — beneficiários de 6 a 18 anos incompletos que ainda não concluíram a educação básica</li>
+          </ul>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Como é acompanhado:</strong> a escola registra a frequência a cada dois meses no <em>Sistema Presença</em> (MEC), a partir da lista de estudantes beneficiários enviada pelo MDS com base no Cadastro Único. As informações são consolidadas no Sistema de Condicionalidades (Sicon) para a gestão do PBF (Portaria Interministerial MEC/MDS n.º 3.789/2004).</p>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Descumprimento não gera corte imediato:</strong> a família é notificada e passa por efeitos graduais (advertência, bloqueio, suspensão e, por fim, cancelamento em caso de reincidência), conforme a Lei n.º 14.601/2023. Famílias em descumprimento devem ser priorizadas para acompanhamento pela rede do SUAS (CRAS/CREAS), com Trabalho Social com Famílias e Territórios voltado a superar as vulnerabilidades que afastam a criança ou adolescente da escola.</p>
+        </details>
+      `;
+    } else if (cat === 'social') {
+      infoBanner.style.display = '';
+      infoBanner.innerHTML = `
+        <span class="cib-title">📘 Programa Bolsa Família — regras, benefícios e Regra de Proteção (base legal)</span>
+        O PBF, instituído pela <strong>Lei n.º 14.601/2023</strong> e regulamentado pelo <strong>Decreto n.º 12.064/2024</strong>, atende famílias inscritas no <strong>Cadastro Único</strong> com renda mensal por pessoa de até <strong>R$ 218,00</strong> (situação de pobreza), condicionada ao cumprimento dos compromissos de saúde e educação. A entrada não é automática: depende do limite orçamentário do Programa.
+        <details>
+          <summary>Ver a composição do benefício, o calendário de pagamento e a Regra de Proteção</summary>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Composição do benefício</strong> (Portaria MDS n.º 897/2023):</p>
+          <ul>
+            <li><strong>Benefício de Renda de Cidadania (BRC):</strong> R$ 142,00 por pessoa da família</li>
+            <li><strong>Benefício Primeira Infância (BPI):</strong> + R$ 150,00 por criança de 0 a 7 anos incompletos</li>
+            <li><strong>Benefício Variável Familiar (BVF):</strong> + R$ 50,00 por gestante, nutriz (bebê até 6 meses) ou criança/adolescente de 7 a 18 anos incompletos</li>
+            <li><strong>Benefício Complementar (BCO):</strong> completa o valor até o piso mínimo de R$ 600,00 por família</li>
+          </ul>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Pagamento:</strong> depositado mensalmente pela Caixa Econômica Federal (conta poupança social digital, se a família não tiver conta), em período de 10 dias definido pelo último dígito do NIS do Responsável Familiar. Saque sem taxas, via agências, lotéricas, CAIXA Aqui ou app CAIXA Tem.</p>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Regra de Proteção:</strong> se a renda familiar por pessoa ultrapassa R$ 218,00 mas permanece até <strong>R$ 706,00</strong>, a família não é excluída de imediato — continua recebendo <strong>50% do benefício</strong> por até <strong>18 meses</strong>. Esgotado esse prazo (ou em caso de desligamento voluntário), a família tem <strong>Retorno Garantido</strong> por até 3 anos, caso a renda volte a cair, bastando atualizar o Cadastro Único junto à gestão municipal.</p>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Cadastro sempre atualizado:</strong> mudanças de renda, endereço, telefone ou composição familiar devem ser informadas ao Cadastro Único, que precisa ser atualizado no máximo a cada 2 anos para evitar bloqueios.</p>
+          <p style="margin:1rem 0 0.3rem 0;"><strong>📋 Cadastro Único (CadÚnico) — porta de entrada dos programas sociais</strong></p>
+          <p style="margin:0.6rem 0 0.3rem 0;">O CadÚnico identifica e caracteriza as famílias de baixa renda do Brasil e é pré-requisito obrigatório para acesso ao Bolsa Família, BPC, Tarifa Social de Energia, Minha Casa Minha Vida, isenção em concursos, ID Jovem, Pé-de-Meia, entre outros. A inscrição e a atualização são gratuitas e feitas presencialmente no CRAS ou posto de atendimento do município.</p>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Faixas de renda per capita mensal</strong> (MDS/SAGICAD, Instrução Normativa SAGICAD n.º 1/2023):</p>
+          <ul>
+            <li><strong>Pobreza:</strong> até R$ 218,00 por pessoa — faixa prioritária para o Bolsa Família</li>
+            <li><strong>Baixa renda:</strong> de R$ 218,01 até meio salário mínimo por pessoa</li>
+            <li><strong>Acima de meio salário mínimo:</strong> cadastro permitido apenas quando vinculado a programa ou serviço que exija o CadÚnico (ex.: BPC, Tarifa Social, isenção de taxas)</li>
+          </ul>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Identificação e atualização:</strong> desde a Lei n.º 14.534/2023, o CPF é o identificador único do cidadão no Cadastro Único, integrado a bases como Receita Federal e CNIS/INSS. A família deve atualizar o cadastro a cada <strong>2 anos</strong> ou em até <strong>30 dias</strong> após mudanças relevantes (nascimento, óbito, mudança de renda, endereço ou composição familiar), sob pena de bloqueio dos benefícios vinculados.</p>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Consulta pelo cidadão:</strong> o titular pode consultar NIS, código familiar, situação cadastral e datas de atualização pelo app ou site do Cadastro Único (<a href="https://cadunico.dataprev.gov.br/" target="_blank" rel="noopener noreferrer">cadunico.dataprev.gov.br</a>), por Consulta Simples (sem login, com nome completo, data de nascimento, nome da mãe e UF/município) ou por Consulta Completa (com login gov.br nível Bronze, Prata ou Ouro). Dúvidas: Central 121 (ligação gratuita).</p>
+          <p style="margin:0.6rem 0;"><strong>Indicadores públicos:</strong> o painel <em>Vis Data</em> (MDS/Cidadania) permite consultar e baixar, por estado, ano e mês, a quantidade de famílias e pessoas cadastradas por faixa de renda no CadÚnico e os dados do Bolsa Família por município.</p>
         </details>
       `;
     } else {
