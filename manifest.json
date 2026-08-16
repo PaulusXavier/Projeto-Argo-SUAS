@@ -1,6 +1,6 @@
 {
-  "name": "Rede de Apoio - Boa Vista",
-  "short_name": "Rede Apoio",
+  "name": "Argo SUAS",
+  "short_name": "Argo SUAS",
   "description": "Sistema de Gestão de Equipamentos Socioassistenciais e Rede de Apoio TEA em Boa Vista-RR.",
   "start_url": "./index.html",
   "display": "standalone",
