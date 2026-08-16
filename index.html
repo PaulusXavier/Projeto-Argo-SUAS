@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://www.simbolosmunicipais.com.br; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://www.simbolosmunicipais.com.br https://upload.wikimedia.org; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Argo SUAS · Gestão Técnica de Equipamentos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Lora:ital,wght@0,400;0,500;1,400&amp;display=swap" rel="stylesheet">
 <meta name="theme-color" content="#0091C2">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -6881,6 +6881,24 @@ async function printGuide(id) {
               <h2 style="margin:0; font-size:1.02rem; line-height:1.2; color:#0F172A; font-family:'Lora', serif; font-weight:700;">${i.fullName}</h2>
             </div>
 
+            <div style="border:1.5px solid #0F172A; border-radius:4px; overflow:hidden; margin-bottom:6px;">
+              <div style="background:#F1F5F9; padding:3px 10px; font-size:0.55rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#0F172A; border-bottom:1px solid #0F172A;">Dados do(a) Usuário(a) Encaminhado(a)</div>
+              <div style="display:flex;">
+                <div style="flex:1.5; padding:5px 10px; border-right:1px solid #CBD5E1;">
+                  <div style="font-size:0.55rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.02em;">Nome Completo</div>
+                  <div style="font-size:0.8rem; font-weight:700; color:#0F172A; min-height:1.1em;">${userData.nome ? escapeHtml(userData.nome) : '&nbsp;'}</div>
+                </div>
+                <div style="flex:1.2; padding:5px 10px; border-right:1px solid #CBD5E1;">
+                  <div style="font-size:0.55rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.02em;">Endereço / Bairro</div>
+                  <div style="font-size:0.8rem; font-weight:700; color:#0F172A; min-height:1.1em;">${userData.endereco ? escapeHtml(userData.endereco) : '&nbsp;'}</div>
+                </div>
+                <div style="flex:0.7; padding:5px 10px;">
+                  <div style="font-size:0.55rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.02em;">Nº NIS</div>
+                  <div style="font-size:0.8rem; font-weight:700; color:#0F172A; min-height:1.1em;">${userData.nis ? escapeHtml(userData.nis) : '&nbsp;'}</div>
+                </div>
+              </div>
+            </div>
+
             <span style="font-size:0.58rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:4px; display:block;">Informações da Unidade</span>
             ${summaryLine ? `<div style="margin-bottom:6px; padding:6px 10px; border:1.5px solid #0F172A; border-radius:4px; font-size:0.74rem; line-height:1.35; color:#475569; background:rgba(17,94,89,0.02);"><strong style="color:#0091C2;">Unidade:</strong> ${summaryLine}</div>` : ''}
             <span style="font-size:0.58rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:4px; display:block;">Motivo do Encaminhamento</span>
@@ -6912,27 +6930,7 @@ async function printGuide(id) {
           </div>
         </div>
 
-        <table style="width:100%; border-collapse:collapse; margin-top:6px; table-layout:fixed;">
-          <tr>
-            <td colspan="3" style="border:1.5px solid #0F172A; border-bottom:none; background:#F1F5F9; padding:3px 12px; font-size:0.55rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#0F172A;">Dados do(a) Usuário(a) Encaminhado(a)</td>
-          </tr>
-          <tr>
-            <td style="border:1.5px solid #0F172A; padding:5px 12px; width:44%; vertical-align:top;">
-              <div style="font-size:0.55rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:3px;">Nome Completo</div>
-              <div style="border-bottom:1px solid #94A3B8; font-size:0.8rem; font-weight:700; color:#0F172A; min-height:1.1em;">${userData.nome ? escapeHtml(userData.nome) : '&nbsp;'}</div>
-            </td>
-            <td style="border:1.5px solid #0F172A; border-left:none; padding:5px 12px; width:36%; vertical-align:top;">
-              <div style="font-size:0.55rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:3px;">Endereço / Bairro</div>
-              <div style="border-bottom:1px solid #94A3B8; font-size:0.8rem; font-weight:700; color:#0F172A; min-height:1.1em;">${userData.endereco ? escapeHtml(userData.endereco) : '&nbsp;'}</div>
-            </td>
-            <td style="border:1.5px solid #0F172A; border-left:none; padding:5px 12px; width:20%; vertical-align:top;">
-              <div style="font-size:0.55rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:3px;">Nº NIS</div>
-              <div style="border-bottom:1px solid #94A3B8; font-size:0.8rem; font-weight:700; color:#0F172A; min-height:1.1em;">${userData.nis ? escapeHtml(userData.nis) : '&nbsp;'}</div>
-            </td>
-          </tr>
-        </table>
-
-        <div style="margin-top:6px; display:flex; justify-content:space-between; align-items:flex-end; flex-shrink:0;">
+        <div style="margin-top:8px; display:flex; justify-content:space-between; align-items:flex-end; flex-shrink:0;">
           <div>
             <p style="margin:0; font-size:0.82rem; font-weight:700; color:#334155;">Boa Vista, Roraima, ${date}.</p>
           </div>
