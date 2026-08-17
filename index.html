@@ -743,6 +743,14 @@
     transition: border-color 0.2s var(--ease), background 0.2s var(--ease);
   }
 
+  .notes-box {
+    margin-top: 0.5rem;
+  }
+
+  .notes-box .label-tech {
+    margin-bottom: 0.4rem;
+  }
+
   .tech-notes:focus {
     border-style: solid;
     border-color: var(--brand-primary);
@@ -3152,6 +3160,18 @@ const DATA = [
     phones: ["(95) 3626-4293"],
     services: "Atenção Básica em Saúde - acompanhamento clínico geral e apoio em saúde mental conforme fluxo de referência da RAPS.",
     desc: "Unidade Básica de Saúde localizada no bairro Centenário (responsável: Derbley Monteiro Nogueira). Faz parte da rede de Atenção Básica do município.<br>⚠️ Para atendimento psicológico especializado da RAPS, o bairro Centenário está referenciado à UBS Buritis (Macroárea 6), que reúne o serviço de saúde mental para os bairros 13 de Setembro, Buritis, Centenário, Cinturão Verde, Liberdade e Pricumã."
+  },
+  {
+    id: "cernutri",
+    name: "CERNUTRI",
+    fullName: "Centro de Recuperação Nutricional Infantil (CERNUTRI)",
+    cat: ["hospitalar"],
+    group: "Atenção Básica",
+    address: "R. Dom José Nepote, 901 - São Francisco, Boa Vista-RR, 69314-382",
+    hours: "Conforme unidade (confirmar com a unidade)",
+    phones: ["N/A"],
+    services: "Recuperação e acompanhamento nutricional infantil, atendimento em saúde comunitária.",
+    desc: "Posto de saúde comunitário voltado à recuperação nutricional infantil, integrando a rede de Atenção Básica do município."
   },
   {
     id: "ubs-santa-luzia",
@@ -5987,8 +6007,10 @@ function renderTeamCard(i, query) {
         </div>
 
         ${renderUserDataFields(i.id)}
-        <label for="notes-${i.id}" class="sr-only">Anotações técnicas para ${i.fullName}</label>
-        <textarea id="notes-${i.id}" class="tech-notes" placeholder="Anotações Técnicas / Conduta..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
+        <div class="notes-box">
+          <label for="notes-${i.id}" class="label-tech">Anotações Técnicas / Conduta</label>
+          <textarea id="notes-${i.id}" class="tech-notes" placeholder="Registre aqui a avaliação, conduta ou observações técnicas..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
+        </div>
       </div>
       <div class="card-actions">
         <button class="btn-tech btn-secondary" onclick="share('${i.id}')">Compartilhar</button>
@@ -6061,8 +6083,10 @@ function renderCasCard(i, query) {
         </div>
 
         ${renderUserDataFields(i.id)}
-        <label for="notes-${i.id}" class="sr-only">Anotações técnicas para ${i.name}</label>
-        <textarea id="notes-${i.id}" class="tech-notes" placeholder="Anotações Técnicas / Conduta..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
+        <div class="notes-box">
+          <label for="notes-${i.id}" class="label-tech">Anotações Técnicas / Conduta</label>
+          <textarea id="notes-${i.id}" class="tech-notes" placeholder="Registre aqui a avaliação, conduta ou observações técnicas..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
+        </div>
       </div>
       <div class="card-actions">
         <button class="btn-tech btn-secondary" onclick="share('${i.id}')">Compartilhar</button>
@@ -6223,8 +6247,10 @@ function renderCrasCard(i, query) {
         </div>
 
         ${renderUserDataFields(i.id)}
-        <label for="notes-${i.id}" class="sr-only">Anotações técnicas para ${i.name}</label>
-        <textarea id="notes-${i.id}" class="tech-notes" placeholder="Anotações Técnicas / Conduta..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
+        <div class="notes-box">
+          <label for="notes-${i.id}" class="label-tech">Anotações Técnicas / Conduta</label>
+          <textarea id="notes-${i.id}" class="tech-notes" placeholder="Registre aqui a avaliação, conduta ou observações técnicas..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
+        </div>
       </div>
       <div class="card-actions">
         <button class="btn-tech btn-secondary" onclick="share('${i.id}')">Compartilhar</button>
@@ -6531,8 +6557,10 @@ function render() {
             ${formatInformeDesc(i.desc)}
           </div>
           ${renderUserDataFields(i.id)}
-          <label for="notes-${i.id}" class="sr-only">Anotações técnicas para ${i.name}</label>
-          <textarea id="notes-${i.id}" class="tech-notes" placeholder="Anotações Técnicas / Conduta..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
+          <div class="notes-box">
+            <label for="notes-${i.id}" class="label-tech">Anotações Técnicas / Conduta</label>
+            <textarea id="notes-${i.id}" class="tech-notes" placeholder="Registre aqui a avaliação, conduta ou observações técnicas..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
+          </div>
           <div class="image-attach-wrapper" id="img-wrap-${i.id}">
             ${imageBlock}
             <div class="image-error-msg" id="img-error-${i.id}" role="alert" style="display:none;"></div>
@@ -6569,8 +6597,10 @@ function render() {
           ${i.cat.includes('educacao') ? BF_HIGHLIGHT_HTML : ''}
         </div>
         ${renderUserDataFields(i.id)}
-        <label for="notes-${i.id}" class="sr-only">Anotações técnicas para ${i.name}</label>
-        <textarea id="notes-${i.id}" class="tech-notes" placeholder="Anotações Técnicas / Conduta..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
+        <div class="notes-box">
+          <label for="notes-${i.id}" class="label-tech">Anotações Técnicas / Conduta</label>
+          <textarea id="notes-${i.id}" class="tech-notes" placeholder="Registre aqui a avaliação, conduta ou observações técnicas..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
+        </div>
         <div class="image-attach-wrapper" id="img-wrap-${i.id}">
           ${imageBlock}
           <div class="image-error-msg" id="img-error-${i.id}" role="alert" style="display:none;"></div>
@@ -7109,7 +7139,7 @@ async function printGuide(id) {
             ${pdfAttach ? `<div style="margin-top:6px; font-size:0.68rem; font-weight:700; color:#475569;">📎 Anexo digital em PDF: ${escapeHtml(pdfAttach.name || 'documento.pdf')} (incluído nas páginas seguintes desta impressão).</div>` : ''}
           </div>
 
-          <div style="display:flex; flex-direction:column; height:100%; min-height:0; overflow:hidden;">
+          <div style="display:flex; flex-direction:column; height:100%; min-height:0; overflow:hidden; padding:18px 14px 10px 14px; box-sizing:border-box;">
             <span style="font-size:0.6rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:8px; display:block;">Dados do Equipamento / Serviço</span>
             <div style="border:1.5px solid #0F172A; border-radius:6px; overflow:hidden; display:flex; flex-direction:column;">
               ${catDisplay ? `<div style="padding:14px 16px; border-bottom:1px solid #CBD5E1; background:rgba(0,145,194,0.05);">
