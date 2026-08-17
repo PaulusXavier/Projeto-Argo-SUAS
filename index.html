@@ -1479,9 +1479,15 @@
 
   .user-data-fields {
     display: grid;
-    grid-template-columns: 1.4fr 1.1fr 0.7fr;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .user-data-fields .user-data-field:nth-child(1),
+  .user-data-fields .user-data-field:nth-child(2),
+  .user-data-fields .user-data-field:nth-child(3) {
+    grid-column: 1 / -1;
   }
 
   @media (max-width: 640px) {
@@ -1490,22 +1496,23 @@
 
   .user-data-field label {
     display: block;
-    font-size: 0.68rem;
+    font-size: 0.78rem;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.03em;
     color: var(--text-muted);
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.45rem;
   }
 
   .user-data-field input {
     width: 100%;
     background: var(--bg-main);
     border: 1.5px solid var(--border-ui);
-    border-radius: 8px;
-    padding: 0.65rem 0.8rem;
+    border-radius: 10px;
+    padding: 0.95rem 1.05rem;
     font-family: var(--font-sans);
-    font-size: 0.9rem;
+    font-size: 1.05rem;
+    line-height: 1.3;
     color: var(--text-main);
     transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
   }
@@ -2786,6 +2793,7 @@ const DATA = [
     name: "Hospital da Criança Santo Antônio",
     fullName: "Hospital da Criança Santo Antônio (HCSA)",
     cat: ["hospitalar"],
+    group: "Hospitais",
     address: "Av. das Guianas, 1645 - Treze de Setembro, Boa Vista-RR, 69308-160",
     hours: "Urgência/emergência 24h. Ambulatórios conforme agenda.",
     phones: ["(95) 3624-2423"],
@@ -2797,6 +2805,7 @@ const DATA = [
     name: "Hospital Coronel Mota",
     fullName: "Hospital Coronel Mota",
     cat: ["hospitalar"],
+    group: "Hospitais",
     address: "R. Coronel Pinto, 636 - Centro, Boa Vista-RR, 69301-081",
     hours: "Conforme unidade (confirmar com a unidade)",
     phones: ["N/A"],
@@ -2808,6 +2817,7 @@ const DATA = [
     name: "Hospital Cosme e Silva",
     fullName: "Pronto Atendimento Cosme e Silva (PACS)",
     cat: ["hospitalar"],
+    group: "Hospitais",
     address: "R. Delman Veras, S/N - Pintolândia, Boa Vista-RR",
     hours: "24 horas, todos os dias",
     phones: ["N/A"],
@@ -2819,6 +2829,7 @@ const DATA = [
     name: "Hospital Universitário",
     fullName: "Hospital Universitário da UFRR (HU-UFRR / Ebserh)",
     cat: ["hospitalar"],
+    group: "Hospitais",
     address: "Av. Nazaré Filgueiras, 2096 - Dr. Silvio Botelho, Boa Vista-RR, 69314-550",
     hours: "Conforme unidade (confirmar com a unidade)",
     phones: ["N/A"],
@@ -2830,6 +2841,7 @@ const DATA = [
     name: "SMSA",
     fullName: "Secretaria Municipal de Saúde de Boa Vista",
     cat: ["hospitalar"],
+    group: "Gestão e Vigilância em Saúde",
     address: "R. Cel. Mota, 356 - Centro, Boa Vista-RR, 69301-120",
     hours: "Segunda a sexta, 08:00 às 14:00",
     phones: ["156"],
@@ -2841,6 +2853,7 @@ const DATA = [
     name: "SESAU",
     fullName: "Secretaria de Estado da Saúde de Roraima",
     cat: ["hospitalar"],
+    group: "Gestão e Vigilância em Saúde",
     address: "R. Madrid, 180 - Aeroporto, Boa Vista-RR, 69310-043",
     hours: "07:30 às 12:00 / 14:00 às 18:00",
     phones: ["N/A"],
@@ -2852,6 +2865,7 @@ const DATA = [
     name: "Centro de Zoonoses",
     fullName: "Unidade de Vigilância e Controle de Zoonoses (UVCZ)",
     cat: ["hospitalar"],
+    group: "Gestão e Vigilância em Saúde",
     address: "Av. Centenário, 469 - Centenário, Boa Vista-RR, 69312-377",
     hours: "Segunda a sexta, 08h às 12h e 14h às 18h",
     phones: ["(95) 3623-1585"],
@@ -2863,6 +2877,7 @@ const DATA = [
     name: "CEAC",
     fullName: "Centro de Atendimento ao Cidadão",
     cat: ["social"],
+    group: "Atendimento e Benefícios Eventuais",
     address: "Av. Mário Homem de Melo, 4534 - Caimbé, Boa Vista-RR, 69312-155",
     hours: "Segunda a sexta, a partir das 07:30",
     phones: ["N/A"],
@@ -2951,6 +2966,7 @@ const DATA = [
     name: "CAPS AD III",
     fullName: "Centro de Atenção Psicossocial - Álcool e Drogas III (24 horas)",
     cat: ["saude"],
+    group: "CAPS (Boa Vista)",
     address: "R. José Bonifácio, 630 - Aparecida, Boa Vista-RR",
     hours: "Porta aberta diurna; acolhimento noturno com até 12 leitos de observação/monitoramento",
     phones: ["(95) 98407-2238"],
@@ -2962,6 +2978,7 @@ const DATA = [
     name: "CAPS III",
     fullName: "Centro de Atenção Psicossocial III (24 horas)",
     cat: ["saude"],
+    group: "CAPS (Boa Vista)",
     address: "Av. Cap. Ene Garcês, 497 - Centro, Boa Vista-RR",
     hours: "Porta aberta diurna; acolhimento noturno para pacientes já em acompanhamento",
     phones: ["(95) 98404-4219"],
@@ -2973,6 +2990,7 @@ const DATA = [
     name: "CAPS II",
     fullName: "Centro de Atenção Psicossocial II",
     cat: ["saude"],
+    group: "CAPS (Boa Vista)",
     address: "R. Pavão, 295 - Mecejana, Boa Vista-RR",
     hours: "Segunda a sexta, 08:00 às 18:00 (pode se estender a um 3º turno até 21h)",
     phones: ["(95) 3624-2384"],
@@ -2984,6 +3002,7 @@ const DATA = [
     name: "UBS Dr. Hélio Macedo",
     fullName: "Unidade Básica de Saúde Dr. Hélio Macedo",
     cat: ["saude"],
+    group: "UBS (Boa Vista)",
     address: "Rua Joca Farias, 2199 - Jardim Caranã, Boa Vista-RR, 69313-600",
     hours: "Segunda a sexta, 07h às 19h",
     phones: ["(95) 3625-9550"],
@@ -2995,6 +3014,7 @@ const DATA = [
     name: "UBS Prof. Mariano de Andrade",
     fullName: "Unidade Básica de Saúde Prof. Mariano de Andrade",
     cat: ["saude"],
+    group: "UBS (Boa Vista)",
     address: "Av. Deco Fonteles, 264 - Caranã, Boa Vista-RR",
     hours: "Segunda a sexta, conforme unidade",
     phones: ["N/A"],
@@ -3006,6 +3026,7 @@ const DATA = [
     name: "UBS Olenka Macellaro",
     fullName: "Unidade Básica de Saúde Olenka Macellaro Thomé Vieira",
     cat: ["saude"],
+    group: "UBS (Boa Vista)",
     address: "Av. Mário Homem de Melo, 5075 - Caimbé, Boa Vista-RR, 69312-155",
     hours: "Segunda a sexta, conforme unidade",
     phones: ["N/A"],
@@ -3017,6 +3038,7 @@ const DATA = [
     name: "UBS Edna Diniz",
     fullName: "Unidade Básica de Saúde Edna Bezerra Diniz",
     cat: ["saude"],
+    group: "UBS (Boa Vista)",
     address: "Rua Francisco Cândido, 177 - Aeroporto, Boa Vista-RR",
     hours: "Segunda a sexta, 07h às 19h",
     phones: ["(95) 3623-3962"],
@@ -3028,6 +3050,7 @@ const DATA = [
     name: "UBS Dra. Sandra Maria",
     fullName: "Unidade Básica de Saúde Dra. Sandra Maria Lacerda Fernandes",
     cat: ["saude"],
+    group: "UBS (Boa Vista)",
     address: "R. Maj. Carlos Mardel, 466 - Trinta e Um de Março, Boa Vista-RR, 69305-290",
     hours: "Segunda a sexta, conforme unidade",
     phones: ["N/A"],
@@ -3039,6 +3062,7 @@ const DATA = [
     name: "UBS Dr. Silvio Botelho",
     fullName: "Unidade Básica de Saúde Dr. Silvio Botelho",
     cat: ["saude"],
+    group: "UBS (Boa Vista)",
     address: "Av. Minas Gerais, 512 - Paraviana, Boa Vista-RR",
     hours: "Segunda a sexta, conforme unidade",
     phones: ["N/A"],
@@ -3050,6 +3074,7 @@ const DATA = [
     name: "UBS Mecejana",
     fullName: "Unidade Básica de Saúde Mecejana",
     cat: ["saude"],
+    group: "UBS (Boa Vista)",
     address: "R. Pavão, 195 - Mecejana, Boa Vista-RR, 69304-451",
     hours: "Segunda a sexta, conforme unidade",
     phones: ["N/A"],
@@ -3061,6 +3086,7 @@ const DATA = [
     name: "UBS Aygara Motta",
     fullName: "Unidade Básica de Saúde Aygara Motta",
     cat: ["saude"],
+    group: "UBS (Boa Vista)",
     address: "R. José Lacerda, 256 - Cidade Satélite, Boa Vista-RR, 27336-550",
     hours: "Segunda a sexta, conforme unidade",
     phones: ["N/A"],
@@ -3072,6 +3098,7 @@ const DATA = [
     name: "UBS Dr. Silvio Leite",
     fullName: "Unidade Básica de Saúde Dr. Silvio Leite",
     cat: ["saude"],
+    group: "UBS (Boa Vista)",
     address: "R. Vicente Tavares de Melo, 615 - Nova Canaã, Boa Vista-RR",
     hours: "Segunda a sexta, conforme unidade",
     phones: ["N/A"],
@@ -3083,6 +3110,7 @@ const DATA = [
     name: "UBS Jorge André Gurjão",
     fullName: "Unidade Básica de Saúde Jorge André Gurjão Vieira",
     cat: ["saude"],
+    group: "UBS (Boa Vista)",
     address: "R. CC 24, 341 - Laura Moreira, Boa Vista-RR, 69318-115",
     hours: "Segunda a sexta, conforme unidade",
     phones: ["N/A"],
@@ -3094,6 +3122,7 @@ const DATA = [
     name: "UBS Asa Branca",
     fullName: "Unidade Básica de Saúde Asa Branca",
     cat: ["saude"],
+    group: "UBS (Boa Vista)",
     address: "R. Francisco Custódio de Andrade, 505 - Asa Branca, Boa Vista-RR, 69312-258",
     hours: "Segunda a sexta, conforme unidade",
     phones: ["N/A"],
@@ -3105,6 +3134,7 @@ const DATA = [
     name: "UBS Buritis",
     fullName: "Unidade Básica de Saúde Buritis",
     cat: ["saude"],
+    group: "UBS (Boa Vista)",
     address: "R. Raimundo Figueiras, 661 - Buritis, Boa Vista-RR, 69309-221",
     hours: "Segunda a sexta, conforme unidade",
     phones: ["N/A"],
@@ -3116,6 +3146,7 @@ const DATA = [
     name: "UBS Centenário",
     fullName: "Unidade Básica de Saúde Pr. Luciano Galdino Rabelo (Centenário)",
     cat: ["hospitalar"],
+    group: "Atenção Básica",
     address: "Rua Bréscia, Centenário, Boa Vista-RR",
     hours: "Segunda a sexta-feira, das 07h às 19h",
     phones: ["(95) 3626-4293"],
@@ -3127,6 +3158,7 @@ const DATA = [
     name: "UBS Santa Luzia",
     fullName: "Unidade Básica de Saúde Santa Luzia",
     cat: ["saude"],
+    group: "UBS (Boa Vista)",
     address: "Av. Abel Monteiro Reis, 1786 - Pintolândia, Boa Vista-RR, 69316-398",
     hours: "Segunda a sexta, conforme unidade",
     phones: ["N/A"],
@@ -3138,6 +3170,7 @@ const DATA = [
     name: "UBS Sayonara",
     fullName: "Unidade Básica de Saúde Sayonara Maria Dantas Licarião Matos",
     cat: ["saude"],
+    group: "UBS (Boa Vista)",
     address: "Av. Raimundo Rodrigues Coelho, 2280 - Dr. Silvio Botelho, Boa Vista-RR, 69316-762",
     hours: "Segunda a sexta, conforme unidade",
     phones: ["N/A"],
@@ -3149,6 +3182,7 @@ const DATA = [
     name: "UBS Bernardo Alem",
     fullName: "Unidade Básica de Saúde Enfermeiro Bernardo Alem (UBS Vila Jardim)",
     cat: ["saude"],
+    group: "UBS (Boa Vista)",
     address: "R. Josemar Batista de Souza, 1200 - Cidade Satélite (Conj. Vila Jardim), Boa Vista-RR",
     hours: "Segunda a sexta, até 19h (confirmar horário completo com a unidade)",
     phones: ["N/A"],
@@ -3244,6 +3278,7 @@ const DATA = [
     name: "Consultório de Rua",
     fullName: "Equipe de Atenção Básica para Populações em Situação de Rua",
     cat: ["saude"],
+    group: "Outros Serviços da RAPS",
     address: "Atendimento itinerante - sem endereço fixo, Boa Vista-RR",
     hours: "N/A",
     phones: ["N/A"],
@@ -3255,6 +3290,7 @@ const DATA = [
     name: "SAMU",
     fullName: "Serviço de Atendimento Móvel de Urgência",
     cat: ["saude"],
+    group: "Urgência e Atenção Hospitalar",
     address: "Atendimento móvel em toda Boa Vista-RR",
     hours: "Atendimento 24 horas",
     phones: ["192"],
@@ -3266,6 +3302,7 @@ const DATA = [
     name: "UAA",
     fullName: "Unidade de Acolhimento Adulto",
     cat: ["saude"],
+    group: "Urgência e Atenção Hospitalar",
     address: "R. Bahia, 162-277 - Bairro dos Estados, Boa Vista-RR",
     hours: "Atendimento 24 horas",
     phones: ["N/A"],
@@ -3277,6 +3314,7 @@ const DATA = [
     name: "Ambulatório Coronel Mota",
     fullName: "Ambulatório Psiquiátrico e Psicológico do Hospital Coronel Mota",
     cat: ["saude"],
+    group: "Urgência e Atenção Hospitalar",
     address: "R. Coronel Pinto, 664 - Centro, Boa Vista-RR",
     hours: "N/A",
     phones: ["(95) 98414-3741"],
@@ -3288,6 +3326,7 @@ const DATA = [
     name: "HGRR",
     fullName: "Hospital Geral de Roraima",
     cat: ["saude"],
+    group: "Urgência e Atenção Hospitalar",
     address: "Av. Brigadeiro Eduardo Gomes, 1364 - Aeroporto, Boa Vista-RR",
     hours: "N/A",
     phones: ["(95) 92121-0633"],
@@ -3299,6 +3338,7 @@ const DATA = [
     name: "SAP/UFRR",
     fullName: "Serviço de Atendimento Psicológico (SAP) - UFRR",
     cat: ["saude"],
+    group: "Clínicas-Escola de Psicologia",
     address: "Rua Paris, em frente à Prefeitura Universitária, Campus Paricarana, Boa Vista-RR",
     hours: "Segunda-feira: 14h30 às 17h · Quinta-feira: 14h30 às 17h · Sexta-feira: 8h30 às 11h",
     phones: ["(95) 98113-0623"],
@@ -3310,6 +3350,7 @@ const DATA = [
     name: "Serviço-Escola Estácio",
     fullName: "Serviço-Escola de Psicologia - Centro Universitário Estácio da Amazônia",
     cat: ["saude"],
+    group: "Clínicas-Escola de Psicologia",
     address: "Rua Jornalista Humberto Silva, 308 - União, Boa Vista-RR, 69313-792",
     hours: "Cadastro por formulário online (agenda aberta)",
     phones: ["(95) 98103-5587"],
@@ -3321,6 +3362,7 @@ const DATA = [
     name: "Clínica Escola de Psicologia - Cathedral",
     fullName: "Clínica Escola de Psicologia da Faculdade Cathedral",
     cat: ["saude"],
+    group: "Clínicas-Escola de Psicologia",
     address: "Av. Luís Canuto Chaves, 293 - Caçari, Boa Vista-RR, 69307-053",
     hours: "Segunda a sexta-feira, 14h às 20h",
     phones: ["(95) 2121-3473"],
@@ -3365,6 +3407,7 @@ const DATA = [
     name: "CIAPI",
     fullName: "Centro Integrado de Atenção à Pessoa Idosa",
     cat: ["idoso", "social"],
+    group: "Atenção à Pessoa Idosa",
     address: "Rua Cabo PM Laurence de Melo, 259 – Caranã, Boa Vista-RR",
     hours: "07:00 às 13:00 / 14:00 às 19:00",
     phones: ["(95) 3623-3703"],
@@ -3376,6 +3419,7 @@ const DATA = [
     name: "CRAS Pintolândia",
     fullName: "Centro de Referência de Assistência Social",
     cat: ["social"],
+    group: "CRAS (Boa Vista)",
     address: "R. Sólon Rodrigues Pessoa, 615 - Nova Canaã (Sede do FQA), Boa Vista-RR",
     hours: "Segunda a sexta, 08:00 às 18:00",
     phones: ["(95) 98407-3680"],
@@ -3387,6 +3431,7 @@ const DATA = [
     name: "CRAS Dr. Silvio Leite",
     fullName: "Centro de Referência de Assistência Social",
     cat: ["social"],
+    group: "CRAS (Boa Vista)",
     address: "R. Marieta de Mello Marquês, 869 - Dr. Silvio Leite, Boa Vista-RR",
     hours: "Segunda a sexta, 08:00 às 18:00",
     phones: ["(95) 98403-1682"],
@@ -3398,6 +3443,7 @@ const DATA = [
     name: "CRAS Cauamé",
     fullName: "Centro de Referência de Assistência Social",
     cat: ["social"],
+    group: "CRAS (Boa Vista)",
     address: "Av. Carlos Pereira de Melo, 207 - Jardim Floresta, Boa Vista-RR",
     hours: "Segunda a sexta, 08:00 às 18:00",
     phones: ["(95) 98410-1337"],
@@ -3409,6 +3455,7 @@ const DATA = [
     name: "CRAS São Francisco",
     fullName: "Centro de Referência de Assistência Social",
     cat: ["social"],
+    group: "CRAS (Boa Vista)",
     address: "R. Floriano Peixoto, 140 - Centro, Boa Vista-RR",
     hours: "Segunda a sexta, 08:00 às 18:00",
     phones: ["(95) 98410-4092"],
@@ -3420,6 +3467,7 @@ const DATA = [
     name: "CRAS União",
     fullName: "Centro de Referência de Assistência Social",
     cat: ["social"],
+    group: "CRAS (Boa Vista)",
     address: "R. Hilda Sobral Guedes, 81 - Bairro União, Boa Vista-RR",
     hours: "Segunda a sexta, 08:00 às 18:00",
     phones: ["(95) 98405-9001"],
@@ -3431,6 +3479,7 @@ const DATA = [
     name: "CRAS Nova Cidade",
     fullName: "Centro de Referência de Assistência Social",
     cat: ["social"],
+    group: "CRAS (Boa Vista)",
     address: "Rua Curitiba, 336 - Nova Cidade, Boa Vista-RR",
     hours: "Segunda a sexta, 08:00 às 18:00",
     phones: ["(95) 98403-0174"],
@@ -3442,6 +3491,7 @@ const DATA = [
     name: "CRAS Cristiana Vicente Nunes",
     fullName: "Centro de Referência de Assistência Social",
     cat: ["social"],
+    group: "CRAS (Boa Vista)",
     address: "Rua Santo Agostinho, 193 - Centenário, Boa Vista-RR",
     hours: "Segunda a sexta, 08:00 às 18:00",
     phones: ["(95) 98402-6617"],
@@ -3453,6 +3503,7 @@ const DATA = [
     name: "CRAS Itinerante",
     fullName: "Centro de Referência de Assistência Social - Itinerante",
     cat: ["social"],
+    group: "CRAS (Boa Vista)",
     address: "R. Maj. Manoel Corrêa, 620 - São Francisco, Boa Vista-RR",
     hours: "A confirmar conforme itinerário",
     phones: ["N/A"],
@@ -3464,6 +3515,7 @@ const DATA = [
     name: "CREAS Centenário",
     fullName: "Centro de Referência Especializado de Assistência Social - Centenário",
     cat: ["social"],
+    group: "CREAS (Boa Vista)",
     address: "R. Turin, 282 - Centenário, Boa Vista-RR",
     hours: "Segunda a sexta, 08:00 às 18:00",
     phones: ["(95) 98412-1829"],
@@ -3475,6 +3527,7 @@ const DATA = [
     name: "CREAS Centro",
     fullName: "Centro de Referência Especializado de Assistência Social - Centro",
     cat: ["social"],
+    group: "CREAS (Boa Vista)",
     address: "Av. Mário Homem de Melo, 514 - Centro, Boa Vista-RR",
     hours: "Segunda a sexta, 08:00 às 18:00",
     phones: ["(95) 98404-5621"],
@@ -3486,6 +3539,7 @@ const DATA = [
     name: "Abrigo Infantil Pedra Pintada",
     fullName: "Abrigo Infantil Pedra Pintada",
     cat: ["social"],
+    group: "Acolhimento Institucional",
     address: "R. Interna, 182 - Centenário, Boa Vista-RR",
     hours: "Atendimento Direto",
     phones: ["N/A"],
@@ -3746,6 +3800,7 @@ const DATA = [
     name: "SEED",
     fullName: "Secretaria de Estado da Educação e Desporto",
     cat: ["educacao"],
+    group: "Gestão e Secretarias",
     address: "Praça do Centro Cívico, 550 - Centro, Boa Vista-RR",
     hours: "Segunda a sexta, 08:00 às 14:00",
     phones: ["(95) 2121-7930"],
@@ -3757,6 +3812,7 @@ const DATA = [
     name: "SMEC",
     fullName: "Secretaria Municipal de Educação e Cultura",
     cat: ["educacao"],
+    group: "Gestão e Secretarias",
     address: "R. Gen. Penha Brasil, 705 - São Francisco, Boa Vista-RR",
     hours: "Segunda a sexta, 08:00 às 14:00",
     phones: ["0800 280 3536"],
@@ -3768,6 +3824,7 @@ const DATA = [
     name: "E.E. 13 de Setembro",
     fullName: "Escola Estadual 13 de Setembro",
     cat: ["educacao"],
+    group: "Rede Estadual",
     address: "Av. Caracaraí, 237 - Treze de Setembro, Boa Vista-RR, 69308-090",
     hours: "N/A",
     phones: ["(95) 3623-1122"],
@@ -3779,6 +3836,7 @@ const DATA = [
     name: "E.E. Maria das Dores Brasil",
     fullName: "Escola Estadual de Tempo Integral Profa. Maria das Dores Brasil",
     cat: ["educacao"],
+    group: "Rede Estadual",
     address: "Av. das Guianas, 1201 - Treze de Setembro, Boa Vista-RR, 69303-472",
     hours: "N/A",
     phones: ["(95) 98117-3899"],
@@ -3790,6 +3848,7 @@ const DATA = [
     name: "E.E. Fagundes Varela",
     fullName: "Escola Estadual Fagundes Varela",
     cat: ["educacao"],
+    group: "Rede Estadual",
     address: "Praça do Nova Cidade, R. Macapá, 860 - Nova Cidade, Boa Vista-RR, 69316-262",
     hours: "N/A",
     phones: ["N/A"],
@@ -3797,670 +3856,11 @@ const DATA = [
     desc: "Escola de educação geral da rede estadual, localizada no bairro Nova Cidade."
   },
   {
-    id: "escola-cantinho-feliz",
-    name: "E.M. Cantinho Feliz",
-    fullName: "Escola Municipal Cantinho Feliz - Educação Infantil e Ensino Fundamental",
-    cat: ["educacao"],
-    address: "Rua Macunaíma, 392 - 13 de Setembro, Boa Vista-RR, 69308-240",
-    hours: "N/A",
-    phones: ["(95) 3624-1722"],
-    services: "Educação Infantil, Ensino Fundamental.",
-    desc: "Escola pública municipal localizada no bairro 13 de Setembro."
-  },
-  {
-    id: "escola-cantinho-do-ceu",
-    name: "E.M. Cantinho do Céu",
-    fullName: "Escola Municipal Cantinho do Céu - Educação Infantil",
-    cat: ["educacao"],
-    address: "Rua Cotingo, 48 - 13 de Setembro, Boa Vista-RR, 69308-014",
-    hours: "N/A",
-    phones: ["(95) 3623-1728"],
-    services: "Educação Infantil.",
-    desc: "Escola pública municipal localizada no bairro 13 de Setembro."
-  },
-  {
-    id: "escola-pequeno-polegar",
-    name: "E.M. Pequeno Polegar",
-    fullName: "Escola Municipal Pequeno Polegar - Ensino Fundamental",
-    cat: ["educacao"],
-    address: "Av. General Sampaio, 262 - 13 de Setembro, Boa Vista-RR, 69314-570",
-    hours: "N/A",
-    phones: ["(95) 3624-4525"],
-    services: "Ensino Fundamental.",
-    desc: "Escola pública municipal localizada no bairro 13 de Setembro."
-  },
-  {
-    id: "escola-palmira-castro-machado",
-    name: "E.M. Palmira Castro Machado",
-    fullName: "Escola Municipal Palmira Castro Machado - Educação Infantil e Ensino Fundamental",
-    cat: ["educacao"],
-    address: "R. Monte Sinai, 403 - Profa. Araceli Souto Maior, Boa Vista-RR, 69315-096",
-    hours: "N/A",
-    phones: ["(95) 98401-0552"],
-    services: "Educação Infantil, Ensino Fundamental.",
-    desc: "Escola pública municipal localizada no bairro Professora Araceli Souto Maior."
-  },
-  {
-    id: "escola-ioladio-batista",
-    name: "E.M. Ioládio Batista Da Silva",
-    fullName: "Escola Municipal Ioládio Batista Da Silva - Educ. Infantil, Ens. Fundamental e EJA",
-    cat: ["educacao"],
-    address: "Rua Antônio Ferreira de Souza, 445 - São Bento, Boa Vista-RR, 69316-054",
-    hours: "N/A",
-    phones: ["(95) 98403-4598"],
-    services: "Educação Infantil, Ensino Fundamental, EJA.",
-    desc: "Escola pública municipal localizada no bairro São Bento."
-  },
-  {
-    id: "escola-maria-de-fatima-faria-andrade",
-    name: "E.M. Maria De Fátima Faria Andrade",
-    fullName: "Escola Municipal Maria De Fátima Faria Andrade - Educ. Infantil e Ens. Fundamental",
-    cat: ["educacao"],
-    address: "Rua Milão, 173 - Centenário, Boa Vista-RR, 69312-665",
-    hours: "N/A",
-    phones: ["(95) 3628-7901"],
-    services: "Educação Infantil, Ensino Fundamental.",
-    desc: "Escola pública municipal localizada no bairro Centenário."
-  },
-  {
-    id: "escola-delacir-de-melo-lima",
-    name: "E.M. Delacir De Melo Lima",
-    fullName: "Escola Municipal Delacir De Melo Lima - Ensino Fundamental",
-    cat: ["educacao"],
-    address: "Rua Santo Agostinho, 173 - Centenário, Boa Vista-RR, 69312-490",
-    hours: "N/A",
-    phones: ["(95) 3626-5770"],
-    services: "Ensino Fundamental.",
-    desc: "Escola pública municipal localizada no bairro Centenário."
-  },
-  {
-    id: "escola-james-macelaro-thome",
-    name: "E.M. James Macelaro Thomé",
-    fullName: "Escola Municipal James Macelaro Thomé",
-    cat: ["educacao"],
-    address: "R. PS-4, 02 - s/n - Centenário, Boa Vista-RR, 69312-606",
-    hours: "N/A",
-    phones: ["N/A"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Centenário."
-  },
-  {
-    id: "escola-proinfancia-lidia-coelho-tavares",
-    name: "E.M. Proinfância Profa. Lídia Coelho Tavares",
-    fullName: "Escola Municipal Proinfância Professora Lídia Coelho Tavares",
-    cat: ["educacao"],
-    address: "R. Bréscia, nº 526 - Centenário, Boa Vista-RR, 69312-673",
-    hours: "N/A",
-    phones: ["N/A"],
-    services: "Educação Infantil (Pré-escola).",
-    desc: "Escola pública municipal de Educação Infantil localizada no bairro Centenário."
-  },
-  {
-    id: "cem-wanda-david-aguiar",
-    name: "CEM Profa. Wanda David Aguiar",
-    fullName: "Colégio Estadual Militarizado Professora Wanda David Aguiar - CEM",
-    cat: ["educacao"],
-    address: "Rua Estrela D'Alva, 736 - Raiar do Sol, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["N/A"],
-    services: "Educação Estadual Militarizada - Ensino Fundamental e Médio.",
-    desc: "Colégio estadual em regime de gestão compartilhada militarizada, localizado no bairro Raiar do Sol."
-  },
-  {
-    id: "escola-joquei-clube",
-    name: "E.M. Jóquei Clube",
-    fullName: "Escola Municipal Jóquei Clube",
-    cat: ["educacao"],
-    address: "Rua CJ-06, s/n - Jóquei Clube, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98404-3385"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Jóquei Clube."
-  },
-  {
-    id: "escola-menino-jesus-de-praga",
-    name: "E.M. Menino Jesus de Praga",
-    fullName: "Escola Municipal Menino Jesus de Praga",
-    cat: ["educacao"],
-    address: "Rua Itajara, 225 - Jóquei Clube, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98403-4745"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Jóquei Clube."
-  },
-  {
-    id: "escola-frei-artur-agostini",
-    name: "E.M. Frei Artur Agostini",
-    fullName: "Escola Municipal Frei Artur Agostini",
-    cat: ["educacao"],
-    address: "Rua Surumu, 1905 - São Vicente, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98406-7058"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro São Vicente."
-  },
-  {
-    id: "escola-ivany-santos-parente",
-    name: "E.M. Profa. Ivany dos Santos Parente",
-    fullName: "Escola Municipal Professora Ivany dos Santos Parente",
-    cat: ["educacao"],
-    address: "Rua Monte Sinai, s/n - Raiar do Sol, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98411-6575"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Raiar do Sol."
-  },
-  {
-    id: "escola-menino-jesus",
-    name: "E.M. Menino Jesus",
-    fullName: "Escola Municipal Menino Jesus",
-    cat: ["educacao"],
-    address: "Rua Lindolfo Bernardo Coutinho, 330 - Asa Branca, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98402-5231"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Asa Branca."
-  },
-  {
-    id: "escola-juslany-souza-flores",
-    name: "E.M. Juslany de Souza Flores",
-    fullName: "Escola Municipal Juslany de Souza Flores",
-    cat: ["educacao"],
-    address: "Rua 08, nº 289 - Jardim Tropical, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98403-0212"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Jardim Tropical."
-  },
-  {
-    id: "escola-antonia-fernandes-cutrim",
-    name: "E.M. Profa. Antônia Fernandes Cutrim",
-    fullName: "Escola Municipal Professora Antônia Fernandes Cutrim",
-    cat: ["educacao"],
-    address: "Rua Abraão Félix Lima, s/n - Jardim Tropical, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98402-5621"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Jardim Tropical."
-  },
-  {
-    id: "escola-carmem-eugenia-macaggi",
-    name: "E.M. Profa. Carmem Eugênia Macaggi",
-    fullName: "Escola Municipal Professora Carmem Eugênia Macaggi",
-    cat: ["educacao"],
-    address: "Av. Nossa Senhora de Nazaré, 3351 - Asa Branca, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98411-9503"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Asa Branca."
-  },
-  {
-    id: "escola-newton-tavares",
-    name: "E.M. Newton Tavares",
-    fullName: "Escola Municipal Newton Tavares",
-    cat: ["educacao"],
-    address: "Rua Castelo Branco, 1277 - Calungá (Caetano Filho), Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98402-4760"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Calungá (Caetano Filho)."
-  },
-  {
-    id: "escola-zacarias-assuncao-ribeiro-araujo",
-    name: "E.M. Zacarias Assunção Ribeiro Araújo",
-    fullName: "Escola Municipal Zacarias Assunção Ribeiro Araújo",
-    cat: ["educacao"],
-    address: "Rua Rio Verde, 164 - Bela Vista, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98402-5572"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Bela Vista."
-  },
-  {
-    id: "escola-isete-evangelista-albuquerque",
-    name: "E.M. Isete Evangelista Albuquerque",
-    fullName: "Escola Municipal Isete Evangelista Albuquerque",
-    cat: ["educacao"],
-    address: "Av. Nossa Senhora de Nazaré, 955 - Asa Branca, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98402-0478"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Asa Branca."
-  },
-  {
-    id: "proinfancia-valderleide-barauna-brandao",
-    name: "Proinfância Valderleide Baraúna Brandão",
-    fullName: "Escola Municipal Proinfância Valderleide Baraúna Brandão",
-    cat: ["educacao"],
-    address: "Av. Ataíde Teive, 788 - Equatorial, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98403-1161"],
-    services: "Educação Infantil (Proinfância).",
-    desc: "Escola pública municipal de Educação Infantil localizada no bairro Equatorial."
-  },
-  {
-    id: "escola-danubia-carvalho-oliveira",
-    name: "E.M. Profa. Danúbia Carvalho de Oliveira",
-    fullName: "Escola Municipal Professora Danúbia Carvalho de Oliveira",
-    cat: ["educacao"],
-    address: "Rua Pavão, 103 - Mecejana, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98402-3589"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Mecejana."
-  },
-  {
-    id: "creche-vovo-julia",
-    name: "Núcleo de Creche Casa Mãe Vovó Júlia",
-    fullName: "Núcleo de Creche Casa Mãe Vovó Júlia",
-    cat: ["educacao"],
-    address: "Av. Mário Homem de Melo, 4665 - Caimbé, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98402-0778"],
-    services: "Educação Infantil (Creche).",
-    desc: "Núcleo de creche municipal localizado no bairro Caimbé."
-  },
-  {
-    id: "creche-pingo-de-gente",
-    name: "Núcleo de Creche Casa Mãe Pingo de Gente",
-    fullName: "Núcleo de Creche Casa Mãe Pingo de Gente",
-    cat: ["educacao"],
-    address: "Rua Belarmino F. Magalhães, 1362 - Tancredo Neves, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98411-6448"],
-    services: "Educação Infantil (Creche).",
-    desc: "Núcleo de creche municipal localizado no bairro Tancredo Neves."
-  },
-  {
-    id: "escola-carlos-raimundo-rodrigues",
-    name: "E.M. Prof. Carlos Raimundo Rodrigues",
-    fullName: "Escola Municipal Professor Carlos Raimundo Rodrigues",
-    cat: ["educacao"],
-    address: "Rua Horácio Mardel de Magalhães, 1265 - Tancredo Neves, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98403-9590"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Tancredo Neves."
-  },
-  {
-    id: "escola-aquilino-da-mota-duarte",
-    name: "E.M. Aquilino da Mota Duarte",
-    fullName: "Escola Municipal Aquilino da Mota Duarte",
-    cat: ["educacao"],
-    address: "Av. Getúlio Vargas, 6241 - Centro, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98402-1161"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Centro."
-  },
-  {
-    id: "escola-presidentes-janio-quadros",
-    name: "E.M. Presidentes (Jânio da Silva Quadros)",
-    fullName: "Escola Municipal Presidentes (Jânio da Silva Quadros)",
-    cat: ["educacao"],
-    address: "Rua Maria Rodrigues dos Santos, 1570 - Tancredo Neves, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98411-2091"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Tancredo Neves."
-  },
-  {
-    id: "creche-branca-de-neve",
-    name: "Núcleo de Creche Casa Mãe Branca de Neve",
-    fullName: "Núcleo de Creche Casa Mãe Branca de Neve",
-    cat: ["educacao"],
-    address: "Rua Carmelo, 1400 - Pintolândia, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98403-2411"],
-    services: "Educação Infantil (Creche).",
-    desc: "Núcleo de creche municipal localizado no bairro Pintolândia."
-  },
-  {
-    id: "escola-nova-canaa",
-    name: "E.M. Nova Canaã",
-    fullName: "Escola Municipal Nova Canaã",
-    cat: ["educacao"],
-    address: "Rua Jericó, 405 - Nova Canaã, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98402-0960"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Nova Canaã."
-  },
-  {
-    id: "proinfancia-waldinete-carvalho-chaves",
-    name: "Proinfância Waldinete de Carvalho Chaves",
-    fullName: "Escola Municipal Proinfância Waldinete de Carvalho Chaves",
-    cat: ["educacao"],
-    address: "Rua Delman Veras, 342 - Dr. Silvio Botelho, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98404-8440"],
-    services: "Educação Infantil (Proinfância).",
-    desc: "Escola pública municipal de Educação Infantil localizada no bairro Dr. Silvio Botelho."
-  },
-  {
-    id: "creche-raio-de-sol",
-    name: "Núcleo de Creche Casa Mãe Raio de Sol",
-    fullName: "Núcleo de Creche Casa Mãe Raio de Sol",
-    cat: ["educacao"],
-    address: "Rua Curitiba, 446 - Nova Cidade, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98403-6365"],
-    services: "Educação Infantil (Creche).",
-    desc: "Núcleo de creche municipal localizado no bairro Nova Cidade."
-  },
-  {
-    id: "proinfancia-odir-lucas-nova-cidade",
-    name: "Proinfância Odir Lucas – Nova Cidade",
-    fullName: "Escola Municipal Proinfância Odir Lucas - Nova Cidade",
-    cat: ["educacao"],
-    address: "Rua Porto Velho, 314 - Nova Cidade, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98407-2917"],
-    services: "Educação Infantil (Proinfância).",
-    desc: "Escola pública municipal de Educação Infantil localizada no bairro Nova Cidade."
-  },
-  {
-    id: "creche-tia-linda",
-    name: "Núcleo de Creche Casa Mãe Tia Linda",
-    fullName: "Núcleo de Creche Casa Mãe Tia Linda",
-    cat: ["educacao"],
-    address: "Rua Vereador Valdemar Gomes, 72 - Dr. Silvio Botelho, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 99138-6060"],
-    services: "Educação Infantil (Creche).",
-    desc: "Núcleo de creche municipal localizado no bairro Dr. Silvio Botelho."
-  },
-  {
-    id: "escola-valdemarina-normando-martins",
-    name: "E.M. Valdemarina Normando Martins",
-    fullName: "Escola Municipal Valdemarina Normando Martins",
-    cat: ["educacao"],
-    address: "Rua Macapá, 740 - Nova Cidade, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98407-2731"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Nova Cidade."
-  },
-  {
-    id: "escola-maria-teresa-maciel-silveira-melo",
-    name: "E.M. Maria Teresa Maciel da Silveira Melo",
-    fullName: "Escola Municipal Maria Teresa Maciel da Silveira Melo",
-    cat: ["educacao"],
-    address: "Rua Severino Caetano, 310 - Jardim Floresta, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98402-8208"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Jardim Floresta."
-  },
-  {
-    id: "creche-sonho-infantil",
-    name: "Núcleo de Creche Casa Mãe Sonho Infantil",
-    fullName: "Núcleo de Creche Casa Mãe Sonho Infantil",
-    cat: ["educacao"],
-    address: "Rua Deco Fonteles, 622 - Jardim Floresta, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98402-6845"],
-    services: "Educação Infantil (Creche).",
-    desc: "Núcleo de creche municipal localizado no bairro Jardim Floresta."
-  },
-  {
-    id: "escola-dr-silvio-leite",
-    name: "E.M. Dr. Silvio Leite",
-    fullName: "Escola Municipal Dr. Silvio Leite",
-    cat: ["educacao"],
-    address: "Rua C-28 c/ Wolter Castelo Branco, 651 - Dr. Silvio Leite, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98403-4548"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Dr. Silvio Leite."
-  },
-  {
-    id: "escola-maria-gertrudes-mota-lima",
-    name: "E.M. Profa. Maria Gertrudes Mota de Lima",
-    fullName: "Escola Municipal Professora Maria Gertrudes Mota de Lima",
-    cat: ["educacao"],
-    address: "Rua Antônio Cutrim, 1299 - Santa Luzia, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98401-2558"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Santa Luzia."
-  },
-  {
-    id: "escola-jardim-das-copaibas",
-    name: "E.M. Jardim das Copaíbas",
-    fullName: "Escola Municipal Jardim das Copaíbas",
-    cat: ["educacao"],
-    address: "Rua Gov. Aquilino da Mota, s/n - Distrito Industrial, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98402-0157"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Distrito Industrial."
-  },
-  {
-    id: "escola-ana-maza-oliveira-monteiro",
-    name: "E.M. Profa. Ana Maza de Oliveira Monteiro",
-    fullName: "Escola Municipal Professora Ana Maza de Oliveira Monteiro",
-    cat: ["educacao"],
-    address: "Rua C-35, s/n - Dr. Silvio Leite, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98401-1158"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Dr. Silvio Leite."
-  },
-  {
-    id: "creche-estrelinha-magica",
-    name: "Núcleo de Creche Casa Mãe Estrelinha Mágica",
-    fullName: "Núcleo de Creche Casa Mãe Estrelinha Mágica",
-    cat: ["educacao"],
-    address: "Rua Expedito Francisco da Silva, 910 - Dr. Silvio Leite, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["N/A"],
-    services: "Educação Infantil (Creche).",
-    desc: "Núcleo de creche municipal localizado no bairro Dr. Silvio Leite."
-  },
-  {
-    id: "escola-laucides-inacio-oliveira",
-    name: "E.M. Laucides Inácio de Oliveira",
-    fullName: "Escola Municipal Laucides Inácio de Oliveira",
-    cat: ["educacao"],
-    address: "Av. A, s/n - Conjunto Dr. Airton Rocha (Nova Cidade), Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98407-2214"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no Conjunto Dr. Airton Rocha (Nova Cidade)."
-  },
-  {
-    id: "creche-vovo-clara",
-    name: "Núcleo de Creche Casa Mãe Vovó Clara",
-    fullName: "Núcleo de Creche Casa Mãe Vovó Clara",
-    cat: ["educacao"],
-    address: "Rua Paraguai, 259 - Cauamé, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98402-4840"],
-    services: "Educação Infantil (Creche).",
-    desc: "Núcleo de creche municipal localizado no bairro Cauamé."
-  },
-  {
-    id: "escola-rujane-severiano-santos",
-    name: "E.M. Rujane Severiano dos Santos",
-    fullName: "Escola Municipal Rujane Severiano dos Santos",
-    cat: ["educacao"],
-    address: "Rua Euclides Gomes da Silva, s/n - Alvorada, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98404-2840"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Alvorada."
-  },
-  {
-    id: "escola-olavo-brasil-filho",
-    name: "E.M. Prof. Olavo Brasil Filho",
-    fullName: "Escola Municipal Professor Olavo Brasil Filho",
-    cat: ["educacao"],
-    address: "Rua Bolívia, 606 - Cauamé, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98411-9666"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Cauamé."
-  },
-  {
-    id: "escola-luiz-canara",
-    name: "E.M. Luiz Canará",
-    fullName: "Escola Municipal Luiz Canará",
-    cat: ["educacao"],
-    address: "Rua HC-04, nº 410 - Senador Hélio Campos, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98404-0936"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Senador Hélio Campos."
-  },
-  {
-    id: "escola-jose-arnobio-silva",
-    name: "E.M. José Arnóbio da Silva",
-    fullName: "Escola Municipal José Arnóbio da Silva",
-    cat: ["educacao"],
-    address: "Rua Pinto Martins, 462 - Cauamé, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98403-5140"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Cauamé."
-  },
-  {
-    id: "escola-jael-silva-barradas",
-    name: "E.M. Jael da Silva Barradas",
-    fullName: "Escola Municipal Jael da Silva Barradas",
-    cat: ["educacao"],
-    address: "Rua Uruguai, 481 - Cauamé, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98403-5298"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Cauamé."
-  },
-  {
-    id: "escola-centenario-boa-vista",
-    name: "E.M. Centenário de Boa Vista",
-    fullName: "Escola Municipal Centenário de Boa Vista",
-    cat: ["educacao"],
-    address: "Rua João Pereira Caldas, 460 - Aparecida, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98411-1573"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Aparecida."
-  },
-  {
-    id: "escola-maria-goncalves-vieira",
-    name: "E.M. Maria Gonçalves Vieira",
-    fullName: "Escola Municipal Maria Gonçalves Vieira",
-    cat: ["educacao"],
-    address: "Rua JCCA Farias, 1775 - Caranã, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98407-4799"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Caranã."
-  },
-  {
-    id: "creche-pequeno-principe",
-    name: "Núcleo de Creche Casa Mãe Pequeno Príncipe",
-    fullName: "Núcleo de Creche Casa Mãe Pequeno Príncipe",
-    cat: ["educacao"],
-    address: "Rua JCCA Farias, 1018 - Caranã, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98404-1078"],
-    services: "Educação Infantil (Creche).",
-    desc: "Núcleo de creche municipal localizado no bairro Caranã."
-  },
-  {
-    id: "escola-edsonina-barros-villa",
-    name: "E.M. Profa. Edsonina de Barros Villa",
-    fullName: "Escola Municipal Professora Edsonina de Barros Villa",
-    cat: ["educacao"],
-    address: "Rua Amapá, 872 - Bairro dos Estados, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98411-7256"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no Bairro dos Estados."
-  },
-  {
-    id: "escola-martinha-thury-vieira",
-    name: "E.M. Martinha Thury Vieira",
-    fullName: "Escola Municipal Martinha Thury Vieira",
-    cat: ["educacao"],
-    address: "Rua Romênia, 145 - Cauamé, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98407-4840"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Cauamé."
-  },
-  {
-    id: "escola-senador-darcy-ribeiro",
-    name: "E.M. Senador Darcy Ribeiro",
-    fullName: "Escola Municipal Senador Darcy Ribeiro",
-    cat: ["educacao"],
-    address: "Av. Santo Antônio, 1138 - Jardim Equatorial, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98407-5032"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Jardim Equatorial."
-  },
-  {
-    id: "centro-municipal-integrado-educacao-especial",
-    name: "Centro Mun. Integrado de Educação Especial",
-    fullName: "Centro Municipal Integrado de Educação Especial",
-    cat: ["educacao"],
-    address: "Rua Paraíba, 444 - Bairro dos Estados, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98404-0967"],
-    services: "Educação Especial.",
-    desc: "Centro municipal voltado à educação especial, localizado no Bairro dos Estados."
-  },
-  {
-    id: "escola-raimundo-eloy-gomes",
-    name: "E.M. Raimundo Eloy Gomes",
-    fullName: "Escola Municipal Raimundo Eloy Gomes",
-    cat: ["educacao"],
-    address: "Av. Major Eceldon Pinto, 1000 - Conjunto Cidadão, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98407-5141"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no Conjunto Cidadão."
-  },
-  {
-    id: "escola-aurea-holanda-lima",
-    name: "E.M. Profa. Áurea de Holanda Lima",
-    fullName: "Escola Municipal Professora Áurea de Holanda Lima",
-    cat: ["educacao"],
-    address: "Travessa dos Macuxis, s/n - Cruviana, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98406-6223"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no bairro Cruviana."
-  },
-  {
-    id: "escola-hilda-franco-souza",
-    name: "E.M. Hilda Franco de Souza",
-    fullName: "Escola Municipal Hilda Franco de Souza",
-    cat: ["educacao"],
-    address: "Rua Latitudinal, 259 - Jardim Equatorial (Cruviana), Boa Vista-RR",
-    hours: "N/A",
-    phones: ["(95) 98404-0647"],
-    services: "Educação Municipal - Ensino Geral.",
-    desc: "Escola pública municipal localizada no Jardim Equatorial (Cruviana)."
-  },
-  {
-    id: "creche-arco-iris",
-    name: "Núcleo de Creche Casa Mãe Arco-Íris",
-    fullName: "Núcleo de Creche Casa Mãe Arco-Íris",
-    cat: ["educacao"],
-    address: "Rua Maçaranduba, 53 - Paraviana, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["N/A"],
-    services: "Educação Infantil (Creche).",
-    desc: "Núcleo de creche municipal localizado no bairro Paraviana."
-  },
-  {
     id: "ee-euclides-da-cunha",
     name: "E.E. Euclides da Cunha",
     fullName: "Escola Estadual Euclides da Cunha",
     cat: ["educacao"],
+    group: "Rede Estadual",
     address: "Rua Bento Brasil, 112 - Centro, Boa Vista-RR",
     hours: "N/A",
     phones: ["N/A"],
@@ -4472,6 +3872,7 @@ const DATA = [
     name: "E.E. Monteiro Lobato",
     fullName: "Escola Estadual Monteiro Lobato",
     cat: ["educacao"],
+    group: "Rede Estadual",
     address: "Rua Cecília Brasil, 1506 - Centro, Boa Vista-RR",
     hours: "N/A",
     phones: ["N/A"],
@@ -4483,6 +3884,7 @@ const DATA = [
     name: "E.E. Lobo D'Almada",
     fullName: "Escola Estadual Lobo D'Almada",
     cat: ["educacao"],
+    group: "Rede Estadual",
     address: "Av. Benjamin Constant, 1453 - Centro, Boa Vista-RR",
     hours: "N/A",
     phones: ["N/A"],
@@ -4494,6 +3896,7 @@ const DATA = [
     name: "E.E. São José",
     fullName: "Escola Estadual São José",
     cat: ["educacao"],
+    group: "Rede Estadual",
     address: "Rua Floriano Peixoto, 346 - Centro, Boa Vista-RR",
     hours: "N/A",
     phones: ["N/A"],
@@ -4505,6 +3908,7 @@ const DATA = [
     name: "E.E. Barão de Parima",
     fullName: "Escola Estadual Barão de Parima",
     cat: ["educacao"],
+    group: "Rede Estadual",
     address: "Rua Castelo Branco, 668 - Calungá, Boa Vista-RR",
     hours: "N/A",
     phones: ["N/A"],
@@ -4512,21 +3916,11 @@ const DATA = [
     desc: "Escola de educação geral da rede estadual, localizada no bairro Calungá."
   },
   {
-    id: "cem-luiz-rittler-brito-lucena",
-    name: "CEM Dr. Luiz Rittler Brito de Lucena",
-    fullName: "Colégio Estadual Militarizado Dr. Luiz Rittler Brito de Lucena",
-    cat: ["educacao"],
-    address: "Rua João Pessoa, s/n - Nova Cidade, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["N/A"],
-    services: "Educação Estadual Militarizada - Ensino Fundamental e Médio.",
-    desc: "Colégio estadual em regime de gestão compartilhada militarizada, localizado no bairro Nova Cidade."
-  },
-  {
     id: "ee-carlo-casadio",
     name: "E.E. Carlo Casadio",
     fullName: "Escola Estadual Carlo Casadio",
     cat: ["educacao"],
+    group: "Rede Estadual",
     address: "Av. Centenário, 900 - Cinturão Verde, Boa Vista-RR",
     hours: "N/A",
     phones: ["N/A"],
@@ -4538,6 +3932,7 @@ const DATA = [
     name: "E.E. Dom José Nepote",
     fullName: "Escola Estadual Dom José Nepote",
     cat: ["educacao"],
+    group: "Rede Estadual",
     address: "Av. Via das Flores, 1111 - Pricumã, Boa Vista-RR",
     hours: "N/A",
     phones: ["N/A"],
@@ -4549,6 +3944,7 @@ const DATA = [
     name: "E.E. Carlos Drummond de Andrade",
     fullName: "Escola Estadual Carlos Drummond de Andrade",
     cat: ["educacao"],
+    group: "Rede Estadual",
     address: "Rua Pastor Almir Nogueira Guerra, 150 - Pricumã, Boa Vista-RR",
     hours: "N/A",
     phones: ["N/A"],
@@ -4560,6 +3956,7 @@ const DATA = [
     name: "E.E. Irmã Maria Teresa Parodi",
     fullName: "Colégio Estadual Militarizado Irmã Maria Teresa Parodi",
     cat: ["educacao"],
+    group: "Rede Estadual",
     address: "Avenida Jardim, 802 - Cidade Satélite, Boa Vista-RR",
     hours: "N/A",
     phones: ["N/A"],
@@ -4571,6 +3968,7 @@ const DATA = [
     name: "E.E. Buritis",
     fullName: "Escola Estadual Buritis",
     cat: ["educacao"],
+    group: "Rede Estadual",
     address: "Rua Antônio Pinheiro Galvão, 837 - Buritis, Boa Vista-RR",
     hours: "N/A",
     phones: ["N/A"],
@@ -4582,6 +3980,7 @@ const DATA = [
     name: "E.E. Prof. Antônio Carlos da Silva Natalino",
     fullName: "Escola Estadual Professor Antônio Carlos da Silva Natalino",
     cat: ["educacao"],
+    group: "Rede Estadual",
     address: "Rua José Francisco, 1339 - Jóquei Clube, Boa Vista-RR",
     hours: "N/A",
     phones: ["N/A"],
@@ -4593,6 +3992,7 @@ const DATA = [
     name: "E.E. Profa. Maria Neves Rezende",
     fullName: "Escola Estadual Professora Maria Neves Rezende",
     cat: ["educacao"],
+    group: "Rede Estadual",
     address: "Rua Lindolfo Bernardo Coutinho, 464 - Asa Branca, Boa Vista-RR",
     hours: "N/A",
     phones: ["N/A"],
@@ -4604,6 +4004,7 @@ const DATA = [
     name: "E.E. Major Alcides Rodrigues Santos",
     fullName: "Escola Estadual Major Alcides Rodrigues Santos",
     cat: ["educacao"],
+    group: "Rede Estadual",
     address: "Av. dos Imigrantes, 551-675 - Asa Branca, Boa Vista-RR",
     hours: "N/A",
     phones: ["N/A"],
@@ -4615,6 +4016,7 @@ const DATA = [
     name: "E.E. Presidente Tancredo Neves",
     fullName: "Escola Estadual Presidente Tancredo Neves",
     cat: ["educacao"],
+    group: "Rede Estadual",
     address: "R. Leôncio Barbosa, 1186 - Tancredo Neves, Boa Vista-RR, 69313-508",
     hours: "N/A",
     phones: ["(95) 3626-8751"],
@@ -4626,6 +4028,7 @@ const DATA = [
     name: "E.E. Profa. Idarlene Severino da Silva",
     fullName: "Escola Estadual Professora Idarlene Severino da Silva",
     cat: ["educacao"],
+    group: "Rede Estadual",
     address: "R. Belarmino Fernandes Magalhães, 1584 - Tancredo Neves, Boa Vista-RR, 69313-485",
     hours: "N/A",
     phones: ["(95) 3626-3652"],
@@ -4637,6 +4040,7 @@ const DATA = [
     name: "E.E. General Penha Brasil",
     fullName: "Escola Estadual General Penha Brasil",
     cat: ["educacao"],
+    group: "Rede Estadual",
     address: "Av. Presidente Juscelino Kubitschek, 926 - Nossa Senhora Aparecida, Boa Vista-RR, 69306-295",
     hours: "N/A",
     phones: ["N/A"],
@@ -4648,6 +4052,7 @@ const DATA = [
     name: "E.E. Maria Sônia de Brito Oliva",
     fullName: "Escola Estadual Maria Sônia de Brito Oliva",
     cat: ["educacao"],
+    group: "Rede Estadual",
     address: "R. S-24 Felintro Barbosa Monteiro, 559 - Senador Hélio Campos, Boa Vista-RR, 69316-584",
     hours: "N/A",
     phones: ["(95) 3627-7068"],
@@ -4659,6 +4064,7 @@ const DATA = [
     name: "E.E. Profa. Francisca Elzika de Souza Coelho",
     fullName: "Escola Estadual Professora Francisca Elzika de Souza Coelho",
     cat: ["educacao"],
+    group: "Rede Estadual",
     address: "R. Dom Pedro I, 1899 - Mecejana, Boa Vista-RR, 69304-010",
     hours: "N/A",
     phones: ["(95) 99119-4581"],
@@ -4670,6 +4076,7 @@ const DATA = [
     name: "E.E. Indígena Índio Dionísio Figueiredo",
     fullName: "Escola Estadual Indígena Índio Dionísio Figueiredo",
     cat: ["educacao"],
+    group: "Rede Estadual",
     address: "Comunidade Indígena do Milho, RR-319, Km 80 - Zona Rural, Boa Vista-RR, 69301-000",
     hours: "N/A",
     phones: ["(95) 4400-7252"],
@@ -4677,10 +4084,743 @@ const DATA = [
     desc: "Escola de educação indígena da rede estadual, localizada na Comunidade Indígena do Milho, zona rural de Boa Vista."
   },
   {
+    id: "escola-cantinho-feliz",
+    name: "E.M. Cantinho Feliz",
+    fullName: "Escola Municipal Cantinho Feliz - Educação Infantil e Ensino Fundamental",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Macunaíma, 392 - 13 de Setembro, Boa Vista-RR, 69308-240",
+    hours: "N/A",
+    phones: ["(95) 3624-1722"],
+    services: "Educação Infantil, Ensino Fundamental.",
+    desc: "Escola pública municipal localizada no bairro 13 de Setembro."
+  },
+  {
+    id: "escola-cantinho-do-ceu",
+    name: "E.M. Cantinho do Céu",
+    fullName: "Escola Municipal Cantinho do Céu - Educação Infantil",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Cotingo, 48 - 13 de Setembro, Boa Vista-RR, 69308-014",
+    hours: "N/A",
+    phones: ["(95) 3623-1728"],
+    services: "Educação Infantil.",
+    desc: "Escola pública municipal localizada no bairro 13 de Setembro."
+  },
+  {
+    id: "escola-pequeno-polegar",
+    name: "E.M. Pequeno Polegar",
+    fullName: "Escola Municipal Pequeno Polegar - Ensino Fundamental",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Av. General Sampaio, 262 - 13 de Setembro, Boa Vista-RR, 69314-570",
+    hours: "N/A",
+    phones: ["(95) 3624-4525"],
+    services: "Ensino Fundamental.",
+    desc: "Escola pública municipal localizada no bairro 13 de Setembro."
+  },
+  {
+    id: "escola-palmira-castro-machado",
+    name: "E.M. Palmira Castro Machado",
+    fullName: "Escola Municipal Palmira Castro Machado - Educação Infantil e Ensino Fundamental",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "R. Monte Sinai, 403 - Profa. Araceli Souto Maior, Boa Vista-RR, 69315-096",
+    hours: "N/A",
+    phones: ["(95) 98401-0552"],
+    services: "Educação Infantil, Ensino Fundamental.",
+    desc: "Escola pública municipal localizada no bairro Professora Araceli Souto Maior."
+  },
+  {
+    id: "escola-ioladio-batista",
+    name: "E.M. Ioládio Batista Da Silva",
+    fullName: "Escola Municipal Ioládio Batista Da Silva - Educ. Infantil, Ens. Fundamental e EJA",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Antônio Ferreira de Souza, 445 - São Bento, Boa Vista-RR, 69316-054",
+    hours: "N/A",
+    phones: ["(95) 98403-4598"],
+    services: "Educação Infantil, Ensino Fundamental, EJA.",
+    desc: "Escola pública municipal localizada no bairro São Bento."
+  },
+  {
+    id: "escola-maria-de-fatima-faria-andrade",
+    name: "E.M. Maria De Fátima Faria Andrade",
+    fullName: "Escola Municipal Maria De Fátima Faria Andrade - Educ. Infantil e Ens. Fundamental",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Milão, 173 - Centenário, Boa Vista-RR, 69312-665",
+    hours: "N/A",
+    phones: ["(95) 3628-7901"],
+    services: "Educação Infantil, Ensino Fundamental.",
+    desc: "Escola pública municipal localizada no bairro Centenário."
+  },
+  {
+    id: "escola-delacir-de-melo-lima",
+    name: "E.M. Delacir De Melo Lima",
+    fullName: "Escola Municipal Delacir De Melo Lima - Ensino Fundamental",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Santo Agostinho, 173 - Centenário, Boa Vista-RR, 69312-490",
+    hours: "N/A",
+    phones: ["(95) 3626-5770"],
+    services: "Ensino Fundamental.",
+    desc: "Escola pública municipal localizada no bairro Centenário."
+  },
+  {
+    id: "escola-james-macelaro-thome",
+    name: "E.M. James Macelaro Thomé",
+    fullName: "Escola Municipal James Macelaro Thomé",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "R. PS-4, 02 - s/n - Centenário, Boa Vista-RR, 69312-606",
+    hours: "N/A",
+    phones: ["N/A"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Centenário."
+  },
+  {
+    id: "escola-proinfancia-lidia-coelho-tavares",
+    name: "E.M. Proinfância Profa. Lídia Coelho Tavares",
+    fullName: "Escola Municipal Proinfância Professora Lídia Coelho Tavares",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "R. Bréscia, nº 526 - Centenário, Boa Vista-RR, 69312-673",
+    hours: "N/A",
+    phones: ["N/A"],
+    services: "Educação Infantil (Pré-escola).",
+    desc: "Escola pública municipal de Educação Infantil localizada no bairro Centenário."
+  },
+  {
+    id: "cem-wanda-david-aguiar",
+    name: "CEM Profa. Wanda David Aguiar",
+    fullName: "Colégio Estadual Militarizado Professora Wanda David Aguiar - CEM",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Estrela D'Alva, 736 - Raiar do Sol, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["N/A"],
+    services: "Educação Estadual Militarizada - Ensino Fundamental e Médio.",
+    desc: "Colégio estadual em regime de gestão compartilhada militarizada, localizado no bairro Raiar do Sol."
+  },
+  {
+    id: "escola-joquei-clube",
+    name: "E.M. Jóquei Clube",
+    fullName: "Escola Municipal Jóquei Clube",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua CJ-06, s/n - Jóquei Clube, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98404-3385"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Jóquei Clube."
+  },
+  {
+    id: "escola-menino-jesus-de-praga",
+    name: "E.M. Menino Jesus de Praga",
+    fullName: "Escola Municipal Menino Jesus de Praga",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Itajara, 225 - Jóquei Clube, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98403-4745"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Jóquei Clube."
+  },
+  {
+    id: "escola-frei-artur-agostini",
+    name: "E.M. Frei Artur Agostini",
+    fullName: "Escola Municipal Frei Artur Agostini",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Surumu, 1905 - São Vicente, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98406-7058"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro São Vicente."
+  },
+  {
+    id: "escola-ivany-santos-parente",
+    name: "E.M. Profa. Ivany dos Santos Parente",
+    fullName: "Escola Municipal Professora Ivany dos Santos Parente",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Monte Sinai, s/n - Raiar do Sol, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98411-6575"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Raiar do Sol."
+  },
+  {
+    id: "escola-menino-jesus",
+    name: "E.M. Menino Jesus",
+    fullName: "Escola Municipal Menino Jesus",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Lindolfo Bernardo Coutinho, 330 - Asa Branca, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98402-5231"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Asa Branca."
+  },
+  {
+    id: "escola-juslany-souza-flores",
+    name: "E.M. Juslany de Souza Flores",
+    fullName: "Escola Municipal Juslany de Souza Flores",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua 08, nº 289 - Jardim Tropical, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98403-0212"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Jardim Tropical."
+  },
+  {
+    id: "escola-antonia-fernandes-cutrim",
+    name: "E.M. Profa. Antônia Fernandes Cutrim",
+    fullName: "Escola Municipal Professora Antônia Fernandes Cutrim",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Abraão Félix Lima, s/n - Jardim Tropical, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98402-5621"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Jardim Tropical."
+  },
+  {
+    id: "escola-carmem-eugenia-macaggi",
+    name: "E.M. Profa. Carmem Eugênia Macaggi",
+    fullName: "Escola Municipal Professora Carmem Eugênia Macaggi",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Av. Nossa Senhora de Nazaré, 3351 - Asa Branca, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98411-9503"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Asa Branca."
+  },
+  {
+    id: "escola-newton-tavares",
+    name: "E.M. Newton Tavares",
+    fullName: "Escola Municipal Newton Tavares",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Castelo Branco, 1277 - Calungá (Caetano Filho), Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98402-4760"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Calungá (Caetano Filho)."
+  },
+  {
+    id: "escola-zacarias-assuncao-ribeiro-araujo",
+    name: "E.M. Zacarias Assunção Ribeiro Araújo",
+    fullName: "Escola Municipal Zacarias Assunção Ribeiro Araújo",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Rio Verde, 164 - Bela Vista, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98402-5572"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Bela Vista."
+  },
+  {
+    id: "escola-isete-evangelista-albuquerque",
+    name: "E.M. Isete Evangelista Albuquerque",
+    fullName: "Escola Municipal Isete Evangelista Albuquerque",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Av. Nossa Senhora de Nazaré, 955 - Asa Branca, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98402-0478"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Asa Branca."
+  },
+  {
+    id: "escola-danubia-carvalho-oliveira",
+    name: "E.M. Profa. Danúbia Carvalho de Oliveira",
+    fullName: "Escola Municipal Professora Danúbia Carvalho de Oliveira",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Pavão, 103 - Mecejana, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98402-3589"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Mecejana."
+  },
+  {
+    id: "escola-carlos-raimundo-rodrigues",
+    name: "E.M. Prof. Carlos Raimundo Rodrigues",
+    fullName: "Escola Municipal Professor Carlos Raimundo Rodrigues",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Horácio Mardel de Magalhães, 1265 - Tancredo Neves, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98403-9590"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Tancredo Neves."
+  },
+  {
+    id: "escola-aquilino-da-mota-duarte",
+    name: "E.M. Aquilino da Mota Duarte",
+    fullName: "Escola Municipal Aquilino da Mota Duarte",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Av. Getúlio Vargas, 6241 - Centro, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98402-1161"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Centro."
+  },
+  {
+    id: "escola-presidentes-janio-quadros",
+    name: "E.M. Presidentes (Jânio da Silva Quadros)",
+    fullName: "Escola Municipal Presidentes (Jânio da Silva Quadros)",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Maria Rodrigues dos Santos, 1570 - Tancredo Neves, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98411-2091"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Tancredo Neves."
+  },
+  {
+    id: "escola-nova-canaa",
+    name: "E.M. Nova Canaã",
+    fullName: "Escola Municipal Nova Canaã",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Jericó, 405 - Nova Canaã, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98402-0960"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Nova Canaã."
+  },
+  {
+    id: "escola-valdemarina-normando-martins",
+    name: "E.M. Valdemarina Normando Martins",
+    fullName: "Escola Municipal Valdemarina Normando Martins",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Macapá, 740 - Nova Cidade, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98407-2731"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Nova Cidade."
+  },
+  {
+    id: "escola-maria-teresa-maciel-silveira-melo",
+    name: "E.M. Maria Teresa Maciel da Silveira Melo",
+    fullName: "Escola Municipal Maria Teresa Maciel da Silveira Melo",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Severino Caetano, 310 - Jardim Floresta, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98402-8208"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Jardim Floresta."
+  },
+  {
+    id: "escola-dr-silvio-leite",
+    name: "E.M. Dr. Silvio Leite",
+    fullName: "Escola Municipal Dr. Silvio Leite",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua C-28 c/ Wolter Castelo Branco, 651 - Dr. Silvio Leite, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98403-4548"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Dr. Silvio Leite."
+  },
+  {
+    id: "escola-maria-gertrudes-mota-lima",
+    name: "E.M. Profa. Maria Gertrudes Mota de Lima",
+    fullName: "Escola Municipal Professora Maria Gertrudes Mota de Lima",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Antônio Cutrim, 1299 - Santa Luzia, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98401-2558"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Santa Luzia."
+  },
+  {
+    id: "escola-jardim-das-copaibas",
+    name: "E.M. Jardim das Copaíbas",
+    fullName: "Escola Municipal Jardim das Copaíbas",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Gov. Aquilino da Mota, s/n - Distrito Industrial, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98402-0157"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Distrito Industrial."
+  },
+  {
+    id: "escola-ana-maza-oliveira-monteiro",
+    name: "E.M. Profa. Ana Maza de Oliveira Monteiro",
+    fullName: "Escola Municipal Professora Ana Maza de Oliveira Monteiro",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua C-35, s/n - Dr. Silvio Leite, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98401-1158"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Dr. Silvio Leite."
+  },
+  {
+    id: "escola-laucides-inacio-oliveira",
+    name: "E.M. Laucides Inácio de Oliveira",
+    fullName: "Escola Municipal Laucides Inácio de Oliveira",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Av. A, s/n - Conjunto Dr. Airton Rocha (Nova Cidade), Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98407-2214"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no Conjunto Dr. Airton Rocha (Nova Cidade)."
+  },
+  {
+    id: "escola-rujane-severiano-santos",
+    name: "E.M. Rujane Severiano dos Santos",
+    fullName: "Escola Municipal Rujane Severiano dos Santos",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Euclides Gomes da Silva, s/n - Alvorada, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98404-2840"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Alvorada."
+  },
+  {
+    id: "escola-olavo-brasil-filho",
+    name: "E.M. Prof. Olavo Brasil Filho",
+    fullName: "Escola Municipal Professor Olavo Brasil Filho",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Bolívia, 606 - Cauamé, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98411-9666"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Cauamé."
+  },
+  {
+    id: "escola-luiz-canara",
+    name: "E.M. Luiz Canará",
+    fullName: "Escola Municipal Luiz Canará",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua HC-04, nº 410 - Senador Hélio Campos, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98404-0936"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Senador Hélio Campos."
+  },
+  {
+    id: "escola-jose-arnobio-silva",
+    name: "E.M. José Arnóbio da Silva",
+    fullName: "Escola Municipal José Arnóbio da Silva",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Pinto Martins, 462 - Cauamé, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98403-5140"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Cauamé."
+  },
+  {
+    id: "escola-jael-silva-barradas",
+    name: "E.M. Jael da Silva Barradas",
+    fullName: "Escola Municipal Jael da Silva Barradas",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Uruguai, 481 - Cauamé, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98403-5298"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Cauamé."
+  },
+  {
+    id: "escola-centenario-boa-vista",
+    name: "E.M. Centenário de Boa Vista",
+    fullName: "Escola Municipal Centenário de Boa Vista",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua João Pereira Caldas, 460 - Aparecida, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98411-1573"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Aparecida."
+  },
+  {
+    id: "escola-maria-goncalves-vieira",
+    name: "E.M. Maria Gonçalves Vieira",
+    fullName: "Escola Municipal Maria Gonçalves Vieira",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua JCCA Farias, 1775 - Caranã, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98407-4799"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Caranã."
+  },
+  {
+    id: "escola-edsonina-barros-villa",
+    name: "E.M. Profa. Edsonina de Barros Villa",
+    fullName: "Escola Municipal Professora Edsonina de Barros Villa",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Amapá, 872 - Bairro dos Estados, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98411-7256"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no Bairro dos Estados."
+  },
+  {
+    id: "escola-martinha-thury-vieira",
+    name: "E.M. Martinha Thury Vieira",
+    fullName: "Escola Municipal Martinha Thury Vieira",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Romênia, 145 - Cauamé, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98407-4840"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Cauamé."
+  },
+  {
+    id: "escola-senador-darcy-ribeiro",
+    name: "E.M. Senador Darcy Ribeiro",
+    fullName: "Escola Municipal Senador Darcy Ribeiro",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Av. Santo Antônio, 1138 - Jardim Equatorial, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98407-5032"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Jardim Equatorial."
+  },
+  {
+    id: "centro-municipal-integrado-educacao-especial",
+    name: "Centro Mun. Integrado de Educação Especial",
+    fullName: "Centro Municipal Integrado de Educação Especial",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Paraíba, 444 - Bairro dos Estados, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98404-0967"],
+    services: "Educação Especial.",
+    desc: "Centro municipal voltado à educação especial, localizado no Bairro dos Estados."
+  },
+  {
+    id: "escola-raimundo-eloy-gomes",
+    name: "E.M. Raimundo Eloy Gomes",
+    fullName: "Escola Municipal Raimundo Eloy Gomes",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Av. Major Eceldon Pinto, 1000 - Conjunto Cidadão, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98407-5141"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no Conjunto Cidadão."
+  },
+  {
+    id: "escola-aurea-holanda-lima",
+    name: "E.M. Profa. Áurea de Holanda Lima",
+    fullName: "Escola Municipal Professora Áurea de Holanda Lima",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Travessa dos Macuxis, s/n - Cruviana, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98406-6223"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no bairro Cruviana."
+  },
+  {
+    id: "escola-hilda-franco-souza",
+    name: "E.M. Hilda Franco de Souza",
+    fullName: "Escola Municipal Hilda Franco de Souza",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua Latitudinal, 259 - Jardim Equatorial (Cruviana), Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98404-0647"],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal localizada no Jardim Equatorial (Cruviana)."
+  },
+  {
+    id: "cem-luiz-rittler-brito-lucena",
+    name: "CEM Dr. Luiz Rittler Brito de Lucena",
+    fullName: "Colégio Estadual Militarizado Dr. Luiz Rittler Brito de Lucena",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Rua João Pessoa, s/n - Nova Cidade, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["N/A"],
+    services: "Educação Estadual Militarizada - Ensino Fundamental e Médio.",
+    desc: "Colégio estadual em regime de gestão compartilhada militarizada, localizado no bairro Nova Cidade."
+  },
+  {
+    id: "proinfancia-valderleide-barauna-brandao",
+    name: "Proinfância Valderleide Baraúna Brandão",
+    fullName: "Escola Municipal Proinfância Valderleide Baraúna Brandão",
+    cat: ["educacao"],
+    group: "Rede Municipal - Creches e Proinfância",
+    address: "Av. Ataíde Teive, 788 - Equatorial, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98403-1161"],
+    services: "Educação Infantil (Proinfância).",
+    desc: "Escola pública municipal de Educação Infantil localizada no bairro Equatorial."
+  },
+  {
+    id: "creche-vovo-julia",
+    name: "Núcleo de Creche Casa Mãe Vovó Júlia",
+    fullName: "Núcleo de Creche Casa Mãe Vovó Júlia",
+    cat: ["educacao"],
+    group: "Rede Municipal - Creches e Proinfância",
+    address: "Av. Mário Homem de Melo, 4665 - Caimbé, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98402-0778"],
+    services: "Educação Infantil (Creche).",
+    desc: "Núcleo de creche municipal localizado no bairro Caimbé."
+  },
+  {
+    id: "creche-pingo-de-gente",
+    name: "Núcleo de Creche Casa Mãe Pingo de Gente",
+    fullName: "Núcleo de Creche Casa Mãe Pingo de Gente",
+    cat: ["educacao"],
+    group: "Rede Municipal - Creches e Proinfância",
+    address: "Rua Belarmino F. Magalhães, 1362 - Tancredo Neves, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98411-6448"],
+    services: "Educação Infantil (Creche).",
+    desc: "Núcleo de creche municipal localizado no bairro Tancredo Neves."
+  },
+  {
+    id: "creche-branca-de-neve",
+    name: "Núcleo de Creche Casa Mãe Branca de Neve",
+    fullName: "Núcleo de Creche Casa Mãe Branca de Neve",
+    cat: ["educacao"],
+    group: "Rede Municipal - Creches e Proinfância",
+    address: "Rua Carmelo, 1400 - Pintolândia, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98403-2411"],
+    services: "Educação Infantil (Creche).",
+    desc: "Núcleo de creche municipal localizado no bairro Pintolândia."
+  },
+  {
+    id: "proinfancia-waldinete-carvalho-chaves",
+    name: "Proinfância Waldinete de Carvalho Chaves",
+    fullName: "Escola Municipal Proinfância Waldinete de Carvalho Chaves",
+    cat: ["educacao"],
+    group: "Rede Municipal - Creches e Proinfância",
+    address: "Rua Delman Veras, 342 - Dr. Silvio Botelho, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98404-8440"],
+    services: "Educação Infantil (Proinfância).",
+    desc: "Escola pública municipal de Educação Infantil localizada no bairro Dr. Silvio Botelho."
+  },
+  {
+    id: "creche-raio-de-sol",
+    name: "Núcleo de Creche Casa Mãe Raio de Sol",
+    fullName: "Núcleo de Creche Casa Mãe Raio de Sol",
+    cat: ["educacao"],
+    group: "Rede Municipal - Creches e Proinfância",
+    address: "Rua Curitiba, 446 - Nova Cidade, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98403-6365"],
+    services: "Educação Infantil (Creche).",
+    desc: "Núcleo de creche municipal localizado no bairro Nova Cidade."
+  },
+  {
+    id: "proinfancia-odir-lucas-nova-cidade",
+    name: "Proinfância Odir Lucas – Nova Cidade",
+    fullName: "Escola Municipal Proinfância Odir Lucas - Nova Cidade",
+    cat: ["educacao"],
+    group: "Rede Municipal - Creches e Proinfância",
+    address: "Rua Porto Velho, 314 - Nova Cidade, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98407-2917"],
+    services: "Educação Infantil (Proinfância).",
+    desc: "Escola pública municipal de Educação Infantil localizada no bairro Nova Cidade."
+  },
+  {
+    id: "creche-tia-linda",
+    name: "Núcleo de Creche Casa Mãe Tia Linda",
+    fullName: "Núcleo de Creche Casa Mãe Tia Linda",
+    cat: ["educacao"],
+    group: "Rede Municipal - Creches e Proinfância",
+    address: "Rua Vereador Valdemar Gomes, 72 - Dr. Silvio Botelho, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 99138-6060"],
+    services: "Educação Infantil (Creche).",
+    desc: "Núcleo de creche municipal localizado no bairro Dr. Silvio Botelho."
+  },
+  {
+    id: "creche-sonho-infantil",
+    name: "Núcleo de Creche Casa Mãe Sonho Infantil",
+    fullName: "Núcleo de Creche Casa Mãe Sonho Infantil",
+    cat: ["educacao"],
+    group: "Rede Municipal - Creches e Proinfância",
+    address: "Rua Deco Fonteles, 622 - Jardim Floresta, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98402-6845"],
+    services: "Educação Infantil (Creche).",
+    desc: "Núcleo de creche municipal localizado no bairro Jardim Floresta."
+  },
+  {
+    id: "creche-estrelinha-magica",
+    name: "Núcleo de Creche Casa Mãe Estrelinha Mágica",
+    fullName: "Núcleo de Creche Casa Mãe Estrelinha Mágica",
+    cat: ["educacao"],
+    group: "Rede Municipal - Creches e Proinfância",
+    address: "Rua Expedito Francisco da Silva, 910 - Dr. Silvio Leite, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["N/A"],
+    services: "Educação Infantil (Creche).",
+    desc: "Núcleo de creche municipal localizado no bairro Dr. Silvio Leite."
+  },
+  {
+    id: "creche-vovo-clara",
+    name: "Núcleo de Creche Casa Mãe Vovó Clara",
+    fullName: "Núcleo de Creche Casa Mãe Vovó Clara",
+    cat: ["educacao"],
+    group: "Rede Municipal - Creches e Proinfância",
+    address: "Rua Paraguai, 259 - Cauamé, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98402-4840"],
+    services: "Educação Infantil (Creche).",
+    desc: "Núcleo de creche municipal localizado no bairro Cauamé."
+  },
+  {
+    id: "creche-pequeno-principe",
+    name: "Núcleo de Creche Casa Mãe Pequeno Príncipe",
+    fullName: "Núcleo de Creche Casa Mãe Pequeno Príncipe",
+    cat: ["educacao"],
+    group: "Rede Municipal - Creches e Proinfância",
+    address: "Rua JCCA Farias, 1018 - Caranã, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 98404-1078"],
+    services: "Educação Infantil (Creche).",
+    desc: "Núcleo de creche municipal localizado no bairro Caranã."
+  },
+  {
+    id: "creche-arco-iris",
+    name: "Núcleo de Creche Casa Mãe Arco-Íris",
+    fullName: "Núcleo de Creche Casa Mãe Arco-Íris",
+    cat: ["educacao"],
+    group: "Rede Municipal - Creches e Proinfância",
+    address: "Rua Maçaranduba, 53 - Paraviana, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["N/A"],
+    services: "Educação Infantil (Creche).",
+    desc: "Núcleo de creche municipal localizado no bairro Paraviana."
+  },
+  {
     id: "ifrr-reitoria",
     name: "IFRR (Reitoria)",
     fullName: "Instituto Federal de Educação, Ciência e Tecnologia de Roraima - Reitoria",
     cat: ["educacao"],
+    group: "Ensino Superior",
     address: "R. Fernão Dias Paes Leme, 1 - Calungá, Boa Vista-RR, 69303-220",
     hours: "Segunda a sexta, 08:00 às 14:00",
     phones: ["(95) 3624-1224"],
@@ -4692,6 +4832,7 @@ const DATA = [
     name: "IFRR - Campus Boa Vista",
     fullName: "Instituto Federal de Roraima - Campus Boa Vista",
     cat: ["educacao"],
+    group: "Ensino Superior",
     address: "Av. Glaycon de Paiva, 2496 - Pricumã, Boa Vista-RR, 69303-340",
     hours: "N/A",
     phones: ["(95) 3621-8000"],
@@ -4703,6 +4844,7 @@ const DATA = [
     name: "IFRR - Campus Boa Vista Zona Oeste",
     fullName: "Instituto Federal de Roraima - Campus Boa Vista Zona Oeste",
     cat: ["educacao"],
+    group: "Ensino Superior",
     address: "R. Prof. Nonato Chacon, 1976 - Laura Moreira (Conjunto Cidadão), Boa Vista-RR, 69318-060",
     hours: "N/A",
     phones: ["N/A"],
@@ -4714,6 +4856,7 @@ const DATA = [
     name: "UFRR",
     fullName: "Universidade Federal de Roraima",
     cat: ["educacao"],
+    group: "Ensino Superior",
     address: "Av. Cap. Ene Garcez, 2413 - Aeroporto, Campus Paricarana, Boa Vista-RR, 69304-000",
     hours: "Segunda a sexta-feira, horário administrativo",
     phones: ["(95) 3621-3100"],
@@ -4725,6 +4868,7 @@ const DATA = [
     name: "UERR",
     fullName: "Universidade Estadual de Roraima",
     cat: ["educacao"],
+    group: "Ensino Superior",
     address: "Rua 7 de Setembro, 231 - Canarinho, Boa Vista-RR, 69306-530",
     hours: "Segunda a sexta-feira, horário administrativo",
     phones: ["(95) 2121-0900"],
@@ -4736,6 +4880,7 @@ const DATA = [
     name: "Claretiano",
     fullName: "Claretiano - Faculdade / Colégio Boa Vista",
     cat: ["educacao"],
+    group: "Ensino Superior",
     address: "R. Antônio Augusto Martins, 52 - São Francisco, Boa Vista-RR, 69305-270",
     hours: "Segunda a sexta-feira, 08h às 21h30 · Sábado, 08h às 15h",
     phones: ["(95) 3621-7200"],
@@ -4747,6 +4892,7 @@ const DATA = [
     name: "Estácio",
     fullName: "Centro Universitário Estácio da Amazônia",
     cat: ["educacao"],
+    group: "Ensino Superior",
     address: "Rua Jornalista Humberto Silva, 308 - União, Boa Vista-RR, 69313-792",
     hours: "Segunda a sexta-feira, 08h às 22h · Sábado, 08h às 18h",
     phones: ["(95) 2121-5500"],
@@ -4758,6 +4904,7 @@ const DATA = [
     name: "Faculdade Cathedral",
     fullName: "Faculdade Cathedral",
     cat: ["educacao"],
+    group: "Ensino Superior",
     address: "Av. Luís Canuto Chaves, 293 - Caçari, Boa Vista-RR, 69307-053",
     hours: "Segunda a sexta-feira, horário administrativo",
     phones: ["(95) 2121-3460"],
@@ -4769,6 +4916,7 @@ const DATA = [
     name: "Unama",
     fullName: "Universidade da Amazônia (Unama) - Unidade Boa Vista",
     cat: ["educacao"],
+    group: "Ensino Superior",
     address: "Rua Araújo Filho, 803 - Centro, Boa Vista-RR",
     hours: "Segunda a sexta-feira, horário administrativo",
     phones: ["(95) 4020-9734"],
@@ -4780,6 +4928,7 @@ const DATA = [
     name: "Faceten",
     fullName: "Faculdade de Ciências, Educação e Teologia do Norte do Brasil (Faceten)",
     cat: ["educacao"],
+    group: "Ensino Superior",
     address: "Av. dos Bandeirantes, 900 - Pricumã, Boa Vista-RR, 69309-100",
     hours: "N/A",
     phones: ["(95) 3625-5477", "(95) 99177-6671"],
@@ -4791,6 +4940,7 @@ const DATA = [
     name: "UNIP",
     fullName: "Universidade Paulista (UNIP) - Boa Vista",
     cat: ["educacao"],
+    group: "Ensino Superior",
     address: "Av. Mário Homem de Melo, 5008 - Caimbé, Boa Vista-RR, 69312-155",
     hours: "N/A",
     phones: ["0800 010 9000"],
@@ -4802,6 +4952,7 @@ const DATA = [
     name: "Pé-de-Meia",
     fullName: "Programa Pé-de-Meia (MEC)",
     cat: ["educacao"],
+    group: "Programas de Apoio",
     address: "Adesão feita pela escola pública estadual, via secretaria de educação (não presencial)",
     hours: "Consulta e extrato: plataforma estudante.pedemeia.mec.gov.br",
     phones: ["pedemeia@mec.gov.br"],
@@ -4858,6 +5009,7 @@ const DATA = [
     name: "SEMADS",
     fullName: "Secretaria Municipal de Assistência e Desenvolvimento Social",
     cat: ["social"],
+    group: "Gestão e Coordenação",
     address: "Av. Major Williams, nº 1687 - Centro, CEP 69.301-365, Boa Vista-RR",
     hours: "Segunda a sexta, 08:00 às 14:00",
     phones: ["(95) 3198-9316"],
@@ -4869,6 +5021,7 @@ const DATA = [
     name: "SETRABES",
     fullName: "Secretaria de Estado do Trabalho e Bem-Estar Social",
     cat: ["social"],
+    group: "Gestão e Coordenação",
     address: "Av. Mário Homem de Melo, 2310 - Mecejana, CEP 69.304-350, Boa Vista-RR",
     hours: "Segunda a sexta, 08:00 às 14:00",
     phones: ["(95) 3627-7995"],
@@ -4880,6 +5033,7 @@ const DATA = [
     name: "CAS",
     fullName: "Centro de Atendimento Social",
     cat: ["social"],
+    group: "Outros Equipamentos Socioassistenciais",
     address: "R. James Meirelles Sobreiro Júnior, 1876 - Cidade Satélite, Boa Vista-RR, 69317-530",
     hours: "Segunda a sábado, 08:00 às 22:00",
     phones: ["N/A"],
@@ -5551,6 +5705,7 @@ const DATA = [
     name: "Consultar CadÚnico",
     fullName: "Consultar dados do Cadastro Único (CadÚnico) - Consulta Simples e Completa",
     cat: ["social"],
+    group: "Cadastro Único (CadÚnico)",
     address: "N/A - Consulta online (app ou web)",
     hours: "N/A",
     phones: ["121"],
@@ -5562,6 +5717,7 @@ const DATA = [
     name: "Vis Data (MDS)",
     fullName: "Vis Data – Painel de Indicadores do Cadastro Único e do Bolsa Família",
     cat: ["social"],
+    group: "Cadastro Único (CadÚnico)",
     address: "N/A - Painel online",
     hours: "N/A",
     phones: ["N/A"],
@@ -6299,12 +6455,28 @@ function render() {
       </div>
     ` : '';
 
+    // Sub-seção por grupo (ex.: Distritos Policiais / Delegacias Especializadas,
+    // ou por município no interior) sempre que o campo "group" do item mudar
+    // em relação ao anterior na lista já filtrada.
+    const prevItem = filtered[idx - 1];
+    const groupChanged = i.group && i.group !== (prevItem ? prevItem.group : undefined) && !i.cat.includes('cas') && !i.cat.includes('cras');
+    const groupDivider = groupChanged ? `
+      <div class="group-section-divider" style="grid-column:1/-1; display:flex; align-items:center; gap:10px; margin:${idx === socialDividerIndex ? '0.6rem' : '1.25rem'} 0 0.15rem;">
+        <span style="display:inline-flex; align-items:center; gap:6px; font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:var(--brand-primary); background:rgba(0,145,194,0.08); padding:5px 12px; border-radius:999px;">
+          ${ICONS.map} ${escapeHtml(i.group)}
+        </span>
+        <span style="flex:1; height:1px; background:linear-gradient(to right, rgba(0,145,194,0.25), transparent);"></span>
+      </div>
+    ` : '';
+
+    const dividers = sectionDivider + groupDivider;
+
     if (i.cat.includes('cas')) {
-      return sectionDivider + renderCasCard(i, query);
+      return dividers + renderCasCard(i, query);
     }
 
     if (i.cat.includes('cras')) {
-      return sectionDivider + renderCrasCard(i, query);
+      return dividers + renderCrasCard(i, query);
     }
 
     const attach = getAttachment(i.id);
@@ -6341,7 +6513,7 @@ function render() {
         informeMetaRow(ICONS.phone, 'Contato Técnico', i.phones.join(' · '))
       ].filter(Boolean).join('');
 
-      return sectionDivider + `
+      return dividers + `
       <div class="tech-card informe-card">
         <div class="card-top">
           <div style="display:flex; align-items:center; gap:0.55rem;">
@@ -6373,7 +6545,7 @@ function render() {
     `;
     }
 
-    return sectionDivider + `
+    return dividers + `
     <div class="tech-card${isPolice ? ' police-card' : ''}${isInterior ? ' interior-card' : ''}">
       <div class="card-top">
         <div style="display:flex; align-items:center; gap:0.55rem;">
@@ -6908,25 +7080,26 @@ async function printGuide(id) {
             ${pdfAttach ? `<div style="margin-top:6px; font-size:0.68rem; font-weight:700; color:#475569;">📎 Anexo digital em PDF: ${escapeHtml(pdfAttach.name || 'documento.pdf')} (incluído nas páginas seguintes desta impressão).</div>` : ''}
           </div>
 
-          <div style="display:flex; flex-direction:column; height:100%; padding-top:20px;">
-            <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
-              ${catDisplay ? `<tr>
-                <td style="background:#F1F5F9; border-bottom:1.5px solid #0F172A; padding:6px 8px; font-size:0.58rem; font-weight:800; text-transform:uppercase; letter-spacing:0.02em; width:64px; white-space:nowrap; vertical-align:top;">Categoria</td>
-                <td style="border-bottom:1.5px solid #0F172A; padding:6px 10px; font-size:0.74rem; line-height:1.35; vertical-align:top; color:#1E293B; font-weight:700;">${catDisplay}</td>
-              </tr>` : ''}
-              <tr>
-                <td style="background:#F1F5F9; border-bottom:1.5px solid #0F172A; padding:6px 8px; font-size:0.58rem; font-weight:800; text-transform:uppercase; letter-spacing:0.02em; width:64px; white-space:nowrap; vertical-align:top;">Endereço</td>
-                <td style="border-bottom:1.5px solid #0F172A; padding:6px 10px; font-size:${addressFontSize}px; line-height:1.35; vertical-align:top; color:#1E293B; font-weight:700;">${addressDisplay}</td>
-              </tr>
-              <tr>
-                <td style="background:#F1F5F9; border-bottom:1.5px solid #0F172A; padding:6px 8px; font-size:0.58rem; font-weight:800; text-transform:uppercase; letter-spacing:0.02em; white-space:nowrap; vertical-align:top;">Horário</td>
-                <td style="border-bottom:1.5px solid #0F172A; padding:6px 10px; font-size:0.78rem; vertical-align:top; color:#1E293B; font-weight:700;">${hoursDisplay}</td>
-              </tr>
-              <tr>
-                <td style="background:#F1F5F9; padding:4px 8px; font-size:0.58rem; font-weight:800; text-transform:uppercase; letter-spacing:0.02em; white-space:nowrap; vertical-align:top;">Contato</td>
-                <td style="padding:4px 10px; font-size:${phoneFontSize}px; line-height:1.25; vertical-align:top; color:#0091C2; font-weight:800;">${phonesDisplay}</td>
-              </tr>
-            </table>
+          <div style="display:flex; flex-direction:column; height:100%; padding-top:14px;">
+            <span style="font-size:0.58rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:6px; display:block;">Dados do Equipamento / Serviço</span>
+            <div style="border:1.5px solid #0F172A; border-radius:6px; overflow:hidden; display:flex; flex-direction:column;">
+              ${catDisplay ? `<div style="padding:8px 12px; border-bottom:1px solid #CBD5E1; background:rgba(0,145,194,0.05);">
+                <div style="font-size:0.56rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#0091C2; margin-bottom:3px;">Categoria</div>
+                <div style="font-size:0.82rem; line-height:1.3; color:#0F172A; font-weight:700;">${catDisplay}</div>
+              </div>` : ''}
+              <div style="padding:8px 12px; border-bottom:1px solid #CBD5E1;">
+                <div style="font-size:0.56rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#475569; margin-bottom:3px;">Endereço</div>
+                <div style="font-size:${addressFontSize}px; line-height:1.4; color:#0F172A; font-weight:700;">${addressDisplay}</div>
+              </div>
+              <div style="padding:8px 12px; border-bottom:1px solid #CBD5E1;">
+                <div style="font-size:0.56rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#475569; margin-bottom:3px;">Horário</div>
+                <div style="font-size:0.8rem; line-height:1.4; color:#0F172A; font-weight:700;">${hoursDisplay}</div>
+              </div>
+              <div style="padding:8px 12px; background:rgba(17,94,89,0.04);">
+                <div style="font-size:0.56rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#475569; margin-bottom:3px;">Contato</div>
+                <div style="font-size:${phoneFontSize}px; line-height:1.3; color:#0091C2; font-weight:800;">${phonesDisplay}</div>
+              </div>
+            </div>
           </div>
         </div>
 
