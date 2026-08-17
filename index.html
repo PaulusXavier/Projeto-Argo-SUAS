@@ -7110,17 +7110,6 @@ async function printGuide(id) {
           </div>
 
           <div style="display:flex; flex-direction:column; height:100%; min-height:0; overflow:hidden;">
-            <div style="border:1px dashed #94A3B8; border-radius:6px; padding:7px 12px; margin-bottom:14px; background:rgba(148,163,184,0.06);">
-              <div>
-                <span style="font-size:0.52rem; font-weight:800; color:#64748B; text-transform:uppercase; letter-spacing:0.04em;">Protocolo</span>
-                <div style="font-size:0.68rem; font-weight:800; color:#0F172A; letter-spacing:0.01em; word-break:break-all; margin-top:1px;">${protocolCode}</div>
-              </div>
-              <div style="margin-top:6px;">
-                <span style="font-size:0.52rem; font-weight:800; color:#64748B; text-transform:uppercase; letter-spacing:0.04em;">Emissão</span>
-                <div style="font-size:0.68rem; font-weight:700; color:#334155; margin-top:1px;">${emissionDisplay}</div>
-              </div>
-            </div>
-
             <span style="font-size:0.58rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:6px; display:block;">Dados do Equipamento / Serviço</span>
             <div style="border:1.5px solid #0F172A; border-radius:6px; overflow:hidden; display:flex; flex-direction:column;">
               ${catDisplay ? `<div style="padding:8px 12px; border-bottom:1px solid #CBD5E1; background:rgba(0,145,194,0.05);">
@@ -7142,7 +7131,17 @@ async function printGuide(id) {
             </div>
 
             <div style="flex-grow:1;"></div>
-            <div style="font-size:0.56rem; line-height:1.5; color:#94A3B8; text-align:center; padding-top:10px; border-top:1px dashed #CBD5E1; margin-top:10px;">
+            <div style="border:1px dashed #94A3B8; border-radius:6px; padding:7px 12px; margin-top:10px; background:rgba(148,163,184,0.06); display:flex; justify-content:space-between; gap:10px;">
+              <div>
+                <span style="font-size:0.52rem; font-weight:800; color:#64748B; text-transform:uppercase; letter-spacing:0.04em;">Protocolo</span>
+                <div style="font-size:0.68rem; font-weight:800; color:#0F172A; letter-spacing:0.01em; word-break:break-all; margin-top:1px;">${protocolCode}</div>
+              </div>
+              <div style="text-align:right;">
+                <span style="font-size:0.52rem; font-weight:800; color:#64748B; text-transform:uppercase; letter-spacing:0.04em;">Emissão</span>
+                <div style="font-size:0.68rem; font-weight:700; color:#334155; margin-top:1px;">${emissionDisplay}</div>
+              </div>
+            </div>
+            <div style="font-size:0.56rem; line-height:1.5; color:#94A3B8; text-align:center; padding-top:8px; border-top:1px dashed #CBD5E1; margin-top:8px;">
               Documento gerado eletronicamente pelo sistema Argo SUAS.<br>Válido mediante assinatura do(a) profissional responsável.
             </div>
           </div>
