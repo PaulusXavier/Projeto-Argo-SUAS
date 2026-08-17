@@ -6708,11 +6708,31 @@ async function fitPrintNote() {
   }
   const noteBox = document.getElementById('printNoteBox');
   if (!noteBox) return;
+
   let fontSize = 15;
   noteBox.style.fontSize = fontSize + 'px';
-  while (noteBox.scrollHeight > noteBox.clientHeight && fontSize > 8) {
+  while (noteBox.scrollHeight > noteBox.clientHeight && fontSize > 7) {
     fontSize -= 0.5;
     noteBox.style.fontSize = fontSize + 'px';
+  }
+
+  // Última garantia: se mesmo na fonte mínima o texto ainda não couber
+  // (nota muito longa), corta o texto com reticências para que a caixa
+  // jamais estoure os limites da folha impressa.
+  if (noteBox.scrollHeight > noteBox.clientHeight) {
+    const textEl = noteBox.querySelector('span') || noteBox;
+    const fullText = textEl.textContent;
+    let lo = 0, hi = fullText.length;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      textEl.textContent = fullText.slice(0, mid).trimEnd() + '…';
+      if (noteBox.scrollHeight > noteBox.clientHeight) {
+        hi = mid - 1;
+      } else {
+        lo = mid;
+      }
+    }
+    textEl.textContent = lo > 0 ? fullText.slice(0, lo).trimEnd() + '…' : '…';
   }
 }
 
@@ -6968,7 +6988,8 @@ async function printGuide(id) {
   // Protocolo e data/hora de emissão da ficha (antes ausentes, o que
   // quebrava a impressão com "protocolCode/emissionDisplay is not defined").
   const now = new Date();
-  const protocolCode = `FE-${(i.id || 'UN').toUpperCase()}-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
+  const shortUnitCode = (i.id || 'UN').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10);
+  const protocolCode = `FE-${shortUnitCode}-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
   const emissionDisplay = now.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
 
   const addressDisplay = cleanPrintField(i.address, 'Endereço não informado — consultar coordenação.');
@@ -7045,7 +7066,7 @@ async function printGuide(id) {
           </tr>
         </table>
 
-        <div style="display:grid; grid-template-columns: 1fr 300px; flex-grow:1; min-height:0; border:1.5px solid #0F172A;">
+        <div style="display:grid; grid-template-columns: 1fr 300px; grid-template-rows: minmax(0, 1fr); flex-grow:1; min-height:0; border:1.5px solid #0F172A;">
 
           <div style="display:flex; flex-direction:column; min-height:0; border-right:1.5px solid #0F172A; padding:10px 14px;">
             <span style="font-size:0.58rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em;">Unidade de Origem</span>
@@ -7086,15 +7107,15 @@ async function printGuide(id) {
             ${pdfAttach ? `<div style="margin-top:6px; font-size:0.68rem; font-weight:700; color:#475569;">📎 Anexo digital em PDF: ${escapeHtml(pdfAttach.name || 'documento.pdf')} (incluído nas páginas seguintes desta impressão).</div>` : ''}
           </div>
 
-          <div style="display:flex; flex-direction:column; height:100%;">
+          <div style="display:flex; flex-direction:column; height:100%; min-height:0; overflow:hidden;">
             <div style="border:1px dashed #94A3B8; border-radius:6px; padding:7px 12px; margin-bottom:14px; background:rgba(148,163,184,0.06);">
-              <div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px;">
+              <div>
                 <span style="font-size:0.52rem; font-weight:800; color:#64748B; text-transform:uppercase; letter-spacing:0.04em;">Protocolo</span>
-                <span style="font-size:0.68rem; font-weight:800; color:#0F172A; letter-spacing:0.02em;">${protocolCode}</span>
+                <div style="font-size:0.68rem; font-weight:800; color:#0F172A; letter-spacing:0.01em; word-break:break-all; margin-top:1px;">${protocolCode}</div>
               </div>
-              <div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-top:2px;">
+              <div style="margin-top:6px;">
                 <span style="font-size:0.52rem; font-weight:800; color:#64748B; text-transform:uppercase; letter-spacing:0.04em;">Emissão</span>
-                <span style="font-size:0.68rem; font-weight:700; color:#334155;">${emissionDisplay}</span>
+                <div style="font-size:0.68rem; font-weight:700; color:#334155; margin-top:1px;">${emissionDisplay}</div>
               </div>
             </div>
 
@@ -7116,6 +7137,11 @@ async function printGuide(id) {
                 <div style="display:flex; align-items:center; gap:5px; font-size:0.56rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#475569; margin-bottom:3px;"><span style="display:inline-flex; color:#0091C2;">${ICONS.phone}</span>Contato</div>
                 <div style="font-size:${phoneFontSize}px; line-height:1.3; color:#0091C2; font-weight:800;">${phonesDisplay}</div>
               </div>
+            </div>
+
+            <div style="flex-grow:1;"></div>
+            <div style="font-size:0.56rem; line-height:1.5; color:#94A3B8; text-align:center; padding-top:10px; border-top:1px dashed #CBD5E1; margin-top:10px;">
+              Documento gerado eletronicamente pelo sistema Argo SUAS.<br>Válido mediante assinatura do(a) profissional responsável.
             </div>
           </div>
         </div>
