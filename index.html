@@ -7110,39 +7110,38 @@ async function printGuide(id) {
           </div>
 
           <div style="display:flex; flex-direction:column; height:100%; min-height:0; overflow:hidden;">
-            <span style="font-size:0.58rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:6px; display:block;">Dados do Equipamento / Serviço</span>
+            <span style="font-size:0.6rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:8px; display:block;">Dados do Equipamento / Serviço</span>
             <div style="border:1.5px solid #0F172A; border-radius:6px; overflow:hidden; display:flex; flex-direction:column;">
-              ${catDisplay ? `<div style="padding:8px 12px; border-bottom:1px solid #CBD5E1; background:rgba(0,145,194,0.05);">
-                <div style="display:flex; align-items:center; gap:5px; font-size:0.56rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#0091C2; margin-bottom:3px;"><span style="display:inline-flex; color:#0091C2;">${ICONS.tag}</span>Categoria</div>
-                <div style="font-size:0.82rem; line-height:1.3; color:#0F172A; font-weight:700;">${catDisplay}</div>
+              ${catDisplay ? `<div style="padding:14px 16px; border-bottom:1px solid #CBD5E1; background:rgba(0,145,194,0.05);">
+                <div style="display:flex; align-items:center; gap:6px; font-size:0.62rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#0091C2; margin-bottom:5px;"><span style="display:inline-flex; color:#0091C2;">${ICONS.tag}</span>Categoria</div>
+                <div style="font-size:0.95rem; line-height:1.35; color:#0F172A; font-weight:700;">${catDisplay}</div>
               </div>` : ''}
-              <div style="padding:8px 12px; border-bottom:1px solid #CBD5E1;">
-                <div style="display:flex; align-items:center; gap:5px; font-size:0.56rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#475569; margin-bottom:3px;"><span style="display:inline-flex; color:#64748B;">${ICONS.map}</span>Endereço</div>
-                <div style="font-size:${addressFontSize}px; line-height:1.4; color:#0F172A; font-weight:700;">${addressDisplay}</div>
+              <div style="padding:14px 16px; border-bottom:1px solid #CBD5E1;">
+                <div style="display:flex; align-items:center; gap:6px; font-size:0.62rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#475569; margin-bottom:5px;"><span style="display:inline-flex; color:#64748B;">${ICONS.map}</span>Endereço</div>
+                <div style="font-size:${addressFontSize + 2}px; line-height:1.5; color:#0F172A; font-weight:700;">${addressDisplay}</div>
               </div>
-              <div style="padding:8px 12px; border-bottom:1px solid #CBD5E1;">
-                <div style="display:flex; align-items:center; gap:5px; font-size:0.56rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#475569; margin-bottom:3px;"><span style="display:inline-flex; color:#64748B;">${ICONS.clock}</span>Horário</div>
-                <div style="font-size:0.8rem; line-height:1.4; color:#0F172A; font-weight:700;">${hoursDisplay}</div>
+              <div style="padding:14px 16px; border-bottom:1px solid #CBD5E1;">
+                <div style="display:flex; align-items:center; gap:6px; font-size:0.62rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#475569; margin-bottom:5px;"><span style="display:inline-flex; color:#64748B;">${ICONS.clock}</span>Horário</div>
+                <div style="font-size:0.92rem; line-height:1.5; color:#0F172A; font-weight:700;">${hoursDisplay}</div>
               </div>
-              <div style="padding:8px 12px; background:rgba(17,94,89,0.04);">
-                <div style="display:flex; align-items:center; gap:5px; font-size:0.56rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#475569; margin-bottom:3px;"><span style="display:inline-flex; color:#0091C2;">${ICONS.phone}</span>Contato</div>
-                <div style="font-size:${phoneFontSize}px; line-height:1.3; color:#0091C2; font-weight:800;">${phonesDisplay}</div>
+              <div style="padding:14px 16px; background:rgba(17,94,89,0.04);">
+                <div style="display:flex; align-items:center; gap:6px; font-size:0.62rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#475569; margin-bottom:5px;"><span style="display:inline-flex; color:#0091C2;">${ICONS.phone}</span>Contato</div>
+                <div style="font-size:${phoneFontSize + 2}px; line-height:1.4; color:#0091C2; font-weight:800;">${phonesDisplay}</div>
               </div>
             </div>
 
-            <div style="border:1px dashed #94A3B8; border-radius:6px; padding:7px 12px; margin-top:10px; background:rgba(148,163,184,0.06); display:flex; justify-content:space-between; gap:10px;">
+            <div style="border:1px dashed #94A3B8; border-radius:6px; padding:9px 14px; margin-top:12px; background:rgba(148,163,184,0.06); display:flex; justify-content:space-between; gap:10px;">
               <div>
-                <span style="font-size:0.52rem; font-weight:800; color:#64748B; text-transform:uppercase; letter-spacing:0.04em;">Protocolo</span>
-                <div style="font-size:0.68rem; font-weight:800; color:#0F172A; letter-spacing:0.01em; word-break:break-all; margin-top:1px;">${protocolCode}</div>
+                <span style="font-size:0.54rem; font-weight:800; color:#64748B; text-transform:uppercase; letter-spacing:0.04em;">Protocolo</span>
+                <div style="font-size:0.72rem; font-weight:800; color:#0F172A; letter-spacing:0.01em; word-break:break-all; margin-top:1px;">${protocolCode}</div>
               </div>
               <div style="text-align:right;">
-                <span style="font-size:0.52rem; font-weight:800; color:#64748B; text-transform:uppercase; letter-spacing:0.04em;">Emissão</span>
-                <div style="font-size:0.68rem; font-weight:700; color:#334155; margin-top:1px;">${emissionDisplay}</div>
+                <span style="font-size:0.54rem; font-weight:800; color:#64748B; text-transform:uppercase; letter-spacing:0.04em;">Emissão</span>
+                <div style="font-size:0.72rem; font-weight:700; color:#334155; margin-top:1px;">${emissionDisplay}</div>
               </div>
             </div>
 
-            <div style="flex-grow:1;"></div>
-            <div style="font-size:0.56rem; line-height:1.5; color:#94A3B8; text-align:center; padding-top:8px; border-top:1px dashed #CBD5E1;">
+            <div style="font-size:0.58rem; line-height:1.5; color:#94A3B8; text-align:center; padding-top:8px; margin-top:8px; border-top:1px dashed #CBD5E1;">
               Documento gerado eletronicamente pelo sistema Argo SUAS.<br>Válido mediante assinatura do(a) profissional responsável.
             </div>
           </div>
