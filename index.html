@@ -7100,9 +7100,11 @@ async function printGuide(id) {
 
             <span style="font-size:0.58rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:4px; display:block;">Informações da Unidade</span>
             ${summaryLine ? `<div style="margin-bottom:6px; padding:6px 10px; border:1.5px solid #0F172A; border-radius:4px; font-size:0.74rem; line-height:1.35; color:#475569; background:rgba(17,94,89,0.02);"><strong style="color:#0091C2;">Unidade:</strong> ${summaryLine}</div>` : ''}
-            <span style="font-size:0.58rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-bottom:4px; display:block;">Motivo do Encaminhamento</span>
-            <div id="printNoteBox" style="flex-grow:1; padding:12px 14px; border:1.5px solid #0F172A; border-radius:4px; font-size:15px; line-height:1.4; background:rgba(17,94,89,0.02); overflow:hidden; text-align:justify;">
-              <span style="white-space:pre-wrap;">${escapeHtml(note)}</span>
+            <div style="flex-grow:1; min-height:0; display:flex; flex-direction:column; border:1.5px solid #0F172A; border-radius:4px; overflow:hidden;">
+              <div style="background:#F1F5F9; padding:3px 10px; font-size:0.55rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#0F172A; border-bottom:1px solid #0F172A; flex-shrink:0;">Motivo do Encaminhamento</div>
+              <div id="printNoteBox" style="flex-grow:1; min-height:0; padding:12px 14px; font-size:15px; line-height:1.4; background:rgba(17,94,89,0.02); overflow:hidden; text-align:justify;">
+                <span style="white-space:pre-wrap;">${escapeHtml(note)}</span>
+              </div>
             </div>
             ${pdfAttach ? `<div style="margin-top:6px; font-size:0.68rem; font-weight:700; color:#475569;">📎 Anexo digital em PDF: ${escapeHtml(pdfAttach.name || 'documento.pdf')} (incluído nas páginas seguintes desta impressão).</div>` : ''}
           </div>
