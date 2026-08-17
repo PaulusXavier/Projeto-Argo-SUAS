@@ -3258,6 +3258,17 @@ const DATA = [
     desc: "Unidade especializada em defesa criminal e acompanhamento de custodiados."
   },
   {
+    id: "mprr",
+    name: "Ministério Público de Roraima",
+    fullName: "Ministério Público do Estado de Roraima (MPRR)",
+    cat: ["juridico"],
+    address: "Edifício-Sede (PGJ): Av. Santos Dumont, nº 710 - São Pedro, Boa Vista-RR, CEP 69306-680<br>Espaço da Cidadania: Av. Ville Roy, nº 5584 - Centro, Boa Vista-RR, CEP 69301-000<br>Fórum Criminal (Promotorias Criminais): Av. José Tabira de Alencar Macedo, nº 602 - Caranã, Boa Vista-RR<br>Casa da Mulher Brasileira (Promotoria de Defesa da Mulher): Rua Uraricoera, S/N - São Vicente, Boa Vista-RR<br>CETAO - Centro de Treinamento Operacional: R. Barão do Rio Branco, 1184 - Centro, Boa Vista-RR",
+    hours: "Segunda a sexta, 08:00 às 18:00 (atendimento presencial ao público geralmente das 08:00 às 12:00 e das 14:00 às 18:00)",
+    phones: ["Sede/PGJ: (95) 3621-2900", "Corregedoria-Geral: (95) 3621-2940 / (95) 3621-2969", "Ouvidoria-Geral: 0800 095 3621 / WhatsApp (95) 98400-8801", "Fórum Criminal: (95) 3623-2962", "Casa da Mulher Brasileira: (95) 99122-7403", "CETAO: (95) 98400-9096"],
+    services: "Coordenações e órgãos do MPRR: Procuradoria-Geral de Justiça (PGJ), Corregedoria-Geral do MP, CAOP - Centro de Apoio Operacional às Procuradorias e Promotorias de Justiça (com o NinA - Núcleo Permanente de Incentivo à Autocomposição, e o NAT - Núcleo de Apoio Técnico), Ouvidoria-Geral, GAEVI-MDH - Grupo de Atuação Especial de Vítimas, Minorias e Direitos Humanos, Promotoria de Defesa da Mulher (na Casa da Mulher Brasileira), Promotorias Criminais (Fórum Criminal), CETAO - Centro de Treinamento Operacional, além das Promotorias de Justiça do interior do Estado.",
+    desc: "Instituição permanente, essencial à função jurisdicional do Estado, responsável pela defesa da ordem jurídica, do regime democrático e dos interesses sociais e individuais indisponíveis (art. 127 da Constituição Federal). Em Roraima, o MPRR atua na capital por meio do Edifício-Sede/PGJ e do Espaço da Cidadania, e organiza sua atuação temática por meio do CAOP - Centro de Apoio Operacional às Procuradorias e Promotorias de Justiça, que coordena núcleos de apoio às Promotorias em diversas áreas (infância e juventude, meio ambiente, saúde, consumidor, entre outras), da Corregedoria-Geral (fiscalização da atividade funcional) e da Ouvidoria-Geral (recebimento de elogios, sugestões, reclamações e denúncias sobre membros e servidores). Possui ainda unidades especializadas, como a Promotoria de Defesa da Mulher, integrada à Casa da Mulher Brasileira, e o GAEVI-MDH, voltado à proteção de vítimas, minorias e direitos humanos. No interior do Estado, o MPRR está presente por meio de Promotorias de Justiça nas comarcas (Alto Alegre, Bonfim, Caracaraí, Mucajaí, Pacaraima, Rorainópolis e São Luiz do Anauá, entre outras)."
+  },
+  {
     id: "caps-ad-iii",
     name: "CAPS AD III",
     fullName: "Centro de Atenção Psicossocial - Álcool e Drogas III (24 horas)",
@@ -7660,12 +7671,32 @@ async function printGeneralNote() {
                 </svg>
                 <div>
                   <div style="font-size:0.7rem; font-weight:800; letter-spacing:0.04em; color:#0091C2; text-transform:uppercase;">Sistema Único de Assistência Social (SUAS)</div>
-                  <div style="font-size:0.62rem; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-top:1px;">Proteção Social Básica</div>
+                  <div style="font-size:0.62rem; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.03em; margin-top:2px;">Proteção Social Básica</div>
                   <div style="font-size:1.15rem; font-weight:800; letter-spacing:0.02em; color:#0F172A; margin-top:4px;">ENCAMINHAMENTO GERAL</div>
                 </div>
               </div>
             </td>
-            <td style="border:1.5px solid #0F172A; padding:8px 14px; text-align:center; width:180px;">
+            <td style="border:1.5px solid #0F172A; padding:5px 10px; text-align:center; width:150px;">
+              <div style="display:flex; align-items:center; justify-content:center; gap:6px;">
+                <svg width="34" height="34" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="psiHeaderGradGeral" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#29ABE2"/>
+                      <stop offset="50%" stop-color="#0091C2"/>
+                      <stop offset="100%" stop-color="#075985"/>
+                    </linearGradient>
+                  </defs>
+                  <circle cx="50" cy="50" r="46" fill="none" stroke="url(#psiHeaderGradGeral)" stroke-width="4"/>
+                  <rect x="39" y="16" width="22" height="7" rx="3.5" fill="url(#psiHeaderGradGeral)"/>
+                  <rect x="46" y="20" width="8" height="21" fill="url(#psiHeaderGradGeral)"/>
+                  <path d="M48,42 C36,41 25,34 22,23 C21,19 23,16 27,16" fill="none" stroke="url(#psiHeaderGradGeral)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M52,42 C64,41 75,34 78,23 C79,19 77,16 73,16" fill="none" stroke="url(#psiHeaderGradGeral)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M50,39 C49,54 47,68 44,83 C47,86 53,86 56,83 C53,68 51,54 50,39 Z" fill="url(#psiHeaderGradGeral)"/>
+                </svg>
+                <div style="font-size:0.46rem; font-weight:700; font-style:italic; color:#075985; letter-spacing:0.01em; line-height:1.15; text-align:left;">SUAS: direito do cidadão e dever do Estado</div>
+              </div>
+            </td>
+            <td style="border:1.5px solid #0F172A; padding:8px 14px; text-align:center; width:160px;">
               <div style="font-size:0.65rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.03em;">Data de Emissão</div>
               <div style="font-size:1.05rem; font-weight:800; color:#0F172A;">${date}</div>
             </td>
@@ -7876,22 +7907,25 @@ async function printGuide(id) {
                 </div>
               </div>
             </td>
-            <td style="border:1.5px solid #0F172A; padding:5px 14px; text-align:center; width:140px;">
-              <svg width="38" height="38" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="display:block; margin:0 auto;">
-                <defs>
-                  <linearGradient id="psiHeaderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#29ABE2"/>
-                    <stop offset="50%" stop-color="#0091C2"/>
-                    <stop offset="100%" stop-color="#075985"/>
-                  </linearGradient>
-                </defs>
-                <circle cx="50" cy="50" r="46" fill="none" stroke="url(#psiHeaderGrad)" stroke-width="4"/>
-                <rect x="39" y="16" width="22" height="7" rx="3.5" fill="url(#psiHeaderGrad)"/>
-                <rect x="46" y="20" width="8" height="21" fill="url(#psiHeaderGrad)"/>
-                <path d="M48,42 C36,41 25,34 22,23 C21,19 23,16 27,16" fill="none" stroke="url(#psiHeaderGrad)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M52,42 C64,41 75,34 78,23 C79,19 77,16 73,16" fill="none" stroke="url(#psiHeaderGrad)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M50,39 C49,54 47,68 44,83 C47,86 53,86 56,83 C53,68 51,54 50,39 Z" fill="url(#psiHeaderGrad)"/>
-              </svg>
+            <td style="border:1.5px solid #0F172A; padding:5px 12px; text-align:center; width:200px;">
+              <div style="display:flex; align-items:center; justify-content:center; gap:6px;">
+                <svg width="38" height="38" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+                  <defs>
+                    <linearGradient id="psiHeaderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#29ABE2"/>
+                      <stop offset="50%" stop-color="#0091C2"/>
+                      <stop offset="100%" stop-color="#075985"/>
+                    </linearGradient>
+                  </defs>
+                  <circle cx="50" cy="50" r="46" fill="none" stroke="url(#psiHeaderGrad)" stroke-width="4"/>
+                  <rect x="39" y="16" width="22" height="7" rx="3.5" fill="url(#psiHeaderGrad)"/>
+                  <rect x="46" y="20" width="8" height="21" fill="url(#psiHeaderGrad)"/>
+                  <path d="M48,42 C36,41 25,34 22,23 C21,19 23,16 27,16" fill="none" stroke="url(#psiHeaderGrad)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M52,42 C64,41 75,34 78,23 C79,19 77,16 73,16" fill="none" stroke="url(#psiHeaderGrad)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M50,39 C49,54 47,68 44,83 C47,86 53,86 56,83 C53,68 51,54 50,39 Z" fill="url(#psiHeaderGrad)"/>
+                </svg>
+                <div style="font-size:0.42rem; font-weight:700; font-style:italic; color:#075985; letter-spacing:0.01em; line-height:1.15; text-align:left;">SUAS: direito do cidadão e dever do Estado</div>
+              </div>
             </td>
           </tr>
         </table>
