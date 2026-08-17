@@ -6963,7 +6963,6 @@ async function printGuide(id) {
   const attach = getAttachment(id);
   const imgData = (attach && attach.type === 'image') ? attach.data : null;
   const pdfAttach = (attach && attach.type === 'pdf') ? attach : null;
-  const date = new Date().toLocaleDateString('pt-BR', {day:'numeric', month:'long', year:'numeric'});
   const userData = getUserData(id);
 
   // Protocolo e data/hora de emissão da ficha (antes ausentes, o que
@@ -7088,6 +7087,8 @@ async function printGuide(id) {
           </div>
 
           <div style="display:flex; flex-direction:column; height:100%;">
+            <div style="flex-grow:1;"></div>
+
             <div style="border:1px dashed #94A3B8; border-radius:6px; padding:7px 12px; margin-bottom:14px; background:rgba(148,163,184,0.06);">
               <div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px;">
                 <span style="font-size:0.52rem; font-weight:800; color:#64748B; text-transform:uppercase; letter-spacing:0.04em;">Protocolo</span>
@@ -7118,22 +7119,10 @@ async function printGuide(id) {
                 <div style="font-size:${phoneFontSize}px; line-height:1.3; color:#0091C2; font-weight:800;">${phonesDisplay}</div>
               </div>
             </div>
-
-            <div style="flex-grow:1;"></div>
-            <div style="border:1.5px solid #0F172A; border-radius:6px; padding:8px 12px; margin-top:14px; background:rgba(0,86,163,0.03);">
-              <div style="font-size:0.54rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#475569; margin-bottom:4px;">Retorno / Encaminhamento</div>
-              <div style="display:flex; flex-direction:column; gap:5px; font-size:0.72rem; color:#334155; font-weight:600;">
-                <span style="display:flex; align-items:center; gap:6px;"><span style="width:11px; height:11px; border:1.3px solid #0F172A; border-radius:2px; flex-shrink:0; display:inline-block;"></span>Encaminhamento urgente</span>
-                <span style="display:flex; align-items:center; gap:6px;"><span style="width:11px; height:11px; border:1.3px solid #0F172A; border-radius:2px; flex-shrink:0; display:inline-block;"></span>Solicita retorno / contrarreferência</span>
-              </div>
-            </div>
           </div>
         </div>
 
-        <div style="margin-top:8px; display:flex; justify-content:space-between; align-items:flex-end; flex-shrink:0;">
-          <div>
-            <p style="margin:0; font-size:0.82rem; font-weight:700; color:#334155;">Boa Vista, Roraima, ${date}.</p>
-          </div>
+        <div style="margin-top:8px; display:flex; justify-content:flex-end; align-items:flex-end; flex-shrink:0;">
           <div style="text-align:center; width:280px;">
             <div style="height:22px;"></div>
             <div style="border-top:2px solid #0F172A; margin-bottom:6px;"></div>
