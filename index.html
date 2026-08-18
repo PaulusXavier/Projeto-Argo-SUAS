@@ -480,6 +480,64 @@
     }
   }
 
+  /* Grupo secundário de categorias ("Rede de Apoio Institucional"): fica
+     recolhido por padrão para não sobrecarregar a barra de filtros com
+     19 chips visíveis ao mesmo tempo. Some do fluxo (não só visualmente)
+     quando recolhido, para não atrapalhar a navegação por teclado/leitor de tela. */
+  .filter-bar:not(.is-expanded) .filter-chip[data-group="more"] {
+    display: none;
+  }
+
+  .filter-chip-toggle {
+    white-space: nowrap;
+    background: transparent;
+    border: 1px dashed var(--border-ui);
+    padding: 0.5rem 0.9rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    color: var(--brand-primary);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    scroll-snap-align: start;
+    transition: background 0.2s var(--ease), border-color 0.2s var(--ease);
+  }
+
+  .filter-chip-toggle:hover {
+    background: rgba(0, 145, 194, 0.08);
+    border-color: var(--brand-primary);
+  }
+
+  .filter-chip-toggle .chip-icon {
+    display: inline-flex;
+    transition: transform 0.2s var(--ease);
+  }
+
+  .filter-bar.is-expanded .filter-chip-toggle .chip-icon {
+    transform: rotate(180deg);
+  }
+
+  @media (min-width: 768px) {
+    .filter-chip-toggle {
+      margin-left: 0.75rem;
+      padding-left: calc(1rem + 0.75rem);
+      position: relative;
+    }
+
+    .filter-chip-toggle::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 1px;
+      height: 22px;
+      background: var(--border-ui);
+    }
+  }
+
   .filter-chip {
     white-space: nowrap;
     background: var(--bg-card);
@@ -522,7 +580,7 @@
     color: var(--brand-primary);
   }
 
-  .filter-chip[aria-pressed="true"]:hover {
+  .filter-chip[aria-selected="true"]:hover {
     color: white;
     border-color: var(--brand-primary-light);
     background: var(--brand-primary-light);
@@ -566,7 +624,7 @@
     display: flex;
   }
 
-  .filter-chip[aria-pressed="true"] {
+  .filter-chip[aria-selected="true"] {
     background: var(--brand-primary);
     color: white;
     border-color: var(--brand-primary);
@@ -577,7 +635,7 @@
     transform: scale(0.96);
   }
 
-  .filter-chip[aria-pressed="true"] .chip-count {
+  .filter-chip[aria-selected="true"] .chip-count {
     background: rgba(255, 255, 255, 0.25);
     color: white;
   }
@@ -2456,50 +2514,54 @@
           <span>Educação</span>
           <span class="chip-count" id="count-educacao">0</span>
         </button>
-        <button class="filter-chip" data-cat="juridico" role="tab" aria-selected="false">
+        <button class="filter-chip" data-cat="juridico" data-group="more" role="tab" aria-selected="false">
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 8h14"/><path d="M5 8 2 15a3 3 0 0 0 6 0Z"/><path d="M19 8l-3 7a3 3 0 0 0 6 0Z"/></svg></span>
           <span>Sistema Judicial</span>
           <span class="chip-count" id="count-juridico">0</span>
         </button>
-        <button class="filter-chip" data-cat="conselho" role="tab" aria-selected="false">
+        <button class="filter-chip" data-cat="conselho" data-group="more" role="tab" aria-selected="false">
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg></span>
           <span>Conselho Tutelar</span>
           <span class="chip-count" id="count-conselho">0</span>
         </button>
-        <button class="filter-chip" data-cat="delegacias" role="tab" aria-selected="false">
+        <button class="filter-chip" data-cat="delegacias" data-group="more" role="tab" aria-selected="false">
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="M9.5 12.5l1.8 1.8 3.2-3.6"/></svg></span>
           <span>Delegacias</span>
           <span class="chip-count" id="count-delegacias">0</span>
         </button>
-        <button class="filter-chip" data-cat="bancos" role="tab" aria-selected="false">
+        <button class="filter-chip" data-cat="bancos" data-group="more" role="tab" aria-selected="false">
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="21" x2="21" y2="21"/><line x1="5" y1="21" x2="5" y2="10"/><line x1="19" y1="21" x2="19" y2="10"/><line x1="12" y1="21" x2="12" y2="10"/><polygon points="12 2 21 8 3 8"/></svg></span>
           <span>Rede Bancária</span>
           <span class="chip-count" id="count-bancos">0</span>
         </button>
-        <button class="filter-chip" data-cat="previdencia" role="tab" aria-selected="false">
+        <button class="filter-chip" data-cat="previdencia" data-group="more" role="tab" aria-selected="false">
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg></span>
           <span>Previdência</span>
           <span class="chip-count" id="count-previdencia">0</span>
         </button>
-        <button class="filter-chip" data-cat="trabalho" role="tab" aria-selected="false">
+        <button class="filter-chip" data-cat="trabalho" data-group="more" role="tab" aria-selected="false">
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><line x1="2" y1="13" x2="22" y2="13"/></svg></span>
           <span>Trabalho e Renda</span>
           <span class="chip-count" id="count-trabalho">0</span>
         </button>
-        <button class="filter-chip" data-cat="documentacao" role="tab" aria-selected="false">
+        <button class="filter-chip" data-cat="documentacao" data-group="more" role="tab" aria-selected="false">
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M15 9h3"/><path d="M15 13h3"/><path d="M6 17c.5-1.8 2-3 3-3s2.5 1.2 3 3"/></svg></span>
           <span>Documentação</span>
           <span class="chip-count" id="count-documentacao">0</span>
         </button>
-        <button class="filter-chip" data-cat="habitacao" role="tab" aria-selected="false">
+        <button class="filter-chip" data-cat="habitacao" data-group="more" role="tab" aria-selected="false">
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 10v10a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1V10"/></svg></span>
           <span>Habitação</span>
           <span class="chip-count" id="count-habitacao">0</span>
         </button>
-        <button class="filter-chip" data-cat="mobilidade" role="tab" aria-selected="false">
+        <button class="filter-chip" data-cat="mobilidade" data-group="more" role="tab" aria-selected="false">
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11 6.5 6.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11"/><rect x="2" y="11" width="20" height="7" rx="2"/><circle cx="7" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/></svg></span>
           <span>Mobilidade</span>
           <span class="chip-count" id="count-mobilidade">0</span>
+        </button>
+        <button class="filter-chip-toggle" id="filterMoreToggle" type="button" aria-expanded="false" aria-controls="filterBar">
+          <span>Mais categorias</span>
+          <span class="chip-icon" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
         </button>
         <button class="filter-chip" data-cat="informes" role="tab" aria-selected="false">
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
@@ -8237,6 +8299,16 @@ document.getElementById('searchClearBtn').addEventListener('click', () => {
   input.focus();
   render();
 });
+
+const filterMoreToggle = document.getElementById('filterMoreToggle');
+if (filterMoreToggle) {
+  filterMoreToggle.addEventListener('click', () => {
+    const bar = document.getElementById('filterBar');
+    const expanded = bar.classList.toggle('is-expanded');
+    filterMoreToggle.setAttribute('aria-expanded', String(expanded));
+    filterMoreToggle.querySelector('span').textContent = expanded ? 'Menos categorias' : 'Mais categorias';
+  });
+}
 
 document.querySelectorAll('.filter-chip').forEach(c => c.addEventListener('click', () => {
   const prevActive = document.querySelector('.filter-chip.active');
