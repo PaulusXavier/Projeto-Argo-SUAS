@@ -1372,6 +1372,27 @@
     gap: 1.25rem;
   }
 
+  .cras-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 1.6rem 0 0.9rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid rgba(13, 148, 136, 0.25);
+    font-weight: 800;
+    font-size: 0.95rem;
+    color: var(--brand-cras);
+  }
+
+  .cras-section-title:first-of-type {
+    margin-top: 0.4rem;
+  }
+
+  .cras-section-title svg {
+    color: var(--brand-cras);
+    flex-shrink: 0;
+  }
+
   @media (max-width: 900px) {
     .cras-groups { grid-template-columns: 1fr; }
   }
@@ -6196,11 +6217,11 @@ const DATA = [
     fullName: "Programa Farmácia Popular do Brasil (PFPB) - \"Aqui Tem Farmácia Popular\"",
     cat: ["informes"],
     group: "Saúde, Reabilitação e Medicamentos",
-    address: "Rede de farmácias e drogarias credenciadas em Boa Vista-RR (não é uma unidade única) - exemplos: Av. Tambaú, 134, Equatorial; Av. Amazonas, 126, Dos Estados; Rua Laura Pinheiro Maia, 937, Pintolândia; Av. São Sebastião, 373-A, Cambará; Av. Das Guianas, 859-A, 13 de Setembro; Av. Cap. Julio Bezerra, 2185, 31 de Março; Av. Ville Roy, 5002, São Francisco",
+    address: "Rede de farmácias e drogarias credenciadas em Boa Vista-RR (não é uma unidade única) - veja a lista completa abaixo",
     hours: "N/A - horário de funcionamento varia conforme cada farmácia credenciada",
     phones: ["N/A - dúvidas: analise.fpopular@saude.gov.br"],
     services: "Medicamentos gratuitos e com desconto para doenças crônicas.",
-    desc: "Programa do Ministério da Saúde que facilita o acesso a medicamentos por meio de uma rede de farmácias e drogarias privadas credenciadas (selo 'Aqui Tem Farmácia Popular'), sem necessidade de CadÚnico para a maioria dos itens. Gratuitos: medicamentos para hipertensão, diabetes e asma. Com desconto de até 90%: medicamentos para glaucoma, osteoporose, Parkinson, colesterol alto e rinite. Também disponíveis: anticoncepcionais e fraldas geriátricas (com regras próprias de elegibilidade).<br>Como usar: 1) Ter em mãos documento oficial com foto, CPF e receita médica válida (legível, com data, CID ou nome do medicamento, assinatura e carimbo do profissional); 2) Dirigir-se a uma farmácia credenciada em Boa Vista; 3) Apresentar a receita e os documentos no caixa/balcão para retirar o medicamento gratuito ou pagar o valor com desconto.<br>⚠️ A lista de farmácias credenciadas é dinâmica (atualizada diariamente) - antes de ir, confirme a unidade mais próxima na consulta oficial do Ministério da Saúde: https://infoms.saude.gov.br/extensions/SEIDIGI_DEMAS_PFPB_ENDERECOS/index.html<br>Dúvidas ou farmácia desatualizada na lista: e-mail analise.fpopular@saude.gov.br"
+    desc: "Programa do Ministério da Saúde que facilita o acesso a medicamentos por meio de uma rede de farmácias e drogarias privadas credenciadas (selo 'Aqui Tem Farmácia Popular'), sem necessidade de CadÚnico para a maioria dos itens. Gratuitos: medicamentos para hipertensão, diabetes e asma. Com desconto de até 90%: medicamentos para glaucoma, osteoporose, Parkinson, colesterol alto e rinite. Também disponíveis: anticoncepcionais e fraldas geriátricas (com regras próprias de elegibilidade). Beneficiários do Programa Bolsa Família têm direito a TODOS os medicamentos do programa 100% gratuitos, inclusive os que normalmente têm desconto.<br><br><strong>💊 Medicamentos por condição (lista pode variar por farmácia/estoque):</strong><ul style=\"margin:6px 0 0 0; padding-left:18px;\"><li><strong>Hipertensão (gratuito):</strong> Losartana potássica, Atenolol, Captopril, Enalapril, Hidroclorotiazida, Anlodipino, Espironolactona, Furosemida</li><li><strong>Diabetes (gratuito):</strong> Metformina (500mg e 850mg), Glibenclamida, Insulina Humana NPH e Regular, Dapagliflozina (diabetes tipo 2 com risco cardiovascular)</li><li><strong>Asma (gratuito):</strong> Sulfato de Salbutamol, Dipropionato de Beclometasona, Brometo de Ipratrópio</li><li><strong>Colesterol alto/dislipidemia (desconto até 90%):</strong> Sinvastatina</li><li><strong>Osteoporose (desconto até 90%):</strong> Alendronato de sódio</li><li><strong>Doença de Parkinson (desconto até 90%):</strong> Cloridrato de Biperideno, Levodopa + Benserazida/Carbidopa</li><li><strong>Glaucoma (desconto até 90%):</strong> Maleato de Timolol, Cloridrato de Betaxolol</li><li><strong>Rinite (desconto até 90%):</strong> Budesonida</li><li><strong>Anticoncepcionais (gratuito):</strong> pílulas combinadas conforme lista vigente</li><li><strong>Fraldas geriátricas (gratuito):</strong> para pessoas com 60 anos ou mais, ou com deficiência (com laudo/CID), mediante prescrição médica</li><li><strong>Incontinência urinária (gratuito):</strong> conforme prescrição, laudo ou atestado médico</li></ul>⚠️ A relação completa e oficial, com nomes comerciais, dosagens e apresentações, deve ser conferida na lista de medicamentos do Ministério da Saúde (atualizada periodicamente): https://www.gov.br/saude/pt-br/composicao/sectics/daf/pfpb/codigos-de-barras/lista-de-medicamentos-pfpb<br><br>Como usar: 1) Ter em mãos documento oficial com foto, CPF e receita médica válida (legível, com data, CID ou nome do medicamento, assinatura e carimbo do profissional); 2) Dirigir-se a uma farmácia credenciada em Boa Vista; 3) Apresentar a receita e os documentos no caixa/balcão para retirar o medicamento gratuito ou pagar o valor com desconto.<br><br><strong>🏪 Farmácias credenciadas em Boa Vista:</strong><ul style=\"margin:6px 0 0 0; padding-left:18px;\"><li><strong>J. J. Barbosa Carvalho & Cia Ltda ME</strong> — Av. General Ataíde Teive, Asa Branca</li><li><strong>Lira e Costa Ltda</strong> — Rua Carlos Pereira de Melo, Caimbé</li><li><strong>Ribeiro e Oliveira Ltda</strong> — Rua Mário Homem de Melo, Caimbé</li><li><strong>Judivan F. Lira ME</strong> — Rua Joca Farias, Caranã</li><li><strong>Drogaria Megafarma Ltda</strong> — Av. Ville Roy, Caçari</li><li><strong>Empreendimentos Pague Menos S/A</strong> — Rua Getúlio Vargas, Centro</li><li><strong>Gomes e Santana Ltda</strong> — Rua Centenário, Cinturão Verde</li><li><strong>Drogaria Popular Ltda</strong> — Rua Mário Homem de Melo, Mecejana</li><li><strong>Silveira & Campos Ltda ME</strong> — Rua Nivaldo da Conceição Gutierrez, Nova Canaã</li><li><strong>Paiva & Soares Ltda ME</strong> — Rua Belo Horizonte, Nova Cidade</li><li><strong>Center Farma Ltda ME</strong> — Rua Laura Pinheiro Maia, Pintolândia</li><li><strong>Leitão & Costa Ltda ME</strong> — Rua Das Flores, Pricumã</li><li><strong>Drogaria Megafarma Ltda</strong> — Av. Capitão Júlio Bezerra, São Francisco</li><li><strong>Empreendimentos Pague Menos S/A</strong> — Av. Ville Roy, São Francisco</li><li><strong>Edimar P. Lima & Cia Ltda</strong> — Av. General Ataíde Teive, Tancredo Neves</li><li><strong>Empreendimentos Pague Menos S/A</strong> — Av. General Ataíde Teive, Tancredo Neves</li></ul><br>⚠️ A lista de farmácias credenciadas é dinâmica (atualizada diariamente) - antes de ir, confirme a unidade mais próxima na consulta oficial do Ministério da Saúde: https://infoms.saude.gov.br/extensions/SEIDIGI_DEMAS_PFPB_ENDERECOS/index.html<br>Dúvidas ou farmácia desatualizada na lista: e-mail analise.fpopular@saude.gov.br"
   },
   {
     id: "dignidade-menstrual",
@@ -6664,8 +6685,8 @@ const DATA = [
       { label: "Calendário Pagamento", icon: "cash", url: "PagamentoPBF.html" }
     ],
     rmaLinks: [
-      { label: "RMA (MDS)", icon: "barchart", url: "RMA_Paulo Xavier_2026.html" },
-      { label: "Registro (Planilha)", icon: "table", url: "Registro de Atendimento (Planilha).html" },
+      { label: "RMA (MDS)", icon: "barchart", url: "RMA_Paulo_Xavier_2026.html" },
+      { label: "Registro (Planilha)", icon: "table", url: "Registro_de_Atendimento__Planilha_.html" },
       { label: "Baixar RMA (.xlsx)", icon: "excel", url: "RMA - Geral - Limpo.xlsx" }
     ],
     driveLinks: [
@@ -7199,6 +7220,7 @@ function renderCrasCard(i, query) {
         <span class="subtitle">🏢 Equipe Técnica e Atendimento CRAS · Sistemas Municipais, Federais e RMA</span>
       </div>
       <div class="card-body">
+        <div class="cras-section-title">${ICONS.map} Informações Gerais</div>
         <div class="info-group"><span class="info-icon">${ICONS.map}</span><div><span class="label-tech">Localização</span>${i.address}</div></div>
         <div class="info-group"><span class="info-icon">${ICONS.clock}</span><div><span class="label-tech">Disponibilidade</span>${i.hours}</div></div>
         <div class="info-group"><span class="info-icon">${ICONS.phone}</span><div><span class="label-tech">Contato Técnico</span>${i.phones.join(' · ')}</div></div>
@@ -7207,8 +7229,10 @@ function renderCrasCard(i, query) {
           ${i.desc}
         </div>
 
+        ${hasTeam ? `<div class="cras-section-title">${ICONS.building} Equipe Técnica</div>` : ''}
         ${teamSection}
 
+        <div class="cras-section-title">${ICONS.folder} Atalhos e Sistemas</div>
         <div class="cras-groups">
           <div class="cras-group">
             <div class="cras-group-header">Sistemas Municipais e Gestão</div>
