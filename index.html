@@ -452,32 +452,18 @@
       align-items: center;
     }
 
-    /* separador visual antes do grupo de "painéis" internos (Informes em diante) */
-    .filter-chip[data-cat="informes"] {
+    /* Separador visual genérico: qualquer chip marcado como início de um
+       novo bloco temático (data-cluster-start="true") ganha uma linha
+       divisória fina à esquerda. Substitui os seletores fixos por
+       data-cat que existiam antes (um por categoria), facilitando
+       adicionar/reordenar categorias sem mexer no CSS. */
+    .filter-chip[data-cluster-start="true"] {
       margin-left: 0.75rem;
       padding-left: calc(1rem + 0.75rem);
       position: relative;
     }
 
-    .filter-chip[data-cat="informes"]::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 1px;
-      height: 22px;
-      background: var(--border-ui);
-    }
-
-    /* separador antes de Anotações */
-    .filter-chip[data-cat="anotacoes"] {
-      margin-left: 0.75rem;
-      padding-left: calc(1rem + 0.75rem);
-      position: relative;
-    }
-
-    .filter-chip[data-cat="anotacoes"]::before {
+    .filter-chip[data-cluster-start="true"]::before {
       content: "";
       position: absolute;
       left: 0;
@@ -1940,6 +1926,33 @@
     color: var(--hero-gold-soft);
   }
 
+  .footer-contact-list .footer-address-link {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 0.3rem;
+  }
+
+  .footer-address-hint {
+    display: block;
+    font-size: 0.72rem;
+    color: #64748B;
+    margin-top: 0.15rem;
+  }
+
+  @media (max-width: 760px) {
+    .footer-contact-list .footer-address-link { justify-content: center; }
+  }
+
+  .footer-contact-unit + .footer-contact-unit {
+    margin-top: 1.4rem;
+    padding-top: 1.4rem;
+    border-top: 1px solid rgba(148, 163, 184, 0.15);
+  }
+
+  .footer-contact-unit .footer-col-title {
+    margin-bottom: 0.75rem;
+  }
+
   .footer-bottom {
     border-top: 1px solid rgba(232, 172, 61, 0.18);
     background: rgba(0, 0, 0, 0.18);
@@ -1958,6 +1971,18 @@
   }
 
   .footer-bottom-sep { color: #475569; }
+
+  .footer-bottom-inner .footer-suas-full {
+    color: #94A3B8;
+  }
+
+  @media (max-width: 560px) {
+    .footer-bottom-inner {
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    .footer-bottom-sep { display: none; }
+  }
 
   .sr-only {
     position: absolute;
@@ -2049,6 +2074,16 @@
     overflow: hidden;
     box-shadow: 0 30px 70px -15px rgba(0, 0, 0, 0.55);
     background: var(--bg-card);
+    animation: loginShellIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes loginShellIn {
+    from { opacity: 0; transform: translateY(10px) scale(0.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .login-shell { animation: none; }
   }
 
   @media (max-width: 760px) {
@@ -2156,6 +2191,21 @@
 
   .login-story-top svg { flex-shrink: 0; }
 
+  .login-story-ship-badge {
+    overflow: visible;
+    vertical-align: middle;
+    margin-right: 0.5rem;
+    flex-shrink: 0;
+  }
+  .login-story-ship-badge .argo-ship-ring { fill: none; stroke: #F1F5F9; stroke-width: 4; }
+  .login-story-ship-badge .argo-ship-ring-inner { fill: none; stroke: #F1F5F9; stroke-width: 1.5; opacity: 0.6; }
+  .login-story-ship-badge .argo-ship-teeth { fill: #F1F5F9; }
+  .login-story-ship-badge .argo-ship-sail { fill: #F1F5F9; }
+  .login-story-ship-badge .argo-ship-swirl { fill: #F1F5F9; }
+  .login-story-ship-badge .argo-ship-mast { stroke: #F1F5F9; stroke-width: 3; stroke-linecap: round; }
+  .login-story-ship-badge .argo-ship-oars { fill: #F1F5F9; stroke: #F1F5F9; }
+  .login-story-ship-badge .argo-ship-oars path { fill: none; stroke-width: 2.4; stroke-linecap: round; }
+
   .login-story-eyebrow {
     font-size: 0.68rem;
     font-weight: 800;
@@ -2167,6 +2217,8 @@
   .login-story-content { position: relative; z-index: 1; }
 
   .login-story-brand {
+    display: flex;
+    align-items: center;
     font-family: var(--font-serif);
     font-weight: 700;
     font-style: italic;
@@ -2203,8 +2255,29 @@
     color: #CBD5E1;
   }
 
+  .login-story-tags {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 1.1rem;
+  }
+
+  .login-story-tags span {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: #CFE3DD;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    padding: 0.25rem 0.6rem;
+    border-radius: 5px;
+  }
+
   @media (max-width: 760px) {
     .login-story-desc { display: none; }
+    .login-story-tags { display: none; }
     .login-story-content { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
     .login-story-brand { font-size: 1.4rem; margin: 0; }
     .login-story-tagline { margin: 0; font-size: 0.6rem; }
@@ -2377,6 +2450,18 @@
   .login-submit:active { transform: scale(0.98); }
   .login-submit:disabled { opacity: 0.7; cursor: default; }
 
+  .login-trust-note {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    margin: 0.8rem 0 0;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+  }
+
+  .login-trust-note svg { flex-shrink: 0; }
+
   .login-footnote {
     margin: 1.6rem 0 0;
     font-size: 0.72rem;
@@ -2433,9 +2518,71 @@
       </div>
 
       <div class="login-story-content">
-        <p class="login-story-brand">Argo<span>SUAS</span></p>
+        <p class="login-story-brand">
+          <svg class="login-story-ship-badge" viewBox="0 0 200 200" width="40" height="40" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Navio Argo">
+            <title>Navio Argo</title>
+            <defs>
+              <rect id="argoShipTooth" x="-3" y="-104" width="6" height="14" rx="1"/>
+            </defs>
+
+            <circle class="argo-ship-ring" cx="100" cy="100" r="90"/>
+            <circle class="argo-ship-ring-inner" cx="100" cy="100" r="78"/>
+            <g class="argo-ship-teeth">
+              <use href="#argoShipTooth" transform="rotate(0.0 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(11.25 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(22.5 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(33.75 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(45.0 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(56.25 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(67.5 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(78.75 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(90.0 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(101.25 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(112.5 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(123.75 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(135.0 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(146.25 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(157.5 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(168.75 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(180.0 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(191.25 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(202.5 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(213.75 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(225.0 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(236.25 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(247.5 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(258.75 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(270.0 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(281.25 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(292.5 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(303.75 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(315.0 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(326.25 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(337.5 100 100)"/>
+              <use href="#argoShipTooth" transform="rotate(348.75 100 100)"/>
+            </g>
+
+            <path class="argo-ship-sail" d="M45,35 L135,32 C158,30 176,44 174,64 C173,76 163,86 148,90 C160,96 168,104 165,112 C162,120 150,122 142,116 C144,108 140,100 140,95 L45,150 Z"/>
+            <path class="argo-ship-swirl" d="M150,120 C165,118 175,128 168,138 C162,146 148,144 145,135 C143,128 146,122 150,120 Z"/>
+            <line class="argo-ship-mast" x1="90" y1="18" x2="90" y2="32"/>
+            <g class="argo-ship-oars">
+              <path d="M28,182 C45,168 60,155 70,140"/>
+              <path d="M28,182 C50,163 72,148 90,130"/>
+              <path d="M28,182 C56,158 84,140 110,118"/>
+              <path d="M28,182 C62,153 96,132 130,108"/>
+              <ellipse cx="70" cy="140" rx="4.5" ry="7" transform="rotate(-40 70 140)"/>
+              <ellipse cx="90" cy="130" rx="4.5" ry="7" transform="rotate(-33 90 130)"/>
+              <ellipse cx="110" cy="118" rx="4.5" ry="7" transform="rotate(-27 110 118)"/>
+              <ellipse cx="130" cy="108" rx="4.5" ry="7" transform="rotate(-22 130 108)"/>
+            </g>
+          </svg>
+          Argo<span>SUAS</span>
+        </p>
         <p class="login-story-tagline">Rede de Políticas Públicas de Roraima</p>
         <p class="login-story-desc">Diretório técnico de equipamentos socioassistenciais e suporte à rede RAPS de Boa Vista, para uso exclusivo da equipe.</p>
+        <div class="login-story-tags" aria-hidden="true">
+          <span>Assistência Social</span><span>Educação</span><span>Saúde</span><span>Segurança Pública</span>
+        </div>
       </div>
     </div>
 
@@ -2456,8 +2603,9 @@
           <div class="login-input-wrapper">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             <input type="password" id="loginPassword" name="password" placeholder="Digite a senha da equipe" autocomplete="current-password" required>
-            <button type="button" id="loginToggleVisibility" class="login-toggle-visibility" aria-label="Mostrar senha">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+            <button type="button" id="loginToggleVisibility" class="login-toggle-visibility" aria-label="Mostrar senha" aria-pressed="false">
+              <svg class="icon-eye" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="icon-eye-off" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.62 21.62 0 0 1 5.06-6.06M9.9 4.24A10.4 10.4 0 0 1 12 4c7 0 11 8 11 8a21.6 21.6 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
             </button>
           </div>
         </div>
@@ -2471,6 +2619,11 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
           Entrar
         </button>
+
+        <p class="login-trust-note">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span>Verificação feita neste dispositivo — a senha não é enviada a servidores.</span>
+        </p>
       </form>
 
       <p class="login-footnote">
@@ -2584,7 +2737,8 @@
           <span>Todos os Equipamentos</span>
           <span class="chip-count" id="count-all">0</span>
         </button>
-        <button class="filter-chip" data-cat="hospitalar" role="tab" aria-selected="false">
+        <!-- Bloco: Saúde -->
+        <button class="filter-chip" data-cat="hospitalar" data-cluster-start="true" role="tab" aria-selected="false" title="Bloco: Saúde">
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v12"/><path d="M6 12h12"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg></span>
           <span>Saúde</span>
           <span class="chip-count" id="count-hospitalar">0</span>
@@ -2599,17 +2753,23 @@
           <span>TEA / PcD</span>
           <span class="chip-count" id="count-tea">0</span>
         </button>
-        <button class="filter-chip" data-cat="social" role="tab" aria-selected="false">
+
+        <!-- Bloco: Assistência Social -->
+        <button class="filter-chip" data-cat="social" data-cluster-start="true" role="tab" aria-selected="false" title="Bloco: Assistência Social">
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
           <span>Assistência Social</span>
           <span class="chip-count" id="count-social">0</span>
         </button>
-        <button class="filter-chip" data-cat="educacao" role="tab" aria-selected="false">
+
+        <!-- Bloco: Educação -->
+        <button class="filter-chip" data-cat="educacao" data-cluster-start="true" role="tab" aria-selected="false" title="Bloco: Educação">
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/></svg></span>
           <span>Educação</span>
           <span class="chip-count" id="count-educacao">0</span>
         </button>
-        <button class="filter-chip" data-cat="juridico" data-group="more" role="tab" aria-selected="false">
+
+        <!-- Bloco: Justiça & Segurança (dentro de "Mais categorias") -->
+        <button class="filter-chip" data-cat="juridico" data-group="more" data-cluster-start="true" role="tab" aria-selected="false" title="Bloco: Justiça & Segurança">
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 8h14"/><path d="M5 8 2 15a3 3 0 0 0 6 0Z"/><path d="M19 8l-3 7a3 3 0 0 0 6 0Z"/></svg></span>
           <span>Sistema Judicial</span>
           <span class="chip-count" id="count-juridico">0</span>
@@ -2624,6 +2784,13 @@
           <span>Delegacias</span>
           <span class="chip-count" id="count-delegacias">0</span>
         </button>
+
+        <!-- Bloco: Cidadania & Documentação (dentro de "Mais categorias") -->
+        <button class="filter-chip" data-cat="documentacao" data-group="more" data-cluster-start="true" role="tab" aria-selected="false" title="Bloco: Cidadania & Documentação">
+          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M15 9h3"/><path d="M15 13h3"/><path d="M6 17c.5-1.8 2-3 3-3s2.5 1.2 3 3"/></svg></span>
+          <span>Documentação</span>
+          <span class="chip-count" id="count-documentacao">0</span>
+        </button>
         <button class="filter-chip" data-cat="bancos" data-group="more" role="tab" aria-selected="false">
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="21" x2="21" y2="21"/><line x1="5" y1="21" x2="5" y2="10"/><line x1="19" y1="21" x2="19" y2="10"/><line x1="12" y1="21" x2="12" y2="10"/><polygon points="12 2 21 8 3 8"/></svg></span>
           <span>Rede Bancária</span>
@@ -2634,17 +2801,16 @@
           <span>Previdência</span>
           <span class="chip-count" id="count-previdencia">0</span>
         </button>
-        <button class="filter-chip" data-cat="trabalho" data-group="more" role="tab" aria-selected="false">
+
+        <!-- Bloco: Trabalho & Renda (dentro de "Mais categorias") -->
+        <button class="filter-chip" data-cat="trabalho" data-group="more" data-cluster-start="true" role="tab" aria-selected="false" title="Bloco: Trabalho & Renda">
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><line x1="2" y1="13" x2="22" y2="13"/></svg></span>
           <span>Trabalho e Renda</span>
           <span class="chip-count" id="count-trabalho">0</span>
         </button>
-        <button class="filter-chip" data-cat="documentacao" data-group="more" role="tab" aria-selected="false">
-          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M15 9h3"/><path d="M15 13h3"/><path d="M6 17c.5-1.8 2-3 3-3s2.5 1.2 3 3"/></svg></span>
-          <span>Documentação</span>
-          <span class="chip-count" id="count-documentacao">0</span>
-        </button>
-        <button class="filter-chip" data-cat="habitacao" data-group="more" role="tab" aria-selected="false">
+
+        <!-- Bloco: Território (dentro de "Mais categorias") -->
+        <button class="filter-chip" data-cat="habitacao" data-group="more" data-cluster-start="true" role="tab" aria-selected="false" title="Bloco: Território">
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 10v10a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1V10"/></svg></span>
           <span>Habitação</span>
           <span class="chip-count" id="count-habitacao">0</span>
@@ -2654,11 +2820,14 @@
           <span>Mobilidade</span>
           <span class="chip-count" id="count-mobilidade">0</span>
         </button>
+
         <button class="filter-chip-toggle" id="filterMoreToggle" type="button" aria-expanded="false" aria-controls="filterBar">
           <span>Mais categorias</span>
           <span class="chip-icon" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
         </button>
-        <button class="filter-chip" data-cat="informes" role="tab" aria-selected="false">
+
+        <!-- Bloco: Painéis internos -->
+        <button class="filter-chip" data-cat="informes" data-cluster-start="true" role="tab" aria-selected="false" title="Bloco: Painéis internos">
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
           <span>Informes</span>
           <span class="chip-count" id="count-informes">0</span>
@@ -2673,7 +2842,9 @@
           <span>Atendimento CRAS</span>
           <span class="chip-count" id="count-cras-panel">0</span>
         </button>
-        <button class="filter-chip" data-cat="anotacoes" role="tab" aria-selected="false">
+
+        <!-- Anotações -->
+        <button class="filter-chip" data-cat="anotacoes" data-cluster-start="true" role="tab" aria-selected="false">
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></span>
           <span>Anotações</span>
         </button>
@@ -2755,21 +2926,39 @@
     </div>
 
     <div class="footer-col-contact">
-      <span class="footer-col-title">CRAS Cristiana Vicente Nunes</span>
-      <ul class="footer-contact-list">
-        <li>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-          <span>Rua Santo Agostinho, 193 - Centenário, Boa Vista-RR</span>
-        </li>
-        <li>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-          <a href="tel:+5595984026617">(95) 98402-6617</a>
-        </li>
-        <li>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
-          <span>Segunda a sexta, 08:00 às 18:00</span>
-        </li>
-      </ul>
+      <div class="footer-contact-unit">
+        <span class="footer-col-title">CRAS Cristiana Vicente Nunes</span>
+        <ul class="footer-contact-list">
+          <li>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span>
+              <a class="footer-address-link" href="https://www.google.com/maps/search/?api=1&query=Rua+Santo+Agostinho%2C+193+-+Centen%C3%A1rio%2C+Boa+Vista-RR" target="_blank" rel="noopener noreferrer">Rua Santo Agostinho, 193 - Centenário, Boa Vista-RR</a>
+              <span class="footer-address-hint">Ver no mapa</span>
+            </span>
+          </li>
+          <li>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            <a href="tel:+5595984026617">(95) 98402-6617</a>
+          </li>
+          <li>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+            <span>Segunda a sexta, 08:00 às 18:00</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="footer-contact-unit">
+        <span class="footer-col-title">CAS · Centro de Atendimento Social</span>
+        <ul class="footer-contact-list">
+          <li>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span>
+              <a class="footer-address-link" href="https://www.google.com/maps/search/?api=1&query=R.+James+Meirelles+Sobreiro+J%C3%BAnior%2C+1876+-+Cidade+Sat%C3%A9lite%2C+Boa+Vista-RR" target="_blank" rel="noopener noreferrer">R. James Meirelles Sobreiro Júnior, 1876 - Cidade Satélite, Boa Vista-RR</a>
+              <span class="footer-address-hint">Ver no mapa</span>
+            </span>
+          </li>
+        </ul>
+      </div>
     </div>
 
     <div class="footer-col-credit">
@@ -2802,6 +2991,8 @@
   <div class="footer-bottom">
     <div class="footer-bottom-inner">
       <span>© <span id="footerYear">2026</span> Argo SUAS</span>
+      <span class="footer-bottom-sep">·</span>
+      <span class="footer-suas-full">Sistema Único de Assistência Social (SUAS) · SEMADS/PMBV</span>
       <span class="footer-bottom-sep">·</span>
       <span>Uso interno da equipe técnica</span>
       <span class="footer-bottom-sep">·</span>
@@ -2937,10 +3128,17 @@ function initAuth() {
   }
 
   if (toggleBtn && pwField) {
+    const eyeIcon = toggleBtn.querySelector('.icon-eye');
+    const eyeOffIcon = toggleBtn.querySelector('.icon-eye-off');
     toggleBtn.addEventListener('click', function() {
-      const showing = pwField.type === 'text';
-      pwField.type = showing ? 'password' : 'text';
-      toggleBtn.setAttribute('aria-label', showing ? 'Mostrar senha' : 'Ocultar senha');
+      const isPassword = pwField.type === 'password';
+      pwField.type = isPassword ? 'text' : 'password';
+      toggleBtn.setAttribute('aria-label', isPassword ? 'Ocultar senha' : 'Mostrar senha');
+      toggleBtn.setAttribute('aria-pressed', String(isPassword));
+      if (eyeIcon && eyeOffIcon) {
+        eyeIcon.hidden = isPassword;
+        eyeOffIcon.hidden = !isPassword;
+      }
       pwField.focus();
     });
   }
