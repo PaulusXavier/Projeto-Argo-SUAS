@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Lora:ital,wght@0,400;0,500;1,400&amp;display=swap" rel="stylesheet">
-<meta name="theme-color" content="#0091C2">
+<meta name="theme-color" content="#0F4A41">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="favicon.ico">
@@ -148,7 +148,15 @@
   .container { max-width: 1400px; margin: 0 auto; padding: 0 1.5rem; }
 
   header.hero {
-    background: var(--brand-secondary);
+    --hero-teal-1: #17685A;
+    --hero-teal-2: #0F4A41;
+    --hero-teal-3: #082C26;
+    --hero-gold: #E8AC3D;
+    --hero-gold-soft: #F2CB7E;
+    --hero-neutral: #A9C7C0;
+    background:
+      radial-gradient(120% 160% at 100% 0%, rgba(232, 172, 61, 0.10) 0%, rgba(232, 172, 61, 0) 45%),
+      linear-gradient(155deg, var(--hero-teal-1) 0%, var(--hero-teal-2) 48%, var(--hero-teal-3) 100%);
     color: white;
     padding: 3rem 0;
     min-height: 460px;
@@ -156,6 +164,7 @@
     align-items: center;
     position: relative;
     overflow: hidden;
+    border-bottom: 3px solid var(--hero-gold);
   }
 
   header.hero .container { width: 100%; }
@@ -177,13 +186,13 @@
   }
 
   .argo-emblem .river-wave.wave-blue {
-    stroke: #0091C2;
+    stroke: #F2CB7E;
     stroke-width: 2.5;
-    opacity: 0.35;
+    opacity: 0.22;
   }
 
   .argo-emblem .river-wave.wave-green {
-    stroke: #009739;
+    stroke: #4FA593;
     stroke-width: 2.5;
     opacity: 0.3;
   }
@@ -209,7 +218,7 @@
   }
 
   .argo-emblem .sun-core {
-    fill: #FEDD00;
+    fill: #E8AC3D;
     opacity: 0.95;
     transform-origin: center;
     animation: heroSunPulse 4s ease-in-out infinite;
@@ -225,7 +234,7 @@
   }
 
   .argo-emblem .sun-ray {
-    stroke: #FEDD00;
+    stroke: #E8AC3D;
     stroke-width: 2;
     stroke-linecap: round;
     opacity: 0.55;
@@ -248,7 +257,7 @@
     gap: 12px;
     flex-shrink: 0;
     padding-right: 24px;
-    border-right: 1px solid rgba(148, 163, 184, 0.25);
+    border-right: 1px solid rgba(232, 172, 61, 0.25);
   }
 
   @media (max-width: 560px) {
@@ -288,7 +297,7 @@
     font-family: var(--font-serif);
     font-weight: 700;
     font-style: italic;
-    color: var(--brand-primary-light);
+    color: #F2CB7E;
     letter-spacing: 0.01em;
   }
 
@@ -308,12 +317,12 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.12em;
-    color: #94A3B8;
+    color: #A9C7C0;
     margin-top: 0.5rem;
   }
 
   .hero p {
-    color: #94A3B8;
+    color: #B9D2CC;
     max-width: 700px;
     font-size: 1.1rem;
     margin-top: 1.25rem;
@@ -327,7 +336,7 @@
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.12em;
-    color: #29ABE2;
+    color: #E8AC3D;
     margin: 0 0 1.15rem;
   }
 
@@ -362,13 +371,13 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: #94A3B8;
+    color: #A9C7C0;
   }
 
   .hero-stat-divider {
     width: 1px;
     height: 32px;
-    background: rgba(148, 163, 184, 0.25);
+    background: rgba(232, 172, 61, 0.25);
   }
 
   @media (max-width: 640px) {
@@ -2395,9 +2404,9 @@
   <svg class="argo-emblem" viewBox="0 0 320 230" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <defs>
       <linearGradient id="argoHullGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stop-color="#0091C2"/>
-        <stop offset="50%" stop-color="#29ABE2"/>
-        <stop offset="100%" stop-color="#009739"/>
+        <stop offset="0%" stop-color="#F2CB7E"/>
+        <stop offset="50%" stop-color="#E8AC3D"/>
+        <stop offset="100%" stop-color="#4FA593"/>
       </linearGradient>
     </defs>
 
@@ -2437,7 +2446,7 @@
         <img src="https://www.simbolosmunicipais.com.br/multimidia/rr/rr-boa-vista-bandeira-VvpTlaUS.jpg" alt="Bandeira de Boa Vista" title="Bandeira de Boa Vista" width="52" height="36" style="object-fit:cover; background:white;">
       </div>
       <h1>
-        <span class="brand-mark">Argo</span><span class="brand-mark" style="font-size:0.55em; font-style:normal; font-weight:600; color:#94A3B8; vertical-align:middle; margin-left:0.3em;">SUAS</span>
+        <span class="brand-mark">Argo</span><span class="brand-mark" style="font-size:0.55em; font-style:normal; font-weight:600; color:#CFE3DD; vertical-align:middle; margin-left:0.3em;">SUAS</span>
         <span class="brand-sub">Rede de Políticas Públicas de Roraima</span>
       </h1>
     </div>
