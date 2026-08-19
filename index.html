@@ -6684,6 +6684,9 @@ const DATA = [
       { label: "Camila", url: "https://drive.google.com/drive/folders/1hJBKv5DsqS34mtwTqr9oFntwGIANO42P" },
       { label: "Pedagoga", url: "https://drive.google.com/drive/folders/1h-X1Do8vB3qG0OY0G8GeLukBiJkTPwxs" },
       { label: "Paulo", url: "https://drive.google.com/drive/folders/1uC3Gt5FCm7xMg0Z-mxU_7V51RxZpBPVv" }
+    ],
+    mapLinks: [
+      { label: "Mapa do Território (Vila Jardim)", icon: "map", url: "vila-jardim.html" }
     ]
   },
   {
@@ -7003,6 +7006,7 @@ function renderCasCard(i, query) {
   const adminRows = (i.adminLinks || []).map(l => linkRow(l.label, l.url, ICONS[l.icon] || ICONS.form)).filter(Boolean).join('');
   const systemRows = (i.systemLinks || []).map(l => linkRow(l.label, l.url, ICONS[l.icon] || ICONS.form)).filter(Boolean).join('');
   const driveRows = (i.driveLinks || []).map(l => linkRow(l.label, l.url, ICONS.folder)).filter(Boolean).join('');
+  const mapRows = (i.mapLinks || []).map(l => linkRow(l.label, l.url, ICONS[l.icon] || ICONS.map)).filter(Boolean).join('');
 
   const emptyRow = `<div style="padding:0.9rem 1.1rem; color:var(--text-muted); font-size:0.8rem;">Nenhum atalho encontrado.</div>`;
 
@@ -7044,6 +7048,13 @@ function renderCasCard(i, query) {
             <div class="cas-group-header">Pastas da Equipe (Google Drive)</div>
             <div class="cas-link-list">
               ${driveRows || emptyRow}
+            </div>
+          </div>
+
+          <div class="cas-group" style="grid-column: 1 / -1;">
+            <div class="cas-group-header">Mapa do Território</div>
+            <div class="cas-link-list">
+              ${mapRows || emptyRow}
             </div>
           </div>
         </div>
