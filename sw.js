@@ -1,20 +1,18 @@
 // Troque este número toda vez que publicar uma alteração no app.
 // É essa mudança de versão que dispara a atualização automática.
-const CACHE_VERSION = 'v5';
+const CACHE_VERSION = 'v6';
 const CACHE_NAME = `rede-apoio-bv-${CACHE_VERSION}`;
 
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
+  './favicon.ico',
   './apple-touch-icon.png',
   './icon-192.png',
   './icon-512.png',
   './icon-maskable-512.png',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&family=JetBrains+Mono:wght@400;500&display=swap',
-  'https://unpkg.com/lucide@latest',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;1,400&display=swap'
 ];
 
 // INSTALAÇÃO: baixa os arquivos novos e já assume o controle,
