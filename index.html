@@ -526,6 +526,13 @@
     display: none;
   }
 
+  /* Bug corrigido: se a categoria ativa está dentro de "Mais categorias"
+     e a barra é recolhida, o grupo daquele chip continua visível — assim
+     o usuário nunca perde de vista qual filtro está aplicado. */
+  .filter-bar:not(.is-expanded) .filter-group[data-group="more"].has-active-chip {
+    display: flex;
+  }
+
   .filter-chip-toggle {
     white-space: nowrap;
     background: linear-gradient(180deg, var(--bg-card), rgba(0, 145, 194, 0.04));
@@ -2831,17 +2838,17 @@
         <div class="filter-group">
           <span class="filter-group-label" aria-hidden="true">Saúde</span>
           <div class="filter-group-chips">
-            <button class="filter-chip" data-cat="hospitalar" role="tab" aria-selected="false">
+            <button class="filter-chip filter-chip-panel" data-cat="hospitalar" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v12"/><path d="M6 12h12"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg></span>
               <span>Saúde</span>
               <span class="chip-count" id="count-hospitalar">0</span>
             </button>
-            <button class="filter-chip" data-cat="saude" role="tab" aria-selected="false">
+            <button class="filter-chip filter-chip-panel" data-cat="saude" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
               <span>RAPS</span>
               <span class="chip-count" id="count-saude">0</span>
             </button>
-            <button class="filter-chip" data-cat="tea" role="tab" aria-selected="false">
+            <button class="filter-chip filter-chip-panel" data-cat="tea" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 9.5a2.5 2.5 0 1 0-3.9-2.9A2.5 2.5 0 1 0 12 8a2.5 2.5 0 1 0-3.6-1.4A2.5 2.5 0 1 0 4.5 9.5a2.5 2.5 0 0 0 0 5 2.5 2.5 0 1 0 3.9 2.9 2.5 2.5 0 1 0 3.6-3.4 2.5 2.5 0 1 0 3.6 3.4 2.5 2.5 0 1 0 3.9-2.9 2.5 2.5 0 0 0 0-5Z"/></svg></span>
               <span>TEA / PcD</span>
               <span class="chip-count" id="count-tea">0</span>
@@ -2853,7 +2860,7 @@
         <div class="filter-group">
           <span class="filter-group-label" aria-hidden="true">Assistência Social</span>
           <div class="filter-group-chips">
-            <button class="filter-chip" data-cat="social" role="tab" aria-selected="false">
+            <button class="filter-chip filter-chip-panel" data-cat="social" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
               <span>Assistência Social</span>
               <span class="chip-count" id="count-social">0</span>
@@ -2865,7 +2872,7 @@
         <div class="filter-group">
           <span class="filter-group-label" aria-hidden="true">Educação</span>
           <div class="filter-group-chips">
-            <button class="filter-chip" data-cat="educacao" role="tab" aria-selected="false">
+            <button class="filter-chip filter-chip-panel" data-cat="educacao" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/></svg></span>
               <span>Educação</span>
               <span class="chip-count" id="count-educacao">0</span>
@@ -2877,17 +2884,17 @@
         <div class="filter-group" data-group="more">
           <span class="filter-group-label" aria-hidden="true">Justiça &amp; Segurança</span>
           <div class="filter-group-chips">
-            <button class="filter-chip" data-cat="juridico" data-group="more" role="tab" aria-selected="false">
+            <button class="filter-chip filter-chip-panel" data-cat="juridico" data-group="more" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 8h14"/><path d="M5 8 2 15a3 3 0 0 0 6 0Z"/><path d="M19 8l-3 7a3 3 0 0 0 6 0Z"/></svg></span>
               <span>Sistema Judicial</span>
               <span class="chip-count" id="count-juridico">0</span>
             </button>
-            <button class="filter-chip" data-cat="conselho" data-group="more" role="tab" aria-selected="false">
+            <button class="filter-chip filter-chip-panel" data-cat="conselho" data-group="more" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg></span>
               <span>Conselho Tutelar</span>
               <span class="chip-count" id="count-conselho">0</span>
             </button>
-            <button class="filter-chip" data-cat="delegacias" data-group="more" role="tab" aria-selected="false">
+            <button class="filter-chip filter-chip-panel" data-cat="delegacias" data-group="more" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="M9.5 12.5l1.8 1.8 3.2-3.6"/></svg></span>
               <span>Delegacias</span>
               <span class="chip-count" id="count-delegacias">0</span>
@@ -2899,17 +2906,17 @@
         <div class="filter-group" data-group="more">
           <span class="filter-group-label" aria-hidden="true">Cidadania &amp; Documentação</span>
           <div class="filter-group-chips">
-            <button class="filter-chip" data-cat="documentacao" data-group="more" role="tab" aria-selected="false">
+            <button class="filter-chip filter-chip-panel" data-cat="documentacao" data-group="more" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M15 9h3"/><path d="M15 13h3"/><path d="M6 17c.5-1.8 2-3 3-3s2.5 1.2 3 3"/></svg></span>
               <span>Documentação</span>
               <span class="chip-count" id="count-documentacao">0</span>
             </button>
-            <button class="filter-chip" data-cat="bancos" data-group="more" role="tab" aria-selected="false">
+            <button class="filter-chip filter-chip-panel" data-cat="bancos" data-group="more" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="21" x2="21" y2="21"/><line x1="5" y1="21" x2="5" y2="10"/><line x1="19" y1="21" x2="19" y2="10"/><line x1="12" y1="21" x2="12" y2="10"/><polygon points="12 2 21 8 3 8"/></svg></span>
               <span>Rede Bancária</span>
               <span class="chip-count" id="count-bancos">0</span>
             </button>
-            <button class="filter-chip" data-cat="previdencia" data-group="more" role="tab" aria-selected="false">
+            <button class="filter-chip filter-chip-panel" data-cat="previdencia" data-group="more" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg></span>
               <span>Previdência</span>
               <span class="chip-count" id="count-previdencia">0</span>
@@ -2921,7 +2928,7 @@
         <div class="filter-group" data-group="more">
           <span class="filter-group-label" aria-hidden="true">Trabalho e Renda</span>
           <div class="filter-group-chips">
-            <button class="filter-chip" data-cat="trabalho" data-group="more" role="tab" aria-selected="false">
+            <button class="filter-chip filter-chip-panel" data-cat="trabalho" data-group="more" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><line x1="2" y1="13" x2="22" y2="13"/></svg></span>
               <span>Trabalho e Renda</span>
               <span class="chip-count" id="count-trabalho">0</span>
@@ -2933,12 +2940,12 @@
         <div class="filter-group" data-group="more">
           <span class="filter-group-label" aria-hidden="true">Território</span>
           <div class="filter-group-chips">
-            <button class="filter-chip" data-cat="habitacao" data-group="more" role="tab" aria-selected="false">
+            <button class="filter-chip filter-chip-panel" data-cat="habitacao" data-group="more" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 10v10a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1V10"/></svg></span>
               <span>Habitação</span>
               <span class="chip-count" id="count-habitacao">0</span>
             </button>
-            <button class="filter-chip" data-cat="mobilidade" data-group="more" role="tab" aria-selected="false">
+            <button class="filter-chip filter-chip-panel" data-cat="mobilidade" data-group="more" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11 6.5 6.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11"/><rect x="2" y="11" width="20" height="7" rx="2"/><circle cx="7" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/></svg></span>
               <span>Mobilidade</span>
               <span class="chip-count" id="count-mobilidade">0</span>
@@ -2977,7 +2984,7 @@
         <div class="filter-group">
           <span class="filter-group-label" aria-hidden="true">Registro Pessoal</span>
           <div class="filter-group-chips">
-            <button class="filter-chip" data-cat="anotacoes" role="tab" aria-selected="false">
+            <button class="filter-chip filter-chip-panel" data-cat="anotacoes" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></span>
               <span>Anotações</span>
             </button>
@@ -7323,7 +7330,7 @@ const CATEGORY_LABELS_PRINT = {
   hospitalar: 'Saúde (Hospitais)', saude: 'RAPS', tea: 'TEA / PcD', social: 'Assistência Social', educacao: 'Educação',
   juridico: 'Sistema Judicial', conselho: 'Conselho Tutelar', delegacias: 'Delegacias', bancos: 'Rede Bancária',
   previdencia: 'Previdência', trabalho: 'Trabalho e Renda', habitacao: 'Habitação', mobilidade: 'Mobilidade', interior: 'CRAS/CREAS Interior', informes: 'Informes',
-  cas: 'Atendimento CAS', cras: 'Atendimento CRAS'
+  cas: 'Atendimento CAS', cras: 'Atendimento CRAS', documentacao: 'Documentação', idoso: 'Pessoa Idosa'
 };
 
 function cleanPrintField(value, fallback) {
@@ -7450,7 +7457,6 @@ function renderCasCard(i, query) {
   const q = (query || '').toLowerCase();
 
   function linkRow(label, url, icon) {
-    if (q && !label.toLowerCase().includes(q)) return '';
     return `
       <a class="cas-link-item" href="${url}" target="_blank" rel="noopener noreferrer">
         ${icon}
@@ -7460,10 +7466,22 @@ function renderCasCard(i, query) {
     `;
   }
 
-  const adminRows = (i.adminLinks || []).map(l => linkRow(l.label, l.url, ICONS[l.icon] || ICONS.form)).filter(Boolean).join('');
-  const systemRows = (i.systemLinks || []).map(l => linkRow(l.label, l.url, ICONS[l.icon] || ICONS.form)).filter(Boolean).join('');
-  const driveRows = (i.driveLinks || []).map(l => linkRow(l.label, l.url, ICONS.folder)).filter(Boolean).join('');
-  const mapRows = (i.mapLinks || []).map(l => linkRow(l.label, l.url, ICONS[l.icon] || ICONS.map)).filter(Boolean).join('');
+  // Se a busca bater em algum atalho do grupo, mostra só os que baterem
+  // (ajuda a achar rápido). Se não bater em nenhum atalho deste grupo —
+  // mas o card apareceu porque a busca bateu em outro campo (endereço,
+  // descrição, outro grupo de atalhos) — mostra todos os atalhos do
+  // grupo em vez de "Nenhum atalho encontrado", que seria enganoso.
+  function buildGroup(links) {
+    const all = links || [];
+    if (!q) return all;
+    const matched = all.filter(l => l.label.toLowerCase().includes(q));
+    return matched.length ? matched : all;
+  }
+
+  const adminRows = buildGroup(i.adminLinks).map(l => linkRow(l.label, l.url, ICONS[l.icon] || ICONS.form)).join('');
+  const systemRows = buildGroup(i.systemLinks).map(l => linkRow(l.label, l.url, ICONS[l.icon] || ICONS.form)).join('');
+  const driveRows = buildGroup(i.driveLinks).map(l => linkRow(l.label, l.url, ICONS.folder)).join('');
+  const mapRows = buildGroup(i.mapLinks).map(l => linkRow(l.label, l.url, ICONS[l.icon] || ICONS.map)).join('');
 
   const emptyRow = `<div style="padding:0.9rem 1.1rem; color:var(--text-muted); font-size:0.8rem;">Nenhum atalho encontrado.</div>`;
 
@@ -7539,7 +7557,6 @@ function renderCrasCard(i, query) {
   const q = (query || '').toLowerCase();
 
   function linkRow(label, url, icon) {
-    if (q && !label.toLowerCase().includes(q)) return '';
     return `
       <a class="cras-link-item" href="${url}" target="_blank" rel="noopener noreferrer">
         ${icon}
@@ -7549,15 +7566,34 @@ function renderCrasCard(i, query) {
     `;
   }
 
-  const municipalRows = (i.municipalLinks || []).map(l => linkRow(l.label, l.url, ICONS[l.icon] || ICONS.form)).filter(Boolean).join('');
-  const federalRows = (i.federalLinks || []).map(l => linkRow(l.label, l.url, ICONS[l.icon] || ICONS.form)).filter(Boolean).join('');
-  const rmaRows = (i.rmaLinks || []).map(l => linkRow(l.label, l.url, ICONS[l.icon] || ICONS.form)).filter(Boolean).join('');
-  const driveRows = (i.driveLinks || []).map(l => linkRow(l.label, l.url, ICONS.cloud)).filter(Boolean).join('');
+  // Mesmo princípio do card CAS: se a busca bater em algum atalho do
+  // grupo, filtra; se não bater em nenhum (mas o card apareceu por outro
+  // motivo), mostra todos em vez de dizer que o grupo está vazio.
+  function buildGroup(links) {
+    const all = links || [];
+    if (!q) return all;
+    const matched = all.filter(l => l.label.toLowerCase().includes(q));
+    return matched.length ? matched : all;
+  }
+
+  const municipalRows = buildGroup(i.municipalLinks).map(l => linkRow(l.label, l.url, ICONS[l.icon] || ICONS.form)).join('');
+  const federalRows = buildGroup(i.federalLinks).map(l => linkRow(l.label, l.url, ICONS[l.icon] || ICONS.form)).join('');
+  const rmaRows = buildGroup(i.rmaLinks).map(l => linkRow(l.label, l.url, ICONS[l.icon] || ICONS.form)).join('');
+  const driveRows = buildGroup(i.driveLinks).map(l => linkRow(l.label, l.url, ICONS.cloud)).join('');
 
   const emptyRow = `<div style="padding:0.9rem 1.1rem; color:var(--text-muted); font-size:0.8rem;">Nenhum atalho encontrado.</div>`;
 
-  const fixedRows = (i.fixedTeam || []).filter(t =>
-    !q || t.name.toLowerCase().includes(q) || t.role.toLowerCase().includes(q) || t.bairros.toLowerCase().includes(q)
+  // Mesma lógica de fallback para a equipe técnica: se ninguém bater com
+  // a busca, mostra a equipe inteira em vez de "Nenhum técnico encontrado".
+  function buildTeam(team, matchFn) {
+    const all = team || [];
+    if (!q) return all;
+    const matched = all.filter(matchFn);
+    return matched.length ? matched : all;
+  }
+
+  const fixedRows = buildTeam(i.fixedTeam, t =>
+    t.name.toLowerCase().includes(q) || t.role.toLowerCase().includes(q) || t.bairros.toLowerCase().includes(q)
   ).map(t => `
     <tr>
       <td><span class="team-name">${t.name}</span></td>
@@ -7566,8 +7602,8 @@ function renderCrasCard(i, query) {
     </tr>
   `).join('');
 
-  const volanteRows = (i.volanteTeam || []).filter(t =>
-    !q || t.name.toLowerCase().includes(q) || t.role.toLowerCase().includes(q)
+  const volanteRows = buildTeam(i.volanteTeam, t =>
+    t.name.toLowerCase().includes(q) || t.role.toLowerCase().includes(q)
   ).map(t => `
     <tr>
       <td>
@@ -8795,12 +8831,20 @@ if (filterMoreToggle) {
   });
 }
 
+function syncMoreGroupVisibility() {
+  document.querySelectorAll('.filter-group[data-group="more"]').forEach(group => {
+    const hasActive = !!group.querySelector('.filter-chip.active');
+    group.classList.toggle('has-active-chip', hasActive);
+  });
+}
+
 document.querySelectorAll('.filter-chip').forEach(c => c.addEventListener('click', () => {
   const prevActive = document.querySelector('.filter-chip.active');
   prevActive.classList.remove('active');
   prevActive.setAttribute('aria-selected', 'false');
   c.classList.add('active');
   c.setAttribute('aria-selected', 'true');
+  syncMoreGroupVisibility();
   render();
   const controlsEl = document.querySelector('.controls');
   const controlsBottom = controlsEl.getBoundingClientRect().bottom;
@@ -8878,6 +8922,7 @@ function ativarAtualizacao(worker) {
 render();
 initAuth();
 updateHeaderFooterStats();
+syncMoreGroupVisibility();
 </script>
 </body>
 </html>
