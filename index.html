@@ -692,6 +692,31 @@
     color: white;
   }
 
+  /* Chips dos "Painéis Internos" (Informes, Atendimento CAS, Atendimento CRAS)
+     ficam sempre azuis, como o chip "Todos os Equipamentos", para se
+     destacarem como acessos diretos a painéis internos. */
+  .filter-chip.filter-chip-panel {
+    background: linear-gradient(180deg, var(--brand-primary-light) 0%, var(--brand-primary) 100%);
+    color: white;
+    border-color: var(--brand-primary);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35) inset, 0 5px 14px -4px rgba(0, 145, 194, 0.55), 0 2px 4px rgba(15, 23, 42, 0.15);
+  }
+
+  .filter-chip.filter-chip-panel .chip-count {
+    background: rgba(255, 255, 255, 0.25);
+    color: white;
+  }
+
+  .filter-chip.filter-chip-panel:hover {
+    color: white;
+    border-color: var(--brand-primary-light);
+    background: linear-gradient(180deg, var(--brand-primary) 0%, var(--brand-primary-light) 100%);
+  }
+
+  .filter-chip.filter-chip-panel[aria-selected="true"] {
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.7) inset, 0 5px 14px -4px rgba(0, 145, 194, 0.55), 0 2px 4px rgba(15, 23, 42, 0.15);
+  }
+
   .empty-state {
     grid-column: 1 / -1;
     text-align: center;
@@ -2930,17 +2955,17 @@
         <div class="filter-group">
           <span class="filter-group-label" aria-hidden="true">Painéis Internos</span>
           <div class="filter-group-chips">
-            <button class="filter-chip" data-cat="informes" role="tab" aria-selected="false">
+            <button class="filter-chip filter-chip-panel" data-cat="informes" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
               <span>Informes</span>
               <span class="chip-count" id="count-informes">0</span>
             </button>
-            <button class="filter-chip" data-cat="cas" role="tab" aria-selected="false">
+            <button class="filter-chip filter-chip-panel" data-cat="cas" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
               <span>Atendimento CAS</span>
               <span class="chip-count" id="count-cas">0</span>
             </button>
-            <button class="filter-chip" data-cat="cras" role="tab" aria-selected="false">
+            <button class="filter-chip filter-chip-panel" data-cat="cras" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="1"/><line x1="9" y1="6" x2="9" y2="6.01"/><line x1="15" y1="6" x2="15" y2="6.01"/><line x1="9" y1="10" x2="9" y2="10.01"/><line x1="15" y1="10" x2="15" y2="10.01"/><line x1="9" y1="14" x2="9" y2="14.01"/><line x1="15" y1="14" x2="15" y2="14.01"/></svg></span>
               <span>Atendimento CRAS</span>
               <span class="chip-count" id="count-cras-panel">0</span>
@@ -6191,7 +6216,7 @@ const DATA = [
     group: "Programas de Apoio",
     address: "Adesão feita pela escola pública estadual, via secretaria de educação (não presencial)",
     hours: "Consulta e extrato: plataforma estudante.pedemeia.mec.gov.br",
-    phones: ["pedemeia@mec.gov.br"],
+    phones: ["N/A - dúvidas: pedemeia@mec.gov.br"],
     services: "Incentivo Matrícula, Incentivo Frequência, Incentivo Conclusão, Incentivo Enem.",
     desc: "Programa federal do Ministério da Educação (Lei nº 14.818/2024) que funciona como uma poupança para estudantes de baixa renda (14 a 24 anos) matriculados no ensino médio de escolas públicas ou na EJA, com o objetivo de estimular a permanência e a conclusão dos estudos. O estudante precisa estar inscrito no CadÚnico e ter a matrícula/frequência informada pela escola ao MEC. Os valores (incentivo matrícula, frequência semestral, conclusão de cada série e participação no Enem) são depositados em poupança na Caixa e ficam parcialmente bloqueados até a conclusão do ensino médio. Elegibilidade e adesão são feitas automaticamente pela escola/rede de ensino a partir dos dados do CadÚnico; o próprio estudante ou responsável não precisa se inscrever separadamente.",
     website: "https://www.gov.br/mec/pt-br/pe-de-meia"
@@ -8690,7 +8715,7 @@ async function printGuide(id) {
           </tr>
         </table>
         <div style="flex-grow:1; display:flex; align-items:center; justify-content:center; border:1.5px solid #0F172A; border-radius:4px; overflow:hidden; background:#F8FAFC;">
-          <img src="${imgData}" style="max-width:100%; max-height:100%; object-fit:contain;">
+          <img src="${imgData}" alt="Anexo fotográfico" style="max-width:100%; max-height:100%; object-fit:contain;">
         </div>
       </div>
     </div>
@@ -8712,7 +8737,7 @@ async function printGuide(id) {
               </tr>
             </table>
             <div style="flex-grow:1; display:flex; align-items:center; justify-content:center; border:1.5px solid #0F172A; border-radius:4px; overflow:hidden; background:#F8FAFC;">
-              <img src="${imgSrc}" style="max-width:100%; max-height:100%; object-fit:contain;">
+              <img src="${imgSrc}" alt="Página ${idx + 1} do anexo em PDF" style="max-width:100%; max-height:100%; object-fit:contain;">
             </div>
           </div>
         </div>
