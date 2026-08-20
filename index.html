@@ -148,14 +148,14 @@
   .container { max-width: 1400px; margin: 0 auto; padding: 0 1.5rem; }
 
   header.hero {
-    --hero-teal-1: #17685A;
-    --hero-teal-2: #0F4A41;
-    --hero-teal-3: #082C26;
+    --hero-teal-1: #12564A;         /* base um pouco mais escura → mais contraste com o texto claro */
+    --hero-teal-2: #0B3C35;
+    --hero-teal-3: #051F1A;         /* canto mais escuro/sólido, casa com o rodapé (#071E1A) */
     --hero-gold: #E8AC3D;
     --hero-gold-soft: #F2CB7E;
-    --hero-neutral: #A9C7C0;
+    --hero-neutral: #C7DED8;        /* era #A9C7C0 → texto secundário mais legível */
     background:
-      radial-gradient(120% 160% at 100% 0%, rgba(232, 172, 61, 0.10) 0%, rgba(232, 172, 61, 0) 45%),
+      radial-gradient(120% 160% at 100% 0%, rgba(232, 172, 61, 0.12) 0%, rgba(232, 172, 61, 0) 45%),
       linear-gradient(155deg, var(--hero-teal-1) 0%, var(--hero-teal-2) 48%, var(--hero-teal-3) 100%);
     color: white;
     padding: 3rem 0;
@@ -164,7 +164,7 @@
     align-items: center;
     position: relative;
     overflow: hidden;
-    border-bottom: 3px solid var(--hero-gold);
+    border-bottom: 4px solid var(--hero-gold);   /* linha um pouco mais espessa, reforça a divisão */
   }
 
   header.hero .container { width: 100%; }
@@ -317,12 +317,12 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.12em;
-    color: #A9C7C0;
+    color: var(--hero-neutral);    /* era #A9C7C0, fixo → agora acompanha o tom mais claro da var */
     margin-top: 0.5rem;
   }
 
   .hero p {
-    color: #B9D2CC;
+    color: #DCEDE7;                /* era #B9D2CC → texto de apoio bem mais legível sobre o fundo escuro */
     max-width: 700px;
     font-size: 1.1rem;
     margin-top: 1.25rem;
@@ -336,7 +336,7 @@
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.12em;
-    color: #E8AC3D;
+    color: var(--hero-gold-soft, #F2CB7E);   /* era #E8AC3D → dourado mais claro, mais fácil de ler */
     margin: 0 0 1.15rem;
   }
 
@@ -350,6 +350,11 @@
     gap: 1.75rem;
     margin-top: 2rem;
     flex-wrap: wrap;
+    padding: 0.9rem 1.25rem;                          /* painel próprio, como no rodapé, para dar peso visual */
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(232, 172, 61, 0.22);
+    border-radius: 10px;
+    width: fit-content;
   }
 
   .hero-stat {
@@ -371,17 +376,17 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: #A9C7C0;
+    color: var(--hero-neutral);    /* era #A9C7C0, fixo → mais claro e legível */
   }
 
   .hero-stat-divider {
     width: 1px;
     height: 32px;
-    background: rgba(232, 172, 61, 0.25);
+    background: rgba(232, 172, 61, 0.3);
   }
 
   @media (max-width: 640px) {
-    .hero-stats { gap: 1.1rem; margin-top: 1.5rem; }
+    .hero-stats { gap: 1.1rem; margin-top: 1.5rem; width: 100%; }
     .hero-stat-divider { display: none; }
   }
 
@@ -2703,8 +2708,13 @@
       </div>
       <div class="hero-stat-divider" aria-hidden="true"></div>
       <div class="hero-stat">
-        <span class="hero-stat-value">24h</span>
-        <span class="hero-stat-label">Consulta a qualquer hora</span>
+        <span class="hero-stat-value">CRAS</span>
+        <span class="hero-stat-label">Cristiana Vicente Nunes</span>
+      </div>
+      <div class="hero-stat-divider" aria-hidden="true"></div>
+      <div class="hero-stat">
+        <span class="hero-stat-value">CAS</span>
+        <span class="hero-stat-label">Centro de Atendimento Social</span>
       </div>
     </div>
   </div>
