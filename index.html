@@ -432,6 +432,7 @@
 
   .filter-bar {
     display: flex;
+    align-items: flex-start;
     gap: 0.5rem;
     overflow-x: auto;
     padding-bottom: 0.5rem;
@@ -440,6 +441,11 @@
   }
 
   .filter-bar::-webkit-scrollbar { display: none; }
+
+  .filter-bar > .filter-chip,
+  .filter-bar > .filter-chip-toggle {
+    align-self: center;
+  }
 
   @media (max-width: 767px) {
     .filter-bar-wrapper {
@@ -454,37 +460,42 @@
       overflow-x: visible;
       padding-bottom: 0;
       row-gap: 0.6rem;
-      align-items: center;
-    }
-
-    /* Separador visual genérico: qualquer chip marcado como início de um
-       novo bloco temático (data-cluster-start="true") ganha uma linha
-       divisória fina à esquerda. Substitui os seletores fixos por
-       data-cat que existiam antes (um por categoria), facilitando
-       adicionar/reordenar categorias sem mexer no CSS. */
-    .filter-chip[data-cluster-start="true"] {
-      margin-left: 0.75rem;
-      padding-left: calc(1rem + 0.75rem);
-      position: relative;
-    }
-
-    .filter-chip[data-cluster-start="true"]::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 1px;
-      height: 22px;
-      background: var(--border-ui);
     }
   }
 
-  /* Grupo secundário de categorias ("Rede de Apoio Institucional"): fica
-     recolhido por padrão para não sobrecarregar a barra de filtros com
-     19 chips visíveis ao mesmo tempo. Some do fluxo (não só visualmente)
-     quando recolhido, para não atrapalhar a navegação por teclado/leitor de tela. */
-  .filter-bar:not(.is-expanded) .filter-chip[data-group="more"] {
+  /* Seções: cada bloco temático de categorias vira uma caixa própria,
+     com um rótulo curto no topo e os chips daquela área agrupados
+     dentro — assim a barra de filtros fica organizada por área em vez
+     de uma lista corrida de chips. */
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    flex-shrink: 0;
+    scroll-snap-align: start;
+    padding: 0.5rem 0.6rem 0.55rem;
+    border: 1px solid var(--border-ui);
+    border-radius: 10px;
+    background: rgba(0, 145, 194, 0.03);
+  }
+
+  .filter-group-label {
+    display: block;
+    white-space: nowrap;
+    font-size: 0.62rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+  }
+
+  .filter-group-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .filter-bar:not(.is-expanded) .filter-group[data-group="more"] {
     display: none;
   }
 
@@ -2524,7 +2535,7 @@
 
       <div class="login-story-content">
         <p class="login-story-brand">
-          <svg class="login-story-ship-badge" viewBox="0 0 200 200" width="30" height="30" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Navio Argo">
+          <svg class="login-story-ship-badge" viewBox="0 0 200 200" width="15" height="15" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Navio Argo">
             <title>Navio Argo</title>
             <defs>
               <rect id="argoShipTooth" x="-3" y="-104" width="6" height="14" rx="1"/>
@@ -2747,117 +2758,163 @@
           <span>Todos os Equipamentos</span>
           <span class="chip-count" id="count-all">0</span>
         </button>
-        <!-- Bloco: Saúde -->
-        <button class="filter-chip" data-cat="hospitalar" data-cluster-start="true" role="tab" aria-selected="false" title="Bloco: Saúde">
-          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v12"/><path d="M6 12h12"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg></span>
-          <span>Saúde</span>
-          <span class="chip-count" id="count-hospitalar">0</span>
-        </button>
-        <button class="filter-chip" data-cat="saude" role="tab" aria-selected="false">
-          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
-          <span>RAPS</span>
-          <span class="chip-count" id="count-saude">0</span>
-        </button>
-        <button class="filter-chip" data-cat="tea" role="tab" aria-selected="false">
-          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 9.5a2.5 2.5 0 1 0-3.9-2.9A2.5 2.5 0 1 0 12 8a2.5 2.5 0 1 0-3.6-1.4A2.5 2.5 0 1 0 4.5 9.5a2.5 2.5 0 0 0 0 5 2.5 2.5 0 1 0 3.9 2.9 2.5 2.5 0 1 0 3.6-3.4 2.5 2.5 0 1 0 3.6 3.4 2.5 2.5 0 1 0 3.9-2.9 2.5 2.5 0 0 0 0-5Z"/></svg></span>
-          <span>TEA / PcD</span>
-          <span class="chip-count" id="count-tea">0</span>
-        </button>
 
-        <!-- Bloco: Assistência Social -->
-        <button class="filter-chip" data-cat="social" data-cluster-start="true" role="tab" aria-selected="false" title="Bloco: Assistência Social">
-          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
-          <span>Assistência Social</span>
-          <span class="chip-count" id="count-social">0</span>
-        </button>
+        <!-- Seção: Saúde -->
+        <div class="filter-group">
+          <span class="filter-group-label" aria-hidden="true">Saúde</span>
+          <div class="filter-group-chips">
+            <button class="filter-chip" data-cat="hospitalar" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v12"/><path d="M6 12h12"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg></span>
+              <span>Saúde</span>
+              <span class="chip-count" id="count-hospitalar">0</span>
+            </button>
+            <button class="filter-chip" data-cat="saude" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
+              <span>RAPS</span>
+              <span class="chip-count" id="count-saude">0</span>
+            </button>
+            <button class="filter-chip" data-cat="tea" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 9.5a2.5 2.5 0 1 0-3.9-2.9A2.5 2.5 0 1 0 12 8a2.5 2.5 0 1 0-3.6-1.4A2.5 2.5 0 1 0 4.5 9.5a2.5 2.5 0 0 0 0 5 2.5 2.5 0 1 0 3.9 2.9 2.5 2.5 0 1 0 3.6-3.4 2.5 2.5 0 1 0 3.6 3.4 2.5 2.5 0 1 0 3.9-2.9 2.5 2.5 0 0 0 0-5Z"/></svg></span>
+              <span>TEA / PcD</span>
+              <span class="chip-count" id="count-tea">0</span>
+            </button>
+          </div>
+        </div>
 
-        <!-- Bloco: Educação -->
-        <button class="filter-chip" data-cat="educacao" data-cluster-start="true" role="tab" aria-selected="false" title="Bloco: Educação">
-          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/></svg></span>
-          <span>Educação</span>
-          <span class="chip-count" id="count-educacao">0</span>
-        </button>
+        <!-- Seção: Assistência Social -->
+        <div class="filter-group">
+          <span class="filter-group-label" aria-hidden="true">Assistência Social</span>
+          <div class="filter-group-chips">
+            <button class="filter-chip" data-cat="social" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+              <span>Assistência Social</span>
+              <span class="chip-count" id="count-social">0</span>
+            </button>
+          </div>
+        </div>
 
-        <!-- Bloco: Justiça & Segurança (dentro de "Mais categorias") -->
-        <button class="filter-chip" data-cat="juridico" data-group="more" data-cluster-start="true" role="tab" aria-selected="false" title="Bloco: Justiça & Segurança">
-          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 8h14"/><path d="M5 8 2 15a3 3 0 0 0 6 0Z"/><path d="M19 8l-3 7a3 3 0 0 0 6 0Z"/></svg></span>
-          <span>Sistema Judicial</span>
-          <span class="chip-count" id="count-juridico">0</span>
-        </button>
-        <button class="filter-chip" data-cat="conselho" data-group="more" role="tab" aria-selected="false">
-          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg></span>
-          <span>Conselho Tutelar</span>
-          <span class="chip-count" id="count-conselho">0</span>
-        </button>
-        <button class="filter-chip" data-cat="delegacias" data-group="more" role="tab" aria-selected="false">
-          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="M9.5 12.5l1.8 1.8 3.2-3.6"/></svg></span>
-          <span>Delegacias</span>
-          <span class="chip-count" id="count-delegacias">0</span>
-        </button>
+        <!-- Seção: Educação -->
+        <div class="filter-group">
+          <span class="filter-group-label" aria-hidden="true">Educação</span>
+          <div class="filter-group-chips">
+            <button class="filter-chip" data-cat="educacao" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/></svg></span>
+              <span>Educação</span>
+              <span class="chip-count" id="count-educacao">0</span>
+            </button>
+          </div>
+        </div>
 
-        <!-- Bloco: Cidadania & Documentação (dentro de "Mais categorias") -->
-        <button class="filter-chip" data-cat="documentacao" data-group="more" data-cluster-start="true" role="tab" aria-selected="false" title="Bloco: Cidadania & Documentação">
-          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M15 9h3"/><path d="M15 13h3"/><path d="M6 17c.5-1.8 2-3 3-3s2.5 1.2 3 3"/></svg></span>
-          <span>Documentação</span>
-          <span class="chip-count" id="count-documentacao">0</span>
-        </button>
-        <button class="filter-chip" data-cat="bancos" data-group="more" role="tab" aria-selected="false">
-          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="21" x2="21" y2="21"/><line x1="5" y1="21" x2="5" y2="10"/><line x1="19" y1="21" x2="19" y2="10"/><line x1="12" y1="21" x2="12" y2="10"/><polygon points="12 2 21 8 3 8"/></svg></span>
-          <span>Rede Bancária</span>
-          <span class="chip-count" id="count-bancos">0</span>
-        </button>
-        <button class="filter-chip" data-cat="previdencia" data-group="more" role="tab" aria-selected="false">
-          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg></span>
-          <span>Previdência</span>
-          <span class="chip-count" id="count-previdencia">0</span>
-        </button>
+        <!-- Seção: Justiça & Segurança (dentro de "Mais categorias") -->
+        <div class="filter-group" data-group="more">
+          <span class="filter-group-label" aria-hidden="true">Justiça &amp; Segurança</span>
+          <div class="filter-group-chips">
+            <button class="filter-chip" data-cat="juridico" data-group="more" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 8h14"/><path d="M5 8 2 15a3 3 0 0 0 6 0Z"/><path d="M19 8l-3 7a3 3 0 0 0 6 0Z"/></svg></span>
+              <span>Sistema Judicial</span>
+              <span class="chip-count" id="count-juridico">0</span>
+            </button>
+            <button class="filter-chip" data-cat="conselho" data-group="more" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg></span>
+              <span>Conselho Tutelar</span>
+              <span class="chip-count" id="count-conselho">0</span>
+            </button>
+            <button class="filter-chip" data-cat="delegacias" data-group="more" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="M9.5 12.5l1.8 1.8 3.2-3.6"/></svg></span>
+              <span>Delegacias</span>
+              <span class="chip-count" id="count-delegacias">0</span>
+            </button>
+          </div>
+        </div>
 
-        <!-- Bloco: Trabalho & Renda (dentro de "Mais categorias") -->
-        <button class="filter-chip" data-cat="trabalho" data-group="more" data-cluster-start="true" role="tab" aria-selected="false" title="Bloco: Trabalho & Renda">
-          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><line x1="2" y1="13" x2="22" y2="13"/></svg></span>
-          <span>Trabalho e Renda</span>
-          <span class="chip-count" id="count-trabalho">0</span>
-        </button>
+        <!-- Seção: Cidadania & Documentação (dentro de "Mais categorias") -->
+        <div class="filter-group" data-group="more">
+          <span class="filter-group-label" aria-hidden="true">Cidadania &amp; Documentação</span>
+          <div class="filter-group-chips">
+            <button class="filter-chip" data-cat="documentacao" data-group="more" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M15 9h3"/><path d="M15 13h3"/><path d="M6 17c.5-1.8 2-3 3-3s2.5 1.2 3 3"/></svg></span>
+              <span>Documentação</span>
+              <span class="chip-count" id="count-documentacao">0</span>
+            </button>
+            <button class="filter-chip" data-cat="bancos" data-group="more" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="21" x2="21" y2="21"/><line x1="5" y1="21" x2="5" y2="10"/><line x1="19" y1="21" x2="19" y2="10"/><line x1="12" y1="21" x2="12" y2="10"/><polygon points="12 2 21 8 3 8"/></svg></span>
+              <span>Rede Bancária</span>
+              <span class="chip-count" id="count-bancos">0</span>
+            </button>
+            <button class="filter-chip" data-cat="previdencia" data-group="more" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg></span>
+              <span>Previdência</span>
+              <span class="chip-count" id="count-previdencia">0</span>
+            </button>
+          </div>
+        </div>
 
-        <!-- Bloco: Território (dentro de "Mais categorias") -->
-        <button class="filter-chip" data-cat="habitacao" data-group="more" data-cluster-start="true" role="tab" aria-selected="false" title="Bloco: Território">
-          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 10v10a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1V10"/></svg></span>
-          <span>Habitação</span>
-          <span class="chip-count" id="count-habitacao">0</span>
-        </button>
-        <button class="filter-chip" data-cat="mobilidade" data-group="more" role="tab" aria-selected="false">
-          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11 6.5 6.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11"/><rect x="2" y="11" width="20" height="7" rx="2"/><circle cx="7" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/></svg></span>
-          <span>Mobilidade</span>
-          <span class="chip-count" id="count-mobilidade">0</span>
-        </button>
+        <!-- Seção: Trabalho & Renda (dentro de "Mais categorias") -->
+        <div class="filter-group" data-group="more">
+          <span class="filter-group-label" aria-hidden="true">Trabalho e Renda</span>
+          <div class="filter-group-chips">
+            <button class="filter-chip" data-cat="trabalho" data-group="more" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><line x1="2" y1="13" x2="22" y2="13"/></svg></span>
+              <span>Trabalho e Renda</span>
+              <span class="chip-count" id="count-trabalho">0</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Seção: Território (dentro de "Mais categorias") -->
+        <div class="filter-group" data-group="more">
+          <span class="filter-group-label" aria-hidden="true">Território</span>
+          <div class="filter-group-chips">
+            <button class="filter-chip" data-cat="habitacao" data-group="more" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 10v10a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1V10"/></svg></span>
+              <span>Habitação</span>
+              <span class="chip-count" id="count-habitacao">0</span>
+            </button>
+            <button class="filter-chip" data-cat="mobilidade" data-group="more" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11 6.5 6.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11"/><rect x="2" y="11" width="20" height="7" rx="2"/><circle cx="7" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/></svg></span>
+              <span>Mobilidade</span>
+              <span class="chip-count" id="count-mobilidade">0</span>
+            </button>
+          </div>
+        </div>
 
         <button class="filter-chip-toggle" id="filterMoreToggle" type="button" aria-expanded="false" aria-controls="filterBar">
           <span>Mais categorias</span>
           <span class="chip-icon" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
         </button>
 
-        <!-- Bloco: Painéis internos -->
-        <button class="filter-chip" data-cat="informes" data-cluster-start="true" role="tab" aria-selected="false" title="Bloco: Painéis internos">
-          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
-          <span>Informes</span>
-          <span class="chip-count" id="count-informes">0</span>
-        </button>
-        <button class="filter-chip" data-cat="cas" role="tab" aria-selected="false">
-          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
-          <span>Atendimento CAS</span>
-          <span class="chip-count" id="count-cas">0</span>
-        </button>
-        <button class="filter-chip" data-cat="cras" role="tab" aria-selected="false">
-          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="1"/><line x1="9" y1="6" x2="9" y2="6.01"/><line x1="15" y1="6" x2="15" y2="6.01"/><line x1="9" y1="10" x2="9" y2="10.01"/><line x1="15" y1="10" x2="15" y2="10.01"/><line x1="9" y1="14" x2="9" y2="14.01"/><line x1="15" y1="14" x2="15" y2="14.01"/></svg></span>
-          <span>Atendimento CRAS</span>
-          <span class="chip-count" id="count-cras-panel">0</span>
-        </button>
+        <!-- Seção: Painéis internos -->
+        <div class="filter-group">
+          <span class="filter-group-label" aria-hidden="true">Painéis Internos</span>
+          <div class="filter-group-chips">
+            <button class="filter-chip" data-cat="informes" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+              <span>Informes</span>
+              <span class="chip-count" id="count-informes">0</span>
+            </button>
+            <button class="filter-chip" data-cat="cas" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+              <span>Atendimento CAS</span>
+              <span class="chip-count" id="count-cas">0</span>
+            </button>
+            <button class="filter-chip" data-cat="cras" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="1"/><line x1="9" y1="6" x2="9" y2="6.01"/><line x1="15" y1="6" x2="15" y2="6.01"/><line x1="9" y1="10" x2="9" y2="10.01"/><line x1="15" y1="10" x2="15" y2="10.01"/><line x1="9" y1="14" x2="9" y2="14.01"/><line x1="15" y1="14" x2="15" y2="14.01"/></svg></span>
+              <span>Atendimento CRAS</span>
+              <span class="chip-count" id="count-cras-panel">0</span>
+            </button>
+          </div>
+        </div>
 
-        <!-- Anotações -->
-        <button class="filter-chip" data-cat="anotacoes" data-cluster-start="true" role="tab" aria-selected="false">
-          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></span>
-          <span>Anotações</span>
-        </button>
+        <!-- Seção: Anotações -->
+        <div class="filter-group">
+          <span class="filter-group-label" aria-hidden="true">Registro Pessoal</span>
+          <div class="filter-group-chips">
+            <button class="filter-chip" data-cat="anotacoes" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></span>
+              <span>Anotações</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -6536,11 +6593,10 @@ const DATA = [
     fullName: "Projeto ArtCanto",
     cat: ["informes"],
     group: "Programas Socioeducativos (Crianças e Adolescentes)",
-    address: "Av. Raimundo Rodrigues Coelho, nº 80 - Dr. Silvio Botelho, Boa Vista-RR",
+    address: "Avenida São Sebastião, s/n – Bairro Cambará, Boa Vista - RR.",
     hours: "Segunda, quarta e sexta-feira (Manhã: 08h às 11h | Tarde: 14h às 17h)",
-    phones: ["N/A"],
-    services: "Acompanhamento social, pedagógico e musical de crianças e adolescentes.",
-    desc: "Promove a educação por meio de acompanhamento social, pedagógico e musical de crianças e adolescentes em situação de vulnerabilidade social. Requisitos: • Ter entre 7 e 17 anos completos; • Estar regularmente matriculado e frequentando a rede pública de ensino (estadual ou municipal); • Responsável legal inscrito no CadÚnico; • Renda familiar igual ou inferior a dois salários mínimos; • Não é permitida a participação de irmãos da mesma família, salvo gêmeos.<br>Atividades: prática de canto; ensino de teoria musical e instrumentos.<br>Benefícios: bolsa de estudos; camiseta, vale-transporte e lanche."
+    phones: ["(95) 98403-4210"],
+    desc: "Fundado em 2001 e regulamentado pela Lei Municipal 1.511/2013, o ArtCanto desenvolve a prática do canto coral infantojuvenil, com repertórios de música popular brasileira, erudita e regional, promovendo educação por meio de acompanhamento social, pedagógico e musical de crianças e adolescentes em situação de vulnerabilidade social. Em novembro de 2024, o projeto ganhou sede própria e definitiva no bairro Cambará - antes funcionava em espaços cedidos, como a Praça Estádio João Mineiro e a Praça Germano Augusto Sampaio. A nova estrutura atende cerca de 250 crianças e adolescentes e dispõe de salas para violão, flauta, aulas de canto/audição de voz, artes cênicas e atendimento psicológico, além de ambientes de lazer e descanso. O espaço também abriga o Núcleo de Cidadania de Adolescentes (NUCAs), da Coordenação de Juventude. Requisitos: • Ter entre 7 e 17 anos completos; • Estar regularmente matriculado e frequentando a rede pública de ensino (estadual ou municipal); • Responsável legal inscrito no CadÚnico; • Renda familiar igual ou inferior a dois salários mínimos; • Não é permitida a participação de irmãos da mesma família, salvo gêmeos.<br>Atividades: canto coral, violão, flauta, artes cênicas e atendimento psicológico.<br>Benefícios: bolsa mensal de R$ 230; camiseta/fardamento; vale-transporte; lanche; Cartão do Bem (R$ 180, apoio à segurança alimentar da família).<br>Equipe multidisciplinar: educadores sociais, assistente social, psicólogos, pedagogo e equipe de música liderada por um maestro, em parceria com o Instituto Boa Vista de Música (IBVM)."
   },
   {
     id: "programa-dedo-verde",
@@ -6982,7 +7038,7 @@ const DATA = [
     rmaLinks: [
       { label: "RMA (MDS)", icon: "barchart", url: "RMA_Paulo_Xavier_2026.html" },
       { label: "Registro (Planilha)", icon: "table", url: "Registro_de_Atendimento__Planilha_.html" },
-      { label: "Baixar RMA (.xlsx)", icon: "excel", url: "RMA - Geral - Limpo.xlsx" }
+      { label: "RMA Imprimir", icon: "excel", url: "https://drive.google.com/drive/folders/1iQ4kv_LOFiDaXAb1RbC5ZMC7cL7zn7yl" }
     ],
     driveLinks: [
       { label: "Danilo", url: "https://drive.google.com/drive/folders/1MtK9Kz3mlxTwIESPp28YwiVtrNdI55Lt?usp=drive_link" },
@@ -8190,7 +8246,7 @@ async function printGeneralNote() {
                 </div>
               </div>
             </td>
-            <td style="border:1.5px solid #0F172A; padding:5px 14px; text-align:center; width:240px;">
+            <td style="border:1.5px solid #0F172A; padding:5px 14px; text-align:center; width:320px;">
               <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
                 <svg width="40" height="40" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;" aria-hidden="true">
                   <defs>
@@ -8457,7 +8513,7 @@ async function printGuide(id) {
                 </div>
               </div>
             </td>
-            <td style="border:1.5px solid #0F172A; padding:5px 12px; text-align:center; width:230px;">
+            <td style="border:1.5px solid #0F172A; padding:5px 12px; text-align:center; width:310px;">
               <div style="display:flex; align-items:center; justify-content:center; gap:6px;">
                 <svg width="38" height="38" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
                   <defs>
