@@ -174,8 +174,8 @@
     top: 50%;
     right: -2%;
     transform: translateY(-50%);
-    width: 420px;
-    height: 301px;
+    width: 280px;
+    height: 201px;
     opacity: 1;
     pointer-events: none;
   }
@@ -189,12 +189,38 @@
     stroke: #F2CB7E;
     stroke-width: 2.5;
     opacity: 0.22;
+    animation: heroWaveDrift 7s ease-in-out infinite;
   }
 
   .argo-emblem .river-wave.wave-green {
     stroke: #4FA593;
     stroke-width: 2.5;
     opacity: 0.3;
+    animation: heroWaveDrift 9s ease-in-out infinite reverse;
+  }
+
+  @keyframes heroWaveDrift {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(-10px); }
+  }
+
+  .argo-emblem .ship-float {
+    animation: heroShipFloat 5s ease-in-out infinite;
+    transform-origin: 160px 140px;
+  }
+
+  @keyframes heroShipFloat {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    25% { transform: translateY(-3px) rotate(-0.6deg); }
+    50% { transform: translateY(2px) rotate(0deg); }
+    75% { transform: translateY(-2px) rotate(0.6deg); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .argo-emblem .river-wave,
+    .argo-emblem .ship-float {
+      animation: none;
+    }
   }
 
   .argo-emblem .embrace-hull {
@@ -473,10 +499,11 @@
     gap: 0.4rem;
     flex-shrink: 0;
     scroll-snap-align: start;
-    padding: 0.5rem 0.6rem 0.55rem;
+    padding: 0.6rem 0.7rem 0.65rem;
     border: 1px solid var(--border-ui);
-    border-radius: 10px;
-    background: rgba(0, 145, 194, 0.03);
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(0, 145, 194, 0.05));
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 8px 16px -10px rgba(15, 23, 42, 0.18), 0 1px 3px rgba(15, 23, 42, 0.06);
   }
 
   .filter-group-label {
@@ -501,10 +528,10 @@
 
   .filter-chip-toggle {
     white-space: nowrap;
-    background: transparent;
-    border: 1px dashed var(--border-ui);
+    background: linear-gradient(180deg, var(--bg-card), rgba(0, 145, 194, 0.04));
+    border: 1px solid var(--border-ui);
     padding: 0.5rem 0.9rem;
-    border-radius: 6px;
+    border-radius: 8px;
     font-size: 0.85rem;
     font-weight: 700;
     cursor: pointer;
@@ -513,12 +540,20 @@
     align-items: center;
     gap: 0.4rem;
     scroll-snap-align: start;
-    transition: background 0.2s var(--ease), border-color 0.2s var(--ease);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 2px 5px -2px rgba(15, 23, 42, 0.18);
+    transition: background 0.2s var(--ease), border-color 0.2s var(--ease), box-shadow 0.15s var(--ease), transform 0.15s var(--ease);
   }
 
   .filter-chip-toggle:hover {
-    background: rgba(0, 145, 194, 0.08);
+    background: linear-gradient(180deg, rgba(0, 145, 194, 0.1), rgba(0, 145, 194, 0.14));
     border-color: var(--brand-primary);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 4px 9px -3px rgba(0, 145, 194, 0.35);
+    transform: translateY(-1px);
+  }
+
+  .filter-chip-toggle:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.15) inset;
   }
 
   .filter-chip-toggle .chip-icon {
@@ -551,14 +586,15 @@
 
   .filter-chip {
     white-space: nowrap;
-    background: var(--bg-card);
+    background: linear-gradient(180deg, var(--bg-card) 0%, rgba(15, 23, 42, 0.025) 100%);
     border: 1px solid var(--border-ui);
     padding: 0.5rem 0.9rem;
-    border-radius: 6px;
+    border-radius: 8px;
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
     color: var(--text-muted);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 2px 5px -2px rgba(15, 23, 42, 0.16);
     transition: background 0.2s var(--ease), color 0.2s var(--ease), border-color 0.2s var(--ease), box-shadow 0.2s var(--ease), transform 0.15s var(--ease);
     display: inline-flex;
     align-items: center;
@@ -570,6 +606,7 @@
     display: inline-flex;
     flex-shrink: 0;
     opacity: 0.85;
+    filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.5));
   }
 
   .filter-chip .chip-icon svg { display: block; }
@@ -578,23 +615,26 @@
     font-size: 0.68rem;
     font-weight: 800;
     line-height: 1;
-    background: rgba(0, 145, 194, 0.1);
+    background: linear-gradient(180deg, rgba(0, 145, 194, 0.16), rgba(0, 145, 194, 0.08));
     color: var(--brand-primary);
     padding: 0.2rem 0.4rem;
     border-radius: 999px;
     min-width: 1.2em;
     text-align: center;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12) inset, 0 1px 0 rgba(255, 255, 255, 0.6);
   }
 
   .filter-chip:hover {
     border-color: var(--brand-primary);
     color: var(--brand-primary);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 5px 12px -4px rgba(0, 145, 194, 0.35);
+    transform: translateY(-1.5px);
   }
 
   .filter-chip[aria-selected="true"]:hover {
     color: white;
     border-color: var(--brand-primary-light);
-    background: var(--brand-primary-light);
+    background: linear-gradient(180deg, var(--brand-primary-light), var(--brand-primary));
   }
 
   .search-input-wrapper {
@@ -636,14 +676,15 @@
   }
 
   .filter-chip[aria-selected="true"] {
-    background: var(--brand-primary);
+    background: linear-gradient(180deg, var(--brand-primary-light) 0%, var(--brand-primary) 100%);
     color: white;
     border-color: var(--brand-primary);
-    box-shadow: 0 3px 10px -3px rgba(0, 145, 194, 0.45);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35) inset, 0 5px 14px -4px rgba(0, 145, 194, 0.55), 0 2px 4px rgba(15, 23, 42, 0.15);
   }
 
   .filter-chip:active {
-    transform: scale(0.96);
+    transform: translateY(1px) scale(0.97);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.18) inset;
   }
 
   .filter-chip[aria-selected="true"] .chip-count {
@@ -2669,13 +2710,15 @@
     <path class="river-wave wave-green" d="M0,196 C45,183 80,208 125,195 C165,183 200,208 240,196 C270,186 300,202 320,193"/>
     <path class="river-wave wave-blue" d="M0,212 C50,200 90,222 135,210 C175,199 215,222 255,211 C280,203 305,215 320,209" style="opacity:0.2;"/>
 
-    <path class="embrace-hull" d="M42,86 C58,132 100,178 152,190 C165,193 175,193 168,193 C205,193 250,150 278,86"/>
-    <path class="embrace-hull inner" d="M60,92 C76,128 112,164 160,174 C204,164 240,128 260,92"/>
+    <g class="ship-float">
+      <path class="embrace-hull" d="M42,86 C58,132 100,178 152,190 C165,193 175,193 168,193 C205,193 250,150 278,86"/>
+      <path class="embrace-hull inner" d="M60,92 C76,128 112,164 160,174 C204,164 240,128 260,92"/>
 
-    <path class="hand-hint" d="M42,86 C36,72 34,58 40,44"/>
-    <path class="hand-hint" d="M55,74 C51,60 51,48 58,36" style="opacity:0.5;"/>
-    <path class="hand-hint" d="M278,86 C284,72 286,58 280,44"/>
-    <path class="hand-hint" d="M265,74 C269,60 269,48 262,36" style="opacity:0.5;"/>
+      <path class="hand-hint" d="M42,86 C36,72 34,58 40,44"/>
+      <path class="hand-hint" d="M55,74 C51,60 51,48 58,36" style="opacity:0.5;"/>
+      <path class="hand-hint" d="M278,86 C284,72 286,58 280,44"/>
+      <path class="hand-hint" d="M265,74 C269,60 269,48 262,36" style="opacity:0.5;"/>
+    </g>
 
     <circle class="sun-core" cx="160" cy="46" r="11"/>
     <line class="sun-ray" x1="160" y1="18" x2="160" y2="6"/>
@@ -3059,7 +3102,7 @@
     <div class="footer-bottom-inner">
       <span>© <span id="footerYear">2026</span> Argo SUAS</span>
       <span class="footer-bottom-sep">·</span>
-      <span class="footer-suas-full">Sistema Único de Assistência Social (SUAS) · SEMADS/PMBV</span>
+      <span class="footer-suas-full">Sistema Único de Assistência Social (SUAS)</span>
       <span class="footer-bottom-sep">·</span>
       <span>Uso interno da equipe técnica</span>
       <span class="footer-bottom-sep">·</span>
@@ -6144,7 +6187,7 @@ const DATA = [
     id: "pe-de-meia",
     name: "Pé-de-Meia",
     fullName: "Programa Pé-de-Meia (MEC)",
-    cat: ["educacao"],
+    cat: ["educacao", "informes"],
     group: "Programas de Apoio",
     address: "Adesão feita pela escola pública estadual, via secretaria de educação (não presencial)",
     hours: "Consulta e extrato: plataforma estudante.pedemeia.mec.gov.br",
@@ -6527,7 +6570,7 @@ const DATA = [
     hours: "N/A",
     phones: ["0800 729 2404 (também disponível via WhatsApp)"],
     services: "Kit de antena parabólica digital (antena, receptor e cabos) com instalação 100% gratuita.",
-    desc: "O programa Siga Antenado foi sucedido pelo Brasil Antenado, executado pela EAF (Entidade Administradora da Faixa) em parceria com o Ministério das Comunicações (MCom) e a Anatel. Entrega gratuitamente o kit da nova parabólica digital (antena, receptor digital e cabos), com instalação domiciliar sem qualquer custo, dando acesso a mais de 100 canais de TV aberta.<br><br><strong>Requisitos:</strong> • Estar inscrito(a) no Cadastro Único (CadÚnico); • Morar em um dos municípios contemplados na fase atual do programa.<br>⚠️ Não é necessário já ter uma antena parabólica antiga em casa, nem ser beneficiário do Bolsa Família - basta o CadÚnico e residir em cidade participante.<br><br><strong>Em Roraima:</strong> na Fase B (13/10/2025 a 13/03/2026), o programa contempla os municípios de Alto Alegre, Amajari e Uiramutã (cerca de 9 mil famílias aptas). Boa Vista não constava entre os municípios contemplados até o momento - oriente o usuário a confirmar a situação atualizada do seu município no site oficial ou pelo WhatsApp, já que a cobertura é ampliada em novas fases.<br><br><strong>Como solicitar:</strong> 1) Confirmar se o município é contemplado, pelo site ou telefone; 2) Agendar pelo WhatsApp oficial (0800 729 2404) ou pela Central Telefônica; 3) Aguardar a visita técnica agendada - todo o processo (agendamento, visita e entrega/instalação do kit) é 100% gratuito, sem cobrança em dinheiro, Pix ou cartão em nenhuma etapa.<br>Site: https://www.brasilantenado.org.br/<br>Dúvidas frequentes: https://www.brasilantenado.org.br/duvidas/<br>E-mail: atendimento@brasilantenado.org.br"
+    desc: "O programa Siga Antenado foi sucedido pelo Brasil Antenado, executado pela EAF (Entidade Administradora da Faixa) em parceria com o Ministério das Comunicações (MCom) e a Anatel. Entrega gratuitamente o kit da nova parabólica digital (antena, receptor digital e cabos), com instalação domiciliar sem qualquer custo, dando acesso a mais de 100 canais de TV aberta.<br><br><strong>Requisitos:</strong> • Estar inscrito(a) no Cadastro Único (CadÚnico); • Morar em um dos municípios contemplados na fase atual do programa.<br>⚠️ Não é necessário já ter uma antena parabólica antiga em casa, nem ser beneficiário do Bolsa Família - basta o CadÚnico e residir em cidade participante.<br><br><strong>Em Roraima:</strong> na Fase B (13/10/2025 a 13/03/2026), o programa contempla os municípios de Alto Alegre, Amajarí e Uiramutã (cerca de 9 mil famílias aptas). Boa Vista não constava entre os municípios contemplados até o momento - oriente o usuário a confirmar a situação atualizada do seu município no site oficial ou pelo WhatsApp, já que a cobertura é ampliada em novas fases.<br><br><strong>Como solicitar:</strong> 1) Confirmar se o município é contemplado, pelo site ou telefone; 2) Agendar pelo WhatsApp oficial (0800 729 2404) ou pela Central Telefônica; 3) Aguardar a visita técnica agendada - todo o processo (agendamento, visita e entrega/instalação do kit) é 100% gratuito, sem cobrança em dinheiro, Pix ou cartão em nenhuma etapa.<br>Site: https://www.brasilantenado.org.br/<br>Dúvidas frequentes: https://www.brasilantenado.org.br/duvidas/<br>E-mail: atendimento@brasilantenado.org.br"
   },
   {
     id: "id-jovem",
@@ -6596,7 +6639,8 @@ const DATA = [
     address: "Avenida São Sebastião, s/n – Bairro Cambará, Boa Vista - RR.",
     hours: "Segunda, quarta e sexta-feira (Manhã: 08h às 11h | Tarde: 14h às 17h)",
     phones: ["(95) 98403-4210"],
-    desc: "Fundado em 2001 e regulamentado pela Lei Municipal 1.511/2013, o ArtCanto desenvolve a prática do canto coral infantojuvenil, com repertórios de música popular brasileira, erudita e regional, promovendo educação por meio de acompanhamento social, pedagógico e musical de crianças e adolescentes em situação de vulnerabilidade social. Em novembro de 2024, o projeto ganhou sede própria e definitiva no bairro Cambará - antes funcionava em espaços cedidos, como a Praça Estádio João Mineiro e a Praça Germano Augusto Sampaio. A nova estrutura atende cerca de 250 crianças e adolescentes e dispõe de salas para violão, flauta, aulas de canto/audição de voz, artes cênicas e atendimento psicológico, além de ambientes de lazer e descanso. O espaço também abriga o Núcleo de Cidadania de Adolescentes (NUCAs), da Coordenação de Juventude. Requisitos: • Ter entre 7 e 17 anos completos; • Estar regularmente matriculado e frequentando a rede pública de ensino (estadual ou municipal); • Responsável legal inscrito no CadÚnico; • Renda familiar igual ou inferior a dois salários mínimos; • Não é permitida a participação de irmãos da mesma família, salvo gêmeos.<br>Atividades: canto coral, violão, flauta, artes cênicas e atendimento psicológico.<br>Benefícios: bolsa mensal de R$ 230; camiseta/fardamento; vale-transporte; lanche; Cartão do Bem (R$ 180, apoio à segurança alimentar da família).<br>Equipe multidisciplinar: educadores sociais, assistente social, psicólogos, pedagogo e equipe de música liderada por um maestro, em parceria com o Instituto Boa Vista de Música (IBVM)."
+    services: "Canto coral, música e acompanhamento socioeducativo para crianças e adolescentes em vulnerabilidade social.",
+    desc: "Fundado em 2001 e regulamentado pela Lei Municipal 1.511/2013, o ArtCanto desenvolve a prática do canto coral infantojuvenil, com repertórios de música popular brasileira, erudita e regional, promovendo educação por meio de acompanhamento social, pedagógico e musical de crianças e adolescentes em situação de vulnerabilidade social. Em novembro de 2024, o projeto ganhou sede própria e definitiva no bairro Cambará - antes funcionava em espaços cedidos, como a Praça Estádio João Mineiro e a Praça Germano Augusto Sampaio. A nova estrutura atende cerca de 250 crianças e adolescentes e dispõe de salas para violão, flauta, aulas de canto/audição de voz, artes cênicas e atendimento psicológico, além de ambientes de lazer e descanso. O espaço também abriga o Núcleo de Cidadania de Adolescentes (NUCAs), da Coordenação de Juventude. Requisitos: • Ter entre 7 e 17 anos completos; • Estar regularmente matriculado e frequentando a rede pública de ensino (estadual ou municipal); • Responsável legal inscrito no CadÚnico; • Não é permitida a participação de irmãos da mesma família, salvo gêmeos.<br>Atividades: canto coral, violão, flauta, artes cênicas e atendimento psicológico.<br>Benefícios: bolsa mensal de R$ 230; camiseta/fardamento; vale-transporte; lanche; Cartão do Bem (R$ 180, apoio à segurança alimentar da família).<br>Equipe multidisciplinar: educadores sociais, assistente social, psicólogos, pedagogo e equipe de música liderada por um maestro, em parceria com o Instituto Boa Vista de Música (IBVM)."
   },
   {
     id: "programa-dedo-verde",
