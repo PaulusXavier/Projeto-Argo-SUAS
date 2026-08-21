@@ -734,29 +734,50 @@
   .app-layout {
     display: flex;
     align-items: flex-start;
-    gap: 1.5rem;
+    gap: 1rem;
   }
 
   .category-sidebar {
-    flex: 0 0 248px;
-    width: 248px;
+    flex: 0 0 200px;
+    width: 200px;
     background: var(--bg-card);
     border: 1px solid var(--border-ui);
     border-radius: var(--radius-ui);
     box-shadow: var(--shadow-sm);
-    padding: 0.85rem 0.7rem 1.1rem;
+    padding: 0.85rem 0.55rem 1.1rem 0.9rem;
     position: sticky;
     top: 6.9rem;
     max-height: calc(100vh - 8rem);
     overflow-y: auto;
     scrollbar-width: thin;
-    scrollbar-color: var(--border-ui) transparent;
+    scrollbar-color: var(--brand-primary-light) rgba(0, 145, 194, 0.08);
+    /* Truque para jogar a barra de rolagem para a borda esquerda:
+       inverte a direção do contêiner (a rolagem nativa vai para a
+       esquerda) e depois volta o conteúdo interno para o sentido
+       normal de leitura. */
+    direction: rtl;
   }
 
-  .category-sidebar::-webkit-scrollbar { width: 6px; }
-  .category-sidebar::-webkit-scrollbar-thumb {
-    background: var(--border-ui);
+  .category-sidebar-header,
+  .category-sidebar .filter-bar-wrapper {
+    direction: ltr;
+  }
+
+  .category-sidebar::-webkit-scrollbar { width: 10px; }
+  .category-sidebar::-webkit-scrollbar-track {
+    background: rgba(0, 145, 194, 0.07);
     border-radius: 999px;
+    margin: 4px 0;
+  }
+  .category-sidebar::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--brand-primary-light), var(--brand-primary));
+    border-radius: 999px;
+    border: 2px solid var(--bg-card);
+    background-clip: padding-box;
+  }
+  .category-sidebar::-webkit-scrollbar-thumb:hover {
+    background: var(--brand-primary);
+    background-clip: padding-box;
   }
 
   .category-sidebar-header,
