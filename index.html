@@ -162,6 +162,24 @@
     border-color: rgba(0, 145, 194, 0.35);
   }
 
+  .tech-card {
+    cursor: pointer;
+  }
+
+  /* Card em destaque: fica assim depois de clicado, com anel colorido,
+     sombra mais forte e a barrinha superior em degradê quente/frio —
+     ajuda a marcar visualmente qual card está em foco no meio da lista. */
+  .tech-card.is-selected {
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 3px rgba(0, 145, 194, 0.22), var(--shadow-lg);
+    transform: translateY(-4px);
+  }
+
+  .tech-card.is-selected::before {
+    background: linear-gradient(90deg, var(--brand-info-light), var(--brand-primary), var(--brand-primary-light));
+    height: 4px;
+  }
+
   .container { max-width: 1400px; margin: 0 auto; padding: 0 1.5rem; }
 
   header.hero {
@@ -9095,6 +9113,17 @@ function exportData() {
 }
 
 document.getElementById('mainSearch').addEventListener('input', render);
+
+/* Destaca o card clicado: marca com a classe is-selected e tira o
+   destaque de qualquer outro card que estivesse selecionado antes.
+   Clicar de novo no mesmo card remove o destaque. */
+document.getElementById('grid').addEventListener('click', (e) => {
+  const card = e.target.closest('.tech-card');
+  if (!card) return;
+  const wasSelected = card.classList.contains('is-selected');
+  document.querySelectorAll('.tech-card.is-selected').forEach(c => c.classList.remove('is-selected'));
+  if (!wasSelected) card.classList.add('is-selected');
+});
 
 document.getElementById('searchClearBtn').addEventListener('click', () => {
   const input = document.getElementById('mainSearch');
