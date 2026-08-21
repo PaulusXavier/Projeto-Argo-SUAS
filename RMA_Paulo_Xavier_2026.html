@@ -2,6 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>RMA - Registro Mensal de Atendimentos</title>
@@ -127,20 +128,19 @@
 
 <div class="page-wrapper">
     <div class="header-box">
-        FORMULÁRIO DE REGISTRO MENSAL DE ATENDIMENTOS DO CRAS &nbsp;&nbsp; MÊS: <input type="text" style="width: 50px; border-bottom: 1px solid #000;" placeholder=><th class="col-val">
-    </div> 
-     <tr style="background:#eee;">
+        FORMULÁRIO DE REGISTRO MENSAL DE ATENDIMENTOS DO CRAS &nbsp;&nbsp; MÊS: <input type="text" name="mes" aria-label="Mês de referência" style="width: 50px; border-bottom: 1px solid #000;">
+    </div>
     <table>
         <tr>
-            <td colspan="2"><strong>Nome da Unidade</strong> <input type="text"  style="width: 80%;"></td>
-            <td style="width: 200px;"><strong>Nº da Unidade</strong> <input type="text"></td>
+            <td colspan="2"><strong>Nome da Unidade</strong> <input type="text" name="unidade_nome" aria-label="Nome da Unidade" style="width: 80%;"></td>
+            <td style="width: 200px;"><strong>Nº da Unidade</strong> <input type="text" name="unidade_numero" aria-label="Número da Unidade"></td>
         </tr>
         <tr>
-            <td colspan="3"><strong>Endereço</strong> <input type="text"></td>
+            <td colspan="3"><strong>Endereço</strong> <input type="text" name="endereco" aria-label="Endereço"></td>
         </tr>
         <tr>
-            <td colspan="2"><strong>Município</strong> <input type="text"></td>
-            <td style="width: 80px;"><strong>UF</strong> <input type="text" maxlength="2"></td>
+            <td colspan="2"><strong>Município</strong> <input type="text" name="municipio" aria-label="Município"></td>
+            <td style="width: 80px;"><strong>UF</strong> <input type="text" name="uf" aria-label="UF" maxlength="2"></td>
         </tr>
     </table>
 
@@ -150,24 +150,24 @@
             <th>A. Volume de famílias em acompanhamento pelo PAIF no mês de referência</th>
             <th class="col-val">Total</th>
         </tr>
-        <tr><td>A.1. Total de famílias em acompanhamento pelo PAIF</td><td class="col-val"><input type="number"></td></tr>
-        <tr><td>A.2. Novas famílias inseridas no acompanhamento do PAIF durante o mês de referência</td><td class="col-val"><input type="number"></td></tr>
+        <tr><td>A.1. Total de famílias em acompanhamento pelo PAIF</td><td class="col-val"><input type="number" name="a1" aria-label="A.1. Total de famílias em acompanhamento pelo PAIF"></td></tr>
+        <tr><td>A.2. Novas famílias inseridas no acompanhamento do PAIF durante o mês de referência</td><td class="col-val"><input type="number" name="a2" aria-label="A.2. Novas famílias inseridas no acompanhamento do PAIF durante o mês de referência"></td></tr>
     </table>
 
     <table>
         <tr style="background:#eee;">
-            <th>B. Perfil das novas famílias inseridas em acompanhamento no PAIF no mês dereferência</th>
+            <th>B. Perfil das novas famílias inseridas em acompanhamento no PAIF no mês de referência</th>
             <th class="col-val">Total</th>
         </tr>
-        <tr><td>B.1. Famílias em situação de extrema pobreza</td><td class="col-val"><input type="number"></td></tr>
-        <tr><td>B.2. Famílias beneficiárias do Programa Bolsa Família</td><td class="col-val"><input type="number"></td></tr>
-        <tr><td>B.3. Famílias em descumprimento de condicionalidades do PBF</td><td class="col-val"><input type="number"></td></tr>
-        <tr><td>B.4. Famílias com membros beneficiários do BPC</td><td class="col-val"><input type="number"></td></tr>
-        <tr><td>B.5. Famílias com crianças ou adolescentes em situação de trabalho infantil</td><td class="col-val"><input type="number"></td></tr>
-        <tr><td>B.6. Famílias com crianças ou adolescentes em Serviço de Acolhimento</td><td class="col-val"><input type="number"></td></tr>
+        <tr><td>B.1. Famílias em situação de extrema pobreza</td><td class="col-val"><input type="number" name="b1" aria-label="B.1. Famílias em situação de extrema pobreza"></td></tr>
+        <tr><td>B.2. Famílias beneficiárias do Programa Bolsa Família</td><td class="col-val"><input type="number" name="b2" aria-label="B.2. Famílias beneficiárias do Programa Bolsa Família"></td></tr>
+        <tr><td>B.3. Famílias em descumprimento de condicionalidades do PBF</td><td class="col-val"><input type="number" name="b3" aria-label="B.3. Famílias em descumprimento de condicionalidades do PBF"></td></tr>
+        <tr><td>B.4. Famílias com membros beneficiários do BPC</td><td class="col-val"><input type="number" name="b4" aria-label="B.4. Famílias com membros beneficiários do BPC"></td></tr>
+        <tr><td>B.5. Famílias com crianças ou adolescentes em situação de trabalho infantil</td><td class="col-val"><input type="number" name="b5" aria-label="B.5. Famílias com crianças ou adolescentes em situação de trabalho infantil"></td></tr>
+        <tr><td>B.6. Famílias com crianças ou adolescentes em Serviço de Acolhimento</td><td class="col-val"><input type="number" name="b6" aria-label="B.6. Famílias com crianças ou adolescentes em Serviço de Acolhimento"></td></tr>
     </table>
     <div class="obs-box">
-        <strong>Atenção!</strong>Os itens B1 a B6 identificam apenas alguns perfis de famílias. É normal que algumas famílias contadas no item A2 não se enquadrem em nenhuma das condições acima, enquanto
+        <strong>Atenção!</strong> Os itens B1 a B6 identificam apenas alguns perfis de famílias. É normal que algumas famílias contadas no item A2 não se enquadrem em nenhuma das condições acima, enquanto
 outras podem se enquadrar simultaneamente em mais de uma condição. Portanto, a soma de B1 a B6 não terá, necessariamente, o mesmo valor relatado em A2.
     </div>
 
@@ -177,15 +177,15 @@ outras podem se enquadrar simultaneamente em mais de uma condição. Portanto, a
             <th>C. Volume de atendimentos particularizados realizados no CRAS no mês de referência</th>
             <th class="col-val">Quant.</th>
         </tr>
-        <tr><td>C.1. Total de atendimentos particularizados realizados no mês de referência</td><td class="col-val"><input type="number"></td></tr>
-        <tr><td>C.2. Famílias encaminhadas para inclusão no Cadastro Único</td><td class="col-val"><input type="number"></td></tr>
-        <tr><td>C.3. Famílias encaminhadas para atualização cadastral no Cadastro Único</td><td class="col-val"><input type="number"></td></tr>
-        <tr><td>C.4. Indivíduos encaminhados para acesso ao BPC</td><td class="col-val"><input type="number"></td></tr>
-        <tr><td>C.5. Famílias encaminhadas para o CREAS</td><td class="col-val"><input type="number"></td></tr>
-        <tr><td>C.6. Visitas domiciliares realizadas</td><td class="col-val"><input type="number"></td></tr>
-        <tr><td>C.7. Total de auxílios-natalidade concedidos/entregues no mês</td><td class="col-val"><input type="number"></td></tr>
-        <tr><td>C.8. Total de auxílios-funeral concedidos/entregues no mês</td><td class="col-val"><input type="number"></td></tr>
-        <tr><td>C.9. Outros benefícios eventuais concedidos/entregues no mês</td><td class="col-val"><input type="number"></td></tr>
+        <tr><td>C.1. Total de atendimentos particularizados realizados no mês de referência</td><td class="col-val"><input type="number" name="c1" aria-label="C.1. Total de atendimentos particularizados realizados no mês de referência"></td></tr>
+        <tr><td>C.2. Famílias encaminhadas para inclusão no Cadastro Único</td><td class="col-val"><input type="number" name="c2" aria-label="C.2. Famílias encaminhadas para inclusão no Cadastro Único"></td></tr>
+        <tr><td>C.3. Famílias encaminhadas para atualização cadastral no Cadastro Único</td><td class="col-val"><input type="number" name="c3" aria-label="C.3. Famílias encaminhadas para atualização cadastral no Cadastro Único"></td></tr>
+        <tr><td>C.4. Indivíduos encaminhados para acesso ao BPC</td><td class="col-val"><input type="number" name="c4" aria-label="C.4. Indivíduos encaminhados para acesso ao BPC"></td></tr>
+        <tr><td>C.5. Famílias encaminhadas para o CREAS</td><td class="col-val"><input type="number" name="c5" aria-label="C.5. Famílias encaminhadas para o CREAS"></td></tr>
+        <tr><td>C.6. Visitas domiciliares realizadas</td><td class="col-val"><input type="number" name="c6" aria-label="C.6. Visitas domiciliares realizadas"></td></tr>
+        <tr><td>C.7. Total de auxílios-natalidade concedidos/entregues no mês</td><td class="col-val"><input type="number" name="c7" aria-label="C.7. Total de auxílios-natalidade concedidos/entregues no mês"></td></tr>
+        <tr><td>C.8. Total de auxílios-funeral concedidos/entregues no mês</td><td class="col-val"><input type="number" name="c8" aria-label="C.8. Total de auxílios-funeral concedidos/entregues no mês"></td></tr>
+        <tr><td>C.9. Outros benefícios eventuais concedidos/entregues no mês</td><td class="col-val"><input type="number" name="c9" aria-label="C.9. Outros benefícios eventuais concedidos/entregues no mês"></td></tr>
     </table>
     <div class="obs-box">
         <strong>Atenção!</strong> Nos campos C1 a C6 devem ser contabilizadas todas as famílias/indivíduos, independente de estarem, ou não, em acompanhamento sistemático do PAIF. Nos campos C7, C8 e C9,
@@ -199,14 +199,14 @@ campos.
             <th>D. Volume de atendimentos coletivos realizados CRAS durante o mês de referência</th>
             <th class="col-val">Quant.</th>
         </tr>
-        <tr><td>D.1. Famílias participando regularmente de grupos no âmbito do PAIF</td><td class="col-val"><input type="number"></td></tr>
-        <tr><td>D.2. Crianças de 0 a 6 anos em Serviços de Convivência e Fortalecimento de Vínculos</td><td class="col-val"><input type="number"></td></tr>
-        <tr><td>D.3. Crianças/adolescentes de 7 a 14 anos em Serviços de Convivência e Fortalecimento de Vínculos</td><td class="col-val"><input type="number"></td></tr>
-        <tr><td>D.4. Adolescentes de 15 a 17 anos em Serviços de Convivência e Fortalecimento de Vínculos</td><td class="col-val"><input type="number"></td></tr>
-        <tr><td>D.8. Adultos entre 18 e 59 anos em Serviços de Convivência e Fortalecimento de Vínculos</td><td class="col-val"><input type="number"></td></tr>
-        <tr><td>D.5. Idosos em Serviços de Convivência e Fortalecimento de Vínculos para idosos</td><td class="col-val"><input type="number"></td></tr>
-        <tr><td>D.6. Pessoas participantes em palestras, oficinas e outras atividades coletivas de caráter não continuado</td><td class="col-val"><input type="number"></td></tr>
-        <tr><td>D.7. Pessoas com deficiência, participando dos Serviço de Convivência ou dos grupos do PAIF</td><td class="col-val"><input type="number"></td></tr>
+        <tr><td>D.1. Famílias participando regularmente de grupos no âmbito do PAIF</td><td class="col-val"><input type="number" name="d1" aria-label="D.1. Famílias participando regularmente de grupos no âmbito do PAIF"></td></tr>
+        <tr><td>D.2. Crianças de 0 a 6 anos em Serviços de Convivência e Fortalecimento de Vínculos</td><td class="col-val"><input type="number" name="d2" aria-label="D.2. Crianças de 0 a 6 anos em Serviços de Convivência e Fortalecimento de Vínculos"></td></tr>
+        <tr><td>D.3. Crianças/adolescentes de 7 a 14 anos em Serviços de Convivência e Fortalecimento de Vínculos</td><td class="col-val"><input type="number" name="d3" aria-label="D.3. Crianças/adolescentes de 7 a 14 anos em Serviços de Convivência e Fortalecimento de Vínculos"></td></tr>
+        <tr><td>D.4. Adolescentes de 15 a 17 anos em Serviços de Convivência e Fortalecimento de Vínculos</td><td class="col-val"><input type="number" name="d4" aria-label="D.4. Adolescentes de 15 a 17 anos em Serviços de Convivência e Fortalecimento de Vínculos"></td></tr>
+        <tr><td>D.8. Adultos entre 18 e 59 anos em Serviços de Convivência e Fortalecimento de Vínculos</td><td class="col-val"><input type="number" name="d8" aria-label="D.8. Adultos entre 18 e 59 anos em Serviços de Convivência e Fortalecimento de Vínculos"></td></tr>
+        <tr><td>D.5. Idosos em Serviços de Convivência e Fortalecimento de Vínculos para idosos</td><td class="col-val"><input type="number" name="d5" aria-label="D.5. Idosos em Serviços de Convivência e Fortalecimento de Vínculos para idosos"></td></tr>
+        <tr><td>D.6. Pessoas participantes em palestras, oficinas e outras atividades coletivas de caráter não continuado</td><td class="col-val"><input type="number" name="d6" aria-label="D.6. Pessoas participantes em palestras, oficinas e outras atividades coletivas de caráter não continuado"></td></tr>
+        <tr><td>D.7. Pessoas com deficiência, participando dos Serviço de Convivência ou dos grupos do PAIF</td><td class="col-val"><input type="number" name="d7" aria-label="D.7. Pessoas com deficiência, participando dos Serviço de Convivência ou dos grupos do PAIF"></td></tr>
     </table>
     <div class="obs-box">
         * Apesar dos serviços de convivência não estar em mais vinculados a faixas etárias, para facilidade de registro, os usuários devem ser contabilizados de acordo com a sua idade, independente de
@@ -217,30 +217,42 @@ estarem, ou não, no mesmo grupo
         Nome e cargo da pessoa responsável no CRAS pelas informações: 
     </div>
         Equipe Volante 
-<input type="text" style="width: 60%; border-bottom: 1px solid #000;">
-    </div>
+<input type="text" name="responsavel" aria-label="Nome e cargo da pessoa responsável no CRAS pelas informações" style="width: 60%; border-bottom: 1px solid #000;">
 </div>
 <script>
-    // Salva os dados no navegador toda vez que o botão é clicado
+    // Salva os dados no navegador toda vez que o botão é clicado.
+    // Usa o atributo "name" de cada campo como chave, em vez da posição
+    // (índice) do campo — assim, se um campo for adicionado, removido ou
+    // reordenado no futuro, os dados salvos de cada campo continuam
+    // batendo com o campo certo, em vez de "escorregar" para o campo
+    // vizinho.
     function saveData() {
-        const inputs = document.querySelectorAll('input');
+        const inputs = document.querySelectorAll('input[name]');
         const data = {};
-        inputs.forEach((input, index) => {
-            data['field_' + index] = input.value;
+        inputs.forEach(input => {
+            data[input.name] = input.value;
         });
         localStorage.setItem('rma_backup', JSON.stringify(data));
         alert('Dados salvos com sucesso!');
     }
 
-    // Carrega os dados automaticamente quando você abre a página
+    // Carrega os dados automaticamente quando você abre a página.
+    // Também migra, de forma transparente, dados salvos por uma versão
+    // anterior deste formulário (que gravava por posição do campo,
+    // "field_0", "field_1"...) para o novo formato por nome de campo.
     window.onload = function() {
         const savedData = localStorage.getItem('rma_backup');
         if (savedData) {
             const data = JSON.parse(savedData);
-            const inputs = document.querySelectorAll('input');
+            const inputs = document.querySelectorAll('input[name]');
+            const isFormatoAntigo = data['field_0'] !== undefined && data[inputs[0]?.name] === undefined;
             inputs.forEach((input, index) => {
-                if (data['field_' + index] !== undefined) {
-                    input.value = data['field_' + index];
+                if (isFormatoAntigo) {
+                    if (data['field_' + index] !== undefined) {
+                        input.value = data['field_' + index];
+                    }
+                } else if (data[input.name] !== undefined) {
+                    input.value = data[input.name];
                 }
             });
         }
