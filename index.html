@@ -186,7 +186,7 @@
     height: 4px;
   }
 
-  .container { max-width: 1400px; margin: 0 auto; padding: 0 1.5rem; }
+  .container { max-width: 1680px; margin: 0 auto; padding: 0 1.5rem; }
 
   header.hero {
     --hero-teal-1: #12564A;         /* base um pouco mais escura → mais contraste com o texto claro */
@@ -1063,20 +1063,20 @@
 
   .equipment-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-    gap: 1.75rem;
+    grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+    gap: 2rem;
     padding: 2rem 0;
   }
 
   .card-top {
-    padding: 1.35rem 1.5rem 1.15rem;
+    padding: 1.6rem 1.75rem 1.35rem;
     border-bottom: 1px solid var(--border-ui);
     background: linear-gradient(180deg, rgba(0, 145, 194, 0.07), rgba(0, 145, 194, 0) 85%);
   }
 
   .card-top h2 {
     margin: 0;
-    font-size: 1.2rem;
+    font-size: 1.35rem;
     font-weight: 800;
     color: var(--text-main);
     line-height: 1.25;
@@ -1094,18 +1094,18 @@
   }
 
   .card-body {
-    padding: 1.4rem 1.5rem;
+    padding: 1.6rem 1.75rem;
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 1.1rem;
+    gap: 1.25rem;
   }
 
   .info-group {
     display: grid;
-    grid-template-columns: 32px 1fr;
-    gap: 0.75rem;
-    font-size: 0.88rem;
+    grid-template-columns: 36px 1fr;
+    gap: 0.85rem;
+    font-size: 0.92rem;
     align-items: start;
   }
 
@@ -1146,30 +1146,47 @@
 
   .tech-notes {
     width: 100%;
-    background: transparent;
-    border: 1.5px dashed var(--border-ui);
-    border-radius: 8px;
-    padding: 1rem;
+    background: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 1.1rem 1.15rem;
     font-family: var(--font-sans);
-    font-size: 0.85rem;
+    font-size: 0.92rem;
+    line-height: 1.5;
     color: var(--text-main);
-    resize: none;
-    min-height: 100px;
-    transition: border-color 0.2s var(--ease), background 0.2s var(--ease);
+    resize: vertical;
+    min-height: 160px;
+    transition: box-shadow 0.2s var(--ease), background 0.2s var(--ease);
   }
 
   .notes-box {
     margin-top: 0.5rem;
+    background: linear-gradient(180deg, rgba(212, 160, 23, 0.14), rgba(212, 160, 23, 0.05));
+    border: 2px solid rgba(212, 160, 23, 0.55);
+    border-radius: 14px;
+    padding: 1.1rem 1.1rem 1.25rem;
+    box-shadow: 0 4px 14px -6px rgba(212, 160, 23, 0.35);
   }
 
   .notes-box .label-tech {
-    margin-bottom: 0.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.6rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+    color: #8a6200;
+  }
+
+  .notes-box .label-tech::before {
+    content: "📝";
+    font-size: 0.95rem;
   }
 
   .tech-notes:focus {
-    border-style: solid;
-    border-color: var(--brand-primary);
-    background: var(--bg-main);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.35);
+    background: #fffdf6;
   }
 
   .image-attach-wrapper {
