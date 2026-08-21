@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://www.simbolosmunicipais.com.br https://upload.wikimedia.org; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Argo SUAS · Gestão Técnica de Equipamentos</title>
@@ -10,6 +10,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Lora:ital,wght@0,400;0,500;1,400&amp;display=swap" rel="stylesheet">
 <meta name="theme-color" content="#0F4A41">
+<!-- PWA em tela cheia no iOS (adicionar à Tela de Início) -->
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Argo SUAS">
+<meta name="format-detection" content="telephone=no">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="favicon.ico">
@@ -847,6 +853,9 @@
   .category-sidebar .filter-chip {
     width: 100%;
     justify-content: flex-start;
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+    min-height: 44px;
   }
 
   .category-sidebar .filter-chip .chip-count { margin-left: auto; }
@@ -899,6 +908,8 @@
       border-right: 1px solid var(--border-ui);
       box-shadow: var(--shadow-lg);
       padding: 0;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
       transform: translateX(-105%);
       transition: transform 0.28s var(--ease);
     }
@@ -928,8 +939,8 @@
       line-height: 1;
       cursor: pointer;
       color: var(--text-muted);
-      width: 34px;
-      height: 34px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
       display: inline-flex;
       align-items: center;
@@ -990,8 +1001,8 @@
 
   .back-to-top {
     position: fixed;
-    right: 1.25rem;
-    bottom: 1.25rem;
+    right: calc(1.25rem + env(safe-area-inset-right));
+    bottom: calc(1.25rem + env(safe-area-inset-bottom));
     width: 48px;
     height: 48px;
     border-radius: 50%;
@@ -1909,7 +1920,7 @@
     border-radius: 8px;
     padding: 1rem;
     font-family: var(--font-sans);
-    font-size: 0.92rem;
+    font-size: 16px; /* >=16px evita o zoom automático do Safari iOS ao focar */
     line-height: 1.6;
     color: var(--text-main);
     resize: vertical;
@@ -2744,7 +2755,7 @@
     border-radius: 9px;
     color: var(--text-main);
     font-family: var(--font-sans);
-    font-size: 0.95rem;
+    font-size: 16px; /* >=16px evita o zoom automático do Safari iOS ao focar */
     transition: all 0.2s;
   }
 
