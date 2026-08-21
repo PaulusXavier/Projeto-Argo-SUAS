@@ -13,7 +13,7 @@ Um diretório técnico instalável (PWA) dos equipamentos socioassistenciais e d
 - Anexo de fotos e PDFs à ficha de encaminhamento;
 - Funcionamento offline via Service Worker, com ícones e manifesto para instalação no celular/desktop.
 
-**Arquivos:** `index.html`, `manifest.json`, `service-worker.js`, `sw.js`, `favicon.ico`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`
+**Arquivos:** `index.html`, `manifest.json`, `sw.js`, `favicon.ico`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`
 
 ## 🧰 Ferramentas complementares
 
