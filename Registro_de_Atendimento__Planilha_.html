@@ -18,13 +18,19 @@
                 margin: 0 auto;
                 padding: 8mm;
                 box-sizing: border-box;
-                display: flex;
-                flex-direction: column;
                 box-shadow: none;
                 transform: none;
+                overflow: hidden;
             }
             .folha:last-child { page-break-after: auto; }
-            .folha table { flex: 1 1 auto; height: 100%; }
+            /* Sem flexbox aqui: a tabela recebe uma altura fixa (calculada
+               descontando a altura aproximada do título "FOLHA X: ...")
+               e o próprio motor de tabela do navegador distribui o espaço
+               extra entre as linhas — é isso que faz a folha impressa
+               ficar cheia, em vez de só o topo da página. */
+            .folha table {
+                height: calc(100% - 10mm);
+            }
             table { width: 100% !important; table-layout: fixed; border-collapse: collapse; }
             thead { display: table-header-group; }
             th, td { font-size: 10pt !important; padding: 4px !important; border: 1px solid #000 !important; }
