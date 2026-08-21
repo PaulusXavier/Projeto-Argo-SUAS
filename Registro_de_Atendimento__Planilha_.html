@@ -14,28 +14,27 @@
             .folha {
                 page-break-after: always;
                 width: 297mm;
-                height: 210mm;
+                min-height: 210mm;
                 margin: 0 auto;
-                padding: 8mm;
+                padding: 6mm;
                 box-sizing: border-box;
                 box-shadow: none;
                 transform: none;
-                overflow: hidden;
             }
             .folha:last-child { page-break-after: auto; }
-            /* Sem flexbox aqui: a tabela recebe uma altura fixa (calculada
-               descontando a altura aproximada do título "FOLHA X: ...")
-               e o próprio motor de tabela do navegador distribui o espaço
-               extra entre as linhas — é isso que faz a folha impressa
-               ficar cheia, em vez de só o topo da página. */
+            /* Sem altura fixa nem overflow:hidden aqui: se o conteúdo precisar
+               de um pouco mais de espaço do que uma folha A4, ele continua
+               naturalmente na página seguinte (com o cabeçalho da tabela
+               repetido) em vez de ser cortado e perdido na impressão. */
             .folha table {
-                height: calc(100% - 10mm);
+                width: 100%;
+                height: auto;
             }
             table { width: 100% !important; table-layout: fixed; border-collapse: collapse; }
             thead { display: table-header-group; }
-            th, td { font-size: 10pt !important; padding: 4px !important; border: 1px solid #000 !important; }
-            input { font-size: 10pt !important; }
-            .header-title { font-size: 15pt !important; margin-bottom: 8px !important; }
+            th, td { font-size: 9pt !important; padding: 2px !important; border: 1px solid #000 !important; line-height: 1.15 !important; }
+            input { font-size: 9pt !important; }
+            .header-title { font-size: 14pt !important; margin-bottom: 4px !important; }
             .bg-orange, .bg-blue, .bg-green { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
 
