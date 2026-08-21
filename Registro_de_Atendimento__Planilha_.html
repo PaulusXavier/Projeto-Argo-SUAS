@@ -7,16 +7,20 @@
     <title>RMA - Registro Mensal com Soma</title>
     <style>
         /* CONFIGURAÇÃO DE IMPRESSÃO */
-        @page { size: A4 landscape; margin: 0; }
+        /* Margem real de 6mm em vez de 0: impressoras físicas quase sempre
+           têm uma faixa nas bordas que não conseguem imprimir, mesmo que o
+           software mande margem zero. Deixar essa margem de segurança evita
+           que a última linha da tabela caia nessa faixa "morta" e suma. */
+        @page { size: A4 landscape; margin: 8mm; }
         @media print {
             .no-print { display: none !important; }
             body { background: white; padding: 0; margin: 0; }
             .folha {
                 page-break-after: always;
-                width: 297mm;
-                min-height: 210mm;
-                margin: 0 auto;
-                padding: 6mm;
+                width: 100%;
+                min-height: 0;
+                margin: 0;
+                padding: 0;
                 box-sizing: border-box;
                 box-shadow: none;
                 transform: none;
