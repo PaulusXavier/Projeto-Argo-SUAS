@@ -149,6 +149,7 @@
     flex-direction: column;
     overflow: hidden;
     box-shadow: var(--shadow-sm);
+    cursor: pointer;
     transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease), border-color 0.25s var(--ease);
   }
 
@@ -166,10 +167,6 @@
     box-shadow: var(--shadow-lg);
     transform: translateY(-4px);
     border-color: rgba(0, 145, 194, 0.35);
-  }
-
-  .tech-card {
-    cursor: pointer;
   }
 
   /* Card em destaque: fica assim depois de clicado, com anel colorido,
@@ -1146,8 +1143,8 @@
 
   .tech-notes {
     width: 100%;
-    background: #fff;
-    border: none;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-ui);
     border-radius: 10px;
     padding: 1.1rem 1.15rem;
     font-family: var(--font-sans);
@@ -1156,7 +1153,12 @@
     color: var(--text-main);
     resize: vertical;
     min-height: 160px;
-    transition: box-shadow 0.2s var(--ease), background 0.2s var(--ease);
+    transition: box-shadow 0.2s var(--ease), background 0.2s var(--ease), border-color 0.2s var(--ease);
+  }
+
+  .tech-notes::placeholder {
+    color: var(--text-muted);
+    opacity: 0.85;
   }
 
   .notes-box {
@@ -1178,6 +1180,11 @@
     color: #8a6200;
   }
 
+  @media (prefers-color-scheme: dark) {
+    .notes-box .label-tech { color: #F2CB7E; }
+    .notes-box { border-color: rgba(212, 160, 23, 0.4); }
+  }
+
   .notes-box .label-tech::before {
     content: "📝";
     font-size: 0.95rem;
@@ -1185,8 +1192,8 @@
 
   .tech-notes:focus {
     outline: none;
+    border-color: rgba(212, 160, 23, 0.7);
     box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.35);
-    background: #fffdf6;
   }
 
   .image-attach-wrapper {
@@ -2623,9 +2630,6 @@
     margin-right: 0.5rem;
     flex-shrink: 0;
   }
-  .login-story-ship-badge .argo-ship-ring { fill: none; stroke: #F1F5F9; stroke-width: 4; }
-  .login-story-ship-badge .argo-ship-ring-inner { fill: none; stroke: #F1F5F9; stroke-width: 1.5; opacity: 0.6; }
-  .login-story-ship-badge .argo-ship-teeth { fill: #F1F5F9; }
   .login-story-ship-badge .argo-ship-sail { fill: #F1F5F9; }
   .login-story-ship-badge .argo-ship-swirl { fill: #F1F5F9; }
   .login-story-ship-badge .argo-ship-mast { stroke: #F1F5F9; stroke-width: 3; stroke-linecap: round; }
@@ -2947,46 +2951,6 @@
         <p class="login-story-brand">
           <svg class="login-story-ship-badge" viewBox="0 0 200 200" width="15" height="15" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Navio Argo">
             <title>Navio Argo</title>
-            <defs>
-              <rect id="argoShipTooth" x="-3" y="-104" width="6" height="14" rx="1"/>
-            </defs>
-
-            <circle class="argo-ship-ring" cx="100" cy="100" r="90"/>
-            <circle class="argo-ship-ring-inner" cx="100" cy="100" r="78"/>
-            <g class="argo-ship-teeth">
-              <use href="#argoShipTooth" transform="rotate(0.0 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(11.25 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(22.5 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(33.75 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(45.0 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(56.25 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(67.5 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(78.75 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(90.0 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(101.25 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(112.5 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(123.75 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(135.0 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(146.25 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(157.5 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(168.75 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(180.0 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(191.25 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(202.5 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(213.75 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(225.0 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(236.25 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(247.5 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(258.75 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(270.0 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(281.25 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(292.5 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(303.75 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(315.0 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(326.25 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(337.5 100 100)"/>
-              <use href="#argoShipTooth" transform="rotate(348.75 100 100)"/>
-            </g>
 
             <path class="argo-ship-sail" d="M45,35 L135,32 C158,30 176,44 174,64 C173,76 163,86 148,90 C160,96 168,104 165,112 C162,120 150,122 142,116 C144,108 140,100 140,95 L45,150 Z"/>
             <path class="argo-ship-swirl" d="M150,120 C165,118 175,128 168,138 C162,146 148,144 145,135 C143,128 146,122 150,120 Z"/>
@@ -7073,7 +7037,7 @@ const DATA = [
     hours: "Segunda a quinta-feira (Manhã: 08h às 10h30 | Tarde: 14h30 às 16h30)",
     phones: ["N/A"],
     services: "Prevenção de risco social e fortalecimento de vínculos familiares e comunitários.",
-    desc: "Tem como objetivo prevenir situações de risco social e fortalecer vínculos familiares e comunitários. Requisitos: • Ter entre 6 e 17 anos completos; • Estar regularmente matriculado e frequentando a rede pública de ensino; • Responsável legal inscrito no CadÚnico.<br>Atividades: oficinas e palestras; esporte e lazer; orientação psicológica, social e pedagógica.<br>Benefícios: camiseta e lanche."
+    desc: "Tem como objetivo prevenir situações de risco social e fortalecer vínculos familiares e comunitários. Requisitos: • Ter entre 6 e 17 anos completos; • Estar regularmente matriculado e frequentando a rede pública de ensino; • Responsável legal inscrito no CadÚnico.<br>Atividades: oficinas e palestras; esporte e lazer; orientação psicológica, social e pedagógica.<br>Benefícios: camiseta e lanche.<br>Documentos necessários para inclusão e atualização no SCFV (xerox e originais) — Da criança/adolescente: 1. RG e CPF; 2. Declaração escolar; 3. Cartão do SUS; 4. 1 (uma) foto 3x4; 5. Cartão de vacinação. — Do responsável: 1. RG e CPF; 2. Comprovante de residência; 3. Folha resumo CadÚnico."
   },
   {
     id: "projeto-cabelos-de-prata",
@@ -7085,7 +7049,7 @@ const DATA = [
     hours: "Segunda a quinta-feira, das 08h às 10h",
     phones: ["N/A"],
     services: "Atividades para o envelhecimento saudável.",
-    desc: "Desenvolve atividades que contribuem para o envelhecimento saudável. Requisitos: • Ter 60 anos ou mais; • Estar inscrito no CadÚnico.<br>Atividades: atividades recreativas; acesso a informações e orientações; orientação psicológica, social e pedagógica.<br>Benefícios: bolsa; camiseta e lanche."
+    desc: "Desenvolve atividades que contribuem para o envelhecimento saudável. Requisitos: • Ter 60 anos ou mais; • Estar inscrito no CadÚnico.<br>Atividades: atividades recreativas; acesso a informações e orientações; orientação psicológica, social e pedagógica.<br>Benefícios: bolsa; camiseta e lanche.<br>Documentos necessários para inclusão e atualização no SCFV (xerox e originais): 1. RG e CPF; 2. Comprovante de residência; 3. Cartão do benefício (caso tenha); 4. Folha resumo CadÚnico; 5. Cartão do SUS; 6. 1 (uma) foto 3x4; 7. Laudo médico de aptidão física; 8. Cartão de vacinação."
   },
   {
     id: "cras-azul-alto-alegre",
