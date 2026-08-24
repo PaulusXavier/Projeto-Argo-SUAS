@@ -2609,6 +2609,25 @@
     pointer-events: none;
   }
 
+  /* Gravura histórica do "Argo Navis" (Firmamentum Sobiescianum, Hevelius) usada
+     como marca d'água de fundo do painel de login, remetendo ao nome do app.
+     Opacidade baixa e mix-blend-mode para não competir com o texto em primeiro plano. */
+  .login-story-historic {
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    background-image: url('argo-navis-historico.jpg');
+    background-size: cover;
+    background-position: center 38%;
+    background-repeat: no-repeat;
+    opacity: 0.24;
+    mix-blend-mode: luminosity;
+    pointer-events: none;
+  }
+
+  @media (max-width: 760px) {
+    .login-story-historic { opacity: 0.16; }
+  }
+
   .login-story-emblem {
     position: absolute;
     right: -10%;
@@ -2956,6 +2975,7 @@
 
     <div class="login-story" aria-hidden="true">
       <div class="login-story-stripe"></div>
+      <div class="login-story-historic"></div>
       <div class="login-story-glow"></div>
 
       <svg class="login-story-emblem" viewBox="0 0 320 230" xmlns="http://www.w3.org/2000/svg">
@@ -6914,7 +6934,7 @@ const DATA = [
     hours: "N/A",
     phones: ["135"],
     services: "Benefício de Prestação Continuada (BPC) – Idoso.",
-    desc: "Requisitos: • Estar inscrito e com dados atualizados no Cadastro Único (CadÚnico); • Possuir 65 anos completos ou mais; • Ter renda familiar per capita de até ¼ do salário mínimo; • Comprovar situação de vulnerabilidade social.<br>Canais para solicitação: • Site: https://meu.inss.gov.br/#/login • Telefone: 135 • Aplicativo: Meu INSS"
+    desc: "Requisitos: • Estar inscrito e com dados atualizados no Cadastro Único (CadÚnico), com atualização obrigatória a cada 2 anos; • Possuir 65 anos completos ou mais; • Ter renda familiar per capita de até ¼ do salário mínimo (R$ 405,25 em 2026); • Comprovar situação de vulnerabilidade social.<br>👨‍👩‍👧‍👦 Composição familiar considerada no cálculo da renda per capita (art. 20, §1º da Lei 8.742/93 – LOAS): requerente, cônjuge ou companheiro(a), pais (ou madrasta/padrasto na ausência deles), irmãos solteiros, filhos e enteados solteiros e menores tutelados, desde que vivam sob o mesmo teto. NÃO entram no cálculo: netos, avós, tios, sobrinhos, primos, genros/noras, cunhados, nem filhos/irmãos/enteados casados, em união estável, divorciados, separados de fato ou viúvos, mesmo que morem na mesma casa. O valor de outro BPC ou benefício previdenciário de até 1 salário mínimo recebido por idoso/PCD da mesma família não entra na conta.<br>🚫 Cancelamento: pode ser solicitado voluntariamente pelo próprio beneficiário (ou representante legal) pelo Meu INSS, aplicativo ou telefone 135, quando não desejar mais receber o benefício ou quando a família não atender mais aos critérios; o INSS também pode suspender/cessar de ofício em revisões bienais, por óbito, superação de renda ou irregularidades no CadÚnico.<br>Canais para solicitação: • Site: https://meu.inss.gov.br/#/login • Telefone: 135 • Aplicativo: Meu INSS<br>⚠️ Observações técnicas: diferente do BPC Pessoa com Deficiência, o BPC Idoso não tem previsão de suspensão temporária com reativação automática ao ingressar no trabalho — se a renda familiar ultrapassar o limite, o benefício é cessado."
   },
   {
     id: "bpc-pcd",
@@ -6926,7 +6946,7 @@ const DATA = [
     hours: "N/A",
     phones: ["135"],
     services: "Benefício de Prestação Continuada (BPC) – Pessoa com Deficiência.",
-    desc: "Requisitos: • Estar inscrito e com dados atualizados no Cadastro Único (CadÚnico); • Possuir deficiência de longo prazo (física, mental, intelectual ou sensorial) que cause impedimentos para a participação plena na sociedade; • Não há idade mínima; • Ter renda familiar per capita de até ¼ do salário mínimo; • Passar por avaliação médica e social do INSS; • Comprovar situação de vulnerabilidade social.<br>Canais para solicitação: • Site: https://meu.inss.gov.br/#/login • Telefone: 135 • Aplicativo: Meu INSS<br>⚠️ Observações técnicas: a deficiência deve ter duração mínima de 2 anos (caráter de longo prazo); pode haver mais de um BPC na mesma família, desde que atendidos os critérios; o benefício não paga 13º salário; não exige contribuição ao INSS."
+    desc: "Requisitos: • Estar inscrito e com dados atualizados no Cadastro Único (CadÚnico), com atualização obrigatória a cada 2 anos; • Possuir deficiência de longo prazo (física, mental, intelectual ou sensorial) que cause impedimentos para a participação plena na sociedade; • Não há idade mínima; • Ter renda familiar per capita de até ¼ do salário mínimo (R$ 405,25 em 2026); • Passar por avaliação médica e social (biopsicossocial) do INSS; • Comprovar situação de vulnerabilidade social.<br>💼 BPC Trabalho / Auxílio-Inclusão: pela Lei nº 14.176/2021, quando a pessoa com deficiência ingressa no mercado de trabalho formal (inclusive como MEI ou empregada), o BPC não é cancelado, apenas SUSPENSO enquanto durar o vínculo — não é mais necessário optar entre trabalhar e manter o benefício. Nesse período, pode ter direito ao Auxílio-Inclusão (metade do salário mínimo, R$ 810,50 em 2026), pago junto com a remuneração, desde que o salário bruto não ultrapasse 2 salários mínimos. Se o vínculo empregatício terminar, o BPC pode ser reativado mediante requerimento simplificado ao INSS, sem necessidade de nova perícia. Contratados na condição de aprendiz podem acumular BPC e remuneração por até 2 anos antes da suspensão. ⚠️ A concessão do Auxílio-Inclusão para MEI/contribuinte individual está atualmente suspensa pelo INSS, aguardando regulamentação.<br>👨‍👩‍👧‍👦 Composição familiar considerada no cálculo da renda per capita (art. 20, §1º da Lei 8.742/93 – LOAS): requerente, cônjuge ou companheiro(a), pais (ou madrasta/padrasto na ausência deles), irmãos solteiros, filhos e enteados solteiros e menores tutelados, desde que vivam sob o mesmo teto. NÃO entram no cálculo: netos, avós, tios, sobrinhos, primos, genros/noras, cunhados, nem filhos/irmãos/enteados casados, em união estável, divorciados, separados de fato ou viúvos, mesmo que morem na mesma casa. O valor de outro BPC ou benefício previdenciário de até 1 salário mínimo recebido por idoso/PCD da mesma família não entra na conta.<br>🚫 Cancelamento: pode ser solicitado voluntariamente pelo próprio beneficiário (ou representante legal) pelo Meu INSS, aplicativo ou telefone 135, quando não desejar mais receber o benefício ou quando a família não atender mais aos critérios; o INSS também pode suspender/cessar de ofício em revisões bienais, por óbito, superação de renda ou irregularidades no CadÚnico.<br>Canais para solicitação: • Site: https://meu.inss.gov.br/#/login • Telefone: 135 • Aplicativo: Meu INSS<br>⚠️ Observações técnicas: a deficiência deve ter duração mínima de 2 anos (caráter de longo prazo); pode haver mais de um BPC na mesma família, desde que atendidos os critérios; o benefício não paga 13º salário; não exige contribuição ao INSS."
   },
   {
     id: "recuperacao-senha-inss",
