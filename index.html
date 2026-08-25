@@ -8313,7 +8313,27 @@ function render() {
     } else if (cat === 'social') {
       infoBanner.style.display = '';
       infoBanner.innerHTML = `
-        <span class="cib-title">📘 Programa Bolsa Família — regras, benefícios e Regra de Proteção (base legal)</span>
+        <span class="cib-title">📘 Proteção Social Básica e Especial — estrutura do SUAS (base legal: LOAS e PNAS)</span>
+        A Assistência Social é organizada, desde a <strong>LOAS (Lei n.º 8.742/1993)</strong>, como política de Seguridade Social <strong>não contributiva</strong>, direito do cidadão e dever do Estado. A <strong>PNAS - Política Nacional de Assistência Social (Resolução CNAS n.º 145/2004)</strong> e a <strong>Tipificação Nacional de Serviços Socioassistenciais (Resolução CNAS n.º 109/2009)</strong> organizam a oferta do SUAS em dois níveis de proteção, hierarquizados pela gravidade da situação: a <strong>Proteção Social Básica (PSB)</strong>, ofertada pelo CRAS, e a <strong>Proteção Social Especial (PSE)</strong>, ofertada pelo CREAS e pela rede de acolhimento.
+        <details>
+          <summary>Ver a diferença entre Proteção Básica e Especial, os serviços de cada uma e como o SUAS é financiado</summary>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Proteção Social Básica (PSB) — unidade de referência: CRAS</strong></p>
+          <p style="margin:0.6rem 0 0.3rem 0;">Destinada a famílias e indivíduos em situação de <em>vulnerabilidade social</em> decorrente de pobreza, privação (de renda, acesso a serviços públicos etc.) e/ou fragilização de vínculos afetivos, relacionais e de pertencimento social - mas cujos direitos ainda <strong>não foram violados</strong>, apenas ameaçados. O objetivo é prevenir situações de risco por meio do desenvolvimento de potencialidades e do fortalecimento de vínculos familiares e comunitários. O <strong>CRAS (Centro de Referência de Assistência Social)</strong> é a "porta de entrada" do SUAS: unidade pública estatal, de base municipal, organizada por território de abrangência (bairros de referência), com atendimento gratuito e sem necessidade de encaminhamento formal.</p>
+          <ul>
+            <li><strong>PAIF</strong> (Serviço de Proteção e Atendimento Integral à Família) - trabalho social com famílias, de oferta obrigatória e continuada em todo CRAS</li>
+            <li><strong>SCFV</strong> (Serviço de Convivência e Fortalecimento de Vínculos) - grupos por ciclo de vida: crianças, adolescentes, jovens e idosos</li>
+            <li>Serviço de Proteção Social Básica no domicílio para pessoas com deficiência e pessoas idosas</li>
+            <li>Cadastro Único e acesso a benefícios e programas (Bolsa Família, BPC, Tarifa Social etc.)</li>
+          </ul>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Proteção Social Especial (PSE) — unidades de referência: CREAS e rede de acolhimento</strong></p>
+          <p style="margin:0.6rem 0 0.3rem 0;">Destinada a famílias e indivíduos cujos direitos <strong>já foram violados</strong>: violência física, psicológica ou sexual, negligência, abandono, situação de rua, trabalho infantil, cumprimento de medida socioeducativa, entre outras violações. Diferente da PSB, pressupõe que o dano já ocorreu, exigindo acompanhamento especializado, e se subdivide em dois graus conforme o rompimento (ou não) dos vínculos familiares:</p>
+          <ul>
+            <li><strong>Média Complexidade</strong> (vínculo familiar ainda não rompido) - ofertada pelo <strong>CREAS (Centro de Referência Especializado de Assistência Social)</strong>, com o <strong>PAEFI</strong> (Serviço de Proteção e Atendimento Especializado a Famílias e Indivíduos), abordagem social a pessoas em situação de rua, Serviço de Proteção Social a Adolescentes em Cumprimento de Medida Socioeducativa (Liberdade Assistida e Prestação de Serviços à Comunidade) e o Centro Pop</li>
+            <li><strong>Alta Complexidade</strong> (vínculo familiar rompido ou pessoa sem referência familiar) - acolhimento institucional (abrigos, casas-lares, casas de passagem) ou acolhimento familiar, garantindo proteção integral fora do núcleo de origem; conforme o ECA e a NOB-SUAS, é sempre medida <strong>excepcional e provisória</strong>, com prioridade para reintegração familiar</li>
+          </ul>
+          <p style="margin:0.6rem 0;"><strong>Gestão e financiamento:</strong> o SUAS é cofinanciado de forma tripartite entre União, Estados e Municípios, por meio de pisos de proteção (Piso Básico para a PSB; Pisos de Média e Alta Complexidade para a PSE), regulados pela <strong>NOB-SUAS (Resolução CNAS n.º 33/2012)</strong>. A rede atua de forma <em>intersetorial</em>, articulada com saúde, educação, Conselho Tutelar, Vara da Infância e Juventude, Ministério Público e Defensoria Pública, sempre respeitando o território de abrangência de cada equipamento.</p>
+        </details>
+        <span class="cib-title" style="margin-top:1rem;">📘 Programa Bolsa Família — regras, benefícios e Regra de Proteção (base legal)</span>
         O PBF, instituído pela <strong>Lei n.º 14.601/2023</strong> e regulamentado pelo <strong>Decreto n.º 12.064/2024</strong>, atende famílias inscritas no <strong>Cadastro Único</strong> com renda mensal por pessoa de até <strong>R$ 218,00</strong> (situação de pobreza), condicionada ao cumprimento dos compromissos de saúde e educação. A entrada não é automática: depende do limite orçamentário do Programa.
         <details>
           <summary>Ver a composição do benefício, o calendário de pagamento e a Regra de Proteção</summary>
