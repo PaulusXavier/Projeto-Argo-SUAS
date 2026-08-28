@@ -8306,12 +8306,6 @@ function renderCasCard(i, query) {
             </div>
           </div>
         </div>
-
-        ${renderUserDataFields(i.id)}
-        <div class="notes-box">
-          <label for="notes-${i.id}" class="label-tech">Anotações Técnicas / Conduta</label>
-          <textarea id="notes-${i.id}" class="tech-notes" placeholder="Registre aqui a avaliação, conduta ou observações técnicas..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
-        </div>
       </div>
       <div class="card-actions">
         <button class="btn-tech btn-secondary" onclick="share('${i.id}')">Compartilhar</button>
@@ -8490,12 +8484,6 @@ function renderCrasCard(i, query) {
               ${driveRows || emptyRow}
             </div>
           </div>
-        </div>
-
-        ${renderUserDataFields(i.id)}
-        <div class="notes-box">
-          <label for="notes-${i.id}" class="label-tech">Anotações Técnicas / Conduta</label>
-          <textarea id="notes-${i.id}" class="tech-notes" placeholder="Registre aqui a avaliação, conduta ou observações técnicas..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
         </div>
       </div>
       <div class="card-actions">
