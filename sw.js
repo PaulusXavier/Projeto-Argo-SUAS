@@ -1,6 +1,6 @@
 // Troque este número toda vez que publicar uma alteração no app.
 // É essa mudança de versão que dispara a atualização automática.
-const CACHE_VERSION = 'v8';
+const CACHE_VERSION = 'v9';
 const CACHE_NAME = `rede-apoio-bv-${CACHE_VERSION}`;
 
 const ASSETS = [
