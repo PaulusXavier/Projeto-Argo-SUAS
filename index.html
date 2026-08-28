@@ -3256,7 +3256,7 @@
             </button>
             <button class="filter-chip filter-chip-panel" data-cat="delegacias" data-group="more" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="M9.5 12.5l1.8 1.8 3.2-3.6"/></svg></span>
-              <span>Segurança Pública (Distritos Policiais)</span>
+              <span>Segurança Pública</span>
               <span class="chip-count" id="count-delegacias">0</span>
             </button>
           </div>
@@ -5005,6 +5005,18 @@ const DATA = [
     phones: ["(95) 2121-3473"],
     services: "Escuta qualificada, triagem e psicoterapia gratuitas, atendimento presencial e virtual (conforme disponibilidade de vagas/editais).",
     desc: "A Clínica Escola de Psicologia da Faculdade Cathedral oferece atendimento psicológico gratuito e de apoio à comunidade, prestado por estudantes da graduação (a partir do 8º semestre) sob supervisão de professores Mestres e Especialistas da área.<br>Público-alvo: pessoas a partir de 12 anos.<br>Contato: (95) 2121-3473 ou clinicapsicologia@cathedral.edu.br, com atendimento também via WhatsApp."
+  },
+  {
+    id: "clinica-psicologia-faceten",
+    name: "Clínica de Psicologia - FACETEN",
+    fullName: "Clínica de Psicologia da Faculdade FACETEN",
+    cat: ["saude"],
+    group: "Clínicas-Escola de Psicologia",
+    address: "Avenida dos Bandeirantes, 900 - Pricumã, Boa Vista-RR",
+    hours: "Consultar disponibilidade de vagas/editais junto à clínica",
+    phones: ["(95) 99177-6671"],
+    services: "Atendimento psicológico gratuito, prestado por estudantes de graduação sob supervisão docente.",
+    desc: "A Clínica de Psicologia da Faculdade FACETEN oferece atendimento psicológico gratuito à comunidade, prestado por estudantes do curso de Psicologia sob supervisão de professores da instituição.<br>Público-alvo: pessoas a partir de 12 anos.<br>Contato: (95) 99177-6671."
   },
   {
     id: "ciapd",
@@ -8494,6 +8506,45 @@ function render() {
           </ul>
           <p style="margin:0.6rem 0 0.3rem 0;"><strong>Direitos garantidos pela Lei n.º 10.216/2001 (art. 2º)</strong>, entre outros: acesso ao melhor tratamento disponível; tratamento com humanidade e respeito; proteção contra abuso e exploração; sigilo das informações; direito à presença médica a qualquer tempo para esclarecer internação involuntária; tratamento pelos meios menos invasivos possíveis; preferência por serviços comunitários de saúde mental.</p>
           <p style="margin:0.6rem 0 0;">A internação psiquiátrica só é indicada quando os recursos extra-hospitalares se mostram insuficientes (art. 4º) e pode ser <em>voluntária</em>, <em>involuntária</em> (a pedido de terceiro, com comunicação obrigatória ao Ministério Público em até 72h) ou <em>compulsória</em> (determinada pela Justiça) — art. 6º.</p>
+        </details>
+      `;
+    } else if (cat === 'hospitalar') {
+      infoBanner.style.display = '';
+      infoBanner.innerHTML = `
+        <span class="cib-title">📘 Fluxo de Atenção à Saúde no SUS — como funciona o encaminhamento (base legal)</span>
+        O SUS é organizado em <strong>redes regionalizadas e hierarquizadas</strong> por níveis de complexidade (Lei n.º 8.080/1990, art. 7º, e Decreto n.º 7.508/2011), com a <strong>Rede de Atenção à Saúde - RAS</strong> (Portaria GM/MS n.º 4.279/2010) organizando o cuidado em torno da Atenção Básica como <strong>coordenadora do cuidado</strong> e ordenadora do acesso aos demais serviços.
+        <details>
+          <summary>Ver os níveis de atenção, o fluxo de referência/contrarreferência e quando procurar cada serviço</summary>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>1) Atenção Primária/Básica (porta de entrada preferencial):</strong> UBS e Equipes de Saúde da Família (eSF). Realiza acolhimento, consultas de rotina, pré-natal, vacinação, curativos, dispensação de medicamentos básicos e acompanhamento de doenças crônicas (hipertensão, diabetes). É aqui que o cidadão deve buscar atendimento em primeiro lugar, exceto em urgência/emergência.</p>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>2) Atenção Secundária (média complexidade):</strong> especialidades médicas (cardiologia, ortopedia, ginecologia etc.), exames de apoio diagnóstico e CAPS. O acesso normalmente depende de <strong>encaminhamento (referência)</strong> feito pela UBS, regulado pela <strong>Central de Regulação</strong> do município/estado, que agenda a vaga conforme fila e prioridade clínica.</p>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>3) Atenção Terciária (alta complexidade):</strong> hospitais de referência, UTI, cirurgias de alta complexidade, oncologia, hemodiálise. O acesso é feito por encaminhamento da atenção secundária ou, em casos graves, direto pela urgência/emergência.</p>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>4) Urgência e Emergência:</strong> <strong>SAMU 192</strong> (atendimento móvel, remoções e primeiros socorros no local); <strong>UPA 24h</strong> (casos de urgência que não exigem internação); <strong>Pronto-Socorro Hospitalar</strong> (casos graves, com possível internação). Nesses pontos não é necessário encaminhamento prévio - o acesso é direto, mediante classificação de risco (Protocolo de Manchester), que define a ordem de atendimento pela gravidade, não por ordem de chegada.</p>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Referência e contrarreferência:</strong> ao encaminhar um paciente para um serviço de maior complexidade (referência), a unidade de origem deve receber de volta as informações do atendimento realizado (contrarreferência), garantindo que a UBS continue coordenando o cuidado. Esse fluxo é formalizado por guias de encaminhamento e, cada vez mais, por prontuário eletrônico integrado (e-SUS APS/PEC).</p>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Cartão Nacional de Saúde (CNS/Cartão SUS):</strong> documento obrigatório para qualquer atendimento no SUS, gerado no primeiro cadastro em uma UBS; identifica o usuário em todos os pontos da rede e viabiliza a regulação e o histórico de atendimentos.</p>
+          <p style="margin:0.6rem 0;"><strong>Princípios que orientam o fluxo</strong> (Lei n.º 8.080/1990, art. 7º): <em>universalidade</em> (acesso para todos, sem custo), <em>equidade</em> (prioridade a quem tem maior necessidade, não a quem chega primeiro), <em>integralidade</em> (atendimento das necessidades em todos os níveis) e <em>regionalização/hierarquização</em> (organização por território e complexidade crescente).</p>
+        </details>
+      `;
+    } else if (cat === 'delegacias') {
+      infoBanner.style.display = '';
+      infoBanner.innerHTML = `
+        <span class="cib-title">📘 Segurança Pública — quem procurar em cada situação (base legal)</span>
+        A Segurança Pública é dever do Estado e responsabilidade de todos (<strong>Constituição Federal, art. 144</strong>), exercida por órgãos com atribuições distintas: <strong>Polícia Militar</strong> (policiamento ostensivo e preservação da ordem), <strong>Polícia Civil</strong> (investigação e apuração de infrações penais, por meio das Delegacias), <strong>Corpo de Bombeiros Militar</strong> (emergências, incêndios e resgates) e <strong>Guarda Civil Municipal</strong> (proteção de bens, serviços e instalações do município).
+        <details>
+          <summary>Ver quando ligar para cada número, a diferença entre Distrito Policial e Delegacia Especializada, e como registrar um Boletim de Ocorrência</summary>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Números de emergência (gratuitos, 24h):</strong></p>
+          <ul>
+            <li><strong>190</strong> - Polícia Militar (ocorrência em andamento, flagrante, pedido de socorro imediato)</li>
+            <li><strong>193</strong> - Corpo de Bombeiros (incêndio, resgate, acidente, emergência com risco à vida)</li>
+            <li><strong>192</strong> - SAMU (emergência médica)</li>
+            <li><strong>180</strong> - Central de Atendimento à Mulher (denúncia de violência doméstica, orientação, sigiloso)</li>
+            <li><strong>181</strong> - Disque-Denúncia (denúncia anônima de crimes)</li>
+            <li><strong>100</strong> - Disque Direitos Humanos (violações contra crianças, idosos, LGBTQIA+, entre outros)</li>
+          </ul>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Distrito Policial (DP) - atendimento por território:</strong> cada DP tem uma circunscrição de bairros definida (ver descrição de cada unidade) e é responsável pelo registro do Boletim de Ocorrência (B.O.) e pela investigação de crimes gerais (furto, roubo, estelionato etc.) cometidos naquele território. Fora do horário de expediente, os casos em flagrante são encaminhados à <strong>Central de Flagrantes</strong>, que funciona 24h.</p>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Delegacia Especializada - atendimento por tipo de crime, não por bairro:</strong> concentra a investigação de um tipo específico de crime, independente de onde ele ocorreu na cidade. Exemplos: <strong>DEAM</strong> (violência doméstica e crimes sexuais contra mulheres), <strong>DPCA/DDIJ</strong> (crimes contra crianças/adolescentes e ato infracional), <strong>DGH</strong> (homicídios e feminicídios). Use a Delegacia Especializada quando o caso se encaixa no seu tipo de atuação; caso contrário, procure o DP do bairro onde o fato ocorreu.</p>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Como registrar um B.O.:</strong> compareça ao DP da circunscrição onde ocorreu o fato (ou à Delegacia Especializada, se for o caso) com documento de identificação; leve, se possível, provas, testemunhas e objetos relacionados ao caso. Em Roraima, o registro também pode ser feito pela <strong>Delegacia Eletrônica</strong> (site da Polícia Civil de RR) para ocorrências sem autor conhecido, como furtos e perda de documentos.</p>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Flagrante x Inquérito:</strong> quando o crime está em andamento ou acabou de ocorrer, a prisão em flagrante pode ser feita por qualquer pessoa (art. 301 do CPP) e formalizada pela Central de Flagrantes; quando o fato já ocorreu e depende de apuração, é instaurado um <strong>inquérito policial</strong>, conduzido pelo delegado, com prazo legal para conclusão e posterior encaminhamento ao Ministério Público.</p>
+          <p style="margin:0.6rem 0;"><strong>Quando não é caso de polícia:</strong> conflitos entre vizinhos, cobrança de dívidas e pequenas causas cíveis são resolvidos nos <strong>Juizados Especiais</strong> ou por mediação; violência contra criança/adolescente sem crime consumado pode ser levada primeiro ao <strong>Conselho Tutelar</strong>; emergências médicas sem indício de crime devem acionar o <strong>SAMU (192)</strong> diretamente.</p>
         </details>
       `;
     } else if (cat === 'educacao') {
