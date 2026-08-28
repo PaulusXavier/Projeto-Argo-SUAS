@@ -3284,6 +3284,18 @@
           </div>
         </div>
 
+        <!-- Seção: Migração (dentro de "Mais categorias") -->
+        <div class="filter-group" data-group="more">
+          <span class="filter-group-label" aria-hidden="true">Política Migratória e Rede de Apoio ao Migrante</span>
+          <div class="filter-group-chips">
+            <button class="filter-chip filter-chip-panel" data-cat="migracao" data-group="more" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M12 2c2.8 3 4.4 6.7 4.4 10s-1.6 7-4.4 10c-2.8-3-4.4-6.7-4.4-10S9.2 5 12 2Z"/></svg></span>
+              <span>Serviço de Migração</span>
+              <span class="chip-count" id="count-migracao">0</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Seção: Trabalho & Renda (dentro de "Mais categorias") -->
         <div class="filter-group" data-group="more">
           <span class="filter-group-label" aria-hidden="true">Trabalho, Emprego e Renda</span>
@@ -5635,13 +5647,13 @@ const DATA = [
     id: "pf-rr",
     name: "Polícia Federal",
     fullName: "Superintendência Regional da Polícia Federal em Roraima (SR/PF/RR)",
-    cat: ["delegacias", "documentacao"],
+    cat: ["delegacias", "documentacao", "migracao"],
     group: "Delegacias e Unidades Federais",
     address: "Av. Brasil, 551 - 13 de Setembro, Boa Vista-RR – CEP 69308-050",
     hours: "Segunda a sexta, 08:00 às 17:00 (Migração: 08:00 às 12:00 / 13:00 às 16:00)",
     phones: ["(95) 3621-1515"],
     services: "Passaportes, CRNM (documento de migrante), Controle de Imigração, SINARM, Crimes Federais.",
-    desc: "Responsável por emissão de passaportes, pela Carteira de Registro Nacional Migratório (CRNM) - documento oficial de identificação de pessoas migrantes e refugiadas no Brasil -, controle de imigração, regulação de armas (SINARM) e investigação de crimes federais, transnacionais ou desvios de verbas públicas. Agendamento para CRNM pelo sistema SISMIGRA (servicos.pf.gov.br); em Boa Vista, o atendimento inicial de triagem para migrantes venezuelanos costuma ser feito no PITRIG, ao lado desta unidade."
+    desc: "Responsável por emissão de passaportes, pela Carteira de Registro Nacional Migratório (CRNM) - documento oficial de identificação de pessoas migrantes e refugiadas no Brasil -, controle de imigração, regulação de armas (SINARM) e investigação de crimes federais, transnacionais ou desvios de verbas públicas. Agendamento para CRNM pelo sistema SISMIGRA (servicos.pf.gov.br); em Boa Vista, o atendimento inicial de triagem para migrantes venezuelanos costuma ser feito no PTRIG, ao lado desta unidade."
   },
   {
     id: "prf-rr",
@@ -7222,14 +7234,58 @@ const DATA = [
   },
   {
     id: "pitrig-bv",
-    name: "PITRIG",
-    fullName: "Posto de Interiorização e Triagem (PITRIG) - Operação Acolhida",
-    cat: ["documentacao"],
+    name: "PTRIG Boa Vista",
+    fullName: "Posto de Triagem (PTRIG) Boa Vista - Operação Acolhida",
+    cat: ["migracao"],
     address: "Av. Brasil, 551 - Pricumã, Boa Vista-RR, 69308-050 (ao lado da Polícia Federal)",
-    hours: "Segunda a sexta, a partir das 07:00 (chegar cedo; recomenda-se a partir das 06:00)",
+    hours: "Segunda a sexta, 07:00 às 17:00 (chegar cedo; recomenda-se a partir das 06:00)",
     phones: ["(95) 3621-3100"],
-    services: "Documentação para pessoas refugiadas e migrantes (registro, CRNM/protocolo, apoio à regularização).",
-    desc: "Estrutura conjunta da Operação Acolhida, ACNUR (ONU) e Polícia Federal voltada à documentação e triagem de pessoas refugiadas e migrantes, principalmente venezuelanas, em Boa Vista. Auxilia no agendamento e acompanhamento do processo de Registro Nacional Migratório (CRNM) junto à Polícia Federal, além de orientação sobre interiorização e acesso a direitos. Atendimento sujeito a grande demanda; senha por ordem de chegada."
+    services: "Triagem, registro e pré-documentação para pessoas refugiadas e migrantes (CRNM/protocolo junto à Polícia Federal, Cadastro Único, apoio à regularização e à interiorização).",
+    desc: "Estrutura conjunta da Operação Acolhida, Polícia Federal e agências da ONU (ACNUR, OIM, UNICEF, UNFPA), com apoio de organizações parceiras (ex.: PADF), voltada ao primeiro atendimento e à triagem de pessoas refugiadas e migrantes, principalmente venezuelanas, em Boa Vista. No local funciona o protocolo do Registro Nacional Migratório (CRNM) junto à Polícia Federal e, desde 2023, um posto de atendimento do <strong>Cadastro Único</strong> (Sala Simone Albuquerque), que permite incluir a família migrante nos programas sociais federais logo na chegada. Também orienta sobre interiorização (deslocamento voluntário para outras cidades do país) e encaminha para a rede de abrigos e de assistência social. Atendimento sujeito a grande demanda; senha por ordem de chegada."
+  },
+  {
+    id: "ptrig-pacaraima",
+    name: "PTRIG Pacaraima",
+    fullName: "Posto de Triagem (PTRIG) Pacaraima - Operação Acolhida",
+    cat: ["migracao"],
+    address: "Município de Pacaraima-RR, na fronteira com a Venezuela (próximo ao ponto de travessia/aduana)",
+    hours: "N/A - consultar Operação Acolhida ou ACNUR (funcionamento sujeito ao fluxo diário de entrada pela fronteira)",
+    phones: ["N/A"],
+    services: "Primeiro acolhimento na fronteira: triagem, biometria/CRNM junto à Polícia Federal, encaminhamento a abrigos e à interiorização.",
+    desc: "Posto de Triagem da Operação Acolhida no município fronteiriço de Pacaraima, porta de entrada terrestre da maioria dos migrantes e refugiados venezuelanos em Roraima. Recebe centenas de pessoas por dia, realizando o primeiro cadastro, triagem de vulnerabilidades (famílias, indígenas, gestantes, idosos e população em situação de rua) e encaminhamento para os abrigos de trânsito (como o BV-8) antes do deslocamento a Boa Vista ou da interiorização direta para outros estados. Também conta com atendimento da Defensoria Pública da União para orientação sobre regularização migratória e proteção de crianças e adolescentes desacompanhados."
+  },
+  {
+    id: "abrigos-acolhida-rr",
+    name: "Rede de Abrigos - Operação Acolhida",
+    fullName: "Rede de Abrigos da Operação Acolhida em Roraima (apoio ACNUR)",
+    cat: ["migracao"],
+    address: "Diversas unidades em Boa Vista (ex.: Tancredo Neves, Nova Canaã, Pintolândia, São Vicente 1 e 2, 13 de Setembro, Rondon 1 e 5, Waraotuma a Tuaronoko, Janokoida) e em Pacaraima (BV-8)",
+    hours: "Funcionamento contínuo (24h), com gestão por organizações parceiras (ex.: AVSI Brasil, Fraternidade)",
+    phones: ["N/A"],
+    services: "Acolhimento temporário (moradia, três refeições diárias, higiene, saúde básica e educação) para famílias e indígenas migrantes e refugiados enquanto aguardam regularização ou interiorização.",
+    desc: "Conjunto de abrigos apoiados pelo ACNUR e geridos por organizações parceiras da Operação Acolhida, distribuídos entre Boa Vista e Pacaraima. Alguns abrigos são voltados a famílias e adultos não indígenas (ex.: Tancredo Neves, Nova Canaã, São Vicente, Rondon 1 - o maior da América Latina, com capacidade para 2.242 pessoas), outros são específicos para populações indígenas venezuelanas, principalmente dos povos Warao e E'ñepá (ex.: Waraotuma a Tuaronoko, Janokoida, Pintolândia), com atenção a especificidades culturais e linguísticas.<br><br><strong>🚪 Formas de ingresso (como se consegue uma vaga):</strong> não há inscrição espontânea direta no abrigo - o ingresso acontece por <strong>triagem</strong>, feita nos PTRIGs (Boa Vista ou Pacaraima) logo após a entrada no Brasil: 1) recepção e distribuição de senha por ordem de chegada; 2) escuta e identificação do perfil de vulnerabilidade (famílias com crianças, gestantes e nutrizes, pessoas idosas, pessoas com deficiência ou condição médica grave, famílias monoparentais, população LGBTIQ+, crianças e adolescentes desacompanhados ou separados, vítimas de violência); 3) alocação da vaga conforme o perfil e a disponibilidade de leitos, com prioridade para os casos de maior vulnerabilidade. Já para quem está fora dos abrigos, o ingresso pode ocorrer por encaminhamento da rede de proteção (CRAS/CREAS, Conselho Tutelar, DPU) em casos de vulnerabilidade identificada no território. Realocações entre abrigos (por reunião familiar, mudança de perfil ou necessidade específica) são feitas pela equipe do ACNUR/FT Log Hum, e não diretamente pela pessoa interessada.<br><br>Famílias já abrigadas podem ser acompanhadas pelo PAIF do CRAS do território de referência do abrigo, de forma articulada com a equipe social do local."
+  },
+  {
+    id: "cci-boavista",
+    name: "Centro de Interiorização (CCI)",
+    fullName: "Centro de Coordenação e Interiorização (CCI) - Operação Acolhida",
+    cat: ["migracao"],
+    address: "Antigo ginásio poliesportivo, Bairro 13 de Setembro, Boa Vista-RR (prédio cedido pelo Governo de Roraima à Força-Tarefa Logística Humanitária)",
+    hours: "N/A - consultar ACNUR/Operação Acolhida para dias e horários de atendimento e sessões informativas",
+    phones: ["N/A"],
+    services: "Inscrição e acompanhamento das modalidades de Interiorização; cursos de português para estrangeiros e qualificação profissional; intermediação de emprego (SINE presente no local).",
+    desc: "Espaço da Operação Acolhida dedicado a organizar a <strong>saída voluntária e segura</strong> de refugiados e migrantes de Roraima para outras cidades do Brasil com maior capacidade de integração socioeconômica, reduzindo a pressão sobre os serviços na fronteira. Reúne no mesmo prédio a Coordenação de Interiorização, um posto do SINE (Sistema Nacional de Emprego) e salas de aula para cursos profissionalizantes e de português, evitando que a pessoa migrante precise se deslocar a outras unidades da cidade.<br><br><strong>📝 Modalidades de Interiorização:</strong> <u>Institucional</u> - saída de abrigos de Roraima para abrigos/Centros de Acolhida e Integração (CAI) geridos pelo governo ou por parceiros em cidades de destino, voltada a perfis com necessidades específicas (famílias monoparentais, pessoas com deficiência ou condição médica grave, população LGBTIQ+, pessoas idosas); <u>Reunificação Familiar</u> - para quem tem familiares residindo regularmente em outra região do país, dispostos e com condições de acolher; <u>Reunião Social</u> - reencontro com amigos ou pessoas com vínculo afetivo (mesmo sem comprovação documental do parentesco), desde que o receptor garanta sustento e moradia; <u>Vaga de Emprego Sinalizada (VES)</u> - deslocamento de quem recebeu oferta formal de emprego de empresa brasileira, com apoio da Operação Acolhida para o transporte e, em alguns casos, auxílio financeiro inicial para alimentação até o primeiro salário.<br><br>⚠️ Não é necessário alterar ou já ter documentação definitiva para se inscrever: pessoas com Protocolo de Refúgio ou residência temporária têm os mesmos direitos de acesso às modalidades de interiorização, trabalho, saúde e educação. Pessoas que vivem fora dos abrigos, em Boa Vista, também podem se registrar para interiorização diretamente no CCI."
+  },
+  {
+    id: "ftloghum-base",
+    name: "Base da Operação Acolhida (FT Log Hum)",
+    fullName: "Base Permanente da Força-Tarefa Logística Humanitária - Operação Acolhida",
+    cat: ["migracao"],
+    address: "Rua Floriano Peixoto, s/n - antigo prédio da Escola Estadual Airton Senna, Boa Vista-RR",
+    hours: "N/A - unidade de comando e coordenação operacional/militar, sem atendimento direto e espontâneo ao público",
+    phones: ["N/A"],
+    services: "Comando, planejamento e coordenação logística dos três pilares da Operação Acolhida (Ordenamento de fronteira, Abrigamento e Interiorização); integração entre Forças Armadas, órgãos federais, agências da ONU e sociedade civil.",
+    desc: "Sede operacional e logística da <strong>Força-Tarefa Logística Humanitária (FT Log Hum)</strong>, o braço executivo das Forças Armadas (Exército, Marinha e Aeronáutica) na Operação Acolhida, inaugurada como base permanente em fevereiro de 2024 no antigo prédio da Escola Estadual Airton Senna. É a partir daqui que são planejadas e coordenadas as atividades operacionais nos PTRIGs, nos abrigos e no Centro de Coordenação e Interiorização (CCI), em articulação com as agências da ONU (ACNUR, OIM, UNICEF, UNFPA) e organizações da sociedade civil (ex.: AVSI Brasil, PADF).<br><br><strong>⚖️ Governança da Operação Acolhida</strong> (instituída pela Lei nº 13.684/2018, iniciada em março de 2018): o <strong>Comitê Federal de Assistência Emergencial</strong>, presidido pela Casa Civil da Presidência da República, coordena o trabalho intersetorial da resposta humanitária; o <strong>Ministério do Desenvolvimento e Assistência Social, Família e Combate à Fome (MDS)</strong> coordena o <strong>Subcomitê Federal de Acolhimento e Interiorização de Imigrantes em Situação de Vulnerabilidade</strong>; e as <strong>Forças Armadas</strong>, por meio da FT Log Hum sediada nesta base, executam as atividades operacionais em Roraima com apoio das agências da ONU e da sociedade civil. Não é uma unidade de atendimento espontâneo ao migrante: para triagem, abrigo ou interiorização, a pessoa deve procurar o PTRIG (Boa Vista ou Pacaraima) ou o Centro de Coordenação e Interiorização (CCI)."
   },
   {
     id: "registro-civil-bv",
@@ -8098,7 +8154,8 @@ const CATEGORY_LABELS_PRINT = {
   hospitalar: 'Rede Hospitalar e Atenção Básica', saude: 'Rede de Atenção Psicossocial (RAPS)', tea: 'Rede de Atenção à Pessoa com Deficiência e TEA', social: 'Proteção Social Básica e Especial (SUAS)', educacao: 'Educação Básica',
   juridico: 'Poder Judiciário', conselho: 'Conselho Tutelar (Proteção à Criança e ao Adolescente)', delegacias: 'Segurança Pública (Distritos Policiais)', bancos: 'Rede Bancária e Correspondentes',
   previdencia: 'Previdência Social (INSS)', trabalho: 'Trabalho, Emprego e Renda', habitacao: 'Habitação e Moradia', mobilidade: 'Mobilidade Urbana', interior: 'CRAS/CREAS Interior', informes: 'Comunicados Institucionais',
-  cas: 'Registro de Atendimento (CAS)', cras: 'Registro de Atendimento (CRAS)', documentacao: 'Documentação Civil e Fiscal', idoso: 'Pessoa Idosa'
+  cas: 'Registro de Atendimento (CAS)', cras: 'Registro de Atendimento (CRAS)', documentacao: 'Documentação Civil e Fiscal', idoso: 'Pessoa Idosa',
+  migracao: 'Serviço de Migração (Política Migratória e Rede de Apoio ao Migrante)'
 };
 
 function cleanPrintField(value, fallback) {
@@ -8498,7 +8555,7 @@ function updateChipCounts() {
   const counts = {
     all: DATA.length, hospitalar: 0, saude: 0, tea: 0, social: 0, educacao: 0, juridico: 0,
     conselho: 0, delegacias: 0, bancos: 0, previdencia: 0, trabalho: 0, documentacao: 0, habitacao: 0, mobilidade: 0, informes: 0, cas: 0,
-    cras: 0
+    cras: 0, migracao: 0
   };
   DATA.forEach(i => {
     if (i.cat.includes('hospitalar')) counts.hospitalar++;
@@ -8513,6 +8570,7 @@ function updateChipCounts() {
     if (i.cat.includes('previdencia')) counts.previdencia++;
     if (i.cat.includes('trabalho')) counts.trabalho++;
     if (i.cat.includes('documentacao')) counts.documentacao++;
+    if (i.cat.includes('migracao')) counts.migracao++;
     if (i.cat.includes('habitacao')) counts.habitacao++;
     if (i.cat.includes('mobilidade')) counts.mobilidade++;
     if (i.cat.includes('informes')) counts.informes++;
@@ -8538,6 +8596,7 @@ function updateChipCounts() {
   setCount('count-previdencia', counts.previdencia);
   setCount('count-trabalho', counts.trabalho);
   setCount('count-documentacao', counts.documentacao);
+  setCount('count-migracao', counts.migracao);
   setCount('count-habitacao', counts.habitacao);
   setCount('count-mobilidade', counts.mobilidade);
   setCount('count-informes', counts.informes);
@@ -8722,6 +8781,20 @@ function render() {
       infoBanner.innerHTML = `
         <span class="cib-title">📘 Registro Civil e Documentação — base legal</span>
         A <strong>Lei de Registros Públicos (Lei n.º 6.015/1973)</strong> garante a todo cidadão o direito ao registro civil de nascimento, casamento e óbito, base para obtenção dos demais documentos (RG, CPF, título de eleitor). A 1ª via da certidão de nascimento é <strong>gratuita (Lei n.º 9.534/1997)</strong>, e o CPF é hoje o identificador único do cidadão nas bases dos programas sociais (Lei n.º 14.534/2023).
+      `;
+    } else if (cat === 'migracao') {
+      infoBanner.style.display = '';
+      infoBanner.innerHTML = `
+        <span class="cib-title">📘 Serviço de Migração — política pública e base legal</span>
+        A <strong>Lei de Migração (Lei nº 13.445/2017)</strong> garante à pessoa migrante, em condição de igualdade com o brasileiro, acesso a serviços, programas e benefícios sociais, bens públicos, educação e assistência jurídica integral, vedando qualquer discriminação por nacionalidade. Em Roraima, o atendimento à população migrante e refugiada (majoritariamente venezuelana) é coordenado pela <strong>Operação Acolhida</strong> - resposta federal interministerial instituída pela <strong>Lei nº 13.684/2018</strong> e coordenada pelo Comitê Federal de Assistência Emergencial, que atua em três eixos: <em>Ordenamento</em> (fronteira e documentação), <em>Abrigamento</em> (acolhimento em abrigos) e <em>Interiorização</em> (deslocamento voluntário para outras cidades do país, ampliando acesso a trabalho e reduzindo a pressão sobre os serviços em Roraima).
+        <details>
+          <summary>Ver os equipamentos específicos, o Cadastro Único para migrantes e a rede de abrigos</summary>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>PTRIG (Posto de Triagem):</strong> unidade de referência para o primeiro atendimento de quem acabou de cruzar a fronteira, reunindo em um só espaço a Polícia Federal (protocolo do Registro Nacional Migratório - CRNM, base do processo de refúgio ou de residência), agências da ONU (ACNUR, OIM, UNICEF, UNFPA) e organizações parceiras (ex.: Fundação Pan-Americana para o Desenvolvimento - PADF). Desde 2023, o PTRIG também conta com posto de atendimento do <strong>Cadastro Único</strong>, permitindo que a família migrante já entre no cadastro que dá acesso ao Bolsa Família, BPC e demais programas sociais antes mesmo de se instalar na cidade. Existem unidades de PTRIG tanto em Boa Vista quanto em Pacaraima (município de fronteira com a Venezuela).</p>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Rede de abrigos:</strong> apoiada pelo ACNUR e geridos por organizações parceiras (ex.: AVSI Brasil, Fraternidade), oferece acomodação, três refeições diárias, saúde básica e apoio à documentação para famílias e indígenas (venezuelanos, em especial dos povos Warao e E'ñepá) enquanto aguardam a interiorização ou a estruturação de vida própria em Boa Vista. O ingresso não é por procura espontânea: acontece por triagem de vulnerabilidade feita no PTRIG, com prioridade para famílias, gestantes, idosos, pessoas com deficiência e crianças/adolescentes desacompanhados.</p>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Interiorização e Centro de Coordenação e Interiorização (CCI):</strong> estratégia de realocação voluntária e segura para outras cidades do país, com quatro modalidades (Institucional, Reunificação Familiar, Reunião Social e Vaga de Emprego Sinalizada). A inscrição e o acompanhamento são feitos no CCI, que reúne também o SINE e cursos de português e qualificação profissional no mesmo espaço.</p>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Base da Operação Acolhida (FT Log Hum):</strong> sede de comando e coordenação logística das Forças Armadas na Operação Acolhida, que planeja as ações executadas nos PTRIGs, nos abrigos e no CCI - não é unidade de atendimento espontâneo ao público.</p>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Encaminhamento a partir do CRAS:</strong> famílias migrantes atendidas no território (com ou sem CRNM definitivo) podem ser inscritas no Cadastro Único e acompanhadas pelo PAIF como qualquer outra família em vulnerabilidade; casos que exijam regularização documental, reunião familiar ou proteção específica devem ser encaminhados ao PTRIG, à Polícia Federal (documentação civil) ou à Defensoria Pública da União (assistência jurídica em migração e refúgio).</p>
+        </details>
       `;
     } else if (cat === 'bancos') {
       infoBanner.style.display = '';
