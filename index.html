@@ -7107,6 +7107,17 @@ const DATA = [
     desc: "Coordenação municipal responsável pelo programa habitacional Minha Casa, Minha Vida."
   },
   {
+    id: "mcmv-programa-federal",
+    name: "Sobre o Minha Casa, Minha Vida (MCMV)",
+    fullName: "Programa Federal de Habitação Minha Casa, Minha Vida",
+    cat: ["habitacao"],
+    address: "Programa do Governo Federal, operacionalizado pela Caixa Econômica Federal",
+    hours: "Consulte agências da Caixa ou correspondentes habitacionais",
+    phones: ["Atendimento CAIXA: 111", "Disque Social MDS: 121"],
+    services: "Financiamento habitacional com subsídio para aquisição de imóvel novo ou usado, construção ou reforma, organizado em faixas de renda familiar.",
+    desc: "Programa habitacional do Governo Federal que oferece condições facilitadas de financiamento e subsídio para famílias de baixa e média renda comprarem a casa própria, dividido em faixas de renda com percentuais de subsídio diferentes para cada uma. As faixas de renda, os valores de subsídio e as demais regras são reajustados periodicamente pelo Governo Federal — por isso, antes de orientar uma família, confirme sempre os valores vigentes no site oficial ou em uma agência da Caixa.<br><br>Mais informações e simulação: <a href=\"https://www.caixa.gov.br/voce/habitacao/minha-casa-minha-vida/Paginas/default.aspx\" target=\"_blank\" rel=\"noopener\">caixa.gov.br - Minha Casa, Minha Vida</a>"
+  },
+  {
     id: "smtran",
     name: "SMTRAN",
     fullName: "Superintendência Municipal de Trânsito (SMTRAN)",
@@ -8706,6 +8717,54 @@ function render() {
           <p style="margin:0.6rem 0;"><strong>Território de atuação em Boa Vista:</strong> a cidade é dividida em 3 territórios de referência (Conselho Tutelar I, II e III), cada um responsável pelos bairros listados no card correspondente - procure sempre o Conselho do território onde a criança/adolescente mora.</p>
         </details>
       `;
+    } else if (cat === 'tea') {
+      infoBanner.style.display = '';
+      infoBanner.innerHTML = `
+        <span class="cib-title">📘 Direitos da Pessoa com Deficiência e do Autista — base legal</span>
+        A <strong>Lei Brasileira de Inclusão (LBI, Lei n.º 13.146/2015)</strong> garante o exercício pleno dos direitos das pessoas com deficiência, e a <strong>Lei n.º 12.764/2012 (Lei Berenice Piana)</strong> institui a Política Nacional de Proteção dos Direitos da Pessoa com Transtorno do Espectro Autista, reconhecendo a pessoa com TEA como pessoa com deficiência para todos os efeitos legais - com direito a diagnóstico precoce, atendimento multiprofissional e prioridade de atendimento na rede de serviços listada nesta aba.
+      `;
+    } else if (cat === 'juridico') {
+      infoBanner.style.display = '';
+      infoBanner.innerHTML = `
+        <span class="cib-title">📘 Acesso à Justiça — base legal</span>
+        O acesso à Justiça é direito fundamental (<strong>art. 5º, XXXV, da Constituição Federal</strong>) e, para quem não pode pagar advogado, é garantido gratuitamente pela <strong>Defensoria Pública (art. 134 da CF/88 e Lei Complementar n.º 80/1994)</strong>. Causas de menor complexidade e menor valor podem ser resolvidas de forma mais simples, rápida e sem custas pelos <strong>Juizados Especiais (Lei n.º 9.099/1995)</strong>.
+      `;
+    } else if (cat === 'documentacao') {
+      infoBanner.style.display = '';
+      infoBanner.innerHTML = `
+        <span class="cib-title">📘 Registro Civil e Documentação — base legal</span>
+        A <strong>Lei de Registros Públicos (Lei n.º 6.015/1973)</strong> garante a todo cidadão o direito ao registro civil de nascimento, casamento e óbito, base para obtenção dos demais documentos (RG, CPF, título de eleitor). A 1ª via da certidão de nascimento é <strong>gratuita (Lei n.º 9.534/1997)</strong>, e o CPF é hoje o identificador único do cidadão nas bases dos programas sociais (Lei n.º 14.534/2023).
+      `;
+    } else if (cat === 'bancos') {
+      infoBanner.style.display = '';
+      infoBanner.innerHTML = `
+        <span class="cib-title">📘 Rede Bancária e Correspondentes — o que são</span>
+        Correspondentes bancários e lotéricas são autorizados pelo <strong>Banco Central do Brasil</strong> a prestar, em nome de instituições financeiras, serviços como recebimento de contas, saque de benefícios sociais e abertura de conta simplificada, ampliando o acesso a serviços financeiros em bairros e localidades sem agência bancária própria.
+      `;
+    } else if (cat === 'previdencia') {
+      infoBanner.style.display = '';
+      infoBanner.innerHTML = `
+        <span class="cib-title">📘 Previdência Social (INSS) — base legal</span>
+        O <strong>Regime Geral de Previdência Social (RGPS)</strong>, regulado pela <strong>Lei n.º 8.213/1991</strong>, garante benefícios como aposentadoria, auxílio-doença e pensão por morte a quem contribui. Já o <strong>Benefício de Prestação Continuada (BPC/LOAS)</strong>, previsto no <strong>art. 20 da Lei n.º 8.742/1993</strong>, é assistencial - não exige contribuição - e garante um salário mínimo mensal a idosos (65 anos ou mais) e pessoas com deficiência em situação de baixa renda, mediante avaliação social e médica realizada pelo INSS.
+      `;
+    } else if (cat === 'trabalho') {
+      infoBanner.style.display = '';
+      infoBanner.innerHTML = `
+        <span class="cib-title">📘 Trabalho, Emprego e Renda — base legal</span>
+        A <strong>Consolidação das Leis do Trabalho (CLT, Decreto-Lei n.º 5.452/1943)</strong> regula as relações de trabalho no Brasil, e o <strong>Sistema Nacional de Emprego (SINE), instituído pela Lei n.º 7.998/1990</strong>, oferece à população intermediação de mão de obra, seguro-desemprego e qualificação profissional gratuita.
+      `;
+    } else if (cat === 'habitacao') {
+      infoBanner.style.display = '';
+      infoBanner.innerHTML = `
+        <span class="cib-title">📘 Habitação e Moradia — base legal</span>
+        A moradia é um <strong>direito social garantido pelo art. 6º da Constituição Federal</strong>. O atual Programa Minha Casa, Minha Vida foi reinstituído pela <strong>Lei n.º 14.620/2023</strong>, oferecendo financiamento habitacional com subsídio para famílias de baixa e média renda, organizado em faixas de renda com percentuais de subsídio diferentes para cada faixa - valores e regras são reajustados periodicamente pelo Governo Federal.
+      `;
+    } else if (cat === 'mobilidade') {
+      infoBanner.style.display = '';
+      infoBanner.innerHTML = `
+        <span class="cib-title">📘 Mobilidade Urbana — base legal</span>
+        A <strong>Política Nacional de Mobilidade Urbana (Lei n.º 12.587/2012)</strong> estabelece os princípios e diretrizes para a organização do transporte público e da circulação de pessoas e cargas nas cidades, priorizando os modos coletivos e não motorizados e o direito ao deslocamento com segurança e acessibilidade.
+      `;
     } else {
       infoBanner.style.display = 'none';
       infoBanner.innerHTML = '';
@@ -9316,10 +9375,25 @@ function ensurePdfJsLoaded() {
         window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         resolve();
       } catch (e) {
+        // Falha ao configurar a lib mesmo com o <script> carregado: libera
+        // a trava para uma nova tentativa da próxima vez, em vez de deixar
+        // esta promise rejeitada "presa" para sempre (ver comentário abaixo).
+        pdfJsLoadingPromise = null;
+        script.remove();
         reject(e);
       }
     };
-    script.onerror = () => reject(new Error('Não foi possível carregar o leitor de PDF.'));
+    script.onerror = () => {
+      // BUG CORRIGIDO: sem isto, uma falha de rede/CDN na primeira tentativa
+      // (comum no app offline-first) deixava pdfJsLoadingPromise apontando
+      // para sempre para essa mesma promise rejeitada — toda tentativa
+      // seguinte de gerar a ficha com anexo em PDF falhava direto, mesmo
+      // com a internet já restabelecida, até a página ser recarregada.
+      // Zerando aqui, a próxima chamada tenta carregar o script de novo.
+      pdfJsLoadingPromise = null;
+      script.remove();
+      reject(new Error('Não foi possível carregar o leitor de PDF.'));
+    };
     document.head.appendChild(script);
   });
   return pdfJsLoadingPromise;
