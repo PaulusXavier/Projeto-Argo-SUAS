@@ -3325,15 +3325,22 @@
           </div>
         </div>
 
+        <!-- Seção: Programas, Projetos e Serviços -->
+        <div class="filter-group">
+          <span class="filter-group-label" aria-hidden="true">Programas, Projetos e Serviços</span>
+          <div class="filter-group-chips">
+            <button class="filter-chip filter-chip-panel" data-cat="informes" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+              <span>Programas, Projetos e Serviços</span>
+              <span class="chip-count" id="count-informes">0</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Seção: Painéis internos -->
         <div class="filter-group">
           <span class="filter-group-label" aria-hidden="true">Gestão Interna e Registro Técnico</span>
           <div class="filter-group-chips">
-            <button class="filter-chip filter-chip-panel" data-cat="informes" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
-              <span>Comunicados Institucionais</span>
-              <span class="chip-count" id="count-informes">0</span>
-            </button>
             <button class="filter-chip filter-chip-panel" data-cat="cas" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
               <span>Registro de Atendimento (CAS)</span>
@@ -7501,6 +7508,66 @@ const DATA = [
     desc: "Desenvolve atividades que contribuem para o envelhecimento saudável. Requisitos: • Ter 60 anos ou mais; • Estar inscrito no CadÚnico.<br>Atividades: atividades recreativas; acesso a informações e orientações; orientação psicológica, social e pedagógica.<br>Benefícios: bolsa; camiseta e lanche.<br>Documentos necessários para inclusão e atualização no SCFV (xerox e originais): 1. RG e CPF; 2. Comprovante de residência; 3. Cartão do benefício (caso tenha); 4. Folha resumo CadÚnico; 5. Cartão do SUS; 6. 1 (uma) foto 3x4; 7. Laudo médico de aptidão física; 8. Cartão de vacinação."
   },
   {
+    id: "crianca-feliz-suas",
+    name: "Primeira Infância no SUAS / Criança Feliz",
+    fullName: "Primeira Infância no SUAS (ex-Programa Criança Feliz)",
+    cat: ["informes"],
+    group: "Programas Socioeducativos (Crianças e Adolescentes)",
+    address: "CRAS de referência do território (visitas domiciliares realizadas pela equipe de visitadores vinculada ao CRAS)",
+    hours: "N/A - agendamento das visitas domiciliares feito pela equipe do programa",
+    phones: ["N/A"],
+    services: "Visitas domiciliares para acompanhamento do desenvolvimento infantil e fortalecimento de vínculos com gestantes e famílias com crianças de 0 a 6 anos.",
+    desc: "Serviço da Proteção Social Básica que leva orientação sobre desenvolvimento infantil e cuidado na primeira infância diretamente à casa da família, sem custo. Requisitos: • Família inscrita e com cadastro atualizado no CadÚnico; • Gestante ou família com criança de até 6 anos incompletos em situação de vulnerabilidade social (prioridade para beneficiárias do Bolsa Família, famílias com criança ou gestante com deficiência, crianças afastadas do convívio familiar ou em acompanhamento do PAIF/PAEFI).<br>Como funciona: visitador (nível médio ou superior) faz visitas domiciliares periódicas, orientando a família sobre brincadeiras, vínculo afetivo e estímulo ao desenvolvimento da criança, sob supervisão de técnico de referência do CRAS.<br>⚖️ <strong>Base legal e atualização em 2026:</strong> antigo Programa Criança Feliz (Lei nº 13.257/2016 - Marco Legal da Primeira Infância); pelas Resoluções CNAS nº 218/2025 e nº 219/2025, o programa deixou de ser uma ação isolada e passou a integrar oficialmente o SUAS como o novo Serviço de Proteção Social Básica no Domicílio para Gestantes e Crianças (SPSBD-GC), com cofinanciamento federal por família atendida. A partir de 1º de janeiro de 2026, municípios que já ofertavam o Criança Feliz passam a formalizar adesão ao novo serviço por Termo de Aceite eletrônico no sistema do SUAS, com prazo de transição até 31/12/2026.<br>📝 Como acessar: procurar o CRAS do bairro para inscrição/atualização no CadÚnico e informar a gestação ou a existência de criança pequena na família; a equipe do CRAS identifica o perfil e inclui a família na lista de visitação, conforme a capacidade de atendimento do território."
+  },
+  {
+    id: "acessuas-trabalho",
+    name: "Acessuas Trabalho",
+    fullName: "Programa Nacional de Promoção do Acesso ao Mundo do Trabalho (Acessuas Trabalho)",
+    cat: ["informes"],
+    group: "Trabalho, Emprego e Renda",
+    address: "CRAS Cristiana Vicente Nunes (encaminhamento) e Casa do Trabalhador/SINE (vagas e qualificação)",
+    hours: "N/A - conforme calendário de turmas e oficinas divulgado pelo CRAS/SEMADS",
+    phones: ["N/A"],
+    services: "Oficinas, palestras e orientação para inclusão no mundo do trabalho; encaminhamento a cursos de qualificação profissional e intermediação de vagas de emprego.",
+    desc: "Programa nacional do SUAS (Resolução CNAS nº 33/2011 e nº 49/2021) que articula a Assistência Social com as políticas de trabalho e renda, aproximando pessoas em vulnerabilidade social do mercado de trabalho - sem ofertar emprego diretamente, mas preparando, orientando e encaminhando. Público-alvo: pessoas e famílias em situação de vulnerabilidade ou risco social, entre 14 e 64 anos, atendidas pelo PAIF (CRAS) ou PAEFI (CREAS), prioritariamente beneficiárias do CadÚnico e do Bolsa Família.<br>Atividades: rodas de conversa e oficinas sobre elaboração de currículo e entrevista de emprego; mobilização e encaminhamento para vagas de emprego, cursos de qualificação profissional (SINE, Casa do Trabalhador) e linhas de microcrédito; acompanhamento da trajetória do usuário rumo à inclusão produtiva.<br>📝 Como acessar: procurar o CRAS do bairro para atendimento, escuta e verificação/atualização do CadÚnico; a equipe técnica identifica o perfil para participação nas oficinas e encaminha para as ações do programa conforme a oferta vigente no município."
+  },
+  {
+    id: "gas-do-povo",
+    name: "Gás do Povo (ex-Auxílio Gás)",
+    fullName: "Programa Gás do Povo (antigo Auxílio Gás dos Brasileiros)",
+    cat: ["informes"],
+    group: "Tarifas Sociais e Utilidades Domésticas",
+    address: "Adesão automática via CadÚnico (CRAS); recarga feita em revendas de GLP credenciadas",
+    hours: "N/A",
+    phones: ["N/A - Ouvidoria ANP (fraude/irregularidade na revenda): 0800 970 0267"],
+    services: "Recarga gratuita do botijão de gás (GLP) de 13 kg para famílias de baixa renda, por meio de vale digital.",
+    desc: "Programa federal que garante a troca do botijão de gás de cozinha (GLP 13 kg) sem custo, em qualquer revenda credenciada no país. Em setembro de 2025 a Medida Provisória nº 1.313 renomeou e reformulou o antigo Auxílio Gás dos Brasileiros (Lei nº 14.237/2021), convertida na Lei nº 15.348/2026: em vez de receber dinheiro na conta Caixa Tem, a família passa a receber um vale digital, trocado por uma recarga gratuita de gás diretamente na revenda credenciada.<br>Requisitos: • Estar inscrita no Cadastro Único (CadÚnico), com renda familiar mensal per capita de até meio salário mínimo; • OU ter na composição familiar pessoa beneficiária do BPC/LOAS (inscrita ou não no CadÚnico); • Cadastro atualizado nos últimos 24 meses (critério de priorização, junto com famílias chefiadas por mulheres, especialmente vítimas de violência doméstica).<br>Quantidade de recargas: de 4 a 6 vales por ano, conforme o número de pessoas na residência, seguindo calendário bimestral (geralmente acompanhando o Bolsa Família).<br>📝 Como acessar: manter o CadÚnico atualizado no CRAS do bairro - a seleção das famílias é automática, por sistema informatizado do MDS, respeitando o limite orçamentário do programa por município; não é preciso fazer inscrição separada. O vale e as instruções de uso ficam disponíveis no aplicativo Caixa Tem ou no Bolsa Família.<br>⚠️ Cuidado com fraudes: o cadastro e a recarga são sempre gratuitos - desconfie de links por WhatsApp ou sites fora do domínio gov.br pedindo pagamento ou dados pessoais."
+  },
+  {
+    id: "carteira-idoso",
+    name: "Carteira do Idoso",
+    fullName: "Carteira da Pessoa Idosa (Carteira do Idoso) - Transporte Interestadual",
+    cat: ["informes"],
+    group: "Programas para Pessoa Idosa",
+    address: "Emissão on-line em gov.br, com apoio presencial no CRAS Cristiana Vicente Nunes para quem tiver dificuldade de acesso à internet",
+    hours: "N/A",
+    phones: ["N/A"],
+    services: "Documento que garante gratuidade (2 vagas por veículo) ou desconto mínimo de 50% em passagens de transporte rodoviário, ferroviário e aquaviário interestadual.",
+    desc: "Prevista no Estatuto da Pessoa Idosa (Lei nº 10.741/2003, regulamentada pelo Decreto nº 5.934/2006), garante à pessoa idosa de baixa renda o direito a passagens gratuitas ou com desconto em viagens entre estados. Requisitos: • Ter 60 anos ou mais; • Renda individual mensal de até 2 salários-mínimos; • Estar inscrito e com cadastro atualizado no Cadastro Único (CadÚnico) nos últimos 2 anos (ou não ter como comprovar renda por meios formais, quando aplicável).<br>📝 Como solicitar: 1) Acessar o serviço \"Adquirir Carteira do Idoso\" em gov.br, com login gov.br (Bronze, Prata ou Ouro), preenchendo os dados e vinculando o CadÚnico; 2) Quem não tiver acesso ou facilidade com a internet pode pedir apoio presencial no CRAS do bairro, levando RG, CPF, comprovante de residência e 2 fotos 3x4; 3) A carteira digital (com QR Code) é emitida em até 15 dias após a geração do NIS/CadÚnico.<br>⏳ Enquanto a carteira definitiva não sai: o CRAS pode emitir uma <strong>declaração provisória</strong>, em papel timbrado, com os dados da pessoa idosa e da renda, válida por 180 dias em todo o território nacional para uso imediato do benefício.<br>⚠️ Observações técnicas: a gratuidade garantida pela Carteira do Idoso vale apenas para viagens interestaduais (entre estados) - passe livre em transporte urbano/intermunicipal depende de lei municipal ou estadual própria (ver, em Roraima, o Passe Livre Intermunicipal da SETRABES nesta ferramenta); é preciso solicitar o \"Bilhete de Viagem do Idoso\" na rodoviária com antecedência mínima recomendada pela ANTT para garantir a vaga gratuita."
+  },
+  {
+    id: "ciptea-roraima",
+    name: "Carteira do Autista (CIPTEA)",
+    fullName: "Carteira de Identificação da Pessoa com Transtorno do Espectro Autista (CIPTEA) - Roraima",
+    cat: ["informes", "tea"],
+    group: "Documentação e Direitos da Pessoa com Deficiência",
+    address: "Centro Integrado de Atenção à Pessoa com Deficiência (CIAPD) - Av. São Sebastião, 1195 - Santa Teresa, Boa Vista-RR",
+    hours: "N/A - consultar CIAPD/SETRABES para dias e horários de atendimento",
+    phones: ["N/A"],
+    services: "Emissão gratuita da Carteira de Identificação da Pessoa com Transtorno do Espectro Autista (CIPTEA), com validade de 5 anos.",
+    desc: "Documento que identifica a pessoa com TEA e garante atendimento prioritário e pronto em serviços públicos e privados, especialmente saúde, educação e assistência social, dispensando a necessidade de apresentar laudos a cada atendimento. Instituída pela Lei nº 13.977/2020 (Lei Romeo Mion), com regulamentação e emissão próprias em cada estado - em Roraima, feita pelo CIAPD (SETRABES).<br>Documentos necessários: • Ficha de cadastro preenchida (modelo disponível no site da SETRABES-RR); • Relatório médico com o código da Classificação Internacional de Doenças (CID) referente ao TEA; • Documento de identificação da pessoa com TEA (nome completo, filiação, local e data de nascimento, RG e CPF) - originais; • Comprovante de residência; • Documento de identificação do responsável legal ou cuidador (nome completo, documento, endereço, telefone e e-mail).<br>🌎 Pessoas migrantes: quando a pessoa com TEA for imigrante com visto temporário, residente fronteiriça ou solicitante de refúgio, a CIPTEA pode ser emitida com a Cédula de Identidade de Estrangeiro (CIE), a Carteira de Registro Nacional Migratório (CRNM) ou o Documento Provisório de Registro Nacional Migratório (DPRNM), com validade em todo o território nacional.<br>⏳ Validade: 5 anos, com necessidade de renovação ao final do prazo, repetindo o mesmo procedimento.<br>📝 Onde emitir em Boa Vista: presencialmente no CIAPD (Centro Integrado de Atenção à Pessoa com Deficiência), unidade vinculada à SETRABES."
+  },
+  {
     id: "cras-azul-alto-alegre",
     name: "CRAS Azul",
     fullName: "Centro de Referência de Assistência Social - Azul (Alto Alegre)",
@@ -8153,7 +8220,7 @@ function informeMetaRow(icon, label, value) {
 const CATEGORY_LABELS_PRINT = {
   hospitalar: 'Rede Hospitalar e Atenção Básica', saude: 'Rede de Atenção Psicossocial (RAPS)', tea: 'Rede de Atenção à Pessoa com Deficiência e TEA', social: 'Proteção Social Básica e Especial (SUAS)', educacao: 'Educação Básica',
   juridico: 'Poder Judiciário', conselho: 'Conselho Tutelar (Proteção à Criança e ao Adolescente)', delegacias: 'Segurança Pública (Distritos Policiais)', bancos: 'Rede Bancária e Correspondentes',
-  previdencia: 'Previdência Social (INSS)', trabalho: 'Trabalho, Emprego e Renda', habitacao: 'Habitação e Moradia', mobilidade: 'Mobilidade Urbana', interior: 'CRAS/CREAS Interior', informes: 'Comunicados Institucionais',
+  previdencia: 'Previdência Social (INSS)', trabalho: 'Trabalho, Emprego e Renda', habitacao: 'Habitação e Moradia', mobilidade: 'Mobilidade Urbana', interior: 'CRAS/CREAS Interior', informes: 'Programas, Projetos e Serviços',
   cas: 'Registro de Atendimento (CAS)', cras: 'Registro de Atendimento (CRAS)', documentacao: 'Documentação Civil e Fiscal', idoso: 'Pessoa Idosa',
   migracao: 'Serviço de Migração (Política Migratória e Rede de Apoio ao Migrante)'
 };
@@ -8987,7 +9054,7 @@ function render() {
             <span class="informe-badge">${ICONS.info}</span>
             <h2 style="margin:0;">${i.name}</h2>
           </div>
-          <span class="subtitle">📋 Informe · ${i.fullName}</span>
+          <span class="subtitle">📋 Programa/Serviço · ${i.fullName}</span>
         </div>
         <div class="card-body">
           ${metaRows}
