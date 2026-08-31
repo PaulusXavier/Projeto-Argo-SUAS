@@ -822,21 +822,22 @@
   .app-layout {
     display: flex;
     align-items: flex-start;
-    gap: 1rem;
+    gap: 0.75rem;
   }
 
   .category-sidebar {
-    flex: 0 0 380px;
-    width: 380px;
+    flex: 0 0 270px;
+    width: 270px;
     background: var(--bg-card);
     border: 1px solid var(--border-ui);
     border-radius: var(--radius-ui);
     box-shadow: var(--shadow-sm);
-    padding: 1rem 0.7rem 1.25rem 1.05rem;
+    padding: 0.75rem 0.5rem 0.9rem 0.75rem;
     position: sticky;
     top: 6.9rem;
     max-height: calc(100vh - 8rem);
     overflow-y: auto;
+    overflow-x: hidden;
     scrollbar-width: thin;
     scrollbar-color: var(--brand-primary-light) rgba(0, 145, 194, 0.08);
     /* Truque para jogar a barra de rolagem para a borda esquerda:
@@ -844,6 +845,7 @@
        esquerda) e depois volta o conteúdo interno para o sentido
        normal de leitura. */
     direction: rtl;
+    box-sizing: border-box;
   }
 
   .category-sidebar-header,
@@ -898,35 +900,38 @@
   .category-sidebar .filter-group {
     flex-direction: column;
     align-items: stretch;
-    gap: 0.55rem;
-    padding: 0.9rem 0.85rem;
+    gap: 0.4rem;
+    padding: 0.65rem 0.6rem;
     border-width: 1.5px;
     border-color: rgba(0, 145, 194, 0.22);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(0, 145, 194, 0.07));
     box-shadow: 0 2px 6px -3px rgba(15, 23, 42, 0.18);
-    margin-bottom: 0.65rem;
-    border-radius: 12px;
+    margin-bottom: 0.5rem;
+    border-radius: 10px;
   }
 
   .category-sidebar .filter-bar {
-    gap: 0.65rem;
+    gap: 0.5rem;
   }
 
   .category-sidebar .filter-group-label {
     border-right: none;
     border-bottom: 1.5px solid rgba(0, 145, 194, 0.2);
     padding-right: 0;
-    padding-bottom: 0.55rem;
-    margin-bottom: 0.15rem;
-    font-size: 0.88rem;
-    font-weight: 900;
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.1rem;
+    font-size: 0.74rem;
+    font-weight: 800;
     letter-spacing: 0.02em;
     color: var(--brand-primary);
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.25;
+    cursor: default;
   }
 
-  .category-sidebar .filter-group.collapsed .filter-group-label {
-    border-bottom-color: transparent;
-    padding-bottom: 0.1rem;
+  .category-sidebar .group-toggle-icon {
+    display: none;
   }
 
   .category-sidebar .filter-group-chips {
@@ -936,39 +941,40 @@
 
   .category-sidebar .filter-chip {
     width: 100%;
+    box-sizing: border-box;
     justify-content: flex-start;
     align-items: center;
-    padding-top: 0.85rem;
-    padding-bottom: 0.85rem;
-    padding-right: 0.8rem;
-    padding-left: 0.8rem;
-    min-height: 56px;
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+    padding-right: 0.5rem;
+    padding-left: 0.5rem;
+    min-height: 42px;
     white-space: normal;
     text-align: left;
-    font-size: 1rem;
+    font-size: 0.8rem;
     font-weight: 700;
-    gap: 0.6rem;
-    border-radius: 10px;
+    gap: 0.45rem;
+    border-radius: 8px;
     border-width: 1.5px;
   }
 
   .category-sidebar .filter-chip[data-cat="all"] {
-    min-height: 62px;
-    font-size: 1.08rem;
+    min-height: 48px;
+    font-size: 0.88rem;
     font-weight: 800;
     border-width: 2px;
-    border-radius: 12px;
+    border-radius: 10px;
     margin-bottom: 0.15rem;
   }
 
   .category-sidebar .filter-chip[data-cat="all"] .chip-icon svg {
-    width: 20px;
-    height: 20px;
+    width: 17px;
+    height: 17px;
   }
 
   .category-sidebar .filter-chip .chip-icon svg {
-    width: 18px;
-    height: 18px;
+    width: 15px;
+    height: 15px;
   }
 
   .category-sidebar .filter-chip .chip-icon {
@@ -986,10 +992,10 @@
   .category-sidebar .filter-chip .chip-count {
     margin-left: auto;
     flex-shrink: 0;
-    font-size: 0.95rem;
+    font-size: 0.76rem;
     font-weight: 900;
-    padding: 0.28rem 0.7rem;
-    min-width: 2.4em;
+    padding: 0.2rem 0.55rem;
+    min-width: 2em;
     border-radius: 999px;
     background: rgba(0, 145, 194, 0.14);
     color: var(--brand-primary);
@@ -1043,7 +1049,7 @@
       left: 0;
       height: 100%;
       max-height: none;
-      width: min(400px, 92vw);
+      width: min(340px, 88vw);
       z-index: 300;
       border-radius: 0;
       border: none;
@@ -1179,8 +1185,8 @@
 
   .equipment-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
-    gap: 2rem;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 2.25rem;
     padding: 2rem 0;
   }
 
@@ -3329,8 +3335,8 @@
         </div>
 
         <!-- Seção: Justiça & Segurança (dentro de "Mais categorias") -->
-        <div class="filter-group collapsed" data-group="more">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="false">Sistema de Justiça e Segurança Pública<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
+        <div class="filter-group" data-group="more">
+          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Sistema de Justiça e Segurança Pública<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
           <div class="filter-group-chips">
             <button class="filter-chip filter-chip-panel" data-cat="juridico" data-group="more" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 8h14"/><path d="M5 8 2 15a3 3 0 0 0 6 0Z"/><path d="M19 8l-3 7a3 3 0 0 0 6 0Z"/></svg></span>
@@ -3351,8 +3357,8 @@
         </div>
 
         <!-- Seção: Cidadania & Documentação (dentro de "Mais categorias") -->
-        <div class="filter-group collapsed" data-group="more">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="false">Cidadania e Documentação Civil<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
+        <div class="filter-group" data-group="more">
+          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Cidadania e Documentação Civil<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
           <div class="filter-group-chips">
             <button class="filter-chip filter-chip-panel" data-cat="documentacao" data-group="more" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M15 9h3"/><path d="M15 13h3"/><path d="M6 17c.5-1.8 2-3 3-3s2.5 1.2 3 3"/></svg></span>
@@ -3373,8 +3379,8 @@
         </div>
 
         <!-- Seção: Migração (dentro de "Mais categorias") -->
-        <div class="filter-group collapsed" data-group="more">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="false">Política Migratória e Rede de Apoio ao Migrante<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
+        <div class="filter-group" data-group="more">
+          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Política Migratória e Rede de Apoio ao Migrante<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
           <div class="filter-group-chips">
             <button class="filter-chip filter-chip-panel" data-cat="migracao" data-group="more" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M12 2c2.8 3 4.4 6.7 4.4 10s-1.6 7-4.4 10c-2.8-3-4.4-6.7-4.4-10S9.2 5 12 2Z"/></svg></span>
@@ -3385,8 +3391,8 @@
         </div>
 
         <!-- Seção: Trabalho & Renda (dentro de "Mais categorias") -->
-        <div class="filter-group collapsed" data-group="more">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="false">Trabalho, Emprego e Renda<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
+        <div class="filter-group" data-group="more">
+          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Trabalho, Emprego e Renda<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
           <div class="filter-group-chips">
             <button class="filter-chip filter-chip-panel" data-cat="trabalho" data-group="more" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><line x1="2" y1="13" x2="22" y2="13"/></svg></span>
@@ -3397,8 +3403,8 @@
         </div>
 
         <!-- Seção: Território (dentro de "Mais categorias") -->
-        <div class="filter-group collapsed" data-group="more">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="false">Ordenamento Territorial e Mobilidade<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
+        <div class="filter-group" data-group="more">
+          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Ordenamento Territorial e Mobilidade<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
           <div class="filter-group-chips">
             <button class="filter-chip filter-chip-panel" data-cat="habitacao" data-group="more" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 10v10a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1V10"/></svg></span>
@@ -10076,14 +10082,11 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && categorySidebar.classList.contains('is-open')) closeCategorySidebar();
 });
 
-// Grupos de categorias recolhíveis: cada rótulo de seção funciona como
-// um acordeão, para a lista inteira caber sem precisar rolar tanto —
-// só os grupos "Mais categorias" começam fechados.
+// Os grupos de categorias agora ficam sempre expandidos — a função de
+// recolher foi desativada a pedido, para que nenhuma seção fique
+// escondida do usuário.
 function toggleFilterGroup(labelEl) {
-  const group = labelEl.closest('.filter-group');
-  if (!group) return;
-  const collapsed = group.classList.toggle('collapsed');
-  labelEl.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  // Intencionalmente vazio: grupos não recolhem mais.
 }
 
 document.querySelectorAll('.filter-group-label[role="button"]').forEach(label => {
