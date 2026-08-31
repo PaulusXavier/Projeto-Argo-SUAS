@@ -9129,6 +9129,24 @@ function render() {
           <p style="margin:0.4rem 0 0; font-size:0.72rem; color:var(--text-muted);">Fontes: Prefeitura de Boa Vista (SMAAI/Semuc), Governo de Roraima (Seadi) e Conab, 2023-2026.</p>
         </details>
       `;
+    } else if (cat === 'informes') {
+      infoBanner.style.display = '';
+      infoBanner.innerHTML = `
+        <span class="cib-title">📘 Programas, Projetos e Serviços — o que reúne esta aba</span>
+        Esta aba reúne benefícios, tarifas sociais, projetos municipais e serviços que complementam o trabalho do CRAS dentro do SUAS: não são, isoladamente, "a" Política de Assistência Social, mas sim <strong>portas de acesso a direitos</strong> que o técnico pode identificar durante o atendimento e encaminhar a família para buscar, cada um com regras, órgão responsável e documentação próprios.
+        <details>
+          <summary>Ver os tipos de programas, projetos e serviços reunidos nesta aba</summary>
+          <ul>
+            <li><strong>Benefícios assistenciais e de transferência de renda:</strong> BPC Idoso, BPC Pessoa com Deficiência, BPC na Escola.</li>
+            <li><strong>Tarifas e descontos sociais:</strong> Tarifa Social de Energia, Tarifa Social de Água (CAER), Siga Antenado.</li>
+            <li><strong>Acesso a bens e insumos básicos:</strong> Cadeiras de Rodas, Muletas e Próteses, Farmácia Popular, Dignidade Menstrual, Gás do Povo (ex-Auxílio Gás).</li>
+            <li><strong>Serviços de convivência e projetos municipais:</strong> SCFV, Projeto ArtCanto, Programa Dedo Verde, Programa Rumo Certo, Projeto Cabelos de Prata.</li>
+            <li><strong>Acompanhamento especializado:</strong> Primeira Infância no SUAS / Criança Feliz, Acessuas Trabalho.</li>
+            <li><strong>Documentos e carteiras de direito:</strong> Carteira do Idoso, Carteira do Autista (CIPTEA).</li>
+          </ul>
+          <p style="margin:0.6rem 0 0;">Cada card traz os critérios de acesso, onde solicitar e a documentação exigida, para orientar a família com precisão já no momento do atendimento.</p>
+        </details>
+      `;
     } else {
       infoBanner.style.display = 'none';
       infoBanner.innerHTML = '';
