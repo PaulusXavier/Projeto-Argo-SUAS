@@ -581,7 +581,10 @@
   }
 
   .filter-group-label {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.3rem;
     white-space: nowrap;
     font-size: 0.56rem;
     font-weight: 800;
@@ -590,12 +593,40 @@
     color: var(--text-muted);
     border-right: 1px solid var(--border-ui);
     padding-right: 0.35rem;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .filter-group-label:focus-visible {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  .group-toggle-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: var(--brand-primary);
+    transition: transform 0.2s var(--ease);
+  }
+
+  /* Fechado por padrão: seta aponta para o lado (para a direita);
+     aberto: seta aponta para baixo. */
+  .filter-group.collapsed .group-toggle-icon {
+    transform: rotate(-90deg);
   }
 
   .filter-group-chips {
     display: flex;
     flex-wrap: wrap;
     gap: 0.2rem;
+  }
+
+  /* Grupo recolhido: some com os chips, deixando só o cabeçalho
+     do grupo visível — assim a lista inteira cabe numa rolagem
+     bem mais curta, e o usuário abre só as seções que precisa. */
+  .filter-group.collapsed .filter-group-chips {
+    display: none;
   }
 
   .filter-chip-toggle {
@@ -883,6 +914,11 @@
     padding-bottom: 0.35rem;
     font-size: 0.64rem;
     color: var(--brand-primary);
+  }
+
+  .category-sidebar .filter-group.collapsed .filter-group-label {
+    border-bottom-color: transparent;
+    padding-bottom: 0.1rem;
   }
 
   .category-sidebar .filter-group-chips {
@@ -3196,7 +3232,7 @@
 
         <!-- Seção: Saúde -->
         <div class="filter-group">
-          <span class="filter-group-label" aria-hidden="true">Rede de Atenção à Saúde</span>
+          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Rede de Atenção à Saúde<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
           <div class="filter-group-chips">
             <button class="filter-chip filter-chip-panel" data-cat="hospitalar" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v12"/><path d="M6 12h12"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg></span>
@@ -3218,19 +3254,24 @@
 
         <!-- Seção: Assistência Social -->
         <div class="filter-group">
-          <span class="filter-group-label" aria-hidden="true">Sistema Único de Assistência Social (SUAS)</span>
+          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Sistema Único de Assistência Social (SUAS)<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
           <div class="filter-group-chips">
             <button class="filter-chip filter-chip-panel" data-cat="social" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
               <span>Proteção Social Básica e Especial</span>
               <span class="chip-count" id="count-social">0</span>
             </button>
+            <button class="filter-chip filter-chip-panel" data-cat="alimentar" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h0a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg></span>
+              <span>Segurança Alimentar e Nutricional</span>
+              <span class="chip-count" id="count-alimentar">0</span>
+            </button>
           </div>
         </div>
 
         <!-- Seção: Educação -->
         <div class="filter-group">
-          <span class="filter-group-label" aria-hidden="true">Rede de Ensino</span>
+          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Rede de Ensino<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
           <div class="filter-group-chips">
             <button class="filter-chip filter-chip-panel" data-cat="educacao" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/></svg></span>
@@ -3241,8 +3282,8 @@
         </div>
 
         <!-- Seção: Justiça & Segurança (dentro de "Mais categorias") -->
-        <div class="filter-group" data-group="more">
-          <span class="filter-group-label" aria-hidden="true">Sistema de Justiça e Segurança Pública</span>
+        <div class="filter-group collapsed" data-group="more">
+          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="false">Sistema de Justiça e Segurança Pública<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
           <div class="filter-group-chips">
             <button class="filter-chip filter-chip-panel" data-cat="juridico" data-group="more" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 8h14"/><path d="M5 8 2 15a3 3 0 0 0 6 0Z"/><path d="M19 8l-3 7a3 3 0 0 0 6 0Z"/></svg></span>
@@ -3263,8 +3304,8 @@
         </div>
 
         <!-- Seção: Cidadania & Documentação (dentro de "Mais categorias") -->
-        <div class="filter-group" data-group="more">
-          <span class="filter-group-label" aria-hidden="true">Cidadania e Documentação Civil</span>
+        <div class="filter-group collapsed" data-group="more">
+          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="false">Cidadania e Documentação Civil<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
           <div class="filter-group-chips">
             <button class="filter-chip filter-chip-panel" data-cat="documentacao" data-group="more" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M15 9h3"/><path d="M15 13h3"/><path d="M6 17c.5-1.8 2-3 3-3s2.5 1.2 3 3"/></svg></span>
@@ -3285,8 +3326,8 @@
         </div>
 
         <!-- Seção: Migração (dentro de "Mais categorias") -->
-        <div class="filter-group" data-group="more">
-          <span class="filter-group-label" aria-hidden="true">Política Migratória e Rede de Apoio ao Migrante</span>
+        <div class="filter-group collapsed" data-group="more">
+          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="false">Política Migratória e Rede de Apoio ao Migrante<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
           <div class="filter-group-chips">
             <button class="filter-chip filter-chip-panel" data-cat="migracao" data-group="more" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M12 2c2.8 3 4.4 6.7 4.4 10s-1.6 7-4.4 10c-2.8-3-4.4-6.7-4.4-10S9.2 5 12 2Z"/></svg></span>
@@ -3297,8 +3338,8 @@
         </div>
 
         <!-- Seção: Trabalho & Renda (dentro de "Mais categorias") -->
-        <div class="filter-group" data-group="more">
-          <span class="filter-group-label" aria-hidden="true">Trabalho, Emprego e Renda</span>
+        <div class="filter-group collapsed" data-group="more">
+          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="false">Trabalho, Emprego e Renda<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
           <div class="filter-group-chips">
             <button class="filter-chip filter-chip-panel" data-cat="trabalho" data-group="more" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><line x1="2" y1="13" x2="22" y2="13"/></svg></span>
@@ -3309,8 +3350,8 @@
         </div>
 
         <!-- Seção: Território (dentro de "Mais categorias") -->
-        <div class="filter-group" data-group="more">
-          <span class="filter-group-label" aria-hidden="true">Ordenamento Territorial e Mobilidade</span>
+        <div class="filter-group collapsed" data-group="more">
+          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="false">Ordenamento Territorial e Mobilidade<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
           <div class="filter-group-chips">
             <button class="filter-chip filter-chip-panel" data-cat="habitacao" data-group="more" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 10v10a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1V10"/></svg></span>
@@ -3327,7 +3368,7 @@
 
         <!-- Seção: Programas, Projetos e Serviços -->
         <div class="filter-group">
-          <span class="filter-group-label" aria-hidden="true">Programas, Projetos e Serviços</span>
+          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Programas, Projetos e Serviços<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
           <div class="filter-group-chips">
             <button class="filter-chip filter-chip-panel" data-cat="informes" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
@@ -3339,7 +3380,7 @@
 
         <!-- Seção: Painéis internos -->
         <div class="filter-group">
-          <span class="filter-group-label" aria-hidden="true">Gestão Interna e Registro Técnico</span>
+          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Gestão Interna e Registro Técnico<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
           <div class="filter-group-chips">
             <button class="filter-chip filter-chip-panel" data-cat="cas" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
@@ -3356,7 +3397,7 @@
 
         <!-- Seção: Anotações -->
         <div class="filter-group">
-          <span class="filter-group-label" aria-hidden="true">Anotações Técnicas Pessoais</span>
+          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Anotações Técnicas Pessoais<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
           <div class="filter-group-chips">
             <button class="filter-chip filter-chip-panel" data-cat="anotacoes" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></span>
@@ -4083,6 +4124,78 @@ const DATA = [
     phones: ["N/A"],
     services: "Colo de Mãe, Cesta da Família, Passe Livre Intermunicipal, Auxílio Funerário, Benefícios Eventuais.",
     desc: "Repartição pública estadual (SETRABES) que reúne em um único local os principais programas sociais de Roraima.<br><br>📋 <strong>Cesta da Família</strong> — entrega mensal de cesta básica ou crédito de R$ 200 no Cartão Alimentação, para famílias da capital e do interior, incluindo comunidades indígenas, ribeirinhas e migrantes.<br><u>Regras para participar:</u> • Família em situação de extrema pobreza, pobreza ou baixa renda, com renda per capita de até meio salário mínimo (principal critério); • Passar por avaliação socioeconômica e por atualização cadastral periódica; • Têm prioridade, conforme a Lei nº 1.386: população em situação de rua, pessoas com deficiência, pessoas idosas, famílias monoparentais chefiadas por mulheres, mulheres vítimas de violência doméstica e familiar, indígenas e ribeirinhos.<br><u>Documentos:</u> RG ou documento oficial com foto; CPF; certidão de nascimento (para crianças e adolescentes menores de 16 anos); comprovante de endereço atualizado (últimos 3 meses).<br><br>👶 <strong>Colo de Mãe</strong> — Programa Social de Cuidado à Gestante e Alimentação Complementar (Portaria nº 297/SETRABES/GAB/AE de 2024): entrega de kit enxoval, oferta de complemento lácteo até os 3 anos da criança, apoio ao registro civil de nascimento e acompanhamento social da gestante e da criança.<br><u>Regras para participar:</u> • Gestante entre a 21ª e a 35ª semana gestacional (sem esse limite para gravidez de alto risco com possibilidade de parto prematuro), pertencente a família em situação de alta ou média vulnerabilidade; • Renda per capita familiar de até meio salário mínimo; • Estar realizando o pré-natal regularmente, com no mínimo 3 consultas comprovadas na caderneta da gestante; • Ter o cadastro aprovado pela equipe técnica do programa; • Não participar de outro programa ou serviço similar (estadual, municipal ou federal) — filhos nascidos de mães que participaram do programa desde a gestação também são considerados beneficiários.<br><u>Documentos:</u> RG, CPF ou outro documento oficial com foto; caderneta da gestante; comprovante de residência atualizado.<br>⚠️ Vagas limitadas a até 10 mil famílias, conforme disponibilidade orçamentária; a beneficiária pode ser excluída se a renda familiar ultrapassar meio salário mínimo, houver informação inverídica, uso indevido do benefício ou, no caso do cartão, 90 dias sem movimentação.<br><br>Também disponibiliza Passe Livre Intermunicipal (gratuidade no transporte intermunicipal para pessoas com deficiência), auxílio funerário, benefícios eventuais e orientação social."
+  },
+  {
+    id: "restaurante-cidadao-silvio-botelho",
+    name: "Restaurante Cidadão - Silvio Botelho",
+    fullName: "Restaurante Cidadão - Unidade Dr. Silvio Botelho (Boa Vista)",
+    cat: ["alimentar"],
+    group: "Restaurante Cidadão (SETRABES)",
+    address: "Av. Nazaré Filgueiras, nº 940 - Dr. Silvio Botelho, Boa Vista-RR",
+    hours: "Almoço gratuito, segunda a sexta-feira, das 11h às 13h30 (encerra quando as refeições do dia se esgotam)",
+    phones: ["N/A - cadastro e informações pela SETRABES"],
+    services: "Almoço gratuito para famílias previamente cadastradas na SETRABES, em situação de vulnerabilidade social.",
+    desc: "Primeira unidade do Restaurante Cidadão em Roraima, inaugurada em 22/07/2024, com capacidade para 500 refeições diárias (mais de 10 mil refeições/mês). Atende famílias cadastradas dos bairros Dr. Silvio Botelho, Pintolândia, Cambará, Nova Canaã, Jardim Olímpico, Jóquei Clube e Jardim Tropical.<br>Fonte: SETRABES/Governo de Roraima e Folha BV (jul/2024)."
+  },
+  {
+    id: "restaurante-cidadao-helio-campos",
+    name: "Restaurante Cidadão - Senador Hélio Campos",
+    fullName: "Restaurante Cidadão - Unidade Senador Hélio Campos (Boa Vista)",
+    cat: ["alimentar"],
+    group: "Restaurante Cidadão (SETRABES)",
+    address: "Bairro Senador Hélio Campos, Boa Vista-RR (endereço exato a confirmar na unidade ou pela SETRABES)",
+    hours: "Almoço gratuito, segunda a sexta-feira, das 11h às 13h30 (encerra quando as refeições do dia se esgotam)",
+    phones: ["N/A - cadastro e informações pela SETRABES"],
+    services: "Almoço gratuito para famílias previamente cadastradas na SETRABES, em situação de vulnerabilidade social.",
+    desc: "Segunda unidade do Restaurante Cidadão, com 500 refeições diárias, atendendo famílias cadastradas dos bairros Senador Hélio Campos, Equatorial, Laura Moreira e Santa Luzia.<br>Fonte: SETRABES/Governo de Roraima (2024)."
+  },
+  {
+    id: "restaurante-cidadao-cidade-satelite",
+    name: "Restaurante Cidadão - Cidade Satélite",
+    fullName: "Restaurante Cidadão - Unidade Cidade Satélite (Boa Vista)",
+    cat: ["alimentar"],
+    group: "Restaurante Cidadão (SETRABES)",
+    address: "Bairro Cidade Satélite, Boa Vista-RR (endereço exato a confirmar na unidade ou pela SETRABES)",
+    hours: "Almoço gratuito, segunda a sexta-feira, das 11h às 13h30 (encerra quando as refeições do dia se esgotam)",
+    phones: ["N/A - cadastro e informações pela SETRABES"],
+    services: "Almoço gratuito para famílias previamente cadastradas na SETRABES, em situação de vulnerabilidade social.",
+    desc: "Terceira unidade, e a maior das seis, com capacidade para 1.000 refeições diárias. Atende famílias cadastradas dos bairros Cidade Satélite, João de Barro, Murilo Teixeira, União, Caranã, Jardim Caranã, Cauamé, Aeroporto, Monte Cristo, Pedra Pintada e Said Salomão.<br>Fonte: SETRABES/Governo de Roraima (jul/2024)."
+  },
+  {
+    id: "restaurante-cidadao-nova-cidade",
+    name: "Restaurante Cidadão - Nova Cidade",
+    fullName: "Restaurante Cidadão - Unidade Nova Cidade (Boa Vista)",
+    cat: ["alimentar"],
+    group: "Restaurante Cidadão (SETRABES)",
+    address: "Bairro Nova Cidade, Boa Vista-RR (endereço exato a confirmar na unidade ou pela SETRABES)",
+    hours: "Almoço gratuito, segunda a sexta-feira, das 11h às 13h30 (encerra quando as refeições do dia se esgotam)",
+    phones: ["N/A - cadastro e informações pela SETRABES"],
+    services: "Almoço gratuito para famílias previamente cadastradas na SETRABES, em situação de vulnerabilidade social.",
+    desc: "Quarta unidade, no bairro Nova Cidade, com 500 refeições diárias para famílias cadastradas do bairro e adjacências.<br>Fonte: SETRABES/Governo de Roraima (ago/2024)."
+  },
+  {
+    id: "restaurante-cidadao-jardim-primavera",
+    name: "Restaurante Cidadão - Jardim Primavera",
+    fullName: "Restaurante Cidadão - Unidade Jardim Primavera (Boa Vista)",
+    cat: ["alimentar"],
+    group: "Restaurante Cidadão (SETRABES)",
+    address: "Lote de Terra Urbana nº 0225, Quadra 379, Zona 12 - Jardim Primavera, Boa Vista-RR",
+    hours: "Almoço gratuito, segunda a sexta-feira, das 11h às 13h30 (encerra quando as refeições do dia se esgotam)",
+    phones: ["N/A - cadastro e informações pela SETRABES"],
+    services: "Almoço gratuito para famílias previamente cadastradas na SETRABES, em situação de vulnerabilidade social.",
+    desc: "Quinta unidade, com 500 refeições diárias, atendendo famílias cadastradas dos bairros Jardim Primavera, Dr. Silvio Leite, Alvorada, Piscicultura, Santa Tereza, Tancredo Neves, Caimbé e Jardim Floresta.<br>Fonte: SETRABES/Governo de Roraima (ago/2024)."
+  },
+  {
+    id: "restaurante-cidadao-centro",
+    name: "Restaurante Cidadão - Centro",
+    fullName: "Restaurante Cidadão - Unidade Centro (Boa Vista)",
+    cat: ["alimentar"],
+    group: "Restaurante Cidadão (SETRABES)",
+    address: "Av. Getúlio Vargas, nº 6258 - Centro, Boa Vista-RR",
+    hours: "Almoço gratuito, segunda a sexta-feira, das 11h às 13h30 (encerra quando as refeições do dia se esgotam)",
+    phones: ["N/A - cadastro e informações pela SETRABES"],
+    services: "Almoço gratuito para famílias previamente cadastradas na SETRABES, em situação de vulnerabilidade social.",
+    desc: "Sexta e última unidade, com 500 refeições diárias, atendendo famílias cadastradas dos bairros Centro, Calungá, 13 de Setembro, Marechal Rondon, Centenário, Cinturão Verde, Pricumã, São Vicente, Liberdade, Mecejana, São Pedro, São Francisco, Bairro dos Estados, Aparecida, Caçari, Paraviana, 31 de Março e Canarinho.<br>Desde a implantação do programa (2024) até julho de 2025, as seis unidades já haviam servido cerca de 495 mil refeições, atendendo até 3.500 pessoas por dia em Boa Vista.<br>Fonte: SETRABES/Governo de Roraima e Folha BV (2024-2025)."
   },
   {
     id: "caixa-economica-centro-villeroy",
@@ -8057,7 +8170,8 @@ const ICONS = {
   pdf: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><text x="6.5" y="17.5" font-size="6.5" fill="currentColor" stroke="none" font-family="Inter, sans-serif" font-weight="800">PDF</text></svg>',
   police: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="M9.5 12.5l1.8 1.8 3.2-3.6"/></svg>',
   home: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg>',
-  tag: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L3 3v6.59a2 2 0 0 0 .59 1.41l9.59 9.59a2 2 0 0 0 2.82 0l4.59-4.59a2 2 0 0 0 0-2.82Z"/><circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" stroke="none"/></svg>'
+  tag: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L3 3v6.59a2 2 0 0 0 .59 1.41l9.59 9.59a2 2 0 0 0 2.82 0l4.59-4.59a2 2 0 0 0 0-2.82Z"/><circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" stroke="none"/></svg>',
+  food: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2h0a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>'
 };
 
 const MAX_ATTACH_BYTES = 3.5 * 1024 * 1024;
@@ -8222,7 +8336,7 @@ const CATEGORY_LABELS_PRINT = {
   juridico: 'Poder Judiciário', conselho: 'Conselho Tutelar (Proteção à Criança e ao Adolescente)', delegacias: 'Segurança Pública (Distritos Policiais)', bancos: 'Rede Bancária e Correspondentes',
   previdencia: 'Previdência Social (INSS)', trabalho: 'Trabalho, Emprego e Renda', habitacao: 'Habitação e Moradia', mobilidade: 'Mobilidade Urbana', interior: 'CRAS/CREAS Interior', informes: 'Programas, Projetos e Serviços',
   cas: 'Registro de Atendimento (CAS)', cras: 'Registro de Atendimento (CRAS)', documentacao: 'Documentação Civil e Fiscal', idoso: 'Pessoa Idosa',
-  migracao: 'Serviço de Migração (Política Migratória e Rede de Apoio ao Migrante)'
+  migracao: 'Serviço de Migração (Política Migratória e Rede de Apoio ao Migrante)', alimentar: 'Segurança Alimentar e Nutricional'
 };
 
 function cleanPrintField(value, fallback) {
@@ -8431,10 +8545,6 @@ function renderCasCard(i, query) {
           </div>
         </div>
       </div>
-      <div class="card-actions">
-        <button class="btn-tech btn-secondary" onclick="share('${i.id}')">Compartilhar</button>
-        <button class="btn-tech btn-primary" onclick="printGuide('${i.id}')">Gerar Guia</button>
-      </div>
     </div>
   `;
 }
@@ -8610,10 +8720,6 @@ function renderCrasCard(i, query) {
           </div>
         </div>
       </div>
-      <div class="card-actions">
-        <button class="btn-tech btn-secondary" onclick="share('${i.id}')">Compartilhar</button>
-        <button class="btn-tech btn-primary" onclick="printGuide('${i.id}')">Gerar Guia</button>
-      </div>
     </div>
   `;
 }
@@ -8622,7 +8728,7 @@ function updateChipCounts() {
   const counts = {
     all: DATA.length, hospitalar: 0, saude: 0, tea: 0, social: 0, educacao: 0, juridico: 0,
     conselho: 0, delegacias: 0, bancos: 0, previdencia: 0, trabalho: 0, documentacao: 0, habitacao: 0, mobilidade: 0, informes: 0, cas: 0,
-    cras: 0, migracao: 0
+    cras: 0, migracao: 0, alimentar: 0
   };
   DATA.forEach(i => {
     if (i.cat.includes('hospitalar')) counts.hospitalar++;
@@ -8643,6 +8749,7 @@ function updateChipCounts() {
     if (i.cat.includes('informes')) counts.informes++;
     if (i.cat.includes('cas')) counts.cas++;
     if (i.cat.includes('cras')) counts.cras++;
+    if (i.cat.includes('alimentar')) counts.alimentar++;
   });
 
   const setCount = (id, value) => {
@@ -8892,6 +8999,20 @@ function render() {
       infoBanner.innerHTML = `
         <span class="cib-title">📘 Mobilidade Urbana — base legal</span>
         A <strong>Política Nacional de Mobilidade Urbana (Lei n.º 12.587/2012)</strong> estabelece os princípios e diretrizes para a organização do transporte público e da circulação de pessoas e cargas nas cidades, priorizando os modos coletivos e não motorizados e o direito ao deslocamento com segurança e acessibilidade.
+      `;
+    } else if (cat === 'alimentar') {
+      infoBanner.style.display = '';
+      infoBanner.innerHTML = `
+        <span class="cib-title">📘 Segurança Alimentar e Nutricional — base legal e como encaminhar</span>
+        A alimentação adequada é <strong>direito social (art. 6º da Constituição Federal, incluído pela EC n.º 64/2010)</strong>, regulamentado pela <strong>Lei Orgânica de Segurança Alimentar e Nutricional - LOSAN (Lei n.º 11.346/2006)</strong>, que instituiu o SISAN (Sistema Nacional de Segurança Alimentar e Nutricional) e o CONSEA.
+        <details>
+          <summary>Ver como funciona o Restaurante Cidadão em Boa Vista e como encaminhar uma família</summary>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Restaurante Cidadão (SETRABES):</strong> programa estadual lançado em julho de 2024 para substituir os antigos Restaurantes Populares, inativos havia mais de dez anos em Roraima. Conta com <strong>6 unidades em Boa Vista</strong>, oferecendo almoço <strong>gratuito</strong>, de segunda a sexta-feira, das 11h às 13h30 (encerra quando as refeições do dia se esgotam), totalizando até 3.500 refeições diárias na capital.</p>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Público prioritário:</strong> pessoas em situação de extrema pobreza, trabalhadores informais e "pequenos trabalhadores" que passam o dia fora de casa, pessoas em situação de rua, idosos e mulheres chefes de família que não conseguem, por algum motivo, alcançar o direito à alimentação saudável.</p>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>Como funciona o acesso:</strong> não é balcão de porta aberta - a família precisa passar por um <strong>cadastro prévio junto à SETRABES</strong> (Secretaria do Trabalho e Bem-Estar Social), que analisa o perfil socioeconômico e vincula a pessoa à unidade mais próxima do seu bairro. Cada unidade atende um conjunto específico de bairros de referência (ver em cada card abaixo).</p>
+          <p style="margin:0.6rem 0;"><strong>Papel do CRAS:</strong> como o programa é estadual (SETRABES), o encaminhamento técnico do CRAS costuma se dar por orientação e, quando necessário, contato com a coordenação do Restaurante Cidadão ou com o CEAC (Centro de Atendimento ao Cidadão, aba Assistência Social), que reúne outros benefícios eventuais da SETRABES (Cesta da Família, Colo de Mãe) - úteis como complemento em casos de insegurança alimentar mais estrutural, além do encaminhamento ao Cadastro Único.</p>
+          <p style="margin:0.4rem 0 0; font-size:0.72rem; color:var(--text-muted);">Fontes: SETRABES Roraima (setrabes.rr.gov.br) e Folha BV (folhabv.com.br), 2024-2025.</p>
+        </details>
       `;
     } else {
       infoBanner.style.display = 'none';
@@ -9902,6 +10023,26 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && categorySidebar.classList.contains('is-open')) closeCategorySidebar();
 });
 
+// Grupos de categorias recolhíveis: cada rótulo de seção funciona como
+// um acordeão, para a lista inteira caber sem precisar rolar tanto —
+// só os grupos "Mais categorias" começam fechados.
+function toggleFilterGroup(labelEl) {
+  const group = labelEl.closest('.filter-group');
+  if (!group) return;
+  const collapsed = group.classList.toggle('collapsed');
+  labelEl.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+}
+
+document.querySelectorAll('.filter-group-label[role="button"]').forEach(label => {
+  label.addEventListener('click', () => toggleFilterGroup(label));
+  label.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      toggleFilterGroup(label);
+    }
+  });
+});
+
 function syncCategoryToggleLabel() {
   const active = document.querySelector('.filter-chip.active');
   if (!active || !categoryToggleLabel) return;
@@ -9920,6 +10061,12 @@ document.querySelectorAll('.filter-chip').forEach(c => c.addEventListener('click
   prevActive.setAttribute('aria-selected', 'false');
   c.classList.add('active');
   c.setAttribute('aria-selected', 'true');
+  const chipGroup = c.closest('.filter-group');
+  if (chipGroup && chipGroup.classList.contains('collapsed')) {
+    chipGroup.classList.remove('collapsed');
+    const chipGroupLabel = chipGroup.querySelector('.filter-group-label[role="button"]');
+    if (chipGroupLabel) chipGroupLabel.setAttribute('aria-expanded', 'true');
+  }
   syncCategoryToggleLabel();
   render();
   if (mobileSidebarQuery.matches) {
