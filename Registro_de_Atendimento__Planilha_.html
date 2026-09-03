@@ -138,18 +138,31 @@
 <script>
     const itens = ["ATENDIMENTO RECEPÇÃO", "INCLUSÃO NO CADASTRO ÚNICO", "ATUALIZAÇÃO DO CADASTRO ÚNICO", "ACOMPANHAMENTO FAMILIAR – PAIF (A-1)", "ATENDIMENTO PAIF (ATENDIMENTO TÉCNICO)", "ATENDIMENTO PARTICULARIZADO GERAL", "INTEGRANTES ATIVOS NO CONVIVER", "INTEGRANTES ATIVOS NO CABELO DE PRATA", "INTEGRANTES ATIVOS NO FQA", "DECLARAÇÃO DE IDOSOS", "EMISSÃO DA CARTEIRA DA PESSOA IDOSA", "CESTA DE COMPLEMENTAÇÃO ALIMENTAR", "ENTREGA DE KIT DE HIGIENE", "ENTREGA DE KIT DE HIGIENE INFANTIL", "ENTREGA DO CARTÃO DO BEM", "ENTREGA DE ENXOVAL", "ENTREGA DE LATAS DE LEITE", "AUXÍLIO FUNERAL", "FAMÍLIAS ENCAMINHADAS PARA O CREAS", "GRUPO NO ÂMBITO DO PAIF", "ORIENTAÇÃO ACESSO AO BPC", "VISITAS DOMICILIARES REALIZADAS"];
 
+    // Campos de quantidade preenchidos manualmente pelo usuário
+    const CAMPO_NUM = 'type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input';
+    // Campos de soma (somente leitura, calculados pelo script)
+    const CAMPO_SOMA = 'type="text" inputmode="numeric" pattern="[0-9]*" readonly class="qtd-input qtd-soma';
+
     function criarLinhas() {
         itens.forEach((texto, i) => {
             // Folha 1 (Brasileiros) + Total Geral
-            document.getElementById('body-br').innerHTML += `<tr data-row="${i}"><td>${i+1}</td><td class="col-info">${texto}</td><td><input type="number" class="total-geral" id="tg_${i}" readonly></td><td><input type="number" class="br-val"></td><td><input type="number" class="br-val"></td><td><input type="number" class="br-val"></td><td><input type="number" class="br-val"></td><td><input type="number" class="br-val"></td><td><input type="number" class="br-val"></td><td class="bg-green"><input type="number" class="total-br" id="tbr_${i}" readonly></td></tr>`;
+            document.getElementById('body-br').innerHTML += `<tr data-row="${i}"><td>${i+1}</td><td class="col-info">${texto}</td><td><input ${CAMPO_SOMA}" id="tg_${i}"></td><td><input ${CAMPO_NUM} br-val"></td><td><input ${CAMPO_NUM} br-val"></td><td><input ${CAMPO_NUM} br-val"></td><td><input ${CAMPO_NUM} br-val"></td><td><input ${CAMPO_NUM} br-val"></td><td><input ${CAMPO_NUM} br-val"></td><td class="bg-green"><input ${CAMPO_SOMA} total-br" id="tbr_${i}"></td></tr>`;
             // Folha 2 (Venezuelanos)
-            document.getElementById('body-ven').innerHTML += `<tr data-row="${i}"><td>${i+1}</td><td class="col-info">${texto}</td><td><input type="number" class="ven-val"></td><td><input type="number" class="ven-val"></td><td><input type="number" class="ven-val"></td><td><input type="number" class="ven-val"></td><td><input type="number" class="ven-val"></td><td><input type="number" class="ven-val"></td><td class="bg-green"><input type="number" class="total-ven" id="tven_${i}" readonly></td></tr>`;
+            document.getElementById('body-ven').innerHTML += `<tr data-row="${i}"><td>${i+1}</td><td class="col-info">${texto}</td><td><input ${CAMPO_NUM} ven-val"></td><td><input ${CAMPO_NUM} ven-val"></td><td><input ${CAMPO_NUM} ven-val"></td><td><input ${CAMPO_NUM} ven-val"></td><td><input ${CAMPO_NUM} ven-val"></td><td><input ${CAMPO_NUM} ven-val"></td><td class="bg-green"><input ${CAMPO_SOMA} total-ven" id="tven_${i}"></td></tr>`;
             // Folha 3 (Outros)
-            document.getElementById('body-out').innerHTML += `<tr data-row="${i}"><td>${i+1}</td><td class="col-info">${texto}</td><td><input type="number" class="out-val"></td><td><input type="number" class="out-val"></td><td><input type="number" class="out-val"></td><td><input type="number" class="out-val"></td><td><input type="number" class="out-val"></td><td><input type="number" class="out-val"></td><td class="bg-green"><input type="number" class="total-out" id="tout_${i}" readonly></td><td><input type="text"></td></tr>`;
+            document.getElementById('body-out').innerHTML += `<tr data-row="${i}"><td>${i+1}</td><td class="col-info">${texto}</td><td><input ${CAMPO_NUM} out-val"></td><td><input ${CAMPO_NUM} out-val"></td><td><input ${CAMPO_NUM} out-val"></td><td><input ${CAMPO_NUM} out-val"></td><td><input ${CAMPO_NUM} out-val"></td><td><input ${CAMPO_NUM} out-val"></td><td class="bg-green"><input ${CAMPO_SOMA} total-out" id="tout_${i}"></td><td><input type="text"></td></tr>`;
         });
     }
 
     criarLinhas();
+
+    // Restringe os campos de quantidade digitáveis a dígitos apenas
+    // (o traço "-" usado na impressão é inserido só pelo próprio script)
+    document.addEventListener('input', function(e) {
+        if (e.target.matches('input.qtd-input:not(.qtd-soma)')) {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+        }
+    });
 
     // LÓGICA DE SOMA AUTOMÁTICA
     document.addEventListener('input', function() {
@@ -193,6 +206,34 @@
             localStorage.removeItem('rma_backup_soma');
         }
     }
+
+    // Ao imprimir: qualquer campo de quantidade (digitado ou calculado)
+    // que estiver vazio passa a exibir um traço "-" em vez de ficar em
+    // branco ou mostrar "0". Isso vale tanto para os campos preenchidos
+    // à mão quanto para as colunas de soma (TOTAL e TOTAL GERAL).
+    function marcarTracosParaImpressao() {
+        document.querySelectorAll('input.qtd-input').forEach(function (input) {
+            input.dataset.eraVazio = (input.value.trim() === '') ? 'true' : 'false';
+            if (input.value.trim() === '') {
+                input.value = '-';
+            }
+        });
+    }
+
+    // Depois de imprimir, o traço é removido para que os campos voltem
+    // ao estado vazio normal (e a soma automática continue funcionando
+    // corretamente ao editar de novo).
+    function restaurarAposImpressao() {
+        document.querySelectorAll('input.qtd-input').forEach(function (input) {
+            if (input.dataset.eraVazio === 'true') {
+                input.value = '';
+            }
+            delete input.dataset.eraVazio;
+        });
+    }
+
+    window.addEventListener('beforeprint', marcarTracosParaImpressao);
+    window.addEventListener('afterprint', restaurarAposImpressao);
 </script>
 </body>
 </html>
