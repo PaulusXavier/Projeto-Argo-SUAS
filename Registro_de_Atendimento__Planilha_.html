@@ -37,7 +37,7 @@
             table { width: 100% !important; table-layout: fixed; border-collapse: collapse; }
             thead { display: table-header-group; }
             th, td { font-size: 9pt !important; padding: 2px !important; border: 1px solid #000 !important; line-height: 1.15 !important; }
-            input { font-size: 9pt !important; }
+            input { font-size: 9pt !important; font-family: "Times New Roman", serif !important; line-height: 1.15 !important; }
             .header-title { font-size: 14pt !important; margin-bottom: 4px !important; }
             .bg-orange, .bg-blue, .bg-green { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
@@ -60,7 +60,19 @@
         .bg-blue { background-color: #c6d9f1 !important; }
         .bg-green { background-color: #ebf1de !important; }
         .col-info { text-align: left; width: 250px; font-weight: bold; font-size: 9pt; }
-        input { width: 100%; border: none; background: transparent; text-align: center; outline: none; }
+        /* Campos de preenchimento (tela): Arial 10pt com espaçamento de linha 1,5,
+           conforme pedido. A impressão continua usando Times New Roman 9pt (regra
+           acima em @media print), para não alterar o layout já ajustado do papel. */
+        input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            text-align: center;
+            outline: none;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10pt;
+            line-height: 1.5;
+        }
         input[readonly] { font-weight: bold; color: #000; }
         .header-title { font-size: 14pt; font-weight: bold; margin-bottom: 5px; }
     </style>
@@ -165,6 +177,8 @@
     });
 
     // LÓGICA DE SOMA AUTOMÁTICA
+    // Os campos de soma (readonly) já exibem um traço "-" em vez de "0" ou
+    // vazio diretamente na tela, sem precisar esperar a impressão.
     document.addEventListener('input', function() {
         itens.forEach((_, i) => {
             const sumGroup = (selector) => {
@@ -178,13 +192,20 @@
             const totalBR = sumGroup('br-val');
             const totalVEN = sumGroup('ven-val');
             const totalOUT = sumGroup('out-val');
+            const totalGeral = totalBR + totalVEN + totalOUT;
 
-            document.getElementById(`tbr_${i}`).value = totalBR || "";
-            document.getElementById(`tven_${i}`).value = totalVEN || "";
-            document.getElementById(`tout_${i}`).value = totalOUT || "";
-            document.getElementById(`tg_${i}`).value = (totalBR + totalVEN + totalOUT) || "";
+            document.getElementById(`tbr_${i}`).value = totalBR > 0 ? totalBR : "-";
+            document.getElementById(`tven_${i}`).value = totalVEN > 0 ? totalVEN : "-";
+            document.getElementById(`tout_${i}`).value = totalOUT > 0 ? totalOUT : "-";
+            document.getElementById(`tg_${i}`).value = totalGeral > 0 ? totalGeral : "-";
         });
     });
+
+    // Dispara a soma uma vez ao carregar, para que os campos de soma já
+    // apareçam com o traço "-" mesmo antes de qualquer digitação.
+    function calcularTodasAsSomas() {
+        document.dispatchEvent(new Event('input'));
+    }
 
     function saveData() {
         const data = {};
@@ -196,26 +217,33 @@
     window.onload = () => {
         const saved = JSON.parse(localStorage.getItem('rma_backup_soma'));
         if(saved) {
-            document.querySelectorAll('input').forEach((inp, i) => inp.value = saved['v'+i] || '');
+            document.querySelectorAll('input').forEach((inp, i) => {
+                // Não restaura o valor salvo em campos de soma (eles são
+                // recalculados a partir dos campos manuais logo em seguida).
+                if (!inp.classList.contains('qtd-soma')) {
+                    inp.value = saved['v'+i] || '';
+                }
+            });
         }
+        calcularTodasAsSomas();
     };
 
     function clearData() {
         if(confirm('Apagar tudo?')) {
             document.querySelectorAll('input').forEach(inp => inp.value = '');
             localStorage.removeItem('rma_backup_soma');
+            calcularTodasAsSomas();
         }
     }
 
-    // Ao imprimir: qualquer campo de quantidade (digitado ou calculado)
-    // que estiver vazio OU cujo valor digitado seja "0" passa a exibir um
-    // traço "-" em vez de ficar em branco ou mostrar "0". Isso vale tanto
-    // para os campos preenchidos à mão (o usuário pode digitar um número
-    // normalmente) quanto para as colunas de soma (TOTAL e TOTAL GERAL).
-    // O valor original de cada campo é guardado em data-valor-original
-    // para poder ser restaurado depois de imprimir.
+    // Ao imprimir: os campos de soma já mostram "-" quando o total é zero
+    // (feito em tempo real acima), então aqui só precisamos tratar os
+    // campos digitados manualmente: se estiverem vazios ou com "0", passam
+    // a exibir um traço "-" também na impressão. O valor original de cada
+    // campo é guardado em data-valor-original para poder ser restaurado
+    // depois de imprimir.
     function marcarTracosParaImpressao() {
-        document.querySelectorAll('input.qtd-input').forEach(function (input) {
+        document.querySelectorAll('input.qtd-input:not(.qtd-soma)').forEach(function (input) {
             const valor = input.value.trim();
             const ehVazioOuZero = (valor === '' || Number(valor) === 0);
             input.dataset.valorOriginal = input.value;
@@ -230,7 +258,7 @@
     // ou "0") é restaurado, para que a soma automática continue
     // funcionando corretamente ao editar de novo.
     function restaurarAposImpressao() {
-        document.querySelectorAll('input.qtd-input').forEach(function (input) {
+        document.querySelectorAll('input.qtd-input:not(.qtd-soma)').forEach(function (input) {
             if (input.dataset.eraVazioOuZero === 'true') {
                 input.value = input.dataset.valorOriginal || '';
             }
