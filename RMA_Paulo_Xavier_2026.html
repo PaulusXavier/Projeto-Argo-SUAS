@@ -85,12 +85,15 @@
         
         .col-val { width: 50px; text-align: center; font-weight: bold; background-color: #fcfcfc !important; }
         
-        /* Inputs para edição */
+        /* Inputs para edição na tela: Arial 10pt com espaçamento de linha
+           1,5, conforme pedido. Na impressão (regra abaixo em @media print)
+           o tamanho volta a 12px para manter o layout do papel já ajustado. */
         input { 
             border: none; 
             background: transparent; 
-            font-family: inherit; 
-            font-size: 12px; 
+            font-family: Arial, Helvetica, sans-serif; 
+            font-size: 10pt; 
+            line-height: 1.5; 
             width: 100%; 
             outline: none; 
         }
@@ -112,6 +115,10 @@
                 margin: 0 auto; 
                 border: none; 
                 width: 190mm;
+            }
+            input {
+                font-size: 12px;
+                line-height: 1.1;
             }
             /* Remove definitivamente data/hora e URL do rodapé */
             body { margin: 0; }
