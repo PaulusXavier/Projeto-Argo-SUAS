@@ -275,25 +275,34 @@ estarem, ou não, no mesmo grupo
         }
     }
 
-    // Ao imprimir: qualquer campo de quantidade que estiver vazio passa
-    // a exibir um traço "-" em vez de ficar em branco (e nunca "0").
-    // Depois de imprimir, o traço é removido para que o campo volte ao
-    // estado vazio normal e você possa continuar editando/preenchendo.
+    // Ao imprimir: qualquer campo de quantidade que estiver vazio OU cujo
+    // valor digitado seja "0" passa a exibir um traço "-" em vez de ficar
+    // em branco ou mostrar "0". O usuário continua podendo digitar um
+    // número normalmente nos campos. O valor original de cada campo é
+    // guardado para poder ser restaurado depois de imprimir (inclusive
+    // quando o valor original era "0").
     function marcarTracosParaImpressao() {
         document.querySelectorAll('input.qtd-input').forEach(function (input) {
-            input.dataset.eraVazio = (input.value.trim() === '') ? 'true' : 'false';
-            if (input.value.trim() === '') {
+            const valor = input.value.trim();
+            const ehVazioOuZero = (valor === '' || Number(valor) === 0);
+            input.dataset.valorOriginal = input.value;
+            input.dataset.eraVazioOuZero = ehVazioOuZero ? 'true' : 'false';
+            if (ehVazioOuZero) {
                 input.value = '-';
             }
         });
     }
 
+    // Depois de imprimir, o traço é removido e o valor original (vazio
+    // ou "0") é restaurado, para que você possa continuar editando/
+    // preenchendo o formulário normalmente.
     function restaurarAposImpressao() {
         document.querySelectorAll('input.qtd-input').forEach(function (input) {
-            if (input.dataset.eraVazio === 'true') {
-                input.value = '';
+            if (input.dataset.eraVazioOuZero === 'true') {
+                input.value = input.dataset.valorOriginal || '';
             }
-            delete input.dataset.eraVazio;
+            delete input.dataset.eraVazioOuZero;
+            delete input.dataset.valorOriginal;
         });
     }
 
