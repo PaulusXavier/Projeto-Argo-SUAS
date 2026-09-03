@@ -208,27 +208,34 @@
     }
 
     // Ao imprimir: qualquer campo de quantidade (digitado ou calculado)
-    // que estiver vazio passa a exibir um traço "-" em vez de ficar em
-    // branco ou mostrar "0". Isso vale tanto para os campos preenchidos
-    // à mão quanto para as colunas de soma (TOTAL e TOTAL GERAL).
+    // que estiver vazio OU cujo valor digitado seja "0" passa a exibir um
+    // traço "-" em vez de ficar em branco ou mostrar "0". Isso vale tanto
+    // para os campos preenchidos à mão (o usuário pode digitar um número
+    // normalmente) quanto para as colunas de soma (TOTAL e TOTAL GERAL).
+    // O valor original de cada campo é guardado em data-valor-original
+    // para poder ser restaurado depois de imprimir.
     function marcarTracosParaImpressao() {
         document.querySelectorAll('input.qtd-input').forEach(function (input) {
-            input.dataset.eraVazio = (input.value.trim() === '') ? 'true' : 'false';
-            if (input.value.trim() === '') {
+            const valor = input.value.trim();
+            const ehVazioOuZero = (valor === '' || Number(valor) === 0);
+            input.dataset.valorOriginal = input.value;
+            input.dataset.eraVazioOuZero = ehVazioOuZero ? 'true' : 'false';
+            if (ehVazioOuZero) {
                 input.value = '-';
             }
         });
     }
 
-    // Depois de imprimir, o traço é removido para que os campos voltem
-    // ao estado vazio normal (e a soma automática continue funcionando
-    // corretamente ao editar de novo).
+    // Depois de imprimir, o traço é removido e o valor original (vazio
+    // ou "0") é restaurado, para que a soma automática continue
+    // funcionando corretamente ao editar de novo.
     function restaurarAposImpressao() {
         document.querySelectorAll('input.qtd-input').forEach(function (input) {
-            if (input.dataset.eraVazio === 'true') {
-                input.value = '';
+            if (input.dataset.eraVazioOuZero === 'true') {
+                input.value = input.dataset.valorOriginal || '';
             }
-            delete input.dataset.eraVazio;
+            delete input.dataset.eraVazioOuZero;
+            delete input.dataset.valorOriginal;
         });
     }
 
