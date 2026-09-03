@@ -95,7 +95,7 @@
             outline: none; 
         }
 
-        input[type="number"] { text-align: center; font-weight: bold; }
+        input.qtd-input { text-align: center; font-weight: bold; }
 
         .obs-box { 
             font-size: 7px; 
@@ -150,8 +150,8 @@
             <th>A. Volume de famílias em acompanhamento pelo PAIF no mês de referência</th>
             <th class="col-val">Total</th>
         </tr>
-        <tr><td>A.1. Total de famílias em acompanhamento pelo PAIF</td><td class="col-val"><input type="number" name="a1" aria-label="A.1. Total de famílias em acompanhamento pelo PAIF"></td></tr>
-        <tr><td>A.2. Novas famílias inseridas no acompanhamento do PAIF durante o mês de referência</td><td class="col-val"><input type="number" name="a2" aria-label="A.2. Novas famílias inseridas no acompanhamento do PAIF durante o mês de referência"></td></tr>
+        <tr><td>A.1. Total de famílias em acompanhamento pelo PAIF</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="a1" aria-label="A.1. Total de famílias em acompanhamento pelo PAIF"></td></tr>
+        <tr><td>A.2. Novas famílias inseridas no acompanhamento do PAIF durante o mês de referência</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="a2" aria-label="A.2. Novas famílias inseridas no acompanhamento do PAIF durante o mês de referência"></td></tr>
     </table>
 
     <table>
@@ -159,12 +159,12 @@
             <th>B. Perfil das novas famílias inseridas em acompanhamento no PAIF no mês de referência</th>
             <th class="col-val">Total</th>
         </tr>
-        <tr><td>B.1. Famílias em situação de extrema pobreza</td><td class="col-val"><input type="number" name="b1" aria-label="B.1. Famílias em situação de extrema pobreza"></td></tr>
-        <tr><td>B.2. Famílias beneficiárias do Programa Bolsa Família</td><td class="col-val"><input type="number" name="b2" aria-label="B.2. Famílias beneficiárias do Programa Bolsa Família"></td></tr>
-        <tr><td>B.3. Famílias em descumprimento de condicionalidades do PBF</td><td class="col-val"><input type="number" name="b3" aria-label="B.3. Famílias em descumprimento de condicionalidades do PBF"></td></tr>
-        <tr><td>B.4. Famílias com membros beneficiários do BPC</td><td class="col-val"><input type="number" name="b4" aria-label="B.4. Famílias com membros beneficiários do BPC"></td></tr>
-        <tr><td>B.5. Famílias com crianças ou adolescentes em situação de trabalho infantil</td><td class="col-val"><input type="number" name="b5" aria-label="B.5. Famílias com crianças ou adolescentes em situação de trabalho infantil"></td></tr>
-        <tr><td>B.6. Famílias com crianças ou adolescentes em Serviço de Acolhimento</td><td class="col-val"><input type="number" name="b6" aria-label="B.6. Famílias com crianças ou adolescentes em Serviço de Acolhimento"></td></tr>
+        <tr><td>B.1. Famílias em situação de extrema pobreza</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="b1" aria-label="B.1. Famílias em situação de extrema pobreza"></td></tr>
+        <tr><td>B.2. Famílias beneficiárias do Programa Bolsa Família</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="b2" aria-label="B.2. Famílias beneficiárias do Programa Bolsa Família"></td></tr>
+        <tr><td>B.3. Famílias em descumprimento de condicionalidades do PBF</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="b3" aria-label="B.3. Famílias em descumprimento de condicionalidades do PBF"></td></tr>
+        <tr><td>B.4. Famílias com membros beneficiários do BPC</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="b4" aria-label="B.4. Famílias com membros beneficiários do BPC"></td></tr>
+        <tr><td>B.5. Famílias com crianças ou adolescentes em situação de trabalho infantil</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="b5" aria-label="B.5. Famílias com crianças ou adolescentes em situação de trabalho infantil"></td></tr>
+        <tr><td>B.6. Famílias com crianças ou adolescentes em Serviço de Acolhimento</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="b6" aria-label="B.6. Famílias com crianças ou adolescentes em Serviço de Acolhimento"></td></tr>
     </table>
     <div class="obs-box">
         <strong>Atenção!</strong> Os itens B1 a B6 identificam apenas alguns perfis de famílias. É normal que algumas famílias contadas no item A2 não se enquadrem em nenhuma das condições acima, enquanto
@@ -177,15 +177,15 @@ outras podem se enquadrar simultaneamente em mais de uma condição. Portanto, a
             <th>C. Volume de atendimentos particularizados realizados no CRAS no mês de referência</th>
             <th class="col-val">Quant.</th>
         </tr>
-        <tr><td>C.1. Total de atendimentos particularizados realizados no mês de referência</td><td class="col-val"><input type="number" name="c1" aria-label="C.1. Total de atendimentos particularizados realizados no mês de referência"></td></tr>
-        <tr><td>C.2. Famílias encaminhadas para inclusão no Cadastro Único</td><td class="col-val"><input type="number" name="c2" aria-label="C.2. Famílias encaminhadas para inclusão no Cadastro Único"></td></tr>
-        <tr><td>C.3. Famílias encaminhadas para atualização cadastral no Cadastro Único</td><td class="col-val"><input type="number" name="c3" aria-label="C.3. Famílias encaminhadas para atualização cadastral no Cadastro Único"></td></tr>
-        <tr><td>C.4. Indivíduos encaminhados para acesso ao BPC</td><td class="col-val"><input type="number" name="c4" aria-label="C.4. Indivíduos encaminhados para acesso ao BPC"></td></tr>
-        <tr><td>C.5. Famílias encaminhadas para o CREAS</td><td class="col-val"><input type="number" name="c5" aria-label="C.5. Famílias encaminhadas para o CREAS"></td></tr>
-        <tr><td>C.6. Visitas domiciliares realizadas</td><td class="col-val"><input type="number" name="c6" aria-label="C.6. Visitas domiciliares realizadas"></td></tr>
-        <tr><td>C.7. Total de auxílios-natalidade concedidos/entregues no mês</td><td class="col-val"><input type="number" name="c7" aria-label="C.7. Total de auxílios-natalidade concedidos/entregues no mês"></td></tr>
-        <tr><td>C.8. Total de auxílios-funeral concedidos/entregues no mês</td><td class="col-val"><input type="number" name="c8" aria-label="C.8. Total de auxílios-funeral concedidos/entregues no mês"></td></tr>
-        <tr><td>C.9. Outros benefícios eventuais concedidos/entregues no mês</td><td class="col-val"><input type="number" name="c9" aria-label="C.9. Outros benefícios eventuais concedidos/entregues no mês"></td></tr>
+        <tr><td>C.1. Total de atendimentos particularizados realizados no mês de referência</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="c1" aria-label="C.1. Total de atendimentos particularizados realizados no mês de referência"></td></tr>
+        <tr><td>C.2. Famílias encaminhadas para inclusão no Cadastro Único</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="c2" aria-label="C.2. Famílias encaminhadas para inclusão no Cadastro Único"></td></tr>
+        <tr><td>C.3. Famílias encaminhadas para atualização cadastral no Cadastro Único</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="c3" aria-label="C.3. Famílias encaminhadas para atualização cadastral no Cadastro Único"></td></tr>
+        <tr><td>C.4. Indivíduos encaminhados para acesso ao BPC</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="c4" aria-label="C.4. Indivíduos encaminhados para acesso ao BPC"></td></tr>
+        <tr><td>C.5. Famílias encaminhadas para o CREAS</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="c5" aria-label="C.5. Famílias encaminhadas para o CREAS"></td></tr>
+        <tr><td>C.6. Visitas domiciliares realizadas</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="c6" aria-label="C.6. Visitas domiciliares realizadas"></td></tr>
+        <tr><td>C.7. Total de auxílios-natalidade concedidos/entregues no mês</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="c7" aria-label="C.7. Total de auxílios-natalidade concedidos/entregues no mês"></td></tr>
+        <tr><td>C.8. Total de auxílios-funeral concedidos/entregues no mês</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="c8" aria-label="C.8. Total de auxílios-funeral concedidos/entregues no mês"></td></tr>
+        <tr><td>C.9. Outros benefícios eventuais concedidos/entregues no mês</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="c9" aria-label="C.9. Outros benefícios eventuais concedidos/entregues no mês"></td></tr>
     </table>
     <div class="obs-box">
         <strong>Atenção!</strong> Nos campos C1 a C6 devem ser contabilizadas todas as famílias/indivíduos, independente de estarem, ou não, em acompanhamento sistemático do PAIF. Nos campos C7, C8 e C9,
@@ -199,14 +199,14 @@ campos.
             <th>D. Volume de atendimentos coletivos realizados CRAS durante o mês de referência</th>
             <th class="col-val">Quant.</th>
         </tr>
-        <tr><td>D.1. Famílias participando regularmente de grupos no âmbito do PAIF</td><td class="col-val"><input type="number" name="d1" aria-label="D.1. Famílias participando regularmente de grupos no âmbito do PAIF"></td></tr>
-        <tr><td>D.2. Crianças de 0 a 6 anos em Serviços de Convivência e Fortalecimento de Vínculos</td><td class="col-val"><input type="number" name="d2" aria-label="D.2. Crianças de 0 a 6 anos em Serviços de Convivência e Fortalecimento de Vínculos"></td></tr>
-        <tr><td>D.3. Crianças/adolescentes de 7 a 14 anos em Serviços de Convivência e Fortalecimento de Vínculos</td><td class="col-val"><input type="number" name="d3" aria-label="D.3. Crianças/adolescentes de 7 a 14 anos em Serviços de Convivência e Fortalecimento de Vínculos"></td></tr>
-        <tr><td>D.4. Adolescentes de 15 a 17 anos em Serviços de Convivência e Fortalecimento de Vínculos</td><td class="col-val"><input type="number" name="d4" aria-label="D.4. Adolescentes de 15 a 17 anos em Serviços de Convivência e Fortalecimento de Vínculos"></td></tr>
-        <tr><td>D.8. Adultos entre 18 e 59 anos em Serviços de Convivência e Fortalecimento de Vínculos</td><td class="col-val"><input type="number" name="d8" aria-label="D.8. Adultos entre 18 e 59 anos em Serviços de Convivência e Fortalecimento de Vínculos"></td></tr>
-        <tr><td>D.5. Idosos em Serviços de Convivência e Fortalecimento de Vínculos para idosos</td><td class="col-val"><input type="number" name="d5" aria-label="D.5. Idosos em Serviços de Convivência e Fortalecimento de Vínculos para idosos"></td></tr>
-        <tr><td>D.6. Pessoas participantes em palestras, oficinas e outras atividades coletivas de caráter não continuado</td><td class="col-val"><input type="number" name="d6" aria-label="D.6. Pessoas participantes em palestras, oficinas e outras atividades coletivas de caráter não continuado"></td></tr>
-        <tr><td>D.7. Pessoas com deficiência, participando dos Serviço de Convivência ou dos grupos do PAIF</td><td class="col-val"><input type="number" name="d7" aria-label="D.7. Pessoas com deficiência, participando dos Serviço de Convivência ou dos grupos do PAIF"></td></tr>
+        <tr><td>D.1. Famílias participando regularmente de grupos no âmbito do PAIF</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="d1" aria-label="D.1. Famílias participando regularmente de grupos no âmbito do PAIF"></td></tr>
+        <tr><td>D.2. Crianças de 0 a 6 anos em Serviços de Convivência e Fortalecimento de Vínculos</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="d2" aria-label="D.2. Crianças de 0 a 6 anos em Serviços de Convivência e Fortalecimento de Vínculos"></td></tr>
+        <tr><td>D.3. Crianças/adolescentes de 7 a 14 anos em Serviços de Convivência e Fortalecimento de Vínculos</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="d3" aria-label="D.3. Crianças/adolescentes de 7 a 14 anos em Serviços de Convivência e Fortalecimento de Vínculos"></td></tr>
+        <tr><td>D.4. Adolescentes de 15 a 17 anos em Serviços de Convivência e Fortalecimento de Vínculos</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="d4" aria-label="D.4. Adolescentes de 15 a 17 anos em Serviços de Convivência e Fortalecimento de Vínculos"></td></tr>
+        <tr><td>D.8. Adultos entre 18 e 59 anos em Serviços de Convivência e Fortalecimento de Vínculos</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="d8" aria-label="D.8. Adultos entre 18 e 59 anos em Serviços de Convivência e Fortalecimento de Vínculos"></td></tr>
+        <tr><td>D.5. Idosos em Serviços de Convivência e Fortalecimento de Vínculos para idosos</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="d5" aria-label="D.5. Idosos em Serviços de Convivência e Fortalecimento de Vínculos para idosos"></td></tr>
+        <tr><td>D.6. Pessoas participantes em palestras, oficinas e outras atividades coletivas de caráter não continuado</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="d6" aria-label="D.6. Pessoas participantes em palestras, oficinas e outras atividades coletivas de caráter não continuado"></td></tr>
+        <tr><td>D.7. Pessoas com deficiência, participando dos Serviço de Convivência ou dos grupos do PAIF</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="d7" aria-label="D.7. Pessoas com deficiência, participando dos Serviço de Convivência ou dos grupos do PAIF"></td></tr>
     </table>
     <div class="obs-box">
         * Apesar dos serviços de convivência não estar em mais vinculados a faixas etárias, para facilidade de registro, os usuários devem ser contabilizados de acordo com a sua idade, independente de
@@ -220,6 +220,14 @@ estarem, ou não, no mesmo grupo
 <input type="text" name="responsavel" aria-label="Nome e cargo da pessoa responsável no CRAS pelas informações" style="width: 60%; border-bottom: 1px solid #000;">
 </div>
 <script>
+    // Restringe os campos numéricos a dígitos, permitindo apenas o
+    // traço "-" que o próprio script insere na hora de imprimir.
+    document.querySelectorAll('input.qtd-input').forEach(function (input) {
+        input.addEventListener('input', function () {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+    });
+
     // Salva os dados no navegador toda vez que o botão é clicado.
     // Usa o atributo "name" de cada campo como chave, em vez da posição
     // (índice) do campo — assim, se um campo for adicionado, removido ou
@@ -266,6 +274,31 @@ estarem, ou não, no mesmo grupo
             localStorage.removeItem('rma_backup');
         }
     }
+
+    // Ao imprimir: qualquer campo de quantidade que estiver vazio passa
+    // a exibir um traço "-" em vez de ficar em branco (e nunca "0").
+    // Depois de imprimir, o traço é removido para que o campo volte ao
+    // estado vazio normal e você possa continuar editando/preenchendo.
+    function marcarTracosParaImpressao() {
+        document.querySelectorAll('input.qtd-input').forEach(function (input) {
+            input.dataset.eraVazio = (input.value.trim() === '') ? 'true' : 'false';
+            if (input.value.trim() === '') {
+                input.value = '-';
+            }
+        });
+    }
+
+    function restaurarAposImpressao() {
+        document.querySelectorAll('input.qtd-input').forEach(function (input) {
+            if (input.dataset.eraVazio === 'true') {
+                input.value = '';
+            }
+            delete input.dataset.eraVazio;
+        });
+    }
+
+    window.addEventListener('beforeprint', marcarTracosParaImpressao);
+    window.addEventListener('afterprint', restaurarAposImpressao);
 </script>
 </body>
 </html>
