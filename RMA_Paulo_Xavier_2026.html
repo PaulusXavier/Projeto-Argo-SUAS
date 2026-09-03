@@ -82,6 +82,11 @@
             text-align: left; 
             vertical-align: middle;
         }
+
+        /* Campos de cabeçalho (Nome da Unidade, Endereço, Município, etc.)
+           ficam em células próprias com o rótulo em cima e o campo
+           logo abaixo, dando mais espaço horizontal ao valor. */
+        td.campo-cabecalho { vertical-align: top; }
         
         .col-val { width: 50px; text-align: center; font-weight: bold; background-color: #fcfcfc !important; }
         
@@ -100,6 +105,25 @@
 
         input.qtd-input { text-align: center; font-weight: bold; }
 
+        /* Campos longos de cabeçalho: textarea que cresce em altura e
+           quebra a linha automaticamente, em vez de cortar o texto. */
+        textarea.campo-longo {
+            border: none;
+            background: transparent;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10pt;
+            line-height: 1.4;
+            width: 100%;
+            outline: none;
+            resize: none;
+            overflow: hidden;
+            padding: 0;
+            margin-top: 2px;
+            display: block;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
         .obs-box { 
             font-size: 7px; 
             margin: 2px 0 6px 0; 
@@ -116,9 +140,9 @@
                 border: none; 
                 width: 190mm;
             }
-            input {
+            input, textarea.campo-longo {
                 font-size: 12px;
-                line-height: 1.1;
+                line-height: 1.15;
             }
             /* Remove definitivamente data/hora e URL do rodapé */
             body { margin: 0; }
@@ -139,15 +163,30 @@
     </div>
     <table>
         <tr>
-            <td style="width: 62%;"><strong>Nome da Unidade</strong> <input type="text" name="unidade_nome" aria-label="Nome da Unidade" style="width: 95%;"></td>
-            <td style="width: 38%;"><strong>Nº da Unidade</strong> <input type="text" name="unidade_numero" aria-label="Número da Unidade" style="width: 95%;"></td>
+            <td class="campo-cabecalho" style="width: 62%;">
+                <strong>Nome da Unidade</strong>
+                <textarea class="campo-longo autogrow" name="unidade_nome" aria-label="Nome da Unidade" rows="1"></textarea>
+            </td>
+            <td class="campo-cabecalho" style="width: 38%;">
+                <strong>Nº da Unidade</strong>
+                <textarea class="campo-longo autogrow" name="unidade_numero" aria-label="Número da Unidade" rows="1"></textarea>
+            </td>
         </tr>
         <tr>
-            <td colspan="2"><strong>Endereço</strong> <input type="text" name="endereco" aria-label="Endereço" style="width: 90%;"></td>
+            <td class="campo-cabecalho" colspan="2">
+                <strong>Endereço</strong>
+                <textarea class="campo-longo autogrow" name="endereco" aria-label="Endereço" rows="1"></textarea>
+            </td>
         </tr>
         <tr>
-            <td style="width: 75%;"><strong>Município</strong> <input type="text" name="municipio" aria-label="Município" style="width: 90%;"></td>
-            <td style="width: 25%;"><strong>UF</strong> <input type="text" name="uf" aria-label="UF" maxlength="2" style="width: 60px;"></td>
+            <td class="campo-cabecalho" style="width: 75%;">
+                <strong>Município</strong>
+                <textarea class="campo-longo autogrow" name="municipio" aria-label="Município" rows="1"></textarea>
+            </td>
+            <td class="campo-cabecalho" style="width: 25%;">
+                <strong>UF</strong>
+                <input type="text" name="uf" aria-label="UF" maxlength="2" style="width: 60px;">
+            </td>
         </tr>
     </table>
 
@@ -227,6 +266,19 @@ estarem, ou não, no mesmo grupo
 <input type="text" name="responsavel" aria-label="Nome e cargo da pessoa responsável no CRAS pelas informações" style="width: 60%; border-bottom: 1px solid #000;">
 </div>
 <script>
+    // Ajusta a altura de um textarea "autogrow" ao conteúdo atual,
+    // para que o texto sempre fique visível, quebrando linha em vez
+    // de ser cortado.
+    function autoGrow(el) {
+        el.style.height = 'auto';
+        el.style.height = (el.scrollHeight) + 'px';
+    }
+
+    document.querySelectorAll('textarea.autogrow').forEach(function (ta) {
+        autoGrow(ta);
+        ta.addEventListener('input', function () { autoGrow(ta); });
+    });
+
     // Restringe os campos numéricos a dígitos, permitindo apenas o
     // traço "-" que o próprio script insere na hora de imprimir.
     document.querySelectorAll('input.qtd-input').forEach(function (input) {
@@ -240,12 +292,12 @@ estarem, ou não, no mesmo grupo
     // (índice) do campo — assim, se um campo for adicionado, removido ou
     // reordenado no futuro, os dados salvos de cada campo continuam
     // batendo com o campo certo, em vez de "escorregar" para o campo
-    // vizinho.
+    // vizinho. Abrange tanto <input> quanto <textarea>.
     function saveData() {
-        const inputs = document.querySelectorAll('input[name]');
+        const campos = document.querySelectorAll('input[name], textarea[name]');
         const data = {};
-        inputs.forEach(input => {
-            data[input.name] = input.value;
+        campos.forEach(campo => {
+            data[campo.name] = campo.value;
         });
         localStorage.setItem('rma_backup', JSON.stringify(data));
         alert('Dados salvos com sucesso!');
@@ -257,27 +309,30 @@ estarem, ou não, no mesmo grupo
     // "field_0", "field_1"...) para o novo formato por nome de campo.
     window.onload = function() {
         const savedData = localStorage.getItem('rma_backup');
+        const campos = document.querySelectorAll('input[name], textarea[name]');
         if (savedData) {
             const data = JSON.parse(savedData);
-            const inputs = document.querySelectorAll('input[name]');
-            const isFormatoAntigo = data['field_0'] !== undefined && data[inputs[0]?.name] === undefined;
-            inputs.forEach((input, index) => {
+            const isFormatoAntigo = data['field_0'] !== undefined && data[campos[0]?.name] === undefined;
+            campos.forEach((campo, index) => {
                 if (isFormatoAntigo) {
                     if (data['field_' + index] !== undefined) {
-                        input.value = data['field_' + index];
+                        campo.value = data['field_' + index];
                     }
-                } else if (data[input.name] !== undefined) {
-                    input.value = data[input.name];
+                } else if (data[campo.name] !== undefined) {
+                    campo.value = data[campo.name];
                 }
             });
         }
+        // Depois de carregar os valores salvos, reajusta a altura de
+        // cada textarea para caber o texto restaurado.
+        document.querySelectorAll('textarea.autogrow').forEach(autoGrow);
     };
 
     // Limpa todos os campos e a memória do navegador
     function clearData() {
         if (confirm('Deseja realmente apagar todos os campos?')) {
-            const inputs = document.querySelectorAll('input');
-            inputs.forEach(input => input.value = '');
+            document.querySelectorAll('input, textarea').forEach(campo => campo.value = '');
+            document.querySelectorAll('textarea.autogrow').forEach(autoGrow);
             localStorage.removeItem('rma_backup');
         }
     }
