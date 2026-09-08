@@ -9712,7 +9712,8 @@ function render() {
           <div style="margin-top:0.5rem; font-weight:600; color:var(--brand-primary); font-size:0.75rem;">SERVIÇOS: ${Array.isArray(i.services) ? i.services.join(', ') : i.services}</div>
           ${i.cat.includes('educacao') ? BF_HIGHLIGHT_HTML : ''}
         </div>
-        ${renderUserDataFields(i.id)}
+        ${BPC_GUIDE_IDS.includes(i.id) ? '' : renderUserDataFields(i.id)}
+        ${BPC_GUIDE_IDS.includes(i.id) ? '' : `
         <div class="notes-box">
           <label for="notes-${i.id}" class="label-tech">Anotações Técnicas / Conduta</label>
           <textarea id="notes-${i.id}" class="tech-notes" placeholder="Registre aqui a avaliação, conduta ou observações técnicas..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
@@ -9720,7 +9721,7 @@ function render() {
         <div class="image-attach-wrapper" id="img-wrap-${i.id}">
           ${imageBlock}
           <div class="image-error-msg" id="img-error-${i.id}" role="alert" style="display:none;"></div>
-        </div>
+        </div>`}
       </div>
       <div class="card-actions" ${(i.website || BPC_GUIDE_IDS.includes(i.id)) ? 'style="grid-template-columns: 1fr 1fr 1fr;"' : ''}>
         ${i.website ? `<a class="btn-tech btn-secondary btn-link" href="${i.website}" target="_blank" rel="noopener noreferrer">Site Oficial</a>` : ''}
@@ -10737,6 +10738,20 @@ if ('serviceWorker' in navigator) {
           }
         });
       });
+
+      // O navegador só checa sw.js sozinho quando a página é recarregada/
+      // navegada de novo. Como o app costuma ficar com a aba aberta por
+      // horas (às vezes dias), isso sozinho não é suficiente para pegar
+      // uma atualização publicada nesse meio tempo. Por isso, além disso,
+      // força a checagem manual (reg.update()) sempre que a aba volta a
+      // ficar visível (o usuário troca de aba/app e volta) e também em
+      // intervalo fixo enquanto a aba permanece aberta em primeiro plano.
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') reg.update().catch(() => {});
+      });
+      setInterval(() => {
+        if (document.visibilityState === 'visible') reg.update().catch(() => {});
+      }, 30 * 60 * 1000); // a cada 30 minutos, só quando a aba está em foco
     }).catch(() => {
     });
 
