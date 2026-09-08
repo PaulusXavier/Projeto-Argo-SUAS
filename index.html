@@ -7639,7 +7639,7 @@ const DATA = [
     id: "bpc-idoso",
     name: "BPC Idoso",
     fullName: "Benefício de Prestação Continuada (BPC) – Idoso",
-    cat: ["informes"],
+    cat: ["previdencia"],
     group: "Benefícios Assistenciais e Previdenciários (INSS)",
     address: "INSS - Instituto Nacional do Seguro Social: Av. Glaycon de Paiva, 86 - Mecejana, Boa Vista - RR (solicitação também disponível pelo Meu INSS)",
     hours: "N/A",
@@ -7651,7 +7651,7 @@ const DATA = [
     id: "bpc-pcd",
     name: "BPC Pessoa com Deficiência",
     fullName: "Benefício de Prestação Continuada (BPC) – Pessoa com Deficiência",
-    cat: ["informes"],
+    cat: ["previdencia"],
     group: "Benefícios Assistenciais e Previdenciários (INSS)",
     address: "INSS - Instituto Nacional do Seguro Social: Av. Glaycon de Paiva, 86 - Mecejana, Boa Vista - RR (solicitação também disponível pelo Meu INSS)",
     hours: "N/A",
@@ -8576,19 +8576,13 @@ const BPC_GUIDE_CONTENT = {
         'Renda de até ¼ de salário mínimo por pessoa da família (R$ 405,25 em 2026)',
         'Estar inscrito no Cadastro Único (CadÚnico), atualizado há menos de 2 anos'
       ],
-      docLabel: 'Documentos para levar',
-      documents: [
-        'RG ou Carteira de Identidade Nacional (CIN) e CPF',
-        'Comprovante de residência atualizado (últimos 3 meses)',
-        'Certidão de nascimento ou casamento',
-        'Número do NIS / CadÚnico',
-        'Comprovantes de renda de todos que moram na casa (ou declaração de que não trabalham)'
-      ],
       stepsLabel: 'Passo a passo',
       steps: [
-        { title: '1. Atualize o CadÚnico', desc: 'Vá ao CRAS do seu bairro com os documentos da família para inscrever ou atualizar o Cadastro Único.' },
-        { title: '2. Peça o benefício', desc: 'Pelo aplicativo/site Meu INSS (gov.br/meuinss), com login gov.br, ou pelo telefone 135 (ligação gratuita, todos os dias, das 7h às 22h).' },
-        { title: '3. Acompanhe o pedido', desc: 'Acompanhe o andamento pelo próprio Meu INSS. Se o benefício for negado, há 30 dias para pedir recurso.' }
+        { title: '1. Atualize o CadÚnico', desc: 'Vá ao CRAS do seu bairro levando RG ou CIN e CPF de todos os moradores da casa, comprovante de residência atualizado (últimos 3 meses), certidão de nascimento ou casamento e comprovantes de renda de quem trabalha (ou declaração de quem não trabalha). O cadastro precisa estar atualizado há menos de 2 anos — sem isso, o pedido do benefício não avança.' },
+        { title: '2. Anote o número do NIS', desc: 'Ao final do atendimento no CRAS, guarde o número do NIS/CadÚnico da pessoa idosa. Esse número será solicitado no momento de pedir o benefício ao INSS.' },
+        { title: '3. Peça o benefício', desc: 'Pelo aplicativo ou site Meu INSS (gov.br/meuinss), com login gov.br, ou pelo telefone 135 (ligação gratuita, todos os dias, das 7h às 22h). Informe o NIS e responda às perguntas sobre a composição e a renda da família.' },
+        { title: '4. Acompanhe o pedido', desc: 'Acompanhe o andamento pela opção "Acompanhar Pedido" no Meu INSS. O INSS pode pedir algum documento complementar dentro de um prazo determinado — fique atento às notificações do aplicativo para não perder o pedido por falta de resposta.' },
+        { title: '5. Receba o resultado', desc: 'Se aprovado, o pagamento é feito pela Caixa Econômica Federal, seguindo o calendário mensal por final do número do benefício. Se negado, há 30 dias a partir da ciência da decisão para pedir recurso administrativo, pelo próprio Meu INSS ou numa agência do INSS (Conselho de Recursos do Seguro Social - CRPS).' }
       ],
       valueLabel: 'Valor e pagamento',
       value: '1 salário mínimo por mês (R$ 1.621,00 em 2026), pago pela Caixa Econômica Federal, sem 13º salário.',
@@ -8607,19 +8601,13 @@ const BPC_GUIDE_CONTENT = {
         'Ingreso de hasta ¼ del salario mínimo por persona de la familia (R$ 405,25 en 2026)',
         'Estar inscrito en el Cadastro Único (CadÚnico), actualizado hace menos de 2 años'
       ],
-      docLabel: 'Documentos para llevar',
-      documents: [
-        'RG o Carteira de Identidade Nacional (CIN) y CPF',
-        'Comprobante de domicilio actualizado (últimos 3 meses)',
-        'Certificado de nacimiento o matrimonio',
-        'Número del NIS / CadÚnico',
-        'Comprobantes de ingresos de todos los que viven en la casa (o declaración de que no trabajan)'
-      ],
       stepsLabel: 'Paso a paso',
       steps: [
-        { title: '1. Actualice el CadÚnico', desc: 'Vaya al CRAS de su barrio con los documentos de la familia para inscribir o actualizar el Cadastro Único.' },
-        { title: '2. Solicite el beneficio', desc: 'Por la aplicación/sitio Meu INSS (gov.br/meuinss), con inicio de sesión gov.br, o por el teléfono 135 (llamada gratuita, todos los días, de 7h a 22h).' },
-        { title: '3. Siga la solicitud', desc: 'Siga el trámite por el propio Meu INSS. Si el beneficio es negado, hay 30 días para pedir un recurso.' }
+        { title: '1. Actualice el CadÚnico', desc: 'Vaya al CRAS de su barrio con el RG o CIN y el CPF de todos los que viven en la casa, comprobante de domicilio actualizado (últimos 3 meses), certificado de nacimiento o matrimonio y comprobantes de ingresos de quien trabaja (o declaración de quien no trabaja). El registro debe estar actualizado hace menos de 2 años — sin eso, la solicitud del beneficio no avanza.' },
+        { title: '2. Anote el número del NIS', desc: 'Al final de la atención en el CRAS, guarde el número del NIS/CadÚnico de la persona mayor. Ese número será solicitado al pedir el beneficio al INSS.' },
+        { title: '3. Solicite el beneficio', desc: 'Por la aplicación o sitio Meu INSS (gov.br/meuinss), con inicio de sesión gov.br, o por el teléfono 135 (llamada gratuita, todos los días, de 7h a 22h). Informe el NIS y responda a las preguntas sobre la composición y el ingreso familiar.' },
+        { title: '4. Siga la solicitud', desc: 'Siga el trámite por la opción "Acompanhar Pedido" en el Meu INSS. El INSS puede pedir algún documento complementario dentro de un plazo determinado — esté atento a las notificaciones de la aplicación para no perder la solicitud por falta de respuesta.' },
+        { title: '5. Reciba el resultado', desc: 'Si es aprobado, el pago lo hace la Caixa Econômica Federal, siguiendo el calendario mensual por el último número del beneficio. Si es negado, hay 30 días desde la notificación para pedir recurso administrativo, por el propio Meu INSS o en una agencia del INSS (Conselho de Recursos do Seguro Social - CRPS).' }
       ],
       valueLabel: 'Valor y pago',
       value: '1 salario mínimo por mes (R$ 1.621,00 en 2026), pagado por la Caixa Econômica Federal, sin aguinaldo (13º salário).',
@@ -8642,21 +8630,14 @@ const BPC_GUIDE_CONTENT = {
         'Estar inscrito no Cadastro Único (CadÚnico), atualizado há menos de 2 anos',
         'Passar por avaliação médica e social do INSS (perícia)'
       ],
-      docLabel: 'Documentos para levar',
-      documents: [
-        'RG ou Carteira de Identidade Nacional (CIN) e CPF',
-        'Comprovante de residência atualizado (últimos 3 meses)',
-        'Certidão de nascimento ou casamento',
-        'Número do NIS / CadÚnico',
-        'Comprovantes de renda de todos que moram na casa (ou declaração de que não trabalham)',
-        'Laudo médico com CID, descrevendo as limitações no dia a dia (quanto mais detalhado, melhor)'
-      ],
       stepsLabel: 'Passo a passo',
       steps: [
-        { title: '1. Atualize o CadÚnico', desc: 'Vá ao CRAS do seu bairro com os documentos da família para inscrever ou atualizar o Cadastro Único.' },
-        { title: '2. Peça o benefício', desc: 'Pelo aplicativo/site Meu INSS (gov.br/meuinss), com login gov.br, ou pelo telefone 135 (ligação gratuita, todos os dias, das 7h às 22h).' },
-        { title: '3. Compareça à avaliação', desc: 'O INSS agenda uma avaliação médica e social (perícia biopsicossocial). Leve o laudo médico e todos os documentos.' },
-        { title: '4. Acompanhe o pedido', desc: 'Acompanhe o andamento pelo próprio Meu INSS. Se o benefício for negado, há 30 dias para pedir recurso.' }
+        { title: '1. Atualize o CadÚnico', desc: 'Vá ao CRAS do seu bairro levando RG ou CIN e CPF de todos os moradores da casa, comprovante de residência atualizado (últimos 3 meses), certidão de nascimento ou casamento e comprovantes de renda de quem trabalha (ou declaração de quem não trabalha). O cadastro precisa estar atualizado há menos de 2 anos — sem isso, o pedido do benefício não avança.' },
+        { title: '2. Providencie o laudo médico', desc: 'Peça ao médico um laudo com o CID e a descrição das limitações no dia a dia da pessoa. Quanto mais detalhado o laudo, menor o risco de a perícia do INSS considerar a documentação genérica e pedir complementação.' },
+        { title: '3. Peça o benefício', desc: 'Pelo aplicativo ou site Meu INSS (gov.br/meuinss), com login gov.br, ou pelo telefone 135 (ligação gratuita, todos os dias, das 7h às 22h). Informe o NIS/CadÚnico e, se possível, anexe o laudo médico digitalizado no próprio Meu INSS.' },
+        { title: '4. Compareça à avaliação', desc: 'O INSS agenda uma avaliação médica e social (perícia biopsicossocial), geralmente em datas separadas. Leve o laudo médico original e todos os documentos da família a cada uma das avaliações.' },
+        { title: '5. Acompanhe o pedido', desc: 'Acompanhe o andamento pela opção "Acompanhar Pedido" no Meu INSS, respondendo a qualquer exigência dentro do prazo informado, para o pedido não ser arquivado por falta de resposta.' },
+        { title: '6. Receba o resultado', desc: 'Se aprovado, o pagamento é feito pela Caixa Econômica Federal, seguindo o calendário mensal por final do número do benefício. Se negado, há 30 dias a partir da ciência da decisão para pedir recurso administrativo, pelo próprio Meu INSS ou numa agência do INSS (Conselho de Recursos do Seguro Social - CRPS).' }
       ],
       valueLabel: 'Valor e pagamento',
       value: '1 salário mínimo por mês (R$ 1.621,00 em 2026), pago pela Caixa Econômica Federal, sem 13º salário. Se a pessoa começar a trabalhar com carteira assinada, o BPC não é cancelado, apenas suspenso.',
@@ -8677,21 +8658,14 @@ const BPC_GUIDE_CONTENT = {
         'Estar inscrito en el Cadastro Único (CadÚnico), actualizado hace menos de 2 años',
         'Pasar por una evaluación médica y social del INSS (pericia)'
       ],
-      docLabel: 'Documentos para llevar',
-      documents: [
-        'RG o Carteira de Identidade Nacional (CIN) y CPF',
-        'Comprobante de domicilio actualizado (últimos 3 meses)',
-        'Certificado de nacimiento o matrimonio',
-        'Número del NIS / CadÚnico',
-        'Comprobantes de ingresos de todos los que viven en la casa (o declaración de que no trabajan)',
-        'Informe médico con CID, describiendo las limitaciones en el día a día (cuanto más detallado, mejor)'
-      ],
       stepsLabel: 'Paso a paso',
       steps: [
-        { title: '1. Actualice el CadÚnico', desc: 'Vaya al CRAS de su barrio con los documentos de la familia para inscribir o actualizar el Cadastro Único.' },
-        { title: '2. Solicite el beneficio', desc: 'Por la aplicación/sitio Meu INSS (gov.br/meuinss), con inicio de sesión gov.br, o por el teléfono 135 (llamada gratuita, todos los días, de 7h a 22h).' },
-        { title: '3. Asista a la evaluación', desc: 'El INSS programa una evaluación médica y social (pericia biopsicosocial). Lleve el informe médico y todos los documentos.' },
-        { title: '4. Siga la solicitud', desc: 'Siga el trámite por el propio Meu INSS. Si el beneficio es negado, hay 30 días para pedir un recurso.' }
+        { title: '1. Actualice el CadÚnico', desc: 'Vaya al CRAS de su barrio con el RG o CIN y el CPF de todos los que viven en la casa, comprobante de domicilio actualizado (últimos 3 meses), certificado de nacimiento o matrimonio y comprobantes de ingresos de quien trabaja (o declaración de quien no trabaja). El registro debe estar actualizado hace menos de 2 años — sin eso, la solicitud del beneficio no avanza.' },
+        { title: '2. Consiga el informe médico', desc: 'Pida al médico un informe con el CID y la descripción de las limitaciones en el día a día de la persona. Cuanto más detallado el informe, menor el riesgo de que la pericia del INSS lo considere genérico y pida más documentación.' },
+        { title: '3. Solicite el beneficio', desc: 'Por la aplicación o sitio Meu INSS (gov.br/meuinss), con inicio de sesión gov.br, o por el teléfono 135 (llamada gratuita, todos los días, de 7h a 22h). Informe el NIS/CadÚnico y, si es posible, adjunte el informe médico digitalizado en el propio Meu INSS.' },
+        { title: '4. Asista a la evaluación', desc: 'El INSS programa una evaluación médica y social (pericia biopsicosocial), generalmente en fechas separadas. Lleve el informe médico original y todos los documentos de la familia a cada evaluación.' },
+        { title: '5. Siga la solicitud', desc: 'Siga el trámite por la opción "Acompanhar Pedido" en el Meu INSS, respondiendo a cualquier exigencia dentro del plazo informado, para que la solicitud no sea archivada por falta de respuesta.' },
+        { title: '6. Reciba el resultado', desc: 'Si es aprobado, el pago lo hace la Caixa Econômica Federal, siguiendo el calendario mensual por el último número del beneficio. Si es negado, hay 30 días desde la notificación para pedir recurso administrativo, por el propio Meu INSS o en una agencia del INSS (Conselho de Recursos do Seguro Social - CRPS).' }
       ],
       valueLabel: 'Valor y pago',
       value: '1 salario mínimo por mes (R$ 1.621,00 en 2026), pagado por la Caixa Econômica Federal, sin aguinaldo (13º salário). Si la persona empieza a trabajar de forma registrada, el BPC no se cancela, solo se suspende.',
@@ -10094,12 +10068,6 @@ function printBpcGuide(id, lang) {
       <span>${r}</span>
     </li>`).join('');
 
-  const docItems = content.documents.map(d => `
-    <li style="margin-bottom:6px; display:flex; gap:8px; align-items:flex-start;">
-      <span style="flex-shrink:0; width:14px; height:14px; margin-top:2px; border:1.5px solid #0F172A; border-radius:3px; display:inline-block;"></span>
-      <span>${d}</span>
-    </li>`).join('');
-
   const stepItems = content.steps.map(s => `
     <div style="margin-bottom:9px;">
       <div style="font-weight:800; color:#0F172A; font-size:0.92rem;">${s.title}</div>
@@ -10127,15 +10095,9 @@ function printBpcGuide(id, lang) {
           ${content.intro}
         </div>
 
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
-          <div style="border:1.5px solid #0F172A; border-radius:6px; padding:10px 14px;">
-            <div style="font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#0091C2; margin-bottom:6px;">✅ ${content.reqLabel}</div>
-            <ul style="margin:0; padding:0; list-style:none; font-size:0.84rem; line-height:1.4; color:#0F172A;">${reqItems}</ul>
-          </div>
-          <div style="border:1.5px solid #0F172A; border-radius:6px; padding:10px 14px;">
-            <div style="font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#0091C2; margin-bottom:6px;">📄 ${content.docLabel}</div>
-            <ul style="margin:0; padding:0; list-style:none; font-size:0.84rem; line-height:1.4; color:#0F172A;">${docItems}</ul>
-          </div>
+        <div style="border:1.5px solid #0F172A; border-radius:6px; padding:10px 14px; margin-bottom:14px;">
+          <div style="font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#0091C2; margin-bottom:6px;">✅ ${content.reqLabel}</div>
+          <ul style="margin:0; padding:0; list-style:none; font-size:0.84rem; line-height:1.4; color:#0F172A; columns:2; column-gap:20px;">${reqItems}</ul>
         </div>
 
         <div style="border:1.5px solid #0F172A; border-radius:6px; padding:10px 14px; margin-bottom:14px; background:rgba(0,145,194,0.04);">
@@ -10157,7 +10119,6 @@ function printBpcGuide(id, lang) {
         <div style="border:1.5px dashed #94A3B8; border-radius:6px; padding:10px 14px; margin-bottom:14px;">
           <div style="font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#0091C2; margin-bottom:5px;">📍 ${content.contactLabel}</div>
           <div style="font-size:0.82rem; line-height:1.5; color:#0F172A;">
-            <strong>CRAS Cristiana Vicente Nunes</strong> — Rua Santo Agostinho, 193, Centenário, Boa Vista-RR — (95) 98402-6617<br>
             <strong>INSS</strong> — Av. Glaycon de Paiva, 86, Mecejana, Boa Vista-RR — Central 135 · Meu INSS (gov.br/meuinss)
           </div>
         </div>
