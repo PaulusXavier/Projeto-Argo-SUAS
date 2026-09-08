@@ -10178,25 +10178,25 @@ async function printBpcGuide(id, lang) {
     ? '(incluido en las páginas siguientes de esta impresión)'
     : '(incluído nas páginas seguintes desta impressão)';
 
+  // Escala automática de tamanhos: guias com menos requisitos/passos (menos
+  // texto no total, ex.: BPC Idoso) usam fonte/espaçamento um pouco maiores
+  // para ocupar bem a folha A4; guias mais longos (ex.: BPC PCD, com 6
+  // requisitos + 6 passos) usam a escala-base (1.0), já calibrada para caber
+  // inteiramente em uma única página mesmo sem a imagem ilustrativa.
+  const totalGuideItems = content.requirements.length + content.steps.length;
+  const guideScale = Math.max(1, Math.min(1.3, 1 + (12 - totalGuideItems) * 0.05));
+  const grem = (n) => (n * guideScale).toFixed(3) + 'rem';
+  const gpx = (n) => Math.round(n * guideScale) + 'px';
+
+  // Lista de requisitos: com poucos itens (até 3, ex.: Recuperação de Senha)
+  // fica em coluna única, mais legível; com listas mais longas (BPC Idoso e
+  // BPC PCD) usa duas colunas para equilibrar melhor o espaço da folha.
+  const reqColumns = content.requirements.length > 3 ? 2 : 1;
   const reqItems = content.requirements.map(r => `
-    <li style="margin-bottom:3px; display:flex; gap:6px; align-items:flex-start; break-inside:avoid;">
-      <span style="flex-shrink:0; width:12px; height:12px; border-radius:3px; background:#0091C2; color:#fff; font-size:0.54rem; font-weight:800; line-height:12px; text-align:center; margin-top:1px;">✓</span>
+    <li style="margin:0 0 ${gpx(6)} 0; display:flex; gap:${gpx(8)}; align-items:flex-start; break-inside:avoid;">
+      <span style="flex-shrink:0; width:${gpx(16)}; height:${gpx(16)}; border-radius:5px; background:#0091C2; color:#fff; font-size:${grem(0.7)}; font-weight:800; line-height:${gpx(16)}; text-align:center; margin-top:1px;">✓</span>
       <span>${hlGuideTerms(r)}</span>
     </li>`).join('');
-
-  // Imagem ilustrativa: por padrão aparece depois do último passo (como
-  // sempre foi), mas cada guia pode definir illustrationAfterStep para
-  // posicioná-la logo depois de um passo específico (ex.: no BPC Idoso,
-  // depois do passo 1 — "Peça o benefício" — onde ela faz mais sentido).
-  const illustrationAfterStep = content.illustration
-    ? (content.illustrationAfterStep || content.steps.length)
-    : 0;
-
-  const illustrationBlock = content.illustration ? `
-    <div style="margin:6px 0 2px 0; border:1px solid #CBD5E1; border-radius:5px; padding:5px; background:white; text-align:center; break-inside:avoid;">
-      <img src="${content.illustration}" alt="${content.illustrationCaption || ''}" style="max-width:100%; max-height:3.4cm; width:auto; height:auto; object-fit:contain; border:1px solid #E2E8F0; border-radius:4px; display:block; margin:0 auto;">
-      ${content.illustrationCaption ? `<div style="font-size:0.56rem; line-height:1.25; color:#64748B; margin-top:3px;">🖼️ ${hlGuideTerms(content.illustrationCaption)}</div>` : ''}
-    </div>` : '';
 
   const stepItems = content.steps.map((s, idx) => {
     // Os títulos já vêm no formato "1. Texto do passo" — separa o número
@@ -10205,67 +10205,67 @@ async function printBpcGuide(id, lang) {
     const stepNum = m ? m[1] : String(idx + 1);
     const stepTitleText = m ? m[2] : (s.title || '');
     return `
-    <div style="display:flex; gap:7px; align-items:flex-start; padding:3px 0; ${idx > 0 ? 'border-top:1px solid #E2E8F0;' : ''} break-inside:avoid;">
-      <div style="flex-shrink:0; width:16px; height:16px; border-radius:50%; background:#0F172A; color:#fff; font-size:0.62rem; font-weight:800; display:flex; align-items:center; justify-content:center; margin-top:1px;">${stepNum}</div>
+    <div style="display:flex; gap:${gpx(10)}; align-items:flex-start; padding:${gpx(5)} 0; ${idx > 0 ? 'border-top:1px solid #E2E8F0;' : ''} break-inside:avoid;">
+      <div style="flex-shrink:0; width:${gpx(22)}; height:${gpx(22)}; border-radius:50%; background:#0F172A; color:#fff; font-size:${grem(0.84)}; font-weight:800; display:flex; align-items:center; justify-content:center; margin-top:1px;">${stepNum}</div>
       <div style="flex:1; min-width:0;">
-        <div style="font-weight:800; color:#0F172A; font-size:0.8rem; line-height:1.2;">${hlGuideTerms(stepTitleText)}</div>
-        <div style="color:#334155; font-size:0.72rem; line-height:1.25; margin-top:1px;">${hlGuideTerms(s.desc)}</div>
+        <div style="font-weight:800; color:#0F172A; font-size:${grem(0.92)}; line-height:1.22;">${hlGuideTerms(stepTitleText)}</div>
+        <div style="color:#334155; font-size:${grem(0.8)}; line-height:1.35; margin-top:2px;">${hlGuideTerms(s.desc)}</div>
       </div>
-    </div>${(idx + 1 === illustrationAfterStep) ? illustrationBlock : ''}`;
+    </div>`;
   }).join('');
 
   const guidePage = `
     <div class="print-page" style="position:relative; padding:0; box-sizing:border-box; display:flex; flex-direction:column; background:white; border:2px solid #0F172A; width:100%; min-height:27.7cm; height:auto; overflow:visible;">
       ${watermark}
-      <div style="position:absolute; inset:0.2cm; border:1px solid #94A3B8; z-index:0; pointer-events:none;"></div>
+      <div style="position:absolute; inset:0.25cm; border:1px solid #94A3B8; z-index:0; pointer-events:none;"></div>
 
-      <div style="position:relative; z-index:1; padding:0.55cm 0.9cm; font-family:'Inter', sans-serif; color:#0F172A;">
+      <div style="position:relative; z-index:1; padding:${gpx(13)} ${gpx(19)} ${gpx(15)} ${gpx(19)}; font-family:'Inter', sans-serif; color:#0F172A;">
 
-        <table style="width:100%; border-collapse:collapse; margin-bottom:7px;">
+        <table style="width:100%; border-collapse:collapse; margin-bottom:${gpx(11)};">
           <tr>
-            <td style="border:1.5px solid #0F172A; border-left:6px solid #0091C2; border-radius:2px; padding:6px 12px; vertical-align:middle;">
-              <div style="font-size:0.54rem; font-weight:800; letter-spacing:0.04em; color:#0091C2; text-transform:uppercase;">CRAS Cristiana Vicente Nunes · SEMADS · Prefeitura de Boa Vista</div>
-              <div style="display:inline-block; font-size:0.62rem; font-weight:800; letter-spacing:0.03em; color:#fff; background:#0F172A; padding:2px 8px; border-radius:20px; margin-top:3px;">${content.badge}</div>
-              <div style="font-size:0.74rem; color:#334155; font-weight:700; margin-top:3px;">${content.title}</div>
+            <td style="border:1.5px solid #0F172A; border-left:8px solid #0091C2; border-radius:3px; padding:${gpx(10)} ${gpx(16)}; vertical-align:middle;">
+              <div style="font-size:${grem(0.64)}; font-weight:800; letter-spacing:0.05em; color:#0091C2; text-transform:uppercase;">CRAS Cristiana Vicente Nunes · SEMADS · Prefeitura de Boa Vista</div>
+              <div style="display:inline-block; font-size:${grem(0.74)}; font-weight:800; letter-spacing:0.04em; color:#fff; background:#0F172A; padding:${gpx(3)} ${gpx(11)}; border-radius:20px; margin-top:${gpx(5)};">${content.badge}</div>
+              <div style="font-size:${grem(1.08)}; color:#0F172A; font-weight:800; margin-top:${gpx(6)};">${content.title}</div>
             </td>
           </tr>
         </table>
 
-        <div style="font-size:0.74rem; line-height:1.3; color:#334155; padding:2px 2px 7px 2px; border-bottom:1px dashed #CBD5E1; margin-bottom:7px;">
+        <div style="font-size:${grem(0.88)}; line-height:1.4; color:#334155; padding:2px 2px ${gpx(11)} 2px; border-bottom:1px dashed #CBD5E1; margin-bottom:${gpx(11)};">
           ${hlGuideTerms(content.intro)}
         </div>
 
-        <div style="border:1.5px solid #0F172A; border-radius:5px; padding:6px 12px; margin-bottom:7px;">
-          <div style="font-size:0.6rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#0091C2; margin-bottom:4px;">✅ ${content.reqLabel}</div>
-          <ul style="margin:0; padding:0; list-style:none; font-size:0.72rem; line-height:1.25; color:#0F172A; columns:2; column-gap:18px;">${reqItems}</ul>
+        <div style="border:1.5px solid #0F172A; border-radius:7px; padding:${gpx(11)} ${gpx(18)}; margin-bottom:${gpx(11)};">
+          <div style="font-size:${grem(0.76)}; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#0091C2; margin-bottom:${gpx(7)};">✅ ${content.reqLabel}</div>
+          <ul style="margin:0; padding:0; list-style:none; font-size:${grem(0.83)}; line-height:1.35; color:#0F172A; ${reqColumns === 2 ? 'columns:2; column-gap:22px;' : ''}">${reqItems}</ul>
         </div>
 
-        <div style="border:1.5px solid #0F172A; border-radius:5px; padding:6px 12px; margin-bottom:7px; background:rgba(0,145,194,0.04);">
-          <div style="font-size:0.6rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#0091C2; margin-bottom:2px;">🧭 ${content.stepsLabel}</div>
+        <div style="border:1.5px solid #0F172A; border-radius:7px; padding:${gpx(11)} ${gpx(18)}; margin-bottom:${gpx(11)}; background:rgba(0,145,194,0.04);">
+          <div style="font-size:${grem(0.76)}; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#0091C2; margin-bottom:3px;">🧭 ${content.stepsLabel}</div>
           ${stepItems}
         </div>
 
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:7px;">
-          <div style="border:1px solid #CBD5E1; border-radius:5px; padding:6px 10px;">
-            <div style="font-size:0.56rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#475569; margin-bottom:3px;">💰 ${content.valueLabel}</div>
-            <div style="font-size:0.7rem; line-height:1.25; color:#0F172A;">${hlGuideTerms(content.value)}</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:${gpx(14)}; margin-bottom:${gpx(11)};">
+          <div style="border:1px solid #CBD5E1; border-radius:7px; padding:${gpx(10)} ${gpx(14)};">
+            <div style="font-size:${grem(0.68)}; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#475569; margin-bottom:${gpx(5)};">💰 ${content.valueLabel}</div>
+            <div style="font-size:${grem(0.81)}; line-height:1.35; color:#0F172A;">${hlGuideTerms(content.value)}</div>
           </div>
-          <div style="border:1px solid #CBD5E1; border-radius:5px; padding:6px 10px;">
-            <div style="font-size:0.56rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#475569; margin-bottom:3px;">⚖️ ${content.denialLabel}</div>
-            <div style="font-size:0.7rem; line-height:1.25; color:#0F172A;">${hlGuideTerms(content.denial)}</div>
+          <div style="border:1px solid #CBD5E1; border-radius:7px; padding:${gpx(10)} ${gpx(14)};">
+            <div style="font-size:${grem(0.68)}; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#475569; margin-bottom:${gpx(5)};">⚖️ ${content.denialLabel}</div>
+            <div style="font-size:${grem(0.81)}; line-height:1.35; color:#0F172A;">${hlGuideTerms(content.denial)}</div>
           </div>
         </div>
 
-        <div style="border:1.5px dashed #94A3B8; border-radius:5px; padding:6px 12px; margin-bottom:7px;">
-          <div style="font-size:0.6rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#0091C2; margin-bottom:3px;">📍 ${content.contactLabel}</div>
-          <div style="font-size:0.7rem; line-height:1.3; color:#0F172A;">
+        <div style="border:1.5px dashed #94A3B8; border-radius:7px; padding:${gpx(10)} ${gpx(18)}; margin-bottom:${gpx(11)};">
+          <div style="font-size:${grem(0.72)}; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#0091C2; margin-bottom:${gpx(4)};">📍 ${content.contactLabel}</div>
+          <div style="font-size:${grem(0.81)}; line-height:1.4; color:#0F172A;">
             <strong>INSS</strong> — Av. Glaycon de Paiva, 86, Mecejana, Boa Vista-RR<br>
             Central <strong style="font-size:1.2em;">135</strong> (gov.br/inss/pt-br/canais_atendimento/central-135) · <strong style="font-size:1.05em;">Meu INSS</strong> (meu.inss.gov.br)
           </div>
-          ${pdfAttach ? `<div style="margin-top:4px; font-size:0.58rem; font-weight:700; color:#475569;">📎 ${attachNoteLabel}: ${escapeHtml(pdfAttach.name || 'documento.pdf')} ${attachNoteSuffix}.</div>` : ''}
+          ${pdfAttach ? `<div style="margin-top:${gpx(5)}; font-size:${grem(0.7)}; font-weight:700; color:#475569;">📎 ${attachNoteLabel}: ${escapeHtml(pdfAttach.name || 'documento.pdf')} ${attachNoteSuffix}.</div>` : ''}
         </div>
 
-        <div style="font-size:0.54rem; line-height:1.3; color:#94A3B8; text-align:center; padding-top:5px; border-top:1px dashed #CBD5E1;">
+        <div style="font-size:${grem(0.64)}; line-height:1.35; color:#94A3B8; text-align:center; padding-top:${gpx(7)}; border-top:1px dashed #CBD5E1;">
           ${hlGuideTerms(content.footer)}<br>
           ${lang === 'es' ? 'Documento generado el' : 'Documento gerado em'} ${dateLong} · Argo SUAS — ${i ? i.fullName : ''}
         </div>
