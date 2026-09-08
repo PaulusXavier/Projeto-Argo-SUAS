@@ -8557,6 +8557,152 @@ const CATEGORY_LABELS_PRINT = {
   mulher: 'Rede de Enfrentamento à Violência contra a Mulher', cultura: 'Cultura, Esporte e Lazer', defesacivil: 'Defesa Civil e Situações de Emergência', conselhosdireitos: 'Conselhos Municipais de Direitos'
 };
 
+/* IDs dos cards de BPC que usam um guia de impressão próprio, voltado ao
+   usuário/família (passo a passo, requisitos, documentos), em vez da Ficha
+   de Encaminhamento Técnico padrão (que é voltada ao profissional). Esse
+   guia também pode ser gerado em espanhol, por causa do público migrante
+   atendido pelo CRAS. */
+const BPC_GUIDE_IDS = ['bpc-idoso', 'bpc-pcd'];
+
+const BPC_GUIDE_CONTENT = {
+  'bpc-idoso': {
+    pt: {
+      badge: 'BPC IDOSO',
+      title: 'Benefício de Prestação Continuada — Pessoa Idosa',
+      intro: 'O BPC Idoso paga 1 salário mínimo por mês a idosos de baixa renda. Não é aposentadoria: não é preciso ter contribuído ao INSS para ter direito.',
+      reqLabel: 'Quem tem direito',
+      requirements: [
+        'Ter 65 anos de idade ou mais',
+        'Renda de até ¼ de salário mínimo por pessoa da família (R$ 405,25 em 2026)',
+        'Estar inscrito no Cadastro Único (CadÚnico), atualizado há menos de 2 anos'
+      ],
+      docLabel: 'Documentos para levar',
+      documents: [
+        'RG ou Carteira de Identidade Nacional (CIN) e CPF',
+        'Comprovante de residência atualizado (últimos 3 meses)',
+        'Certidão de nascimento ou casamento',
+        'Número do NIS / CadÚnico',
+        'Comprovantes de renda de todos que moram na casa (ou declaração de que não trabalham)'
+      ],
+      stepsLabel: 'Passo a passo',
+      steps: [
+        { title: '1. Atualize o CadÚnico', desc: 'Vá ao CRAS do seu bairro com os documentos da família para inscrever ou atualizar o Cadastro Único.' },
+        { title: '2. Peça o benefício', desc: 'Pelo aplicativo/site Meu INSS (gov.br/meuinss), com login gov.br, ou pelo telefone 135 (ligação gratuita, todos os dias, das 7h às 22h).' },
+        { title: '3. Acompanhe o pedido', desc: 'Acompanhe o andamento pelo próprio Meu INSS. Se o benefício for negado, há 30 dias para pedir recurso.' }
+      ],
+      valueLabel: 'Valor e pagamento',
+      value: '1 salário mínimo por mês (R$ 1.621,00 em 2026), pago pela Caixa Econômica Federal, sem 13º salário.',
+      denialLabel: 'Se o pedido for negado',
+      denial: 'É possível recorrer em até 30 dias pelo Meu INSS ou em uma agência do INSS. Persistindo a negativa, procure orientação jurídica gratuita na Defensoria Pública da União (DPU).',
+      contactLabel: 'Onde buscar ajuda',
+      footer: 'Este guia é apenas informativo e não substitui o atendimento no CRAS ou no INSS. Regras e valores podem mudar — confirme sempre no CRAS ou pelo Meu INSS/135.'
+    },
+    es: {
+      badge: 'BPC ANCIANO',
+      title: 'Beneficio de Prestación Continuada — Persona Mayor',
+      intro: 'El BPC Anciano paga 1 salario mínimo por mes a personas mayores de bajos ingresos. No es una jubilación: no es necesario haber contribuido al INSS para tener derecho.',
+      reqLabel: 'Quién tiene derecho',
+      requirements: [
+        'Tener 65 años de edad o más',
+        'Ingreso de hasta ¼ del salario mínimo por persona de la familia (R$ 405,25 en 2026)',
+        'Estar inscrito en el Cadastro Único (CadÚnico), actualizado hace menos de 2 años'
+      ],
+      docLabel: 'Documentos para llevar',
+      documents: [
+        'RG o Carteira de Identidade Nacional (CIN) y CPF',
+        'Comprobante de domicilio actualizado (últimos 3 meses)',
+        'Certificado de nacimiento o matrimonio',
+        'Número del NIS / CadÚnico',
+        'Comprobantes de ingresos de todos los que viven en la casa (o declaración de que no trabajan)'
+      ],
+      stepsLabel: 'Paso a paso',
+      steps: [
+        { title: '1. Actualice el CadÚnico', desc: 'Vaya al CRAS de su barrio con los documentos de la familia para inscribir o actualizar el Cadastro Único.' },
+        { title: '2. Solicite el beneficio', desc: 'Por la aplicación/sitio Meu INSS (gov.br/meuinss), con inicio de sesión gov.br, o por el teléfono 135 (llamada gratuita, todos los días, de 7h a 22h).' },
+        { title: '3. Siga la solicitud', desc: 'Siga el trámite por el propio Meu INSS. Si el beneficio es negado, hay 30 días para pedir un recurso.' }
+      ],
+      valueLabel: 'Valor y pago',
+      value: '1 salario mínimo por mes (R$ 1.621,00 en 2026), pagado por la Caixa Econômica Federal, sin aguinaldo (13º salário).',
+      denialLabel: 'Si la solicitud es negada',
+      denial: 'Es posible recurrir dentro de 30 días por el Meu INSS o en una agencia del INSS. Si persiste la negativa, busque orientación jurídica gratuita en la Defensoria Pública da União (DPU).',
+      contactLabel: 'Dónde buscar ayuda',
+      footer: 'Esta guía es solo informativa y no sustituye la atención en el CRAS o en el INSS. Las reglas y valores pueden cambiar — confirme siempre en el CRAS o por el Meu INSS/135.'
+    }
+  },
+  'bpc-pcd': {
+    pt: {
+      badge: 'BPC PESSOA COM DEFICIÊNCIA',
+      title: 'Benefício de Prestação Continuada — Pessoa com Deficiência',
+      intro: 'O BPC PCD paga 1 salário mínimo por mês a pessoas com deficiência de baixa renda, de qualquer idade. Não é aposentadoria: não é preciso ter contribuído ao INSS para ter direito.',
+      reqLabel: 'Quem tem direito',
+      requirements: [
+        'Ter deficiência de longo prazo (física, mental, intelectual ou sensorial), de pelo menos 2 anos, que dificulte a participação plena na sociedade',
+        'Não há idade mínima',
+        'Renda de até ¼ de salário mínimo por pessoa da família (R$ 405,25 em 2026)',
+        'Estar inscrito no Cadastro Único (CadÚnico), atualizado há menos de 2 anos',
+        'Passar por avaliação médica e social do INSS (perícia)'
+      ],
+      docLabel: 'Documentos para levar',
+      documents: [
+        'RG ou Carteira de Identidade Nacional (CIN) e CPF',
+        'Comprovante de residência atualizado (últimos 3 meses)',
+        'Certidão de nascimento ou casamento',
+        'Número do NIS / CadÚnico',
+        'Comprovantes de renda de todos que moram na casa (ou declaração de que não trabalham)',
+        'Laudo médico com CID, descrevendo as limitações no dia a dia (quanto mais detalhado, melhor)'
+      ],
+      stepsLabel: 'Passo a passo',
+      steps: [
+        { title: '1. Atualize o CadÚnico', desc: 'Vá ao CRAS do seu bairro com os documentos da família para inscrever ou atualizar o Cadastro Único.' },
+        { title: '2. Peça o benefício', desc: 'Pelo aplicativo/site Meu INSS (gov.br/meuinss), com login gov.br, ou pelo telefone 135 (ligação gratuita, todos os dias, das 7h às 22h).' },
+        { title: '3. Compareça à avaliação', desc: 'O INSS agenda uma avaliação médica e social (perícia biopsicossocial). Leve o laudo médico e todos os documentos.' },
+        { title: '4. Acompanhe o pedido', desc: 'Acompanhe o andamento pelo próprio Meu INSS. Se o benefício for negado, há 30 dias para pedir recurso.' }
+      ],
+      valueLabel: 'Valor e pagamento',
+      value: '1 salário mínimo por mês (R$ 1.621,00 em 2026), pago pela Caixa Econômica Federal, sem 13º salário. Se a pessoa começar a trabalhar com carteira assinada, o BPC não é cancelado, apenas suspenso.',
+      denialLabel: 'Se o pedido for negado',
+      denial: 'É possível recorrer em até 30 dias pelo Meu INSS ou em uma agência do INSS. Persistindo a negativa, procure orientação jurídica gratuita na Defensoria Pública da União (DPU).',
+      contactLabel: 'Onde buscar ajuda',
+      footer: 'Este guia é apenas informativo e não substitui o atendimento no CRAS ou no INSS. Regras e valores podem mudar — confirme sempre no CRAS ou pelo Meu INSS/135.'
+    },
+    es: {
+      badge: 'BPC PERSONA CON DISCAPACIDAD',
+      title: 'Beneficio de Prestación Continuada — Persona con Discapacidad',
+      intro: 'El BPC PCD paga 1 salario mínimo por mes a personas con discapacidad de bajos ingresos, de cualquier edad. No es una jubilación: no es necesario haber contribuido al INSS para tener derecho.',
+      reqLabel: 'Quién tiene derecho',
+      requirements: [
+        'Tener discapacidad de largo plazo (física, mental, intelectual o sensorial), de al menos 2 años, que dificulte la participación plena en la sociedad',
+        'No hay edad mínima',
+        'Ingreso de hasta ¼ del salario mínimo por persona de la familia (R$ 405,25 en 2026)',
+        'Estar inscrito en el Cadastro Único (CadÚnico), actualizado hace menos de 2 años',
+        'Pasar por una evaluación médica y social del INSS (pericia)'
+      ],
+      docLabel: 'Documentos para llevar',
+      documents: [
+        'RG o Carteira de Identidade Nacional (CIN) y CPF',
+        'Comprobante de domicilio actualizado (últimos 3 meses)',
+        'Certificado de nacimiento o matrimonio',
+        'Número del NIS / CadÚnico',
+        'Comprobantes de ingresos de todos los que viven en la casa (o declaración de que no trabajan)',
+        'Informe médico con CID, describiendo las limitaciones en el día a día (cuanto más detallado, mejor)'
+      ],
+      stepsLabel: 'Paso a paso',
+      steps: [
+        { title: '1. Actualice el CadÚnico', desc: 'Vaya al CRAS de su barrio con los documentos de la familia para inscribir o actualizar el Cadastro Único.' },
+        { title: '2. Solicite el beneficio', desc: 'Por la aplicación/sitio Meu INSS (gov.br/meuinss), con inicio de sesión gov.br, o por el teléfono 135 (llamada gratuita, todos los días, de 7h a 22h).' },
+        { title: '3. Asista a la evaluación', desc: 'El INSS programa una evaluación médica y social (pericia biopsicosocial). Lleve el informe médico y todos los documentos.' },
+        { title: '4. Siga la solicitud', desc: 'Siga el trámite por el propio Meu INSS. Si el beneficio es negado, hay 30 días para pedir un recurso.' }
+      ],
+      valueLabel: 'Valor y pago',
+      value: '1 salario mínimo por mes (R$ 1.621,00 en 2026), pagado por la Caixa Econômica Federal, sin aguinaldo (13º salário). Si la persona empieza a trabajar de forma registrada, el BPC no se cancela, solo se suspende.',
+      denialLabel: 'Si la solicitud es negada',
+      denial: 'Es posible recurrir dentro de 30 días por el Meu INSS o en una agencia del INSS. Si persiste la negativa, busque orientación jurídica gratuita en la Defensoria Pública da União (DPU).',
+      contactLabel: 'Dónde buscar ayuda',
+      footer: 'Esta guía es solo informativa y no sustituye la atención en el CRAS o en el INSS. Las reglas y valores pueden cambiar — confirme siempre en el CRAS o por el Meu INSS/135.'
+    }
+  }
+};
+
 function cleanPrintField(value, fallback) {
   const raw = value || '';
   const naPrefixMatch = raw.match(/^\s*n\/a\s*[-–]\s*([\s\S]+)$/i);
@@ -9501,9 +9647,13 @@ function render() {
             <div class="image-error-msg" id="img-error-${i.id}" role="alert" style="display:none;"></div>
           </div>
         </div>
-        <div class="card-actions">
+        <div class="card-actions"${BPC_GUIDE_IDS.includes(i.id) ? ' style="grid-template-columns: 1fr 1fr 1fr;"' : ''}>
           <button class="btn-tech btn-secondary" onclick="share('${i.id}')">Compartilhar</button>
-          <button class="btn-tech btn-primary" onclick="printGuide('${i.id}')">Gerar Guia</button>
+          ${BPC_GUIDE_IDS.includes(i.id)
+            ? `<button class="btn-tech btn-primary" onclick="printBpcGuide('${i.id}','pt')">📄 Guia do Benefício (PT)</button>
+               <button class="btn-tech btn-primary" onclick="printBpcGuide('${i.id}','es')">📄 Guía del Beneficio (ES)</button>`
+            : `<button class="btn-tech btn-primary" onclick="printGuide('${i.id}')">Gerar Guia</button>`
+          }
         </div>
       </div>
     `;
@@ -9911,6 +10061,125 @@ function buildPrintWatermark() {
       </svg>
     </div>
   `;
+}
+
+/* Guia de impressão do BPC (Idoso / Pessoa com Deficiência), voltado ao
+   usuário/família — diferente da Ficha de Encaminhamento Técnico gerada por
+   printGuide(). É impresso em A4 retrato (a Ficha usa A4 paisagem), por isso
+   troca temporariamente a regra @page antes de chamar window.print() e
+   desfaz a troca depois (evento 'afterprint'). Pode ser gerado em português
+   ou espanhol, conforme o parâmetro lang. */
+function setTempPageOrientation(size) {
+  let styleTag = document.getElementById('tempPageOrientation');
+  if (!styleTag) {
+    styleTag = document.createElement('style');
+    styleTag.id = 'tempPageOrientation';
+    document.head.appendChild(styleTag);
+  }
+  styleTag.textContent = size ? `@media print { @page { size: ${size}; margin: 1cm; } }` : '';
+}
+
+function printBpcGuide(id, lang) {
+  const content = (BPC_GUIDE_CONTENT[id] && BPC_GUIDE_CONTENT[id][lang]) || null;
+  if (!content) return;
+
+  const i = DATA.find(x => x.id === id);
+  const now = new Date();
+  const dateLong = now.toLocaleDateString(lang === 'es' ? 'es-ES' : 'pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+  const watermark = buildPrintWatermark();
+
+  const reqItems = content.requirements.map(r => `
+    <li style="margin-bottom:5px; display:flex; gap:8px; align-items:flex-start;">
+      <span style="flex-shrink:0; color:#0091C2; font-weight:800;">✓</span>
+      <span>${r}</span>
+    </li>`).join('');
+
+  const docItems = content.documents.map(d => `
+    <li style="margin-bottom:6px; display:flex; gap:8px; align-items:flex-start;">
+      <span style="flex-shrink:0; width:14px; height:14px; margin-top:2px; border:1.5px solid #0F172A; border-radius:3px; display:inline-block;"></span>
+      <span>${d}</span>
+    </li>`).join('');
+
+  const stepItems = content.steps.map(s => `
+    <div style="margin-bottom:9px;">
+      <div style="font-weight:800; color:#0F172A; font-size:0.92rem;">${s.title}</div>
+      <div style="color:#334155; font-size:0.86rem; line-height:1.4; margin-top:1px;">${s.desc}</div>
+    </div>`).join('');
+
+  const guidePage = `
+    <div class="print-page" style="position:relative; padding:0; box-sizing:border-box; display:flex; flex-direction:column; background:white; border:2px solid #0F172A; width:100%; min-height:27.7cm;">
+      ${watermark}
+      <div style="position:absolute; inset:0.25cm; border:1px solid #94A3B8; z-index:0; pointer-events:none;"></div>
+
+      <div style="position:relative; z-index:1; padding:0.9cm 1.1cm; font-family:'Inter', sans-serif; color:#0F172A;">
+
+        <table style="width:100%; border-collapse:collapse; margin-bottom:10px;">
+          <tr>
+            <td style="border:1.5px solid #0F172A; padding:8px 14px; vertical-align:middle;">
+              <div style="font-size:0.6rem; font-weight:800; letter-spacing:0.04em; color:#0091C2; text-transform:uppercase;">CRAS Cristiana Vicente Nunes · SEMADS · Prefeitura de Boa Vista</div>
+              <div style="font-size:1.05rem; font-weight:800; color:#0F172A; margin-top:2px;">${content.badge}</div>
+              <div style="font-size:0.75rem; color:#475569; font-weight:700; margin-top:1px;">${content.title}</div>
+            </td>
+          </tr>
+        </table>
+
+        <div style="font-size:0.86rem; line-height:1.45; color:#334155; padding:8px 2px 14px 2px; border-bottom:1px dashed #CBD5E1; margin-bottom:12px;">
+          ${content.intro}
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+          <div style="border:1.5px solid #0F172A; border-radius:6px; padding:10px 14px;">
+            <div style="font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#0091C2; margin-bottom:6px;">✅ ${content.reqLabel}</div>
+            <ul style="margin:0; padding:0; list-style:none; font-size:0.84rem; line-height:1.4; color:#0F172A;">${reqItems}</ul>
+          </div>
+          <div style="border:1.5px solid #0F172A; border-radius:6px; padding:10px 14px;">
+            <div style="font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#0091C2; margin-bottom:6px;">📄 ${content.docLabel}</div>
+            <ul style="margin:0; padding:0; list-style:none; font-size:0.84rem; line-height:1.4; color:#0F172A;">${docItems}</ul>
+          </div>
+        </div>
+
+        <div style="border:1.5px solid #0F172A; border-radius:6px; padding:10px 14px; margin-bottom:14px; background:rgba(0,145,194,0.04);">
+          <div style="font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#0091C2; margin-bottom:8px;">🧭 ${content.stepsLabel}</div>
+          ${stepItems}
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+          <div style="border:1px solid #CBD5E1; border-radius:6px; padding:9px 13px;">
+            <div style="font-size:0.62rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#475569; margin-bottom:4px;">💰 ${content.valueLabel}</div>
+            <div style="font-size:0.8rem; line-height:1.4; color:#0F172A;">${content.value}</div>
+          </div>
+          <div style="border:1px solid #CBD5E1; border-radius:6px; padding:9px 13px;">
+            <div style="font-size:0.62rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#475569; margin-bottom:4px;">⚖️ ${content.denialLabel}</div>
+            <div style="font-size:0.8rem; line-height:1.4; color:#0F172A;">${content.denial}</div>
+          </div>
+        </div>
+
+        <div style="border:1.5px dashed #94A3B8; border-radius:6px; padding:10px 14px; margin-bottom:14px;">
+          <div style="font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#0091C2; margin-bottom:5px;">📍 ${content.contactLabel}</div>
+          <div style="font-size:0.82rem; line-height:1.5; color:#0F172A;">
+            <strong>CRAS Cristiana Vicente Nunes</strong> — Rua Santo Agostinho, 193, Centenário, Boa Vista-RR — (95) 98402-6617<br>
+            <strong>INSS</strong> — Av. Glaycon de Paiva, 86, Mecejana, Boa Vista-RR — Central 135 · Meu INSS (gov.br/meuinss)
+          </div>
+        </div>
+
+        <div style="font-size:0.62rem; line-height:1.4; color:#94A3B8; text-align:center; padding-top:8px; border-top:1px dashed #CBD5E1;">
+          ${content.footer}<br>
+          ${lang === 'es' ? 'Documento generado el' : 'Documento gerado em'} ${dateLong} · Argo SUAS — ${i ? i.fullName : ''}
+        </div>
+      </div>
+    </div>
+  `;
+
+  const printArea = document.getElementById('print-area');
+  printArea.innerHTML = guidePage;
+
+  setTempPageOrientation('A4 portrait');
+  window.addEventListener('afterprint', function clearOrientation() {
+    setTempPageOrientation(null);
+    window.removeEventListener('afterprint', clearOrientation);
+  });
+
+  window.print();
 }
 
 /* Converte o PDF anexado em imagens (uma por página) para que a impressão
