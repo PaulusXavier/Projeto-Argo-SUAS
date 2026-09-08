@@ -8588,6 +8588,7 @@ const BPC_GUIDE_CONTENT = {
         { title: '2. Acompanhe o pedido', desc: 'Acompanhe o andamento pela opção "Acompanhar Pedido" no Meu INSS. O INSS pode pedir algum documento complementar dentro de um prazo determinado — fique atento às notificações do aplicativo para não perder o pedido por falta de resposta.' },
         { title: '3. Receba o resultado', desc: 'Se aprovado, o pagamento é feito pela Caixa Econômica Federal, seguindo o calendário mensal por final do número do benefício. Se negado, há 30 dias a partir da ciência da decisão para pedir recurso administrativo, pelo próprio Meu INSS ou numa agência do INSS (Conselho de Recursos do Seguro Social - CRPS).' }
       ],
+      illustrationAfterStep: 1,
       illustrationCaption: 'Tela do Meu INSS (meu.inss.gov.br) — toque em "Entrar com gov.br" para pedir o benefício',
       illustration: BPC_IDOSO_LOGIN_IMG,
       valueLabel: 'Valor e pagamento',
@@ -8614,6 +8615,7 @@ const BPC_GUIDE_CONTENT = {
         { title: '2. Siga la solicitud', desc: 'Siga el trámite por la opción "Acompanhar Pedido" en el Meu INSS. El INSS puede pedir algún documento complementario dentro de un plazo determinado — esté atento a las notificaciones de la aplicación para no perder la solicitud por falta de respuesta.' },
         { title: '3. Reciba el resultado', desc: 'Si es aprobado, el pago lo hace la Caixa Econômica Federal, siguiendo el calendario mensual por el último número del beneficio. Si es negado, hay 30 días desde la notificación para pedir recurso administrativo, por el propio Meu INSS o en una agencia del INSS (Conselho de Recursos do Seguro Social - CRPS).' }
       ],
+      illustrationAfterStep: 1,
       illustrationCaption: 'Pantalla del Meu INSS (meu.inss.gov.br) — toque en "Entrar com gov.br" para solicitar el beneficio',
       illustration: BPC_IDOSO_LOGIN_IMG,
       valueLabel: 'Valor y pago',
@@ -9634,6 +9636,17 @@ function render() {
     }
 
     const attach = getAttachment(i.id);
+    // Para os três guias do BPC (Idoso, PCD e Recuperação de Senha), o anexo
+    // é restrito a PDF — pensado especificamente para a Folha Resumo do
+    // Cadastro Único, que a família costuma levar junto do guia impresso.
+    const isBpcGuideCard = BPC_GUIDE_IDS.includes(i.id);
+    const attachUploadLabel = isBpcGuideCard
+      ? `${ICONS.pdf} Anexar Folha Resumo do CadÚnico (PDF)`
+      : `${ICONS.image} Anexar Imagem ou PDF`;
+    const attachAccept = isBpcGuideCard ? 'application/pdf' : 'image/*,application/pdf';
+    const attachHint = isBpcGuideCard
+      ? 'PDF da Folha Resumo do Cadastro Único, até 3,5MB'
+      : 'Imagem ou PDF, até 3,5MB';
     const imageBlock = attach
       ? (attach.type === 'pdf'
           ? `<div class="pdf-preview">
@@ -9651,10 +9664,10 @@ function render() {
                <button type="button" class="image-remove-btn" title="Remover imagem" aria-label="Remover imagem de ${escapeHtml(i.name)}" onclick="removeAttachment('${i.id}')">✕</button>
              </div>`)
       : `<label class="btn-tech btn-secondary image-upload-label">
-           ${ICONS.image} Anexar Imagem ou PDF
-           <input type="file" accept="image/*,application/pdf" style="display:none" onchange="handleAttachUpload(event, '${i.id}')">
+           ${attachUploadLabel}
+           <input type="file" accept="${attachAccept}" style="display:none" onchange="handleAttachUpload(event, '${i.id}')">
          </label>
-         <div class="image-attach-hint">Imagem ou PDF, até 3,5MB</div>`;
+         <div class="image-attach-hint">${attachHint}</div>`;
 
     const isInforme = i.cat.includes('informes');
     const isPolice = i.cat.includes('delegacias');
@@ -9732,11 +9745,11 @@ function render() {
         <div class="notes-box">
           <label for="notes-${i.id}" class="label-tech">Anotações Técnicas / Conduta</label>
           <textarea id="notes-${i.id}" class="tech-notes" placeholder="Registre aqui a avaliação, conduta ou observações técnicas..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
-        </div>
+        </div>`}
         <div class="image-attach-wrapper" id="img-wrap-${i.id}">
           ${imageBlock}
           <div class="image-error-msg" id="img-error-${i.id}" role="alert" style="display:none;"></div>
-        </div>`}
+        </div>
       </div>
       <div class="card-actions" ${(i.website || BPC_GUIDE_IDS.includes(i.id)) ? 'style="grid-template-columns: 1fr 1fr 1fr;"' : ''}>
         ${i.website ? `<a class="btn-tech btn-secondary btn-link" href="${i.website}" target="_blank" rel="noopener noreferrer">Site Oficial</a>` : ''}
@@ -10130,7 +10143,21 @@ function setTempPageOrientation(size) {
   styleTag.textContent = size ? `@media print { @page { size: ${size}; margin: 1cm; } }` : '';
 }
 
-function printBpcGuide(id, lang) {
+/* Realça termos-chave que a pessoa precisa localizar rapidamente na folha
+   impressa (o número da Central 135 e o nome "Meu INSS"), deixando-os em
+   negrito e um pouco maiores dentro do próprio texto corrido. Usado em
+   todo o conteúdo do guia (introdução, requisitos, passos, valor,
+   indeferimento, contato e rodapé) para que o destaque seja consistente
+   em qualquer trecho onde esses termos apareçam. \b135\b evita casar
+   dentro de outros números (ex.: "1.621,00"). */
+function hlGuideTerms(text) {
+  if (!text) return text;
+  return String(text)
+    .replace(/Meu INSS/g, '<strong style="font-size:1.08em;">Meu INSS</strong>')
+    .replace(/\b135\b/g, '<strong style="font-size:1.25em;">135</strong>');
+}
+
+async function printBpcGuide(id, lang) {
   const content = (BPC_GUIDE_CONTENT[id] && BPC_GUIDE_CONTENT[id][lang]) || null;
   if (!content) return;
 
@@ -10139,23 +10166,53 @@ function printBpcGuide(id, lang) {
   const dateLong = now.toLocaleDateString(lang === 'es' ? 'es-ES' : 'pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
   const watermark = buildPrintWatermark();
 
+  // Anexo em PDF (pensado para a Folha Resumo do Cadastro Único), incluído
+  // como página(s) extra no fim desta impressão — mesmo mecanismo já usado
+  // na Ficha de Encaminhamento Técnico (printGuide/pdfDataUrlToImages).
+  const attach = getAttachment(id);
+  const pdfAttach = (attach && attach.type === 'pdf') ? attach : null;
+  const attachNoteLabel = lang === 'es'
+    ? 'Anexo digital en PDF'
+    : 'Anexo digital em PDF';
+  const attachNoteSuffix = lang === 'es'
+    ? '(incluido en las páginas siguientes de esta impresión)'
+    : '(incluído nas páginas seguintes desta impressão)';
+
   const reqItems = content.requirements.map(r => `
-    <li style="margin-bottom:5px; display:flex; gap:8px; align-items:flex-start;">
-      <span style="flex-shrink:0; color:#0091C2; font-weight:800;">✓</span>
-      <span>${r}</span>
+    <li style="margin-bottom:6px; display:flex; gap:8px; align-items:flex-start; break-inside:avoid;">
+      <span style="flex-shrink:0; width:15px; height:15px; border-radius:4px; background:#0091C2; color:#fff; font-size:0.62rem; font-weight:800; line-height:15px; text-align:center; margin-top:1px;">✓</span>
+      <span>${hlGuideTerms(r)}</span>
     </li>`).join('');
 
-  const stepItems = content.steps.map(s => `
-    <div style="margin-bottom:9px;">
-      <div style="font-weight:800; color:#0F172A; font-size:0.92rem;">${s.title}</div>
-      <div style="color:#334155; font-size:0.86rem; line-height:1.4; margin-top:1px;">${s.desc}</div>
-    </div>`).join('');
+  // Imagem ilustrativa: por padrão aparece depois do último passo (como
+  // sempre foi), mas cada guia pode definir illustrationAfterStep para
+  // posicioná-la logo depois de um passo específico (ex.: no BPC Idoso,
+  // depois do passo 1 — "Peça o benefício" — onde ela faz mais sentido).
+  const illustrationAfterStep = content.illustration
+    ? (content.illustrationAfterStep || content.steps.length)
+    : 0;
 
   const illustrationBlock = content.illustration ? `
-    <div style="margin-top:8px; border:1px solid #CBD5E1; border-radius:6px; padding:8px; background:white; text-align:center;">
+    <div style="margin:10px 0 4px 0; border:1px solid #CBD5E1; border-radius:6px; padding:8px; background:white; text-align:center; break-inside:avoid;">
       <img src="${content.illustration}" alt="${content.illustrationCaption || ''}" style="max-width:100%; height:auto; border:1px solid #E2E8F0; border-radius:4px; display:block; margin:0 auto;">
-      ${content.illustrationCaption ? `<div style="font-size:0.62rem; color:#64748B; margin-top:5px;">🖼️ ${content.illustrationCaption}</div>` : ''}
+      ${content.illustrationCaption ? `<div style="font-size:0.62rem; color:#64748B; margin-top:5px;">🖼️ ${hlGuideTerms(content.illustrationCaption)}</div>` : ''}
     </div>` : '';
+
+  const stepItems = content.steps.map((s, idx) => {
+    // Os títulos já vêm no formato "1. Texto do passo" — separa o número
+    // para desenhar um selo circular, mantendo o texto do título ao lado.
+    const m = /^(\d+)\.\s*(.*)$/.exec(s.title || '');
+    const stepNum = m ? m[1] : String(idx + 1);
+    const stepTitleText = m ? m[2] : (s.title || '');
+    return `
+    <div style="display:flex; gap:9px; align-items:flex-start; padding:6px 0; ${idx > 0 ? 'border-top:1px solid #E2E8F0;' : ''} break-inside:avoid;">
+      <div style="flex-shrink:0; width:20px; height:20px; border-radius:50%; background:#0F172A; color:#fff; font-size:0.7rem; font-weight:800; display:flex; align-items:center; justify-content:center; margin-top:1px;">${stepNum}</div>
+      <div style="flex:1; min-width:0;">
+        <div style="font-weight:800; color:#0F172A; font-size:0.92rem;">${hlGuideTerms(stepTitleText)}</div>
+        <div style="color:#334155; font-size:0.86rem; line-height:1.4; margin-top:1px;">${hlGuideTerms(s.desc)}</div>
+      </div>
+    </div>${(idx + 1 === illustrationAfterStep) ? illustrationBlock : ''}`;
+  }).join('');
 
   const guidePage = `
     <div class="print-page" style="position:relative; padding:0; box-sizing:border-box; display:flex; flex-direction:column; background:white; border:2px solid #0F172A; width:100%; min-height:27.7cm;">
@@ -10164,59 +10221,97 @@ function printBpcGuide(id, lang) {
 
       <div style="position:relative; z-index:1; padding:0.9cm 1.1cm; font-family:'Inter', sans-serif; color:#0F172A;">
 
-        <table style="width:100%; border-collapse:collapse; margin-bottom:10px;">
+        <table style="width:100%; border-collapse:collapse; margin-bottom:12px;">
           <tr>
-            <td style="border:1.5px solid #0F172A; padding:8px 14px; vertical-align:middle;">
+            <td style="border:1.5px solid #0F172A; border-left:6px solid #0091C2; border-radius:2px; padding:9px 14px; vertical-align:middle;">
               <div style="font-size:0.6rem; font-weight:800; letter-spacing:0.04em; color:#0091C2; text-transform:uppercase;">CRAS Cristiana Vicente Nunes · SEMADS · Prefeitura de Boa Vista</div>
-              <div style="font-size:1.05rem; font-weight:800; color:#0F172A; margin-top:2px;">${content.badge}</div>
-              <div style="font-size:0.75rem; color:#475569; font-weight:700; margin-top:1px;">${content.title}</div>
+              <div style="display:inline-block; font-size:0.68rem; font-weight:800; letter-spacing:0.03em; color:#fff; background:#0F172A; padding:2px 9px; border-radius:20px; margin-top:5px;">${content.badge}</div>
+              <div style="font-size:0.8rem; color:#334155; font-weight:700; margin-top:5px;">${content.title}</div>
             </td>
           </tr>
         </table>
 
-        <div style="font-size:0.86rem; line-height:1.45; color:#334155; padding:8px 2px 14px 2px; border-bottom:1px dashed #CBD5E1; margin-bottom:12px;">
-          ${content.intro}
+        <div style="font-size:0.86rem; line-height:1.45; color:#334155; padding:2px 2px 14px 2px; border-bottom:1px dashed #CBD5E1; margin-bottom:14px;">
+          ${hlGuideTerms(content.intro)}
         </div>
 
         <div style="border:1.5px solid #0F172A; border-radius:6px; padding:10px 14px; margin-bottom:14px;">
-          <div style="font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#0091C2; margin-bottom:6px;">✅ ${content.reqLabel}</div>
+          <div style="font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#0091C2; margin-bottom:7px;">✅ ${content.reqLabel}</div>
           <ul style="margin:0; padding:0; list-style:none; font-size:0.84rem; line-height:1.4; color:#0F172A; columns:2; column-gap:20px;">${reqItems}</ul>
         </div>
 
         <div style="border:1.5px solid #0F172A; border-radius:6px; padding:10px 14px; margin-bottom:14px; background:rgba(0,145,194,0.04);">
-          <div style="font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#0091C2; margin-bottom:8px;">🧭 ${content.stepsLabel}</div>
+          <div style="font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#0091C2; margin-bottom:4px;">🧭 ${content.stepsLabel}</div>
           ${stepItems}
-          ${illustrationBlock}
         </div>
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
           <div style="border:1px solid #CBD5E1; border-radius:6px; padding:9px 13px;">
             <div style="font-size:0.62rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#475569; margin-bottom:4px;">💰 ${content.valueLabel}</div>
-            <div style="font-size:0.8rem; line-height:1.4; color:#0F172A;">${content.value}</div>
+            <div style="font-size:0.8rem; line-height:1.4; color:#0F172A;">${hlGuideTerms(content.value)}</div>
           </div>
           <div style="border:1px solid #CBD5E1; border-radius:6px; padding:9px 13px;">
             <div style="font-size:0.62rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#475569; margin-bottom:4px;">⚖️ ${content.denialLabel}</div>
-            <div style="font-size:0.8rem; line-height:1.4; color:#0F172A;">${content.denial}</div>
+            <div style="font-size:0.8rem; line-height:1.4; color:#0F172A;">${hlGuideTerms(content.denial)}</div>
           </div>
         </div>
 
         <div style="border:1.5px dashed #94A3B8; border-radius:6px; padding:10px 14px; margin-bottom:14px;">
           <div style="font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; color:#0091C2; margin-bottom:5px;">📍 ${content.contactLabel}</div>
-          <div style="font-size:0.82rem; line-height:1.5; color:#0F172A;">
-            <strong>INSS</strong> — Av. Glaycon de Paiva, 86, Mecejana, Boa Vista-RR — Central 135 (gov.br/inss/pt-br/canais_atendimento/central-135) · Meu INSS (meu.inss.gov.br)
+          <div style="font-size:0.82rem; line-height:1.6; color:#0F172A;">
+            <strong>INSS</strong> — Av. Glaycon de Paiva, 86, Mecejana, Boa Vista-RR<br>
+            Central <strong style="font-size:1.25em;">135</strong> (gov.br/inss/pt-br/canais_atendimento/central-135) · <strong style="font-size:1.08em;">Meu INSS</strong> (meu.inss.gov.br)
           </div>
+          ${pdfAttach ? `<div style="margin-top:7px; font-size:0.68rem; font-weight:700; color:#475569;">📎 ${attachNoteLabel}: ${escapeHtml(pdfAttach.name || 'documento.pdf')} ${attachNoteSuffix}.</div>` : ''}
         </div>
 
         <div style="font-size:0.62rem; line-height:1.4; color:#94A3B8; text-align:center; padding-top:8px; border-top:1px dashed #CBD5E1;">
-          ${content.footer}<br>
+          ${hlGuideTerms(content.footer)}<br>
           ${lang === 'es' ? 'Documento generado el' : 'Documento gerado em'} ${dateLong} · Argo SUAS — ${i ? i.fullName : ''}
         </div>
       </div>
     </div>
   `;
 
+  // Página(s) extra com o PDF anexado (ex.: Folha Resumo do CadÚnico),
+  // convertido em imagem por página — mesmo mecanismo do anexo em PDF da
+  // Ficha de Encaminhamento Técnico (ver pdfDataUrlToImages).
+  const attachPages = pdfAttach ? await (async () => {
+    try {
+      const pdfImages = await pdfDataUrlToImages(pdfAttach.data);
+      const pageTitle = lang === 'es' ? 'ANEXO EN PDF' : 'ANEXO EM PDF';
+      return pdfImages.map((imgSrc, idx) => `
+        <div class="print-page" style="position:relative; padding:0.9cm 1.1cm; box-sizing:border-box; display:flex; flex-direction:column; background:white; border:2px solid #0F172A;">
+          <div style="position:absolute; inset:0.25cm; border:1px solid #94A3B8; pointer-events:none;"></div>
+          <div style="position:relative; z-index:1; display:flex; flex-direction:column; height:100%;">
+            <table style="width:100%; border-collapse:collapse; margin-bottom:10px; table-layout:fixed;">
+              <tr>
+                <td style="border:1.5px solid #0F172A; padding:8px 14px;">
+                  <div style="font-size:1rem; font-weight:800; color:#0F172A;">${pageTitle}${pdfImages.length > 1 ? ` — Página ${idx + 1} de ${pdfImages.length}` : ''}</div>
+                  <div style="font-size:0.68rem; font-weight:700; color:#475569; text-transform:uppercase;">${escapeHtml(pdfAttach.name || 'documento.pdf')} — ${i ? i.fullName : ''}</div>
+                </td>
+              </tr>
+            </table>
+            <div style="flex-grow:1; display:flex; align-items:center; justify-content:center; border:1.5px solid #0F172A; border-radius:4px; overflow:hidden; background:#F8FAFC;">
+              <img src="${imgSrc}" alt="Página ${idx + 1} do anexo em PDF" style="max-width:100%; max-height:100%; object-fit:contain;">
+            </div>
+          </div>
+        </div>
+      `).join('');
+    } catch (err) {
+      const failMsg = lang === 'es'
+        ? 'No fue posible cargar el archivo PDF adjunto para la impresión.<br>Verifique la conexión a internet e intente nuevamente.'
+        : 'Não foi possível carregar o anexo em PDF para impressão.<br>Verifique a conexão com a internet e tente novamente.';
+      return `
+        <div class="print-page" style="position:relative; padding:0.9cm 1.1cm; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; justify-content:center; background:white; border:2px solid #0F172A;">
+          <div style="font-size:1rem; font-weight:800; color:#0F172A; text-align:center;">${failMsg}</div>
+        </div>
+      `;
+    }
+  })() : '';
+
   const printArea = document.getElementById('print-area');
-  printArea.innerHTML = guidePage;
+  printArea.innerHTML = guidePage + attachPages;
 
   setTempPageOrientation('A4 portrait');
   window.addEventListener('afterprint', function clearOrientation() {
