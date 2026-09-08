@@ -7663,7 +7663,7 @@ const DATA = [
     id: "bpc-na-escola",
     name: "BPC na Escola",
     fullName: "Programa de Acompanhamento e Monitoramento do Acesso e Permanência na Escola das Pessoas com Deficiência Beneficiárias do BPC",
-    cat: ["informes"],
+    cat: ["previdencia"],
     group: "Benefícios Assistenciais e Previdenciários (INSS)",
     address: "Execução intersetorial: CRAS/CREAS (Assistência Social), escolas da rede (Educação), unidades de saúde e Direitos Humanos — coordenação pelo Grupo Gestor Municipal",
     hours: "N/A",
@@ -7675,13 +7675,13 @@ const DATA = [
     id: "recuperacao-senha-inss",
     name: "Recuperação de Senha – Meu INSS",
     fullName: "Recuperação de senha – Meu INSS / gov.br",
-    cat: ["informes"],
+    cat: ["previdencia"],
     group: "Benefícios Assistenciais e Previdenciários (INSS)",
     address: "INSS - Instituto Nacional do Seguro Social: Av. Glaycon de Paiva, 86 - Mecejana, Boa Vista - RR (procedimento também disponível online)",
     hours: "N/A",
     phones: ["N/A"],
     services: "Recuperação de senha gov.br / Meu INSS.",
-    desc: "A recuperação de senha deve ser realizada diretamente pelo sistema gov.br: 1) Acesse o Meu INSS (https://meu.inss.gov.br); 2) Clique em 'Entrar com gov.br'; 3) Digite o CPF; 4) Clique em 'Esqueci minha senha'; 5) Escolha uma forma de recuperação: e-mail, SMS, aplicativo gov.br (reconhecimento facial) ou bancos credenciados; 6) Siga as instruções para criar uma nova senha.<br>📌 Caso não consiga recuperar online: utilizar formulário de atendimento ou comparecer a uma agência com documento com foto."
+    desc: "A recuperação de senha deve ser realizada diretamente pelo sistema gov.br: 1) Acesse o Meu INSS (https://meu.inss.gov.br); 2) Clique em 'Entrar com gov.br'; 3) Digite o CPF e clique em 'Avançar'; 4) Clique em 'Esqueci minha senha'; 5) Na tela de Recuperação de Conta, marque 'Não sou um robô' e avance; 6) Escolha uma forma de recuperação: e-mail, SMS, aplicativo gov.br (reconhecimento facial) ou bancos credenciados; 7) Siga as instruções para criar uma nova senha.<br>📌 Caso não consiga recuperar online: utilizar formulário de atendimento ou comparecer a uma agência com documento com foto.<br>Fonte: gov.br/inss (Canais de Atendimento &gt; Meu INSS &gt; Esqueceu a senha?)."
   },
   {
     id: "tarifa-social-energia",
@@ -8562,7 +8562,7 @@ const CATEGORY_LABELS_PRINT = {
    de Encaminhamento Técnico padrão (que é voltada ao profissional). Esse
    guia também pode ser gerado em espanhol, por causa do público migrante
    atendido pelo CRAS. */
-const BPC_GUIDE_IDS = ['bpc-idoso', 'bpc-pcd'];
+const BPC_GUIDE_IDS = ['bpc-idoso', 'bpc-pcd', 'recuperacao-senha-inss'];
 
 const BPC_GUIDE_CONTENT = {
   'bpc-idoso': {
@@ -8674,6 +8674,61 @@ const BPC_GUIDE_CONTENT = {
       contactLabel: 'Dónde buscar ayuda',
       footer: 'Esta guía es solo informativa y no sustituye la atención en el CRAS o en el INSS. Las reglas y valores pueden cambiar — confirme siempre en el CRAS o por el Meu INSS/135.'
     }
+  }
+};
+
+BPC_GUIDE_CONTENT['recuperacao-senha-inss'] = {
+  pt: {
+    badge: 'RECUPERAÇÃO DE SENHA',
+    title: 'Recuperação de Senha — Meu INSS / gov.br',
+    intro: 'Para acessar o Meu INSS é preciso ter uma conta gov.br. Se você esqueceu a senha, a recuperação é feita diretamente pelo site ou aplicativo gov.br, sem necessidade de ir a uma agência.',
+    reqLabel: 'O que ter em mãos',
+    requirements: [
+      'Número do CPF',
+      'Acesso a pelo menos um canal de verificação: e-mail cadastrado, celular cadastrado (SMS), conta em banco credenciado ou o aplicativo gov.br com reconhecimento facial'
+    ],
+    stepsLabel: 'Passo a passo',
+    steps: [
+      { title: '1. Acesse o Meu INSS', desc: 'Pelo site meu.inss.gov.br ou pelo aplicativo Meu INSS, baixado na loja de aplicativos do celular.' },
+      { title: '2. Clique em "Entrar com gov.br"', desc: 'Essa é a porta de entrada única do governo federal; o Meu INSS não tem login próprio, separado do gov.br.' },
+      { title: '3. Digite o CPF e clique em "Avançar"', desc: 'Informe o número do CPF do titular da conta gov.br e avance para a tela de senha.' },
+      { title: '4. Clique em "Esqueci minha senha"', desc: 'A opção aparece logo abaixo do campo de senha, na tela de login do gov.br.' },
+      { title: '5. Confirme "Não sou um robô"', desc: 'Na tela seguinte (Recuperação de Conta), marque essa verificação de segurança e avance para ver as opções disponíveis.' },
+      { title: '6. Escolha a forma de recuperação', desc: 'E-mail cadastrado, SMS para o celular cadastrado, reconhecimento facial pelo aplicativo gov.br, ou validação por conta em banco credenciado.' },
+      { title: '7. Crie uma nova senha', desc: 'Siga as instruções apresentadas na tela até concluir a criação da nova senha e conseguir acessar o Meu INSS normalmente.' }
+    ],
+    valueLabel: 'Se não tiver acesso a nenhum canal',
+    value: 'Sem e-mail, celular cadastrado, banco credenciado ou aplicativo com biometria, a recuperação online não é possível — é necessário atualizar esses dados presencialmente.',
+    denialLabel: 'Caso não consiga recuperar online',
+    denial: 'Utilize o formulário de atendimento do gov.br ou compareça a uma agência do INSS (Av. Glaycon de Paiva, 86, Mecejana) com documento oficial com foto, para atualizar os dados de contato da conta gov.br.',
+    contactLabel: 'Onde buscar ajuda',
+    footer: 'Este guia é apenas informativo e não substitui o atendimento no CRAS ou no INSS. Regras e valores podem mudar — confirme sempre no CRAS ou pelo Meu INSS/135.'
+  },
+  es: {
+    badge: 'RECUPERACIÓN DE CONTRASEÑA',
+    title: 'Recuperación de Contraseña — Meu INSS / gov.br',
+    intro: 'Para acceder al Meu INSS es necesario tener una cuenta gov.br. Si olvidó la contraseña, la recuperación se hace directamente por el sitio o la aplicación gov.br, sin necesidad de ir a una agencia.',
+    reqLabel: 'Qué tener a mano',
+    requirements: [
+      'Número de CPF',
+      'Acceso a por lo menos un canal de verificación: correo electrónico registrado, celular registrado (SMS), cuenta en banco acreditado o la aplicación gov.br con reconocimiento facial'
+    ],
+    stepsLabel: 'Paso a paso',
+    steps: [
+      { title: '1. Acceda al Meu INSS', desc: 'Por el sitio meu.inss.gov.br o por la aplicación Meu INSS, descargada en la tienda de aplicaciones del celular.' },
+      { title: '2. Haga clic en "Entrar com gov.br"', desc: 'Esa es la puerta de entrada única del gobierno federal; el Meu INSS no tiene inicio de sesión propio, separado del gov.br.' },
+      { title: '3. Digite el CPF y haga clic en "Avançar"', desc: 'Informe el número de CPF del titular de la cuenta gov.br y avance a la pantalla de contraseña.' },
+      { title: '4. Haga clic en "Esqueci minha senha"', desc: 'La opción aparece justo debajo del campo de contraseña, en la pantalla de inicio de sesión del gov.br.' },
+      { title: '5. Confirme "Não sou um robô"', desc: 'En la pantalla siguiente (Recuperación de Cuenta), marque esa verificación de seguridad y avance para ver las opciones disponibles.' },
+      { title: '6. Elija la forma de recuperación', desc: 'Correo electrónico registrado, SMS al celular registrado, reconocimiento facial por la aplicación gov.br, o validación por cuenta en banco acreditado.' },
+      { title: '7. Cree una nueva contraseña', desc: 'Siga las instrucciones presentadas en la pantalla hasta concluir la creación de la nueva contraseña y poder acceder al Meu INSS normalmente.' }
+    ],
+    valueLabel: 'Si no tiene acceso a ningún canal',
+    value: 'Sin correo electrónico, celular registrado, banco acreditado o aplicación con biometría, la recuperación en línea no es posible — es necesario actualizar esos datos presencialmente.',
+    denialLabel: 'Si no logra recuperarla en línea',
+    denial: 'Utilice el formulario de atención del gov.br o comparezca a una agencia del INSS (Av. Glaycon de Paiva, 86, Mecejana) con documento oficial con foto, para actualizar los datos de contacto de la cuenta gov.br.',
+    contactLabel: 'Dónde buscar ayuda',
+    footer: 'Esta guía es solo informativa y no sustituye la atención en el CRAS o en el INSS. Las reglas y valores pueden cambiar — confirme siempre en el CRAS o por el Meu INSS/135.'
   }
 };
 
@@ -9665,10 +9720,14 @@ function render() {
           <div class="image-error-msg" id="img-error-${i.id}" role="alert" style="display:none;"></div>
         </div>
       </div>
-      <div class="card-actions" ${i.website ? 'style="grid-template-columns: 1fr 1fr 1fr;"' : ''}>
+      <div class="card-actions" ${(i.website || BPC_GUIDE_IDS.includes(i.id)) ? 'style="grid-template-columns: 1fr 1fr 1fr;"' : ''}>
         ${i.website ? `<a class="btn-tech btn-secondary btn-link" href="${i.website}" target="_blank" rel="noopener noreferrer">Site Oficial</a>` : ''}
         <button class="btn-tech btn-secondary" onclick="share('${i.id}')">Compartilhar</button>
-        <button class="btn-tech btn-primary" onclick="printGuide('${i.id}')">Gerar Guia</button>
+        ${BPC_GUIDE_IDS.includes(i.id)
+          ? `<button class="btn-tech btn-primary" onclick="printBpcGuide('${i.id}','pt')">📄 Guia do Benefício (PT)</button>
+             <button class="btn-tech btn-primary" onclick="printBpcGuide('${i.id}','es')">📄 Guía del Beneficio (ES)</button>`
+          : `<button class="btn-tech btn-primary" onclick="printGuide('${i.id}')">Gerar Guia</button>`
+        }
       </div>
     </div>
   `;
