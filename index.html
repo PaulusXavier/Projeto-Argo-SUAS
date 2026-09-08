@@ -10215,7 +10215,7 @@ async function printBpcGuide(id, lang) {
   }).join('');
 
   const guidePage = `
-    <div class="print-page" style="position:relative; padding:0; box-sizing:border-box; display:flex; flex-direction:column; background:white; border:2px solid #0F172A; width:100%; min-height:27.7cm;">
+    <div class="print-page" style="position:relative; padding:0; box-sizing:border-box; display:flex; flex-direction:column; background:white; border:2px solid #0F172A; width:100%; min-height:27.7cm; height:auto; overflow:visible;">
       ${watermark}
       <div style="position:absolute; inset:0.25cm; border:1px solid #94A3B8; z-index:0; pointer-events:none;"></div>
 
@@ -10281,7 +10281,7 @@ async function printBpcGuide(id, lang) {
       const pdfImages = await pdfDataUrlToImages(pdfAttach.data);
       const pageTitle = lang === 'es' ? 'ANEXO EN PDF' : 'ANEXO EM PDF';
       return pdfImages.map((imgSrc, idx) => `
-        <div class="print-page" style="position:relative; padding:0.9cm 1.1cm; box-sizing:border-box; display:flex; flex-direction:column; background:white; border:2px solid #0F172A;">
+        <div class="print-page" style="position:relative; padding:0.9cm 1.1cm; box-sizing:border-box; display:flex; flex-direction:column; background:white; border:2px solid #0F172A; width:100%; height:27.7cm; overflow:hidden;">
           <div style="position:absolute; inset:0.25cm; border:1px solid #94A3B8; pointer-events:none;"></div>
           <div style="position:relative; z-index:1; display:flex; flex-direction:column; height:100%;">
             <table style="width:100%; border-collapse:collapse; margin-bottom:10px; table-layout:fixed;">
@@ -10303,7 +10303,7 @@ async function printBpcGuide(id, lang) {
         ? 'No fue posible cargar el archivo PDF adjunto para la impresión.<br>Verifique la conexión a internet e intente nuevamente.'
         : 'Não foi possível carregar o anexo em PDF para impressão.<br>Verifique a conexão com a internet e tente novamente.';
       return `
-        <div class="print-page" style="position:relative; padding:0.9cm 1.1cm; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; justify-content:center; background:white; border:2px solid #0F172A;">
+        <div class="print-page" style="position:relative; padding:0.9cm 1.1cm; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; justify-content:center; background:white; border:2px solid #0F172A; width:100%; height:27.7cm; overflow:hidden;">
           <div style="font-size:1rem; font-weight:800; color:#0F172A; text-align:center;">${failMsg}</div>
         </div>
       `;
