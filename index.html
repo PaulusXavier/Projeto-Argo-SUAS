@@ -1557,7 +1557,8 @@
   .cras-badge,
   .police-badge,
   .notes-badge,
-  .interior-badge {
+  .interior-badge,
+  .pdftools-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1574,6 +1575,7 @@
   .police-badge { color: var(--brand-police-light); background: rgba(30, 58, 138, 0.1); }
   .notes-badge { color: var(--brand-notes); background: rgba(190, 18, 60, 0.1); }
   .interior-badge { color: var(--brand-interior); background: rgba(180, 133, 6, 0.1); }
+  .pdftools-badge { color: var(--brand-pdftools); background: rgba(29, 78, 216, 0.1); }
 
   .informe-box {
     font-size: 0.85rem;
@@ -1770,6 +1772,8 @@
     --brand-police-light: #2563EB;
     --brand-interior: #B45906;
     --brand-interior-light: #EA580C;
+    --brand-pdftools: #1D4ED8;
+    --brand-pdftools-light: #3B82F6;
   }
 
   .cas-card {
@@ -1787,6 +1791,260 @@
 
   .cas-card .card-top h2 {
     color: var(--brand-cas);
+  }
+
+  /* Cartão da aba "Ferramentas de Arquivo" (unificar PDF, PDF<->Word,
+     PDF<->JPG), com o acento azul (--brand-pdftools). Todo o processamento
+     acontece no próprio navegador, sem enviar arquivos a nenhum servidor. */
+  .pdftools-card {
+    border-top: none;
+    grid-column: 1 / -1;
+  }
+
+  .pdftools-card::before {
+    background: linear-gradient(90deg, var(--brand-pdftools), var(--brand-pdftools-light));
+  }
+
+  .pdftools-card .card-top {
+    background: linear-gradient(180deg, rgba(29, 78, 216, 0.07), rgba(29, 78, 216, 0) 80%);
+  }
+
+  .pdftools-card .card-top h2 {
+    color: var(--brand-pdftools);
+  }
+
+  .pdftools-privacy {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    background: rgba(29, 78, 216, 0.06);
+    border: 1px dashed var(--brand-pdftools-light);
+    border-radius: 8px;
+    padding: 0.6rem 0.9rem;
+    margin-bottom: 1.1rem;
+  }
+
+  .pdftools-privacy svg { color: var(--brand-pdftools); flex-shrink: 0; }
+
+  .pdftools-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.1rem;
+  }
+
+  @media (max-width: 860px) {
+    .pdftools-grid { grid-template-columns: 1fr; }
+  }
+
+  .pdftools-tool {
+    background: var(--bg-main);
+    border: 1.5px solid var(--border-ui);
+    border-radius: var(--radius-ui);
+    padding: 1.1rem 1.1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+  }
+
+  .pdftools-tool:hover { border-color: var(--brand-pdftools-light); }
+
+  .pdftools-tool-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .pdftools-tool-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: rgba(29, 78, 216, 0.1);
+    color: var(--brand-pdftools);
+    flex-shrink: 0;
+  }
+
+  .pdftools-tool-title {
+    font-weight: 800;
+    font-size: 0.98rem;
+    color: var(--text-main);
+    line-height: 1.25;
+  }
+
+  .pdftools-tool-limit {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .pdftools-tool-desc {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin: 0 0 0.85rem;
+  }
+
+  .pdftools-dropzone {
+    position: relative;
+    border: 1.5px dashed var(--border-ui);
+    border-radius: 10px;
+    background: var(--bg-card);
+    padding: 1.1rem 0.8rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s var(--ease), background 0.2s var(--ease);
+  }
+
+  .pdftools-dropzone:hover,
+  .pdftools-dropzone.dragover {
+    border-color: var(--brand-pdftools);
+    background: rgba(29, 78, 216, 0.05);
+  }
+
+  .pdftools-dropzone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .pdftools-dropzone-icon { color: var(--brand-pdftools-light); margin-bottom: 0.3rem; }
+
+  .pdftools-dropzone-text {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-main);
+  }
+
+  .pdftools-dropzone-hint {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+  }
+
+  .pdftools-filelist {
+    list-style: none;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .pdftools-fileitem {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-ui);
+    border-radius: 8px;
+    padding: 0.4rem 0.5rem 0.4rem 0.7rem;
+    font-size: 0.76rem;
+  }
+
+  .pdftools-fileitem-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--text-main);
+  }
+
+  .pdftools-fileitem-meta {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    flex-shrink: 0;
+  }
+
+  .pdftools-fileitem-btns {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+    flex-shrink: 0;
+  }
+
+  .pdftools-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .pdftools-icon-btn:hover { background: var(--bg-main); color: var(--brand-pdftools); }
+  .pdftools-icon-btn.pdftools-remove:hover { color: #DC2626; }
+
+  .pdftools-actions {
+    margin-top: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  .pdftools-btn {
+    appearance: none;
+    border: none;
+    border-radius: 9px;
+    padding: 0.55rem 1rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease), opacity 0.15s var(--ease);
+    background: linear-gradient(180deg, var(--brand-pdftools-light), var(--brand-pdftools));
+    color: #fff;
+    box-shadow: 0 4px 10px -3px rgba(29, 78, 216, 0.5);
+  }
+
+  .pdftools-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 16px -3px rgba(29, 78, 216, 0.6); }
+  .pdftools-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+
+  .pdftools-status {
+    margin-top: 0.65rem;
+    font-size: 0.76rem;
+    line-height: 1.45;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.4rem;
+    min-height: 1.1em;
+  }
+
+  .pdftools-status.is-error { color: #DC2626; font-weight: 600; }
+  .pdftools-status.is-warn { color: #B45309; font-weight: 600; }
+  .pdftools-status.is-success { color: #15803D; font-weight: 600; }
+  .pdftools-status.is-info { color: var(--text-muted); }
+
+  .pdftools-progress {
+    display: none;
+    margin-top: 0.6rem;
+    height: 6px;
+    border-radius: 4px;
+    background: var(--border-ui);
+    overflow: hidden;
+  }
+
+  .pdftools-progress.active { display: block; }
+
+  .pdftools-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--brand-pdftools), var(--brand-pdftools-light));
+    transition: width 0.2s ease;
   }
 
   .cas-groups {
@@ -3503,6 +3761,17 @@
             <button class="filter-chip filter-chip-panel" data-cat="anotacoes" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></span>
               <span>Minhas Anotações</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Seção: Ferramentas de Arquivo -->
+        <div class="filter-group">
+          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Ferramentas de Arquivo<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
+          <div class="filter-group-chips">
+            <button class="filter-chip filter-chip-panel" data-cat="pdftools" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg></span>
+              <span>Unificar / Converter PDF</span>
             </button>
           </div>
         </div>
@@ -9336,6 +9605,13 @@ function render() {
     return;
   }
 
+  if (cat === 'pdftools') {
+    if (resultsInfo) resultsInfo.style.display = 'none';
+    grid.innerHTML = renderPdfToolsCard();
+    initPdfToolsPanel();
+    return;
+  }
+
   const infoBanner = document.getElementById('categoryInfoBanner');
   if (infoBanner) {
     if (cat === 'saude') {
@@ -10047,6 +10323,132 @@ function truncateForPrint(text, maxLen) {
 }
 
 const GENERAL_NOTE_KEY = 'nota_geral_encaminhamento';
+
+function renderPdfToolsCard() {
+  return `
+    <div class="tech-card pdftools-card">
+      <div class="card-top">
+        <div style="display:flex; align-items:center; gap:0.55rem;">
+          <span class="pdftools-badge">${ICONS.pdf}</span>
+          <h2 style="margin:0;">Ferramentas de Arquivo</h2>
+        </div>
+        <span class="subtitle">🗂️ Unificar, converter e transformar arquivos PDF</span>
+      </div>
+      <div class="card-body">
+        <div class="pdftools-privacy">
+          ${ICONS.info}
+          <span>Tudo acontece aqui no seu navegador — nenhum arquivo é enviado a servidor algum. Na primeira vez que usar cada função, o app baixa uma pequena biblioteca (leva poucos segundos e precisa de internet só nesse momento).</span>
+        </div>
+
+        <div class="pdftools-tool" style="margin-bottom:1.1rem;">
+          <div class="pdftools-tool-header">
+            <span class="pdftools-tool-icon">${ICONS.layers}</span>
+            <div>
+              <div class="pdftools-tool-title">Unificar PDF</div>
+              <div class="pdftools-tool-limit">Até 5 arquivos · total de 15 páginas</div>
+            </div>
+          </div>
+          <p class="pdftools-tool-desc">Junte vários arquivos PDF em um único documento, na ordem que você escolher (use as setas para reordenar).</p>
+
+          <label class="pdftools-dropzone" for="pdftoolsMergeInput" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="pdftoolsHandleDrop(event, 'merge')">
+            <input type="file" id="pdftoolsMergeInput" accept=".pdf,application/pdf" multiple onchange="pdftoolsAddMergeFiles(this.files)">
+            <div class="pdftools-dropzone-icon">${ICONS.folder}</div>
+            <div class="pdftools-dropzone-text">Toque para escolher os PDFs</div>
+            <div class="pdftools-dropzone-hint">ou arraste os arquivos até aqui</div>
+          </label>
+
+          <ul class="pdftools-filelist" id="pdftoolsMergeList"></ul>
+
+          <div class="pdftools-actions">
+            <button type="button" class="pdftools-btn" id="pdftoolsMergeBtn" disabled onclick="pdftoolsMergePdfs()">${ICONS.layers} Unificar e baixar</button>
+          </div>
+          <div class="pdftools-status is-info" id="pdftoolsMergeStatus"></div>
+        </div>
+
+        <div class="pdftools-grid">
+          <div class="pdftools-tool">
+            <div class="pdftools-tool-header">
+              <span class="pdftools-tool-icon">${ICONS.filebinary}</span>
+              <div>
+                <div class="pdftools-tool-title">PDF → Word</div>
+                <div class="pdftools-tool-limit">Gera um .docx editável</div>
+              </div>
+            </div>
+            <p class="pdftools-tool-desc">Extrai o texto do PDF para um documento Word (.docx) que você pode editar depois.</p>
+            <label class="pdftools-dropzone" for="pdftoolsPdfWordInput" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="pdftoolsHandleDrop(event, 'pdfword')">
+              <input type="file" id="pdftoolsPdfWordInput" accept=".pdf,application/pdf" onchange="pdftoolsRunPdfToWord(this.files[0], this)">
+              <div class="pdftools-dropzone-icon">${ICONS.pdf}</div>
+              <div class="pdftools-dropzone-text">Escolher um PDF</div>
+              <div class="pdftools-dropzone-hint">conversão baseada no texto do arquivo</div>
+            </label>
+            <div class="pdftools-progress" id="pdftoolsPdfWordProgress"><div class="pdftools-progress-fill" id="pdftoolsPdfWordProgressFill"></div></div>
+            <div class="pdftools-status is-info" id="pdftoolsPdfWordStatus"></div>
+          </div>
+
+          <div class="pdftools-tool">
+            <div class="pdftools-tool-header">
+              <span class="pdftools-tool-icon">${ICONS.form}</span>
+              <div>
+                <div class="pdftools-tool-title">Word → PDF</div>
+                <div class="pdftools-tool-limit">A partir de um .docx</div>
+              </div>
+            </div>
+            <p class="pdftools-tool-desc">Converte um documento Word (.docx) em um arquivo PDF pronto para impressão.</p>
+            <label class="pdftools-dropzone" for="pdftoolsWordPdfInput" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="pdftoolsHandleDrop(event, 'wordpdf')">
+              <input type="file" id="pdftoolsWordPdfInput" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="pdftoolsRunWordToPdf(this.files[0], this)">
+              <div class="pdftools-dropzone-icon">${ICONS.form}</div>
+              <div class="pdftools-dropzone-text">Escolher um .docx</div>
+              <div class="pdftools-dropzone-hint">mantém títulos e parágrafos</div>
+            </label>
+            <div class="pdftools-progress" id="pdftoolsWordPdfProgress"><div class="pdftools-progress-fill" id="pdftoolsWordPdfProgressFill"></div></div>
+            <div class="pdftools-status is-info" id="pdftoolsWordPdfStatus"></div>
+          </div>
+
+          <div class="pdftools-tool">
+            <div class="pdftools-tool-header">
+              <span class="pdftools-tool-icon">${ICONS.image}</span>
+              <div>
+                <div class="pdftools-tool-title">PDF → JPG</div>
+                <div class="pdftools-tool-limit">Uma imagem por página</div>
+              </div>
+            </div>
+            <p class="pdftools-tool-desc">Transforma cada página do PDF em uma imagem JPG (baixa tudo junto em .zip quando houver mais de uma página).</p>
+            <label class="pdftools-dropzone" for="pdftoolsPdfJpgInput" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="pdftoolsHandleDrop(event, 'pdfjpg')">
+              <input type="file" id="pdftoolsPdfJpgInput" accept=".pdf,application/pdf" onchange="pdftoolsRunPdfToJpg(this.files[0], this)">
+              <div class="pdftools-dropzone-icon">${ICONS.pdf}</div>
+              <div class="pdftools-dropzone-text">Escolher um PDF</div>
+              <div class="pdftools-dropzone-hint">boa qualidade de imagem</div>
+            </label>
+            <div class="pdftools-progress" id="pdftoolsPdfJpgProgress"><div class="pdftools-progress-fill" id="pdftoolsPdfJpgProgressFill"></div></div>
+            <div class="pdftools-status is-info" id="pdftoolsPdfJpgStatus"></div>
+          </div>
+
+          <div class="pdftools-tool">
+            <div class="pdftools-tool-header">
+              <span class="pdftools-tool-icon">${ICONS.image}</span>
+              <div>
+                <div class="pdftools-tool-title">JPG → PDF</div>
+                <div class="pdftools-tool-limit">Uma ou várias imagens</div>
+              </div>
+            </div>
+            <p class="pdftools-tool-desc">Junta uma ou mais imagens (JPG ou PNG) em um único arquivo PDF, na ordem escolhida.</p>
+            <label class="pdftools-dropzone" for="pdftoolsJpgPdfInput" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="pdftoolsHandleDrop(event, 'jpgpdf')">
+              <input type="file" id="pdftoolsJpgPdfInput" accept="image/jpeg,image/png" multiple onchange="pdftoolsAddJpgPdfFiles(this.files)">
+              <div class="pdftools-dropzone-icon">${ICONS.image}</div>
+              <div class="pdftools-dropzone-text">Escolher imagens</div>
+              <div class="pdftools-dropzone-hint">JPG ou PNG</div>
+            </label>
+            <ul class="pdftools-filelist" id="pdftoolsJpgPdfList"></ul>
+            <div class="pdftools-actions">
+              <button type="button" class="pdftools-btn" id="pdftoolsJpgPdfBtn" disabled onclick="pdftoolsRunJpgToPdf()">${ICONS.pdf} Converter e baixar</button>
+            </div>
+            <div class="pdftools-status is-info" id="pdftoolsJpgPdfStatus"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
 
 function renderNotesCard() {
   const savedNote = safeStorage.get(GENERAL_NOTE_KEY, '');
@@ -11128,6 +11530,518 @@ if ('serviceWorker' in navigator) {
 
 function ativarAtualizacao(worker) {
   worker.postMessage({ type: 'SKIP_WAITING' });
+}
+
+/* ============================================================
+   FERRAMENTAS DE ARQUIVO — Unificar PDF · PDF<->Word · PDF<->JPG
+   Tudo roda no navegador (client-side). As bibliotecas abaixo só
+   são baixadas do cdnjs na primeira vez que cada função é usada
+   (por isso não entram no cache offline do Service Worker).
+   ============================================================ */
+const PDFTOOLS_CDN = {
+  pdfLib: 'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js',
+  pdfJs: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+  pdfJsWorker: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
+  jszip: 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
+  mammoth: 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.12.2/mammoth.browser.min.js'
+};
+
+const pdftoolsScriptPromises = {};
+function pdftoolsLoadScript(url) {
+  if (pdftoolsScriptPromises[url]) return pdftoolsScriptPromises[url];
+  pdftoolsScriptPromises[url] = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = url;
+    s.onload = () => resolve();
+    s.onerror = () => { delete pdftoolsScriptPromises[url]; reject(new Error('Falha ao carregar ' + url)); };
+    document.head.appendChild(s);
+  });
+  return pdftoolsScriptPromises[url];
+}
+async function ensurePdfLib() {
+  if (!window.PDFLib) await pdftoolsLoadScript(PDFTOOLS_CDN.pdfLib);
+  return window.PDFLib;
+}
+async function ensurePdfJs() {
+  if (!window.pdfjsLib) {
+    await pdftoolsLoadScript(PDFTOOLS_CDN.pdfJs);
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFTOOLS_CDN.pdfJsWorker;
+  }
+  return window.pdfjsLib;
+}
+async function ensureJSZip() {
+  if (!window.JSZip) await pdftoolsLoadScript(PDFTOOLS_CDN.jszip);
+  return window.JSZip;
+}
+async function ensureMammoth() {
+  if (!window.mammoth) await pdftoolsLoadScript(PDFTOOLS_CDN.mammoth);
+  return window.mammoth;
+}
+
+function pdftoolsDownloadBlob(blob, filename) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+}
+
+function pdftoolsSetStatus(id, message, kind) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'pdftools-status' + (kind ? ' is-' + kind : ' is-info');
+  el.textContent = message || '';
+}
+
+function pdftoolsSetProgress(prefix, current, total) {
+  const bar = document.getElementById('pdftools' + prefix + 'Progress');
+  const fill = document.getElementById('pdftools' + prefix + 'ProgressFill');
+  if (!bar || !fill) return;
+  if (!total) { bar.classList.remove('active'); fill.style.width = '0%'; return; }
+  bar.classList.add('active');
+  fill.style.width = Math.round((current / total) * 100) + '%';
+  if (current >= total) setTimeout(() => bar.classList.remove('active'), 600);
+}
+
+function pdftoolsFormatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+  return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+}
+
+function pdftoolsHandleDrop(event, kind) {
+  event.preventDefault();
+  event.currentTarget.classList.remove('dragover');
+  const files = event.dataTransfer.files;
+  if (!files || !files.length) return;
+  if (kind === 'merge') { pdftoolsAddMergeFiles(files); return; }
+  if (kind === 'jpgpdf') { pdftoolsAddJpgPdfFiles(files); return; }
+  if (kind === 'pdfword') { pdftoolsRunPdfToWord(files[0]); return; }
+  if (kind === 'wordpdf') { pdftoolsRunWordToPdf(files[0]); return; }
+  if (kind === 'pdfjpg') { pdftoolsRunPdfToJpg(files[0]); return; }
+}
+
+/* ---------- Unificar PDF (até 5 arquivos / 15 páginas) ---------- */
+const pdftoolsMergeState = { files: [] };
+
+async function pdftoolsAddMergeFiles(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+  pdftoolsSetStatus('pdftoolsMergeStatus', 'Carregando biblioteca de PDF...', 'info');
+  let PDFLib;
+  try {
+    PDFLib = await ensurePdfLib();
+  } catch (e) {
+    pdftoolsSetStatus('pdftoolsMergeStatus', 'Não foi possível carregar a biblioteca de PDF. Verifique sua conexão.', 'error');
+    return;
+  }
+  for (const file of files) {
+    if (pdftoolsMergeState.files.length >= 5) {
+      pdftoolsSetStatus('pdftoolsMergeStatus', 'Limite de 5 arquivos atingido.', 'warn');
+      break;
+    }
+    const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+    if (!isPdf) {
+      pdftoolsSetStatus('pdftoolsMergeStatus', `"${file.name}" não é um PDF.`, 'error');
+      continue;
+    }
+    try {
+      const bytes = await file.arrayBuffer();
+      const doc = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
+      pdftoolsMergeState.files.push({
+        id: 'm' + Date.now() + Math.random().toString(36).slice(2),
+        name: file.name,
+        bytes,
+        pages: doc.getPageCount()
+      });
+    } catch (e) {
+      pdftoolsSetStatus('pdftoolsMergeStatus', `Não foi possível ler "${file.name}" (arquivo protegido ou corrompido).`, 'error');
+    }
+  }
+  const input = document.getElementById('pdftoolsMergeInput');
+  if (input) input.value = '';
+  pdftoolsRenderMergeList();
+}
+
+function pdftoolsRenderMergeList() {
+  const list = document.getElementById('pdftoolsMergeList');
+  const btn = document.getElementById('pdftoolsMergeBtn');
+  if (!list) return;
+  const totalPages = pdftoolsMergeState.files.reduce((s, f) => s + f.pages, 0);
+  list.innerHTML = pdftoolsMergeState.files.map((f, idx) => `
+    <li class="pdftools-fileitem">
+      <span class="pdftools-fileitem-name">${idx + 1}. ${escapeHtml(f.name)}</span>
+      <span class="pdftools-fileitem-meta">${f.pages} pág.</span>
+      <span class="pdftools-fileitem-btns">
+        <button type="button" class="pdftools-icon-btn" title="Mover para cima" ${idx === 0 ? 'disabled' : ''} onclick="pdftoolsMoveMergeFile('${f.id}', -1)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+        </button>
+        <button type="button" class="pdftools-icon-btn" title="Mover para baixo" ${idx === pdftoolsMergeState.files.length - 1 ? 'disabled' : ''} onclick="pdftoolsMoveMergeFile('${f.id}', 1)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <button type="button" class="pdftools-icon-btn pdftools-remove" title="Remover" onclick="pdftoolsRemoveMergeFile('${f.id}')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </span>
+    </li>
+  `).join('');
+
+  if (btn) btn.disabled = pdftoolsMergeState.files.length < 2 || totalPages > 15;
+
+  if (pdftoolsMergeState.files.length === 0) {
+    pdftoolsSetStatus('pdftoolsMergeStatus', '', 'info');
+  } else if (totalPages > 15) {
+    pdftoolsSetStatus('pdftoolsMergeStatus', `Total de ${totalPages} páginas — o limite é 15. Remova algum arquivo.`, 'error');
+  } else {
+    pdftoolsSetStatus('pdftoolsMergeStatus', `${pdftoolsMergeState.files.length} arquivo(s) · ${totalPages} de 15 páginas.`, 'info');
+  }
+}
+
+function pdftoolsMoveMergeFile(id, dir) {
+  const idx = pdftoolsMergeState.files.findIndex(f => f.id === id);
+  const target = idx + dir;
+  if (idx < 0 || target < 0 || target >= pdftoolsMergeState.files.length) return;
+  const [item] = pdftoolsMergeState.files.splice(idx, 1);
+  pdftoolsMergeState.files.splice(target, 0, item);
+  pdftoolsRenderMergeList();
+}
+
+function pdftoolsRemoveMergeFile(id) {
+  pdftoolsMergeState.files = pdftoolsMergeState.files.filter(f => f.id !== id);
+  pdftoolsRenderMergeList();
+}
+
+async function pdftoolsMergePdfs() {
+  const totalPages = pdftoolsMergeState.files.reduce((s, f) => s + f.pages, 0);
+  if (pdftoolsMergeState.files.length < 2 || totalPages > 15) return;
+  const btn = document.getElementById('pdftoolsMergeBtn');
+  if (btn) btn.disabled = true;
+  pdftoolsSetStatus('pdftoolsMergeStatus', 'Unificando PDFs...', 'info');
+  try {
+    const PDFLib = await ensurePdfLib();
+    const merged = await PDFLib.PDFDocument.create();
+    for (const f of pdftoolsMergeState.files) {
+      const src = await PDFLib.PDFDocument.load(f.bytes, { ignoreEncryption: true });
+      const copied = await merged.copyPages(src, src.getPageIndices());
+      copied.forEach(p => merged.addPage(p));
+    }
+    const bytes = await merged.save();
+    pdftoolsDownloadBlob(new Blob([bytes], { type: 'application/pdf' }), 'pdf-unificado.pdf');
+    pdftoolsSetStatus('pdftoolsMergeStatus', 'PDF unificado gerado com sucesso!', 'success');
+  } catch (e) {
+    pdftoolsSetStatus('pdftoolsMergeStatus', 'Erro ao unificar os PDFs. Tente novamente.', 'error');
+  } finally {
+    pdftoolsRenderMergeList();
+  }
+}
+
+/* ---------- JPG → PDF ---------- */
+const pdftoolsJpgPdfState = { files: [] };
+
+function pdftoolsAddJpgPdfFiles(fileList) {
+  const files = Array.from(fileList || []).filter(f => /^image\/(jpeg|png)$/.test(f.type) || /\.(jpe?g|png)$/i.test(f.name));
+  if (!files.length) {
+    pdftoolsSetStatus('pdftoolsJpgPdfStatus', 'Selecione arquivos JPG ou PNG.', 'error');
+    return;
+  }
+  files.forEach(file => {
+    pdftoolsJpgPdfState.files.push({ id: 'j' + Date.now() + Math.random().toString(36).slice(2), file });
+  });
+  const input = document.getElementById('pdftoolsJpgPdfInput');
+  if (input) input.value = '';
+  pdftoolsRenderJpgPdfList();
+}
+
+function pdftoolsRenderJpgPdfList() {
+  const list = document.getElementById('pdftoolsJpgPdfList');
+  const btn = document.getElementById('pdftoolsJpgPdfBtn');
+  if (!list) return;
+  list.innerHTML = pdftoolsJpgPdfState.files.map((f, idx) => `
+    <li class="pdftools-fileitem">
+      <span class="pdftools-fileitem-name">${idx + 1}. ${escapeHtml(f.file.name)}</span>
+      <span class="pdftools-fileitem-meta">${pdftoolsFormatBytes(f.file.size)}</span>
+      <span class="pdftools-fileitem-btns">
+        <button type="button" class="pdftools-icon-btn" title="Mover para cima" ${idx === 0 ? 'disabled' : ''} onclick="pdftoolsMoveJpgPdfFile('${f.id}', -1)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+        </button>
+        <button type="button" class="pdftools-icon-btn" title="Mover para baixo" ${idx === pdftoolsJpgPdfState.files.length - 1 ? 'disabled' : ''} onclick="pdftoolsMoveJpgPdfFile('${f.id}', 1)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <button type="button" class="pdftools-icon-btn pdftools-remove" title="Remover" onclick="pdftoolsRemoveJpgPdfFile('${f.id}')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </span>
+    </li>
+  `).join('');
+  if (btn) btn.disabled = pdftoolsJpgPdfState.files.length === 0;
+  pdftoolsSetStatus('pdftoolsJpgPdfStatus', pdftoolsJpgPdfState.files.length ? `${pdftoolsJpgPdfState.files.length} imagem(ns) selecionada(s).` : '', 'info');
+}
+
+function pdftoolsMoveJpgPdfFile(id, dir) {
+  const idx = pdftoolsJpgPdfState.files.findIndex(f => f.id === id);
+  const target = idx + dir;
+  if (idx < 0 || target < 0 || target >= pdftoolsJpgPdfState.files.length) return;
+  const [item] = pdftoolsJpgPdfState.files.splice(idx, 1);
+  pdftoolsJpgPdfState.files.splice(target, 0, item);
+  pdftoolsRenderJpgPdfList();
+}
+
+function pdftoolsRemoveJpgPdfFile(id) {
+  pdftoolsJpgPdfState.files = pdftoolsJpgPdfState.files.filter(f => f.id !== id);
+  pdftoolsRenderJpgPdfList();
+}
+
+async function pdftoolsRunJpgToPdf() {
+  if (!pdftoolsJpgPdfState.files.length) return;
+  const btn = document.getElementById('pdftoolsJpgPdfBtn');
+  if (btn) btn.disabled = true;
+  pdftoolsSetStatus('pdftoolsJpgPdfStatus', 'Carregando biblioteca e convertendo...', 'info');
+  try {
+    const PDFLib = await ensurePdfLib();
+    const doc = await PDFLib.PDFDocument.create();
+    const pageWidth = 595.28, pageHeight = 841.89, margin = 24;
+    const maxW = pageWidth - margin * 2, maxH = pageHeight - margin * 2;
+    for (const item of pdftoolsJpgPdfState.files) {
+      const bytes = await item.file.arrayBuffer();
+      const isPng = item.file.type === 'image/png' || /\.png$/i.test(item.file.name);
+      const img = isPng ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
+      const scale = Math.min(maxW / img.width, maxH / img.height, 1);
+      const w = img.width * scale, h = img.height * scale;
+      const page = doc.addPage([pageWidth, pageHeight]);
+      page.drawImage(img, { x: (pageWidth - w) / 2, y: (pageHeight - h) / 2, width: w, height: h });
+    }
+    const bytes = await doc.save();
+    pdftoolsDownloadBlob(new Blob([bytes], { type: 'application/pdf' }), 'imagens-convertidas.pdf');
+    pdftoolsSetStatus('pdftoolsJpgPdfStatus', 'PDF gerado com sucesso!', 'success');
+  } catch (e) {
+    pdftoolsSetStatus('pdftoolsJpgPdfStatus', 'Erro ao converter as imagens. Verifique se são JPG/PNG válidos.', 'error');
+  } finally {
+    if (btn) btn.disabled = pdftoolsJpgPdfState.files.length === 0;
+  }
+}
+
+/* ---------- PDF → JPG ---------- */
+async function pdftoolsRunPdfToJpg(file, inputEl) {
+  if (!file) return;
+  if (inputEl) inputEl.disabled = true;
+  pdftoolsSetStatus('pdftoolsPdfJpgStatus', 'Carregando biblioteca de PDF...', 'info');
+  pdftoolsSetProgress('PdfJpg', 0, 0);
+  try {
+    const pdfjsLib = await ensurePdfJs();
+    const JSZipLib = await ensureJSZip();
+    const bytes = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+    const baseName = file.name.replace(/\.pdf$/i, '') || 'documento';
+    const zip = new JSZipLib();
+    pdftoolsSetStatus('pdftoolsPdfJpgStatus', `Gerando imagens (0/${pdf.numPages})...`, 'info');
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({ scale: 2 });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      const ctx = canvas.getContext('2d');
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+      if (pdf.numPages === 1) {
+        pdftoolsDownloadBlob(blob, `${baseName}.jpg`);
+      } else {
+        zip.file(`${baseName}-pagina-${String(i).padStart(2, '0')}.jpg`, blob);
+      }
+      pdftoolsSetProgress('PdfJpg', i, pdf.numPages);
+      pdftoolsSetStatus('pdftoolsPdfJpgStatus', `Gerando imagens (${i}/${pdf.numPages})...`, 'info');
+    }
+    if (pdf.numPages > 1) {
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      pdftoolsDownloadBlob(zipBlob, `${baseName}-imagens.zip`);
+    }
+    pdftoolsSetStatus('pdftoolsPdfJpgStatus', 'Imagens geradas com sucesso!', 'success');
+  } catch (e) {
+    pdftoolsSetStatus('pdftoolsPdfJpgStatus', 'Não foi possível converter este PDF.', 'error');
+  } finally {
+    if (inputEl) { inputEl.disabled = false; inputEl.value = ''; }
+    pdftoolsSetProgress('PdfJpg', 0, 0);
+  }
+}
+
+/* ---------- PDF → Word (texto) ---------- */
+function pdftoolsEscapeXml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+async function pdftoolsBuildDocx(paragraphsPerPage) {
+  const JSZipLib = await ensureJSZip();
+  const zip = new JSZipLib();
+
+  zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
+<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
+</Types>`);
+
+  zip.folder('_rels').file('.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
+<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>
+</Relationships>`);
+
+  zip.folder('docProps').file('core.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:creator>Argo SUAS</dc:creator><cp:lastModifiedBy>Argo SUAS</cp:lastModifiedBy></cp:coreProperties>`);
+
+  zip.folder('docProps').file('app.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Argo SUAS</Application></Properties>`);
+
+  const wordFolder = zip.folder('word');
+  wordFolder.folder('_rels').file('document.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`);
+
+  let bodyXml = '';
+  paragraphsPerPage.forEach((pageParagraphs, pageIdx) => {
+    if (!pageParagraphs.length) {
+      bodyXml += '<w:p/>';
+    } else {
+      pageParagraphs.forEach(paraText => {
+        bodyXml += `<w:p><w:r><w:t xml:space="preserve">${pdftoolsEscapeXml(paraText)}</w:t></w:r></w:p>`;
+      });
+    }
+    if (pageIdx < paragraphsPerPage.length - 1) {
+      bodyXml += `<w:p><w:r><w:br w:type="page"/></w:r></w:p>`;
+    }
+  });
+
+  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${bodyXml}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1417" w:right="1417" w:bottom="1417" w:left="1417"/></w:sectPr></w:body></w:document>`;
+
+  wordFolder.file('document.xml', documentXml);
+
+  return zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+}
+
+async function pdftoolsRunPdfToWord(file, inputEl) {
+  if (!file) return;
+  if (inputEl) inputEl.disabled = true;
+  pdftoolsSetStatus('pdftoolsPdfWordStatus', 'Carregando bibliotecas...', 'info');
+  pdftoolsSetProgress('PdfWord', 0, 0);
+  try {
+    const pdfjsLib = await ensurePdfJs();
+    await ensureJSZip();
+    const bytes = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+    const pages = [];
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const lines = [];
+      let lastY = null, currentLine = [];
+      content.items.forEach(item => {
+        const y = item.transform[5];
+        if (lastY !== null && Math.abs(y - lastY) > 2) {
+          if (currentLine.length) lines.push(currentLine.join(' '));
+          currentLine = [];
+        }
+        currentLine.push(item.str);
+        lastY = y;
+      });
+      if (currentLine.length) lines.push(currentLine.join(' '));
+      pages.push(lines.filter(l => l.trim().length));
+      pdftoolsSetProgress('PdfWord', i, pdf.numPages);
+      pdftoolsSetStatus('pdftoolsPdfWordStatus', `Extraindo texto (${i}/${pdf.numPages})...`, 'info');
+    }
+    const blob = await pdftoolsBuildDocx(pages);
+    pdftoolsDownloadBlob(blob, (file.name.replace(/\.pdf$/i, '') || 'documento') + '.docx');
+    pdftoolsSetStatus('pdftoolsPdfWordStatus', 'Documento Word gerado! (conversão baseada no texto — layouts muito complexos podem mudar)', 'success');
+  } catch (e) {
+    pdftoolsSetStatus('pdftoolsPdfWordStatus', 'Não foi possível converter este PDF.', 'error');
+  } finally {
+    if (inputEl) { inputEl.disabled = false; inputEl.value = ''; }
+    pdftoolsSetProgress('PdfWord', 0, 0);
+  }
+}
+
+/* ---------- Word → PDF ---------- */
+async function pdftoolsRunWordToPdf(file, inputEl) {
+  if (!file) return;
+  if (inputEl) inputEl.disabled = true;
+  pdftoolsSetStatus('pdftoolsWordPdfStatus', 'Carregando bibliotecas...', 'info');
+  try {
+    const mammothLib = await ensureMammoth();
+    const PDFLib = await ensurePdfLib();
+    const bytes = await file.arrayBuffer();
+    const result = await mammothLib.convertToHtml({ arrayBuffer: bytes });
+    const container = document.createElement('div');
+    container.innerHTML = result.value;
+    const blocks = [];
+    container.childNodes.forEach(node => {
+      if (node.nodeType !== 1) return;
+      const text = (node.textContent || '').trim();
+      if (!text) return;
+      blocks.push({ text, heading: /^h[1-6]$/i.test(node.tagName) });
+    });
+    if (!blocks.length) {
+      pdftoolsSetStatus('pdftoolsWordPdfStatus', 'Não encontramos texto neste documento.', 'error');
+      return;
+    }
+
+    const doc = await PDFLib.PDFDocument.create();
+    const fontRegular = await doc.embedFont(PDFLib.StandardFonts.Helvetica);
+    const fontBold = await doc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+    const pageWidth = 595.28, pageHeight = 841.89, margin = 56;
+    const maxWidth = pageWidth - margin * 2;
+    let page = doc.addPage([pageWidth, pageHeight]);
+    let y = pageHeight - margin;
+
+    const sanitize = t => t.replace(/[^\x20-\x7EÀ-ÿ""''–—•ºª§]/g, '?');
+
+    function wrapText(text, font, size) {
+      const words = text.split(/\s+/);
+      const lines = [];
+      let line = '';
+      words.forEach(word => {
+        const test = line ? line + ' ' + word : word;
+        if (font.widthOfTextAtSize(test, size) > maxWidth && line) {
+          lines.push(line);
+          line = word;
+        } else {
+          line = test;
+        }
+      });
+      if (line) lines.push(line);
+      return lines;
+    }
+
+    blocks.forEach(block => {
+      const font = block.heading ? fontBold : fontRegular;
+      const size = block.heading ? 14 : 11;
+      const lineHeight = size + 4;
+      const lines = wrapText(sanitize(block.text), font, size);
+      lines.forEach(line => {
+        if (y < margin + lineHeight) { page = doc.addPage([pageWidth, pageHeight]); y = pageHeight - margin; }
+        page.drawText(line, { x: margin, y: y - size, size, font });
+        y -= lineHeight;
+      });
+      y -= 6;
+      if (y < margin) { page = doc.addPage([pageWidth, pageHeight]); y = pageHeight - margin; }
+    });
+
+    const pdfBytes = await doc.save();
+    pdftoolsDownloadBlob(new Blob([pdfBytes], { type: 'application/pdf' }), (file.name.replace(/\.docx?$/i, '') || 'documento') + '.pdf');
+    pdftoolsSetStatus('pdftoolsWordPdfStatus', 'PDF gerado! (texto e títulos — imagens e tabelas não são reproduzidas)', 'success');
+  } catch (e) {
+    pdftoolsSetStatus('pdftoolsWordPdfStatus', 'Não foi possível converter este documento.', 'error');
+  } finally {
+    if (inputEl) { inputEl.disabled = false; inputEl.value = ''; }
+  }
+}
+
+function initPdfToolsPanel() {
+  pdftoolsRenderMergeList();
+  pdftoolsRenderJpgPdfList();
 }
 
 render();
