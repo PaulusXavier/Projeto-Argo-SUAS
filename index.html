@@ -8712,6 +8712,7 @@ BPC_GUIDE_CONTENT['recuperacao-senha-inss'] = {
       { title: '6. Escolha a forma de recuperação', desc: 'E-mail cadastrado, SMS para o celular cadastrado, reconhecimento facial pelo aplicativo gov.br, ou validação por conta em banco credenciado.' },
       { title: '7. Crie uma nova senha', desc: 'Siga as instruções apresentadas na tela até concluir a criação da nova senha e conseguir acessar o Meu INSS normalmente.' }
     ],
+    illustrationAfterStep: 6,
     illustrationCaption: 'Tela do gov.br — opções para confirmar sua identidade na recuperação de conta',
     illustration: RECUPERACAO_SENHA_GOVBR_IMG,
     valueLabel: 'Se não tiver acesso a nenhum canal',
@@ -8740,6 +8741,7 @@ BPC_GUIDE_CONTENT['recuperacao-senha-inss'] = {
       { title: '6. Elija la forma de recuperación', desc: 'Correo electrónico registrado, SMS al celular registrado, reconocimiento facial por la aplicación gov.br, o validación por cuenta en banco acreditado.' },
       { title: '7. Cree una nueva contraseña', desc: 'Siga las instrucciones presentadas en la pantalla hasta concluir la creación de la nueva contraseña y poder acceder al Meu INSS normalmente.' }
     ],
+    illustrationAfterStep: 6,
     illustrationCaption: 'Pantalla del gov.br — opciones para confirmar su identidad en la recuperación de cuenta',
     illustration: RECUPERACAO_SENHA_GOVBR_IMG,
     valueLabel: 'Si no tiene acceso a ningún canal',
@@ -10198,12 +10200,25 @@ async function printBpcGuide(id, lang) {
       <span>${hlGuideTerms(r)}</span>
     </li>`).join('');
 
+  // Ilustração (print screen do gov.br/Meu INSS) que acompanha o guia: cada
+  // conteúdo indica em qual ponto do guia ela deve aparecer. Quando
+  // "illustrationAfterStep" está definido, ela entra logo após aquele passo
+  // do "Passo a passo" (ex.: BPC Idoso e Recuperação de Senha); quando não
+  // está definido, ela ilustra a seção de requisitos (ex.: BPC PCD, cuja
+  // imagem mostra a tela de requisitos do Meu INSS).
+  const illustrationBlock = content.illustration ? `
+    <div style="text-align:center; margin:${gpx(6)} 0 ${gpx(2)} 0; break-inside:avoid;">
+      <img src="${content.illustration}" alt="${escapeHtml(content.illustrationCaption || '')}" style="max-width:${gpx(150)}; max-height:${gpx(190)}; width:auto; height:auto; border:1px solid #CBD5E1; border-radius:8px; box-shadow:0 2px 6px rgba(15,23,42,0.12);">
+      ${content.illustrationCaption ? `<div style="font-size:${grem(0.6)}; line-height:1.25; color:#64748B; font-style:italic; margin-top:${gpx(3)}; max-width:${gpx(220)}; margin-left:auto; margin-right:auto;">${escapeHtml(content.illustrationCaption)}</div>` : ''}
+    </div>` : '';
+
   const stepItems = content.steps.map((s, idx) => {
     // Os títulos já vêm no formato "1. Texto do passo" — separa o número
     // para desenhar um selo circular, mantendo o texto do título ao lado.
     const m = /^(\d+)\.\s*(.*)$/.exec(s.title || '');
     const stepNum = m ? m[1] : String(idx + 1);
     const stepTitleText = m ? m[2] : (s.title || '');
+    const showIllustrationHere = content.illustrationAfterStep != null && Number(stepNum) === Number(content.illustrationAfterStep);
     return `
     <div style="display:flex; gap:${gpx(10)}; align-items:flex-start; padding:${gpx(5)} 0; ${idx > 0 ? 'border-top:1px solid #E2E8F0;' : ''} break-inside:avoid;">
       <div style="flex-shrink:0; width:${gpx(22)}; height:${gpx(22)}; border-radius:50%; background:#0F172A; color:#fff; font-size:${grem(0.84)}; font-weight:800; display:flex; align-items:center; justify-content:center; margin-top:1px;">${stepNum}</div>
@@ -10211,7 +10226,7 @@ async function printBpcGuide(id, lang) {
         <div style="font-weight:800; color:#0F172A; font-size:${grem(0.92)}; line-height:1.22;">${hlGuideTerms(stepTitleText)}</div>
         <div style="color:#334155; font-size:${grem(0.8)}; line-height:1.35; margin-top:2px;">${hlGuideTerms(s.desc)}</div>
       </div>
-    </div>`;
+    </div>${showIllustrationHere ? illustrationBlock : ''}`;
   }).join('');
 
   const guidePage = `
@@ -10238,6 +10253,7 @@ async function printBpcGuide(id, lang) {
         <div style="border:1.5px solid #0F172A; border-radius:7px; padding:${gpx(11)} ${gpx(18)}; margin-bottom:${gpx(11)};">
           <div style="font-size:${grem(0.76)}; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#0091C2; margin-bottom:${gpx(7)};">✅ ${content.reqLabel}</div>
           <ul style="margin:0; padding:0; list-style:none; font-size:${grem(0.83)}; line-height:1.35; color:#0F172A; ${reqColumns === 2 ? 'columns:2; column-gap:22px;' : ''}">${reqItems}</ul>
+          ${content.illustrationAfterStep == null ? illustrationBlock : ''}
         </div>
 
         <div style="border:1.5px solid #0F172A; border-radius:7px; padding:${gpx(11)} ${gpx(18)}; margin-bottom:${gpx(11)}; background:rgba(0,145,194,0.04);">
