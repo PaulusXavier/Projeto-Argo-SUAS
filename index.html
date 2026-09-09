@@ -10256,38 +10256,40 @@ async function printBpcGuide(id, lang) {
     ? '(incluido en las páginas siguientes de esta impresión)'
     : '(incluído nas páginas seguintes desta impressão)';
 
-  // Escala automática de tamanhos: guias com menos requisitos/passos (menos
-  // texto no total, ex.: BPC Idoso) usam fonte/espaçamento um pouco maiores
-  // para ocupar bem a folha A4; guias mais longos (ex.: BPC PCD, com 6
-  // requisitos + 6 passos) usam a escala-base (1.0), já calibrada para caber
-  // inteiramente em uma única página mesmo sem a imagem ilustrativa.
-  const totalGuideItems = content.requirements.length + content.steps.length;
-  const guideScale = Math.max(1, Math.min(1.3, 1 + (12 - totalGuideItems) * 0.05));
-  const grem = (n) => (n * guideScale).toFixed(3) + 'rem';
-  const gpx = (n) => Math.round(n * guideScale) + 'px';
+  // Escala dinâmica de tamanhos: em vez de um fator fixo calculado só pelo
+  // número de itens (que podia deixar o texto grande demais e "vazar" para
+  // uma segunda página, como acontecia nos guias de BPC Idoso, BPC PCD e
+  // Recuperação de Senha), o guia agora é montado, medido e, se necessário,
+  // reduzido em escala até caber inteiramente em uma única folha A4.
+  // buildGuidePageHtml(scale) monta o HTML completo do guia (página 1) para
+  // um fator de escala qualquer — é chamada mais de uma vez pelo laço de
+  // ajuste logo abaixo.
+  function buildGuidePageHtml(scale) {
+    const grem = (n) => (n * scale).toFixed(3) + 'rem';
+    const gpx = (n) => Math.round(n * scale) + 'px';
 
-  // Lista de requisitos: com poucos itens (até 3, ex.: Recuperação de Senha)
-  // fica em coluna única, mais legível; com listas mais longas (BPC Idoso e
-  // BPC PCD) usa duas colunas para equilibrar melhor o espaço da folha.
-  const reqColumns = content.requirements.length > 3 ? 2 : 1;
-  const reqItems = content.requirements.map(r => `
+    // Lista de requisitos: com poucos itens (até 3, ex.: Recuperação de Senha)
+    // fica em coluna única, mais legível; com listas mais longas (BPC Idoso e
+    // BPC PCD) usa duas colunas para equilibrar melhor o espaço da folha.
+    const reqColumns = content.requirements.length > 3 ? 2 : 1;
+    const reqItems = content.requirements.map(r => `
     <li style="margin:0 0 ${gpx(6)} 0; display:flex; gap:${gpx(8)}; align-items:flex-start; break-inside:avoid;">
       <span style="flex-shrink:0; width:${gpx(16)}; height:${gpx(16)}; border-radius:5px; background:#0091C2; color:#fff; font-size:${grem(0.7)}; font-weight:800; line-height:${gpx(16)}; text-align:center; margin-top:1px;">✓</span>
       <span>${hlGuideTerms(r)}</span>
     </li>`).join('');
 
-  // A ilustração (print screen do gov.br/Meu INSS) não entra mais embutida
-  // no corpo do guia (página 1) — ela agora forma uma página 2 dedicada,
-  // maior, com a legenda passo a passo (ver illustrationPage mais abaixo).
-  // Isso libera espaço na página 1 para o texto do guia caber inteiro nela.
+    // A ilustração (print screen do gov.br/Meu INSS) não entra mais embutida
+    // no corpo do guia (página 1) — ela agora forma uma página 2 dedicada,
+    // maior, com a legenda passo a passo (ver illustrationPage mais abaixo).
+    // Isso libera espaço na página 1 para o texto do guia caber inteiro nela.
 
-  const stepItems = content.steps.map((s, idx) => {
-    // Os títulos já vêm no formato "1. Texto do passo" — separa o número
-    // para desenhar um selo circular, mantendo o texto do título ao lado.
-    const m = /^(\d+)\.\s*(.*)$/.exec(s.title || '');
-    const stepNum = m ? m[1] : String(idx + 1);
-    const stepTitleText = m ? m[2] : (s.title || '');
-    return `
+    const stepItems = content.steps.map((s, idx) => {
+      // Os títulos já vêm no formato "1. Texto do passo" — separa o número
+      // para desenhar um selo circular, mantendo o texto do título ao lado.
+      const m = /^(\d+)\.\s*(.*)$/.exec(s.title || '');
+      const stepNum = m ? m[1] : String(idx + 1);
+      const stepTitleText = m ? m[2] : (s.title || '');
+      return `
     <div style="display:flex; gap:${gpx(10)}; align-items:flex-start; padding:${gpx(5)} 0; ${idx > 0 ? 'border-top:1px solid #E2E8F0;' : ''} break-inside:avoid;">
       <div style="flex-shrink:0; width:${gpx(22)}; height:${gpx(22)}; border-radius:50%; background:#0F172A; color:#fff; font-size:${grem(0.84)}; font-weight:800; display:flex; align-items:center; justify-content:center; margin-top:1px;">${stepNum}</div>
       <div style="flex:1; min-width:0;">
@@ -10295,10 +10297,10 @@ async function printBpcGuide(id, lang) {
         <div style="color:#334155; font-size:${grem(0.8)}; line-height:1.35; margin-top:2px;">${hlGuideTerms(s.desc)}</div>
       </div>
     </div>`;
-  }).join('');
+    }).join('');
 
-  const guidePage = `
-    <div class="print-page" style="position:relative; padding:0; box-sizing:border-box; display:flex; flex-direction:column; background:white; border:2px solid #0F172A; width:100%; min-height:27.7cm; height:auto; overflow:visible;">
+    return `
+    <div class="print-page guide-measure-page" style="position:relative; padding:0; box-sizing:border-box; display:flex; flex-direction:column; background:white; border:2px solid #0F172A; width:100%; height:27.7cm; overflow:hidden;">
       ${watermark}
       <div style="position:absolute; inset:0.25cm; border:1px solid #94A3B8; z-index:0; pointer-events:none;"></div>
 
@@ -10354,6 +10356,7 @@ async function printBpcGuide(id, lang) {
       </div>
     </div>
   `;
+  }
 
   // Página 2 dedicada ao passo a passo ilustrado: mostra o print screen do
   // gov.br/Meu INSS ampliado, com a legenda explicando o que fazer naquela
@@ -10409,7 +10412,43 @@ async function printBpcGuide(id, lang) {
   })() : '';
 
   const printArea = document.getElementById('print-area');
+
+  // Monta o guia numa escala inicial conservadora (nunca maior que 1, ou
+  // seja, nunca maior que o tamanho-base já calibrado) e então mede a
+  // altura realmente renderizada, reduzindo a escala em até 4 tentativas
+  // até o conteúdo caber inteiramente dentro de uma única folha A4
+  // (27.7cm de área útil, mesmo valor usado no height do .print-page).
+  // Isso corrige o "vazamento" para uma segunda folha que acontecia em
+  // guias mais longos (BPC PCD, Recuperação de Senha) — agora tudo sai
+  // sempre numa única folha, com o texto reduzido o quanto for preciso.
+  const totalGuideItems = content.requirements.length + content.steps.length;
+  let guideScale = Math.max(0.6, Math.min(1, 1 + (9 - totalGuideItems) * 0.04));
+
+  function measureA4HeightPx() {
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:absolute; visibility:hidden; height:27.7cm; width:0; pointer-events:none;';
+    document.body.appendChild(probe);
+    const px = probe.offsetHeight;
+    document.body.removeChild(probe);
+    return px || 0;
+  }
+  const targetHeightPx = measureA4HeightPx();
+
+  let guidePage = buildGuidePageHtml(guideScale);
   printArea.innerHTML = guidePage + illustrationPage + attachPages;
+
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const guideEl = printArea.querySelector('.guide-measure-page');
+    if (!guideEl) break;
+    const renderedHeight = guideEl.scrollHeight || 0;
+    if (!targetHeightPx || renderedHeight <= targetHeightPx || guideScale <= 0.55) break;
+    const ratio = targetHeightPx / renderedHeight;
+    const nextScale = Math.max(0.55, guideScale * ratio * 0.985);
+    if (nextScale >= guideScale) break;
+    guideScale = nextScale;
+    guidePage = buildGuidePageHtml(guideScale);
+    printArea.innerHTML = guidePage + illustrationPage + attachPages;
+  }
 
   setTempPageOrientation('A4 portrait');
   window.addEventListener('afterprint', function clearOrientation() {
