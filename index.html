@@ -10200,17 +10200,10 @@ async function printBpcGuide(id, lang) {
       <span>${hlGuideTerms(r)}</span>
     </li>`).join('');
 
-  // Ilustração (print screen do gov.br/Meu INSS) que acompanha o guia: cada
-  // conteúdo indica em qual ponto do guia ela deve aparecer. Quando
-  // "illustrationAfterStep" está definido, ela entra logo após aquele passo
-  // do "Passo a passo" (ex.: BPC Idoso e Recuperação de Senha); quando não
-  // está definido, ela ilustra a seção de requisitos (ex.: BPC PCD, cuja
-  // imagem mostra a tela de requisitos do Meu INSS).
-  const illustrationBlock = content.illustration ? `
-    <div style="text-align:center; margin:${gpx(6)} 0 ${gpx(2)} 0; break-inside:avoid;">
-      <img src="${content.illustration}" alt="${escapeHtml(content.illustrationCaption || '')}" style="max-width:${gpx(150)}; max-height:${gpx(190)}; width:auto; height:auto; border:1px solid #CBD5E1; border-radius:8px; box-shadow:0 2px 6px rgba(15,23,42,0.12);">
-      ${content.illustrationCaption ? `<div style="font-size:${grem(0.6)}; line-height:1.25; color:#64748B; font-style:italic; margin-top:${gpx(3)}; max-width:${gpx(220)}; margin-left:auto; margin-right:auto;">${escapeHtml(content.illustrationCaption)}</div>` : ''}
-    </div>` : '';
+  // A ilustração (print screen do gov.br/Meu INSS) não entra mais embutida
+  // no corpo do guia (página 1) — ela agora forma uma página 2 dedicada,
+  // maior, com a legenda passo a passo (ver illustrationPage mais abaixo).
+  // Isso libera espaço na página 1 para o texto do guia caber inteiro nela.
 
   const stepItems = content.steps.map((s, idx) => {
     // Os títulos já vêm no formato "1. Texto do passo" — separa o número
@@ -10218,7 +10211,6 @@ async function printBpcGuide(id, lang) {
     const m = /^(\d+)\.\s*(.*)$/.exec(s.title || '');
     const stepNum = m ? m[1] : String(idx + 1);
     const stepTitleText = m ? m[2] : (s.title || '');
-    const showIllustrationHere = content.illustrationAfterStep != null && Number(stepNum) === Number(content.illustrationAfterStep);
     return `
     <div style="display:flex; gap:${gpx(10)}; align-items:flex-start; padding:${gpx(5)} 0; ${idx > 0 ? 'border-top:1px solid #E2E8F0;' : ''} break-inside:avoid;">
       <div style="flex-shrink:0; width:${gpx(22)}; height:${gpx(22)}; border-radius:50%; background:#0F172A; color:#fff; font-size:${grem(0.84)}; font-weight:800; display:flex; align-items:center; justify-content:center; margin-top:1px;">${stepNum}</div>
@@ -10226,7 +10218,7 @@ async function printBpcGuide(id, lang) {
         <div style="font-weight:800; color:#0F172A; font-size:${grem(0.92)}; line-height:1.22;">${hlGuideTerms(stepTitleText)}</div>
         <div style="color:#334155; font-size:${grem(0.8)}; line-height:1.35; margin-top:2px;">${hlGuideTerms(s.desc)}</div>
       </div>
-    </div>${showIllustrationHere ? illustrationBlock : ''}`;
+    </div>`;
   }).join('');
 
   const guidePage = `
@@ -10253,7 +10245,6 @@ async function printBpcGuide(id, lang) {
         <div style="border:1.5px solid #0F172A; border-radius:7px; padding:${gpx(11)} ${gpx(18)}; margin-bottom:${gpx(11)};">
           <div style="font-size:${grem(0.76)}; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#0091C2; margin-bottom:${gpx(7)};">✅ ${content.reqLabel}</div>
           <ul style="margin:0; padding:0; list-style:none; font-size:${grem(0.83)}; line-height:1.35; color:#0F172A; ${reqColumns === 2 ? 'columns:2; column-gap:22px;' : ''}">${reqItems}</ul>
-          ${content.illustrationAfterStep == null ? illustrationBlock : ''}
         </div>
 
         <div style="border:1.5px solid #0F172A; border-radius:7px; padding:${gpx(11)} ${gpx(18)}; margin-bottom:${gpx(11)}; background:rgba(0,145,194,0.04);">
@@ -10282,12 +10273,27 @@ async function printBpcGuide(id, lang) {
         </div>
 
         <div style="font-size:${grem(0.64)}; line-height:1.35; color:#94A3B8; text-align:center; padding-top:${gpx(7)}; border-top:1px dashed #CBD5E1;">
-          ${hlGuideTerms(content.footer)}<br>
           ${lang === 'es' ? 'Documento generado el' : 'Documento gerado em'} ${dateLong} · Argo SUAS — ${i ? i.fullName : ''}
         </div>
       </div>
     </div>
   `;
+
+  // Página 2 dedicada ao passo a passo ilustrado: mostra o print screen do
+  // gov.br/Meu INSS ampliado, com a legenda explicando o que fazer naquela
+  // tela. Substitui a versão pequena que antes ficava embutida na página 1.
+  const stepByStepTitle = lang === 'es' ? 'Paso a paso ilustrado' : 'Passo a passo ilustrado';
+  const illustrationPage = content.illustration ? `
+    <div class="print-page" style="position:relative; padding:0; box-sizing:border-box; display:flex; flex-direction:column; background:white; border:2px solid #0F172A; width:100%; min-height:27.7cm; height:auto; overflow:visible;">
+      ${watermark}
+      <div style="position:absolute; inset:0.25cm; border:1px solid #94A3B8; z-index:0; pointer-events:none;"></div>
+      <div style="position:relative; z-index:1; padding:${gpx(18)} ${gpx(24)}; font-family:'Inter', sans-serif; color:#0F172A; display:flex; flex-direction:column; align-items:center; justify-content:center; flex-grow:1;">
+        <div style="font-size:${grem(0.74)}; font-weight:800; letter-spacing:0.04em; color:#fff; background:#0091C2; padding:${gpx(4)} ${gpx(14)}; border-radius:20px; margin-bottom:${gpx(16)};">🧭 ${stepByStepTitle}</div>
+        <img src="${content.illustration}" alt="${escapeHtml(content.illustrationCaption || '')}" style="max-width:80%; max-height:60vh; width:auto; height:auto; border:1px solid #CBD5E1; border-radius:10px; box-shadow:0 4px 14px rgba(15,23,42,0.16);">
+        ${content.illustrationCaption ? `<div style="font-size:${grem(0.88)}; line-height:1.4; color:#334155; font-style:italic; text-align:center; margin-top:${gpx(16)}; max-width:70%;">${escapeHtml(content.illustrationCaption)}</div>` : ''}
+      </div>
+    </div>
+  ` : '';
 
   // Página(s) extra com o PDF anexado (ex.: Folha Resumo do CadÚnico),
   // convertido em imagem por página — mesmo mecanismo do anexo em PDF da
@@ -10327,7 +10333,7 @@ async function printBpcGuide(id, lang) {
   })() : '';
 
   const printArea = document.getElementById('print-area');
-  printArea.innerHTML = guidePage + attachPages;
+  printArea.innerHTML = guidePage + illustrationPage + attachPages;
 
   setTempPageOrientation('A4 portrait');
   window.addEventListener('afterprint', function clearOrientation() {
