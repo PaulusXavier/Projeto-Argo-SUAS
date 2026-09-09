@@ -8711,7 +8711,21 @@ const BPC_GUIDE_CONTENT = {
       denialLabel: 'Se o pedido for negado',
       denial: 'É possível recorrer em até 30 dias pelo Meu INSS ou em uma agência do INSS. Persistindo a negativa, procure orientação jurídica gratuita na Defensoria Pública da União (DPU).',
       contactLabel: 'Onde buscar ajuda',
-      footer: 'Este guia é apenas informativo e não substitui o atendimento no CRAS ou no INSS. Regras e valores podem mudar — confirme sempre no CRAS ou pelo Meu INSS/135.'
+      footer: 'Este guia é apenas informativo e não substitui o atendimento no CRAS ou no INSS. Regras e valores podem mudar — confirme sempre no CRAS ou pelo Meu INSS/135.',
+      familyComposition: {
+        title: 'Composição Familiar e Renda',
+        includedLabel: '👨‍👩‍👧‍👦 Quem entra no cálculo da renda per capita',
+        includedIntro: 'Art. 20, §1º da Lei 8.742/93 (LOAS) — desde que vivam sob o mesmo teto:',
+        included: ['Requerente', 'Cônjuge ou companheiro(a)', 'Pais (ou madrasta/padrasto na ausência deles)', 'Irmãos solteiros', 'Filhos e enteados solteiros', 'Menores tutelados'],
+        excludedLabel: 'Quem NÃO entra no cálculo',
+        excluded: 'Netos, avós, tios, sobrinhos, primos, genros/noras, cunhados, nem filhos/irmãos/enteados casados, em união estável, divorciados, separados de fato ou viúvos, mesmo que morem na mesma casa.',
+        incomeExclusionsLabel: '💵 O que NÃO entra na renda familiar',
+        incomeExclusions: 'Outro BPC; benefício previdenciário de até 1 salário mínimo recebido por idoso (65+) ou pessoa com deficiência da família (se houver mais de um, apenas um pode ser descontado); valores de contrato de aprendizagem; bolsa de estágio supervisionado; auxílio financeiro temporário ou indenização por rompimento/colapso de barragem; e o valor do Auxílio-Inclusão e da remuneração de quem o recebe. Qualquer outro valor recebido pela família entra na conta.',
+        accumulationLabel: '🔗 Acumulação com outros benefícios',
+        accumulation: 'O BPC não pode ser acumulado com outros benefícios da Seguridade Social (ex.: aposentadoria, pensão, seguro-desemprego), mas PODE ser recebido junto com o Bolsa Família — nesse caso, o valor do Bolsa Família entra no cálculo da renda per capita da família, que não pode ultrapassar ¼ do salário mínimo por pessoa.',
+        cancellationLabel: '🚫 Cancelamento',
+        cancellation: 'Pode ser solicitado voluntariamente pelo próprio beneficiário (ou representante legal) pelo Meu INSS, aplicativo ou telefone 135, quando não desejar mais receber o benefício ou quando a família não atender mais aos critérios; o INSS também pode suspender/cessar de ofício em revisões bienais, por óbito, superação de renda ou irregularidades no CadÚnico.'
+      }
     },
     es: {
       badge: 'BPC PERSONA CON DISCAPACIDAD',
@@ -10369,8 +10383,66 @@ async function printBpcGuide(id, lang) {
           </div>
           ${pdfAttach ? `<div style="margin-top:${gpx(5)}; font-size:${grem(0.7)}; font-weight:700; color:#475569;">📎 ${attachNoteLabel}: ${escapeHtml(pdfAttach.name || 'documento.pdf')} ${attachNoteSuffix}.</div>` : ''}
         </div>
+      </div>
+    </div>
+  `;
+  }
 
-        <div style="font-size:${grem(0.64)}; line-height:1.35; color:#94A3B8; text-align:center; padding-top:${gpx(7)}; border-top:1px dashed #CBD5E1;">
+  // Página 2 dedicada à composição familiar considerada no cálculo da renda
+  // per capita do BPC (art. 20, §1º da Lei 8.742/93 - LOAS), ao que NÃO
+  // entra nessa renda, à possibilidade de acumulação com outros benefícios
+  // e ao cancelamento — conteúdo já existente em content.familyComposition,
+  // mas que ainda não tinha uma página própria na impressão. Só é gerada
+  // quando o guia tem esse conteúdo (bpc-idoso e bpc-pcd); guias sem ele
+  // (ex.: recuperação de senha) seguem sem essa página extra.
+  function buildFamilyCompositionPageHtml() {
+    const fc = content.familyComposition;
+    if (!fc) return '';
+    const includedItems = (fc.included || []).map(item => `
+      <li style="margin:0 0 4px 0; display:flex; gap:8px; align-items:flex-start; break-inside:avoid;">
+        <span style="flex-shrink:0; width:16px; height:16px; border-radius:5px; background:#0091C2; color:#fff; font-size:0.7rem; font-weight:800; line-height:16px; text-align:center; margin-top:1px;">✓</span>
+        <span>${hlGuideTerms(item)}</span>
+      </li>`).join('');
+    return `
+    <div class="print-page" style="position:relative; padding:0; box-sizing:border-box; display:flex; flex-direction:column; background:white; border:2px solid #0F172A; width:100%; height:27.7cm; overflow:hidden;">
+      ${watermark}
+      <div style="position:absolute; inset:0.25cm; border:1px solid #94A3B8; z-index:0; pointer-events:none;"></div>
+      <div style="position:relative; z-index:1; padding:19px 27px 21px 27px; font-family:'Inter', sans-serif; color:#0F172A;">
+
+        <table style="width:100%; border-collapse:collapse; margin-bottom:15px;">
+          <tr>
+            <td style="border:1.5px solid #0F172A; border-left:8px solid #0091C2; border-radius:3px; padding:10px 16px; vertical-align:middle;">
+              <div style="font-size:0.64rem; font-weight:800; letter-spacing:0.05em; color:#0091C2; text-transform:uppercase;">CRAS Cristiana Vicente Nunes · SEMADS · Prefeitura de Boa Vista</div>
+              <div style="display:inline-block; font-size:0.74rem; font-weight:800; letter-spacing:0.04em; color:#fff; background:#0F172A; padding:3px 11px; border-radius:20px; margin-top:5px;">${content.badge}</div>
+              <div style="font-size:1.08rem; color:#0F172A; font-weight:800; margin-top:6px;">${fc.title || content.title}</div>
+            </td>
+          </tr>
+        </table>
+
+        <div style="border:1.5px solid #0F172A; border-radius:7px; padding:11px 18px; margin-bottom:11px;">
+          <div style="font-size:0.76rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#0091C2; margin-bottom:5px;">${fc.includedLabel}</div>
+          ${fc.includedIntro ? `<div style="font-size:0.78rem; line-height:1.35; color:#334155; margin-bottom:7px;">${hlGuideTerms(fc.includedIntro)}</div>` : ''}
+          <ul style="margin:0; padding:0; list-style:none; font-size:0.83rem; line-height:1.35; color:#0F172A; columns:2; column-gap:22px;">${includedItems}</ul>
+          <div style="font-size:0.72rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#475569; margin-top:10px; margin-bottom:4px;">${fc.excludedLabel}</div>
+          <div style="font-size:0.81rem; line-height:1.4; color:#0F172A;">${hlGuideTerms(fc.excluded)}</div>
+        </div>
+
+        <div style="border:1px solid #CBD5E1; border-radius:7px; padding:10px 14px; margin-bottom:11px;">
+          <div style="font-size:0.76rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#0091C2; margin-bottom:5px;">${fc.incomeExclusionsLabel}</div>
+          <div style="font-size:0.81rem; line-height:1.4; color:#0F172A;">${hlGuideTerms(fc.incomeExclusions)}</div>
+        </div>
+
+        <div style="border:1px solid #CBD5E1; border-radius:7px; padding:10px 14px; margin-bottom:11px;">
+          <div style="font-size:0.76rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#0091C2; margin-bottom:5px;">${fc.accumulationLabel}</div>
+          <div style="font-size:0.81rem; line-height:1.4; color:#0F172A;">${hlGuideTerms(fc.accumulation)}</div>
+        </div>
+
+        <div style="border:1.5px dashed #94A3B8; border-radius:7px; padding:10px 18px; margin-bottom:11px;">
+          <div style="font-size:0.76rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#0091C2; margin-bottom:5px;">${fc.cancellationLabel}</div>
+          <div style="font-size:0.81rem; line-height:1.4; color:#0F172A;">${hlGuideTerms(fc.cancellation)}</div>
+        </div>
+
+        <div style="font-size:0.64rem; line-height:1.35; color:#94A3B8; text-align:center; padding-top:7px; border-top:1px dashed #CBD5E1;">
           ${lang === 'es' ? 'Documento generado el' : 'Documento gerado em'} ${dateLong} · Argo SUAS — ${i ? i.fullName : ''}
         </div>
       </div>
@@ -10453,9 +10525,10 @@ async function printBpcGuide(id, lang) {
     return px || 0;
   }
   const targetHeightPx = measureA4HeightPx();
+  const familyCompositionPage = buildFamilyCompositionPageHtml();
 
   let guidePage = buildGuidePageHtml(guideScale);
-  printArea.innerHTML = guidePage + illustrationPage + attachPages;
+  printArea.innerHTML = guidePage + familyCompositionPage + illustrationPage + attachPages;
 
   for (let attempt = 0; attempt < 4; attempt++) {
     const guideEl = printArea.querySelector('.guide-measure-page');
@@ -10467,7 +10540,7 @@ async function printBpcGuide(id, lang) {
     if (nextScale >= guideScale) break;
     guideScale = nextScale;
     guidePage = buildGuidePageHtml(guideScale);
-    printArea.innerHTML = guidePage + illustrationPage + attachPages;
+    printArea.innerHTML = guidePage + familyCompositionPage + illustrationPage + attachPages;
   }
 
   setTempPageOrientation('A4 portrait');
