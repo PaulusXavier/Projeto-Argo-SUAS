@@ -8588,10 +8588,22 @@ const BPC_GUIDE_CONTENT = {
         { title: '2. Acompanhe o pedido', desc: 'Acompanhe o andamento pela opção "Acompanhar Pedido" no Meu INSS. O INSS pode pedir algum documento complementar dentro de um prazo determinado — fique atento às notificações do aplicativo para não perder o pedido por falta de resposta.' },
         { title: '3. Receba o resultado', desc: 'Se aprovado, o pagamento é feito pela Caixa Econômica Federal, seguindo o calendário mensal por final do número do benefício. Se negado, há 30 dias a partir da ciência da decisão para pedir recurso administrativo, pelo próprio Meu INSS ou numa agência do INSS (Conselho de Recursos do Seguro Social - CRPS).' }
       ],
-      illustrationAfterStep: 1,
-      illustrationCaption: 'Tela do Meu INSS (meu.inss.gov.br) — toque em "Entrar com gov.br" para pedir o benefício',
-      illustration: BPC_IDOSO_LOGIN_IMG,
-      valueLabel: 'Valor e pagamento',
+      channelsTitle: 'Como dar entrada',
+      channels: [
+        { icon: '📱', label: 'Pelo Meu INSS (app ou site)', steps: [
+          'Acesse meu.inss.gov.br ou o app Meu INSS',
+          'Toque em "Entrar com gov.br"',
+          'Informe o NIS/CadÚnico',
+          'Responda sobre a família e envie'
+        ] },
+        { icon: '☎️', label: 'Pela Central 135', steps: [
+          'Ligue para 135 (grátis, todos os dias, 7h–22h)',
+          'Informe o NIS/CadÚnico',
+          'Responda sobre a família',
+          'Anote o número do protocolo'
+        ] }
+      ],
+      channelsNote: 'Depois de pedir: acompanhe pelo "Acompanhar Pedido" no Meu INSS. Aprovado → pagamento pela Caixa. Negado → recurso em até 30 dias.',
       value: '1 salário mínimo por mês (R$ 1.621,00 em 2026), pago pela Caixa Econômica Federal, sem 13º salário.',
       denialLabel: 'Se o pedido for negado',
       denial: 'É possível recorrer em até 30 dias pelo Meu INSS ou em uma agência do INSS. Persistindo a negativa, procure orientação jurídica gratuita na Defensoria Pública da União (DPU).',
@@ -8615,10 +8627,22 @@ const BPC_GUIDE_CONTENT = {
         { title: '2. Siga la solicitud', desc: 'Siga el trámite por la opción "Acompanhar Pedido" en el Meu INSS. El INSS puede pedir algún documento complementario dentro de un plazo determinado — esté atento a las notificaciones de la aplicación para no perder la solicitud por falta de respuesta.' },
         { title: '3. Reciba el resultado', desc: 'Si es aprobado, el pago lo hace la Caixa Econômica Federal, siguiendo el calendario mensual por el último número del beneficio. Si es negado, hay 30 días desde la notificación para pedir recurso administrativo, por el propio Meu INSS o en una agencia del INSS (Conselho de Recursos do Seguro Social - CRPS).' }
       ],
-      illustrationAfterStep: 1,
-      illustrationCaption: 'Pantalla del Meu INSS (meu.inss.gov.br) — toque en "Entrar com gov.br" para solicitar el beneficio',
-      illustration: BPC_IDOSO_LOGIN_IMG,
-      valueLabel: 'Valor y pago',
+      channelsTitle: 'Cómo solicitarlo',
+      channels: [
+        { icon: '📱', label: 'Por el Meu INSS (app o sitio)', steps: [
+          'Acceda a meu.inss.gov.br o la app Meu INSS',
+          'Toque en "Entrar com gov.br"',
+          'Informe el NIS/CadÚnico',
+          'Responda sobre la familia y envíe'
+        ] },
+        { icon: '☎️', label: 'Por la Central 135', steps: [
+          'Llame al 135 (gratis, todos los días, 7h–22h)',
+          'Informe el NIS/CadÚnico',
+          'Responda sobre la familia',
+          'Anote el número de protocolo'
+        ] }
+      ],
+      channelsNote: 'Después de solicitar: siga el trámite por "Acompanhar Pedido" en el Meu INSS. Aprobado → pago por la Caixa. Negado → recurso en hasta 30 días.',
       value: '1 salario mínimo por mes (R$ 1.621,00 en 2026), pagado por la Caixa Econômica Federal, sin aguinaldo (13º salário).',
       denialLabel: 'Si la solicitud es negada',
       denial: 'Es posible recurrir dentro de 30 días por el Meu INSS o en una agencia del INSS. Si persiste la negativa, busque orientación jurídica gratuita en la Defensoria Pública da União (DPU).',
@@ -8649,9 +8673,23 @@ const BPC_GUIDE_CONTENT = {
         { title: '5. Acompanhe o pedido', desc: 'Acompanhe o andamento pela opção "Acompanhar Pedido" no Meu INSS, respondendo a qualquer exigência dentro do prazo informado, para o pedido não ser arquivado por falta de resposta.' },
         { title: '6. Receba o resultado', desc: 'Se aprovado, o pagamento é feito pela Caixa Econômica Federal, seguindo o calendário mensal por final do número do benefício. Se negado, há 30 dias a partir da ciência da decisão para pedir recurso administrativo, pelo próprio Meu INSS ou numa agência do INSS (Conselho de Recursos do Seguro Social - CRPS).' }
       ],
-      illustrationCaption: 'Tela do Meu INSS (meu.inss.gov.br) — requisitos para solicitar o BPC Pessoa com Deficiência',
-      illustration: BPC_PCD_ACESSIBILIDADE_IMG,
-      valueLabel: 'Valor e pagamento',
+      channelsTitle: 'Como dar entrada',
+      channelsIntro: 'Antes: CadÚnico atualizado + laudo médico com CID em mãos.',
+      channels: [
+        { icon: '📱', label: 'Pelo Meu INSS (app ou site)', steps: [
+          'Acesse meu.inss.gov.br ou o app Meu INSS',
+          'Toque em "Entrar com gov.br"',
+          'Informe o NIS/CadÚnico',
+          'Anexe o laudo médico digitalizado'
+        ] },
+        { icon: '☎️', label: 'Pela Central 135', steps: [
+          'Ligue para 135 (grátis, todos os dias, 7h–22h)',
+          'Informe o NIS/CadÚnico',
+          'Informe que já tem laudo médico',
+          'Anote o número do protocolo'
+        ] }
+      ],
+      channelsNote: 'Depois: compareça à avaliação médica e social agendada pelo INSS. Aprovado → pagamento pela Caixa. Negado → recurso em até 30 dias.',
       value: '1 salário mínimo por mês (R$ 1.621,00 em 2026), pago pela Caixa Econômica Federal, sem 13º salário. Não é permitido trabalhar formalmente e receber o BPC ao mesmo tempo: quem consegue emprego formal tem direito ao Auxílio-Inclusão (metade do salário mínimo) ou, se não se enquadrar, tem o BPC suspenso enquanto durar o trabalho — nos dois casos, o benefício não é cancelado.',
       denialLabel: 'Se o pedido for negado',
       denial: 'É possível recorrer em até 30 dias pelo Meu INSS ou em uma agência do INSS. Persistindo a negativa, procure orientação jurídica gratuita na Defensoria Pública da União (DPU).',
@@ -8680,9 +8718,23 @@ const BPC_GUIDE_CONTENT = {
         { title: '5. Siga la solicitud', desc: 'Siga el trámite por la opción "Acompanhar Pedido" en el Meu INSS, respondiendo a cualquier exigencia dentro del plazo informado, para que la solicitud no sea archivada por falta de respuesta.' },
         { title: '6. Reciba el resultado', desc: 'Si es aprobado, el pago lo hace la Caixa Econômica Federal, siguiendo el calendario mensual por el último número del beneficio. Si es negado, hay 30 días desde la notificación para pedir recurso administrativo, por el propio Meu INSS o en una agencia del INSS (Conselho de Recursos do Seguro Social - CRPS).' }
       ],
-      illustrationCaption: 'Pantalla del Meu INSS (meu.inss.gov.br) — requisitos para solicitar el BPC Persona con Discapacidad',
-      illustration: BPC_PCD_ACESSIBILIDADE_IMG,
-      valueLabel: 'Valor y pago',
+      channelsTitle: 'Cómo solicitarlo',
+      channelsIntro: 'Antes: CadÚnico actualizado + informe médico con CID a mano.',
+      channels: [
+        { icon: '📱', label: 'Por el Meu INSS (app o sitio)', steps: [
+          'Acceda a meu.inss.gov.br o la app Meu INSS',
+          'Toque en "Entrar com gov.br"',
+          'Informe el NIS/CadÚnico',
+          'Adjunte el informe médico digitalizado'
+        ] },
+        { icon: '☎️', label: 'Por la Central 135', steps: [
+          'Llame al 135 (gratis, todos los días, 7h–22h)',
+          'Informe el NIS/CadÚnico',
+          'Informe que ya tiene informe médico',
+          'Anote el número de protocolo'
+        ] }
+      ],
+      channelsNote: 'Después: asista a la evaluación médica y social programada por el INSS. Aprobado → pago por la Caixa. Negado → recurso en hasta 30 días.',
       value: '1 salario mínimo por mes (R$ 1.621,00 en 2026), pagado por la Caixa Econômica Federal, sin aguinaldo (13º salário). No está permitido trabajar de forma registrada y recibir el BPC al mismo tiempo: quien consigue empleo formal tiene derecho al Auxílio-Inclusão (mitad del salario mínimo) o, si no cumple los requisitos, tiene el BPC suspendido mientras dure el trabajo — en ambos casos, el beneficio no se cancela.',
       denialLabel: 'Si la solicitud es negada',
       denial: 'Es posible recurrir dentro de 30 días por el Meu INSS o en una agencia del INSS. Si persiste la negativa, busque orientación jurídica gratuita en la Defensoria Pública da União (DPU).',
@@ -8712,10 +8764,22 @@ BPC_GUIDE_CONTENT['recuperacao-senha-inss'] = {
       { title: '6. Escolha a forma de recuperação', desc: 'E-mail cadastrado, SMS para o celular cadastrado, reconhecimento facial pelo aplicativo gov.br, ou validação por conta em banco credenciado.' },
       { title: '7. Crie uma nova senha', desc: 'Siga as instruções apresentadas na tela até concluir a criação da nova senha e conseguir acessar o Meu INSS normalmente.' }
     ],
-    illustrationAfterStep: 6,
-    illustrationCaption: 'Tela do gov.br — opções para confirmar sua identidade na recuperação de conta',
-    illustration: RECUPERACAO_SENHA_GOVBR_IMG,
-    valueLabel: 'Se não tiver acesso a nenhum canal',
+    channelsTitle: 'Como recuperar a senha',
+    channels: [
+      { icon: '🌐', label: 'Online (gov.br)', steps: [
+        'Acesse gov.br e toque em "Entrar com gov.br"',
+        'Informe o CPF e clique em "Avançar"',
+        'Clique em "Esqueci minha senha"',
+        'Confirme "Não sou um robô" e escolha e-mail, SMS, facial ou banco'
+      ] },
+      { icon: '🏢', label: 'Presencial (sem nenhum canal cadastrado)', steps: [
+        'Vá a uma agência do INSS (Av. Glaycon de Paiva, 86, Mecejana)',
+        'Leve documento oficial com foto',
+        'Peça a atualização dos dados de contato da conta gov.br',
+        'Depois disso, a recuperação online passa a funcionar'
+      ] }
+    ],
+    channelsNote: 'Depois de recuperar, crie uma nova senha e acesse o Meu INSS normalmente.',
     value: 'Sem e-mail, celular cadastrado, banco credenciado ou aplicativo com biometria, a recuperação online não é possível — é necessário atualizar esses dados presencialmente.',
     denialLabel: 'Caso não consiga recuperar online',
     denial: 'Utilize o formulário de atendimento do gov.br ou compareça a uma agência do INSS (Av. Glaycon de Paiva, 86, Mecejana) com documento oficial com foto, para atualizar os dados de contato da conta gov.br.',
@@ -8741,10 +8805,22 @@ BPC_GUIDE_CONTENT['recuperacao-senha-inss'] = {
       { title: '6. Elija la forma de recuperación', desc: 'Correo electrónico registrado, SMS al celular registrado, reconocimiento facial por la aplicación gov.br, o validación por cuenta en banco acreditado.' },
       { title: '7. Cree una nueva contraseña', desc: 'Siga las instrucciones presentadas en la pantalla hasta concluir la creación de la nueva contraseña y poder acceder al Meu INSS normalmente.' }
     ],
-    illustrationAfterStep: 6,
-    illustrationCaption: 'Pantalla del gov.br — opciones para confirmar su identidad en la recuperación de cuenta',
-    illustration: RECUPERACAO_SENHA_GOVBR_IMG,
-    valueLabel: 'Si no tiene acceso a ningún canal',
+    channelsTitle: 'Cómo recuperar la contraseña',
+    channels: [
+      { icon: '🌐', label: 'En línea (gov.br)', steps: [
+        'Acceda a gov.br y toque en "Entrar com gov.br"',
+        'Informe el CPF y haga clic en "Avançar"',
+        'Haga clic en "Esqueci minha senha"',
+        'Confirme "Não sou um robô" y elija correo, SMS, facial o banco'
+      ] },
+      { icon: '🏢', label: 'Presencial (sin ningún canal registrado)', steps: [
+        'Vaya a una agencia del INSS (Av. Glaycon de Paiva, 86, Mecejana)',
+        'Lleve documento oficial con foto',
+        'Pida la actualización de los datos de contacto de la cuenta gov.br',
+        'Después de eso, la recuperación en línea vuelve a funcionar'
+      ] }
+    ],
+    channelsNote: 'Después de recuperarla, cree una nueva contraseña y acceda al Meu INSS normalmente.',
     value: 'Sin correo electrónico, celular registrado, banco acreditado o aplicación con biometría, la recuperación en línea no es posible — es necesario actualizar esos datos presencialmente.',
     denialLabel: 'Si no logra recuperarla en línea',
     denial: 'Utilice el formulario de atención del gov.br o comparezca a una agencia del INSS (Av. Glaycon de Paiva, 86, Mecejana) con documento oficial con foto, para actualizar los datos de contacto de la cuenta gov.br.',
