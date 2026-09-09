@@ -8604,11 +8604,26 @@ const BPC_GUIDE_CONTENT = {
         ] }
       ],
       channelsNote: 'Depois de pedir: acompanhe pelo "Acompanhar Pedido" no Meu INSS. Aprovado → pagamento pela Caixa. Negado → recurso em até 30 dias.',
+      valueLabel: 'Valor e Pagamento',
       value: '1 salário mínimo por mês (R$ 1.621,00 em 2026), pago pela Caixa Econômica Federal, sem 13º salário.',
       denialLabel: 'Se o pedido for negado',
       denial: 'É possível recorrer em até 30 dias pelo Meu INSS ou em uma agência do INSS. Persistindo a negativa, procure orientação jurídica gratuita na Defensoria Pública da União (DPU).',
       contactLabel: 'Onde buscar ajuda',
-      footer: 'Este guia é apenas informativo e não substitui o atendimento no CRAS ou no INSS. Regras e valores podem mudar — confirme sempre no CRAS ou pelo Meu INSS/135.'
+      footer: 'Este guia é apenas informativo e não substitui o atendimento no CRAS ou no INSS. Regras e valores podem mudar — confirme sempre no CRAS ou pelo Meu INSS/135.',
+      familyComposition: {
+        title: 'Composição Familiar e Renda',
+        includedLabel: '👨‍👩‍👧‍👦 Quem entra no cálculo da renda per capita',
+        includedIntro: 'Art. 20, §1º da Lei 8.742/93 (LOAS) — desde que vivam sob o mesmo teto:',
+        included: ['Requerente', 'Cônjuge ou companheiro(a)', 'Pais (ou madrasta/padrasto na ausência deles)', 'Irmãos solteiros', 'Filhos e enteados solteiros', 'Menores tutelados'],
+        excludedLabel: 'Quem NÃO entra no cálculo',
+        excluded: 'Netos, avós, tios, sobrinhos, primos, genros/noras, cunhados, nem filhos/irmãos/enteados casados, em união estável, divorciados, separados de fato ou viúvos, mesmo que morem na mesma casa.',
+        incomeExclusionsLabel: '💵 O que NÃO entra na renda familiar',
+        incomeExclusions: 'Outro BPC; benefício previdenciário de até 1 salário mínimo recebido por idoso (65+) ou pessoa com deficiência da família (se houver mais de um, apenas um pode ser descontado); valores de contrato de aprendizagem; bolsa de estágio supervisionado; auxílio financeiro temporário ou indenização por rompimento/colapso de barragem; e o valor do Auxílio-Inclusão e da remuneração de quem o recebe. Qualquer outro valor recebido pela família entra na conta.',
+        accumulationLabel: '🔗 Acumulação com outros benefícios',
+        accumulation: 'O BPC não pode ser acumulado com outros benefícios da Seguridade Social (ex.: aposentadoria, pensão, seguro-desemprego), mas PODE ser recebido junto com o Bolsa Família — nesse caso, o valor do Bolsa Família entra no cálculo da renda per capita da família, que não pode ultrapassar ¼ do salário mínimo por pessoa.',
+        cancellationLabel: '🚫 Cancelamento',
+        cancellation: 'Pode ser solicitado voluntariamente pelo próprio beneficiário (ou representante legal) pelo Meu INSS, aplicativo ou telefone 135, quando não desejar mais receber o benefício ou quando a família não atender mais aos critérios; o INSS também pode suspender/cessar de ofício em revisões bienais, por óbito, superação de renda ou irregularidades no CadÚnico.'
+      }
     },
     es: {
       badge: 'BPC ANCIANO',
@@ -8643,6 +8658,7 @@ const BPC_GUIDE_CONTENT = {
         ] }
       ],
       channelsNote: 'Después de solicitar: siga el trámite por "Acompanhar Pedido" en el Meu INSS. Aprobado → pago por la Caixa. Negado → recurso en hasta 30 días.',
+      valueLabel: 'Valor y Pago',
       value: '1 salario mínimo por mes (R$ 1.621,00 en 2026), pagado por la Caixa Econômica Federal, sin aguinaldo (13º salário).',
       denialLabel: 'Si la solicitud es negada',
       denial: 'Es posible recurrir dentro de 30 días por el Meu INSS o en una agencia del INSS. Si persiste la negativa, busque orientación jurídica gratuita en la Defensoria Pública da União (DPU).',
@@ -8690,6 +8706,7 @@ const BPC_GUIDE_CONTENT = {
         ] }
       ],
       channelsNote: 'Depois: compareça à avaliação médica e social agendada pelo INSS. Aprovado → pagamento pela Caixa. Negado → recurso em até 30 dias.',
+      valueLabel: 'Valor e Pagamento',
       value: '1 salário mínimo por mês (R$ 1.621,00 em 2026), pago pela Caixa Econômica Federal, sem 13º salário. Não é permitido trabalhar formalmente e receber o BPC ao mesmo tempo: quem consegue emprego formal tem direito ao Auxílio-Inclusão (metade do salário mínimo) ou, se não se enquadrar, tem o BPC suspenso enquanto durar o trabalho — nos dois casos, o benefício não é cancelado.',
       denialLabel: 'Se o pedido for negado',
       denial: 'É possível recorrer em até 30 dias pelo Meu INSS ou em uma agência do INSS. Persistindo a negativa, procure orientação jurídica gratuita na Defensoria Pública da União (DPU).',
@@ -8735,6 +8752,7 @@ const BPC_GUIDE_CONTENT = {
         ] }
       ],
       channelsNote: 'Después: asista a la evaluación médica y social programada por el INSS. Aprobado → pago por la Caixa. Negado → recurso en hasta 30 días.',
+      valueLabel: 'Valor y Pago',
       value: '1 salario mínimo por mes (R$ 1.621,00 en 2026), pagado por la Caixa Econômica Federal, sin aguinaldo (13º salário). No está permitido trabajar de forma registrada y recibir el BPC al mismo tiempo: quien consigue empleo formal tiene derecho al Auxílio-Inclusão (mitad del salario mínimo) o, si no cumple los requisitos, tiene el BPC suspendido mientras dure el trabajo — en ambos casos, el beneficio no se cancela.',
       denialLabel: 'Si la solicitud es negada',
       denial: 'Es posible recurrir dentro de 30 días por el Meu INSS o en una agencia del INSS. Si persiste la negativa, busque orientación jurídica gratuita en la Defensoria Pública da União (DPU).',
@@ -8780,6 +8798,7 @@ BPC_GUIDE_CONTENT['recuperacao-senha-inss'] = {
       ] }
     ],
     channelsNote: 'Depois de recuperar, crie uma nova senha e acesse o Meu INSS normalmente.',
+    valueLabel: 'Atenção',
     value: 'Sem e-mail, celular cadastrado, banco credenciado ou aplicativo com biometria, a recuperação online não é possível — é necessário atualizar esses dados presencialmente.',
     denialLabel: 'Caso não consiga recuperar online',
     denial: 'Utilize o formulário de atendimento do gov.br ou compareça a uma agência do INSS (Av. Glaycon de Paiva, 86, Mecejana) com documento oficial com foto, para atualizar os dados de contato da conta gov.br.',
@@ -8821,6 +8840,7 @@ BPC_GUIDE_CONTENT['recuperacao-senha-inss'] = {
       ] }
     ],
     channelsNote: 'Después de recuperarla, cree una nueva contraseña y acceda al Meu INSS normalmente.',
+    valueLabel: 'Atención',
     value: 'Sin correo electrónico, celular registrado, banco acreditado o aplicación con biometría, la recuperación en línea no es posible — es necesario actualizar esos datos presencialmente.',
     denialLabel: 'Si no logra recuperarla en línea',
     denial: 'Utilice el formulario de atención del gov.br o comparezca a una agencia del INSS (Av. Glaycon de Paiva, 86, Mecejana) con documento oficial con foto, para actualizar los datos de contacto de la cuenta gov.br.',
