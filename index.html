@@ -17,7 +17,7 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://www.simbolosmunicipais.com.br https://upload.wikimedia.org; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://www.simbolosmunicipais.com.br https://upload.wikimedia.org; connect-src 'self' https://api.mymemory.translated.net; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Argo SUAS · Gestão Técnica de Equipamentos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1558,7 +1558,8 @@
   .police-badge,
   .notes-badge,
   .interior-badge,
-  .pdftools-badge {
+  .pdftools-badge,
+  .tradutor-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1576,6 +1577,7 @@
   .notes-badge { color: var(--brand-notes); background: rgba(190, 18, 60, 0.1); }
   .interior-badge { color: var(--brand-interior); background: rgba(180, 133, 6, 0.1); }
   .pdftools-badge { color: var(--brand-pdftools); background: rgba(29, 78, 216, 0.1); }
+  .tradutor-badge { color: var(--brand-tradutor); background: rgba(180, 89, 6, 0.1); }
 
   .informe-box {
     font-size: 0.85rem;
@@ -1774,6 +1776,8 @@
     --brand-interior-light: #EA580C;
     --brand-pdftools: #1D4ED8;
     --brand-pdftools-light: #3B82F6;
+    --brand-tradutor: #B45906;
+    --brand-tradutor-light: #EA9A2E;
   }
 
   .cas-card {
@@ -2045,6 +2049,230 @@
     width: 0%;
     background: linear-gradient(90deg, var(--brand-pdftools), var(--brand-pdftools-light));
     transition: width 0.2s ease;
+  }
+
+  /* Cartão da aba "Tradutor" — comunicação com estrangeiros (espanhol,
+     inglês e francês) em texto e áudio, com o acento laranja
+     (--brand-tradutor). A tradução usa uma API pública gratuita; a voz
+     usa a síntese de fala nativa do navegador (sem custo, sem envio de
+     áudio a servidor). */
+  .tradutor-card {
+    border-top: none;
+    grid-column: 1 / -1;
+  }
+
+  .tradutor-card::before {
+    background: linear-gradient(90deg, var(--brand-tradutor), var(--brand-tradutor-light));
+  }
+
+  .tradutor-card .card-top h2 { color: var(--brand-tradutor); }
+
+  .tradutor-privacy {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    background: rgba(180, 89, 6, 0.05);
+    border: 1px dashed var(--brand-tradutor-light);
+    border-radius: 8px;
+    padding: 0.7rem 0.9rem;
+    margin-bottom: 1.1rem;
+    line-height: 1.5;
+  }
+
+  .tradutor-privacy svg { color: var(--brand-tradutor); flex-shrink: 0; margin-top: 0.1rem; }
+
+  .tradutor-langbar {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+
+  .tradutor-langbar select {
+    flex: 1 1 160px;
+    min-width: 140px;
+    padding: 0.6rem 0.8rem;
+    border-radius: 8px;
+    border: 1.5px solid var(--border-ui);
+    background: var(--bg-card);
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  .tradutor-swap-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-ui);
+    background: var(--bg-card);
+    color: var(--brand-tradutor);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: 0.15s;
+  }
+
+  .tradutor-swap-btn:hover { background: rgba(180, 89, 6, 0.1); border-color: var(--brand-tradutor-light); }
+
+  .tradutor-panes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  @media (max-width: 720px) {
+    .tradutor-panes { grid-template-columns: 1fr; }
+  }
+
+  .tradutor-pane {
+    display: flex;
+    flex-direction: column;
+    border: 1.5px solid var(--border-ui);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--bg-card);
+  }
+
+  .tradutor-pane-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.55rem 0.8rem;
+    background: var(--bg-main);
+    border-bottom: 1px solid var(--border-ui);
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+  }
+
+  .tradutor-speak-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border: none;
+    background: none;
+    color: var(--brand-tradutor);
+    cursor: pointer;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 0.25rem 0.4rem;
+    border-radius: 6px;
+  }
+
+  .tradutor-speak-btn:hover { background: rgba(180, 89, 6, 0.1); }
+  .tradutor-speak-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .tradutor-pane textarea {
+    flex: 1;
+    min-height: 140px;
+    border: none;
+    resize: vertical;
+    padding: 0.9rem;
+    font-family: inherit;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--text-main);
+    background: transparent;
+    outline: none;
+  }
+
+  .tradutor-pane textarea[readonly] { background: var(--bg-main); color: var(--text-main); }
+
+  .tradutor-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    margin: 1rem 0;
+    flex-wrap: wrap;
+  }
+
+  .tradutor-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.4rem;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(180deg, var(--brand-tradutor-light), var(--brand-tradutor));
+    color: #fff;
+    font-weight: 800;
+    font-size: 0.9rem;
+    cursor: pointer;
+    box-shadow: 0 4px 12px -3px rgba(180, 89, 6, 0.5);
+  }
+
+  .tradutor-btn:hover:not(:disabled) { transform: translateY(-1px); }
+  .tradutor-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+
+  .tradutor-status {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .tradutor-status.is-error { color: #DC2626; }
+  .tradutor-status.is-success { color: #15803D; }
+
+  .tradutor-phrases {
+    margin-top: 1.4rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--border-ui);
+  }
+
+  .tradutor-phrases h3 {
+    margin: 0 0 0.8rem;
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--brand-tradutor);
+  }
+
+  .tradutor-phrase-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+  }
+
+  @media (max-width: 720px) {
+    .tradutor-phrase-list { grid-template-columns: 1fr; }
+  }
+
+  .tradutor-phrase-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    padding: 0.6rem 0.85rem;
+    border: 1px solid var(--border-ui);
+    border-radius: 8px;
+    background: var(--bg-main);
+    font-size: 0.85rem;
+    color: var(--text-main);
+  }
+
+  .tradutor-phrase-item button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border: none;
+    background: var(--brand-tradutor);
+    color: #fff;
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.72rem;
+    font-weight: 800;
+    flex-shrink: 0;
   }
 
   .cas-groups {
@@ -3358,7 +3586,7 @@
           Argo<span>SUAS</span>
         </p>
         <p class="login-story-tagline">Rede de Políticas Públicas de Roraima</p>
-        <p class="login-story-desc">Diretório técnico de equipamentos socioassistenciais e suporte à rede RAPS de Boa Vista, para uso exclusivo da equipe.</p>
+        <p class="login-story-desc">Diretório técnico de equipamentos de Políticas Públicas do estado de Roraima.</p>
         <div class="login-story-tags" aria-hidden="true">
           <span>Assistência Social</span><span>Educação</span><span>Saúde</span><span>Segurança Pública</span>
         </div>
@@ -3772,6 +4000,17 @@
             <button class="filter-chip filter-chip-panel" data-cat="pdftools" role="tab" aria-selected="false">
               <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg></span>
               <span>Unificar / Converter PDF</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Seção: Tradutor -->
+        <div class="filter-group">
+          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Atendimento a Estrangeiros<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
+          <div class="filter-group-chips">
+            <button class="filter-chip filter-chip-panel" data-cat="tradutor" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h9"/><path d="M9.5 5.5v3.2c0 3.2-2 5.9-4.5 7.3"/><path d="M6.5 12c1.3 1.5 3.3 2.7 6 3.4"/><path d="M12.5 21l4-9 4 9"/><path d="M13.9 18h5.2"/></svg></span>
+              <span>Tradutor (Es / En / Fr)</span>
             </button>
           </div>
         </div>
@@ -8657,7 +8896,10 @@ const ICONS = {
   police: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="M9.5 12.5l1.8 1.8 3.2-3.6"/></svg>',
   home: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg>',
   tag: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L3 3v6.59a2 2 0 0 0 .59 1.41l9.59 9.59a2 2 0 0 0 2.82 0l4.59-4.59a2 2 0 0 0 0-2.82Z"/><circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" stroke="none"/></svg>',
-  food: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2h0a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>'
+  food: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2h0a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>',
+  translate: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h9"/><path d="M9.5 5.5v3.2c0 3.2-2 5.9-4.5 7.3"/><path d="M6.5 12c1.3 1.5 3.3 2.7 6 3.4"/><path d="M12.5 21l4-9 4 9"/><path d="M13.9 18h5.2"/></svg>',
+  volume: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>',
+  swap: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>'
 };
 
 const MAX_ATTACH_BYTES = 3.5 * 1024 * 1024;
@@ -9612,6 +9854,13 @@ function render() {
     return;
   }
 
+  if (cat === 'tradutor') {
+    if (resultsInfo) resultsInfo.style.display = 'none';
+    grid.innerHTML = renderTranslatorCard();
+    initTranslatorPanel();
+    return;
+  }
+
   const infoBanner = document.getElementById('categoryInfoBanner');
   if (infoBanner) {
     if (cat === 'saude') {
@@ -10345,7 +10594,7 @@ function renderPdfToolsCard() {
             <span class="pdftools-tool-icon">${ICONS.layers}</span>
             <div>
               <div class="pdftools-tool-title">Unificar PDF</div>
-              <div class="pdftools-tool-limit">Até 5 arquivos · total de 15 páginas</div>
+              <div class="pdftools-tool-limit">Até 10 arquivos · total de 50 MB</div>
             </div>
           </div>
           <p class="pdftools-tool-desc">Junte vários arquivos PDF em um único documento, na ordem que você escolher (use as setas para reordenar).</p>
@@ -10448,6 +10697,218 @@ function renderPdfToolsCard() {
       </div>
     </div>
   `;
+}
+
+const TRADUTOR_LANGS = {
+  pt: { label: 'Português', voice: 'pt-BR', flag: '🇧🇷' },
+  es: { label: 'Espanhol', voice: 'es-ES', flag: '🇪🇸' },
+  en: { label: 'Inglês', voice: 'en-US', flag: '🇺🇸' },
+  fr: { label: 'Francês', voice: 'fr-FR', flag: '🇫🇷' }
+};
+
+const TRADUTOR_PHRASES = [
+  'Bom dia! Qual é o seu nome completo?',
+  'Você já tem o Cadastro Único (CadÚnico)?',
+  'Você tem algum documento de identificação, como passaporte ou cédula?',
+  'Por favor, aguarde um momento, vou chamar alguém para te ajudar.',
+  'Quantas pessoas moram na sua casa?',
+  'Você precisa de ajuda com alimentação, moradia ou documentos?',
+  'Volte aqui na próxima sexta-feira, das 8h às 12h.',
+  'Traga um comprovante de endereço na próxima visita.'
+];
+
+/* Aba "Tradutor" — comunicação em texto e voz com estrangeiros
+   (espanhol, inglês e francês), muito usada no atendimento a
+   venezuelanos. A tradução de texto usa a API pública e gratuita do
+   MyMemory (api.mymemory.translated.net); a voz usa a síntese de fala
+   nativa do navegador (Web Speech API), que não envia áudio a
+   servidor algum. */
+function renderTranslatorCard() {
+  const langOptions = (selected) => Object.entries(TRADUTOR_LANGS).map(([code, l]) =>
+    `<option value="${code}" ${code === selected ? 'selected' : ''}>${l.flag} ${l.label}</option>`
+  ).join('');
+
+  return `
+    <div class="tech-card tradutor-card">
+      <div class="card-top">
+        <div style="display:flex; align-items:center; gap:0.55rem;">
+          <span class="tradutor-badge">${ICONS.translate}</span>
+          <h2 style="margin:0;">Tradutor</h2>
+        </div>
+        <span class="subtitle">🌎 Comunicação com estrangeiros · texto e voz (Espanhol, Inglês e Francês)</span>
+      </div>
+      <div class="card-body">
+        <div class="tradutor-privacy">
+          ${ICONS.info}
+          <span>Digite o texto, toque em "Traduzir" e depois no alto-falante para ouvir em voz alta — útil para se comunicar com pessoas que não falam português, principalmente venezuelanos e outros estrangeiros em atendimento. A tradução do texto usa um serviço online gratuito (precisa de internet); a voz é gerada pelo próprio aparelho.</span>
+        </div>
+
+        <div class="tradutor-langbar">
+          <select id="tradutorFrom" onchange="tradutorSyncSpeakLabels()" aria-label="Idioma de origem">
+            ${langOptions('pt')}
+          </select>
+          <button type="button" class="tradutor-swap-btn" onclick="tradutorSwapLangs()" title="Inverter idiomas" aria-label="Inverter idiomas">${ICONS.swap}</button>
+          <select id="tradutorTo" onchange="tradutorSyncSpeakLabels()" aria-label="Idioma de destino">
+            ${langOptions('es')}
+          </select>
+        </div>
+
+        <div class="tradutor-panes">
+          <div class="tradutor-pane">
+            <div class="tradutor-pane-head">
+              <span id="tradutorFromLabel">Português</span>
+              <button type="button" class="tradutor-speak-btn" id="tradutorSpeakFrom" onclick="tradutorSpeak('from')">${ICONS.volume} Ouvir</button>
+            </div>
+            <textarea id="tradutorInput" placeholder="Digite aqui o texto em português..." oninput="tradutorClearStatus()"></textarea>
+          </div>
+          <div class="tradutor-pane">
+            <div class="tradutor-pane-head">
+              <span id="tradutorToLabel">Espanhol</span>
+              <button type="button" class="tradutor-speak-btn" id="tradutorSpeakTo" onclick="tradutorSpeak('to')" disabled>${ICONS.volume} Ouvir</button>
+            </div>
+            <textarea id="tradutorOutput" placeholder="A tradução aparece aqui..." readonly></textarea>
+          </div>
+        </div>
+
+        <div class="tradutor-actions">
+          <button type="button" class="tradutor-btn" id="tradutorGoBtn" onclick="tradutorTranslate()">${ICONS.translate} Traduzir</button>
+          <span class="tradutor-status" id="tradutorStatus"></span>
+        </div>
+
+        <div class="tradutor-phrases">
+          <h3>Frases rápidas de atendimento</h3>
+          <div class="tradutor-phrase-list" id="tradutorPhraseList"></div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function tradutorSyncSpeakLabels() {
+  const fromSel = document.getElementById('tradutorFrom');
+  const toSel = document.getElementById('tradutorTo');
+  if (!fromSel || !toSel) return;
+  const from = fromSel.value;
+  const to = toSel.value;
+  const fromLabelEl = document.getElementById('tradutorFromLabel');
+  const toLabelEl = document.getElementById('tradutorToLabel');
+  if (fromLabelEl) fromLabelEl.textContent = TRADUTOR_LANGS[from].label;
+  if (toLabelEl) toLabelEl.textContent = TRADUTOR_LANGS[to].label;
+  const inputEl = document.getElementById('tradutorInput');
+  if (inputEl) inputEl.placeholder = `Digite aqui o texto em ${TRADUTOR_LANGS[from].label.toLowerCase()}...`;
+}
+
+function tradutorSwapLangs() {
+  const fromSel = document.getElementById('tradutorFrom');
+  const toSel = document.getElementById('tradutorTo');
+  const inputEl = document.getElementById('tradutorInput');
+  const outputEl = document.getElementById('tradutorOutput');
+  if (!fromSel || !toSel || !inputEl || !outputEl) return;
+
+  const tmpLang = fromSel.value;
+  fromSel.value = toSel.value;
+  toSel.value = tmpLang;
+
+  const tmpText = inputEl.value;
+  inputEl.value = outputEl.value;
+  outputEl.value = tmpText;
+
+  tradutorSyncSpeakLabels();
+  const speakTo = document.getElementById('tradutorSpeakTo');
+  if (speakTo) speakTo.disabled = !outputEl.value.trim();
+  tradutorClearStatus();
+}
+
+function tradutorSetStatus(msg, kind) {
+  const el = document.getElementById('tradutorStatus');
+  if (!el) return;
+  el.textContent = msg || '';
+  el.className = 'tradutor-status' + (kind ? ' is-' + kind : '');
+}
+
+function tradutorClearStatus() {
+  tradutorSetStatus('', '');
+}
+
+async function tradutorTranslate() {
+  const input = document.getElementById('tradutorInput');
+  const output = document.getElementById('tradutorOutput');
+  const from = document.getElementById('tradutorFrom').value;
+  const to = document.getElementById('tradutorTo').value;
+  const text = input.value.trim();
+  const btn = document.getElementById('tradutorGoBtn');
+  const speakTo = document.getElementById('tradutorSpeakTo');
+
+  if (!text) {
+    tradutorSetStatus('Digite um texto para traduzir.', 'error');
+    return;
+  }
+  if (from === to) {
+    output.value = text;
+    if (speakTo) speakTo.disabled = false;
+    tradutorSetStatus('Os idiomas são iguais — nada para traduzir.', '');
+    return;
+  }
+
+  btn.disabled = true;
+  tradutorSetStatus('Traduzindo...', '');
+  try {
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('network');
+    const data = await res.json();
+    const translated = data && data.responseData && data.responseData.translatedText;
+    const status = data && data.responseStatus ? Number(data.responseStatus) : 200;
+    if (!translated || status >= 400) throw new Error('bad response');
+    output.value = translated;
+    if (speakTo) speakTo.disabled = false;
+    tradutorSetStatus('Tradução concluída.', 'success');
+  } catch (e) {
+    tradutorSetStatus('Não foi possível traduzir agora. Verifique a internet e tente novamente.', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function tradutorSpeak(which) {
+  if (!('speechSynthesis' in window)) {
+    tradutorSetStatus('Este navegador não tem suporte a voz.', 'error');
+    return;
+  }
+  const langCode = which === 'from' ? document.getElementById('tradutorFrom').value : document.getElementById('tradutorTo').value;
+  const text = which === 'from' ? document.getElementById('tradutorInput').value : document.getElementById('tradutorOutput').value;
+  if (!text || !text.trim()) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = TRADUTOR_LANGS[langCode].voice;
+  window.speechSynthesis.speak(utter);
+}
+
+function tradutorRenderPhrases() {
+  const list = document.getElementById('tradutorPhraseList');
+  if (!list) return;
+  list.innerHTML = TRADUTOR_PHRASES.map((p, i) => `
+    <div class="tradutor-phrase-item">
+      <span>${p}</span>
+      <button type="button" onclick="tradutorUsePhrase(${i})">${ICONS.translate} Traduzir</button>
+    </div>
+  `).join('');
+}
+
+function tradutorUsePhrase(idx) {
+  const phrase = TRADUTOR_PHRASES[idx];
+  if (!phrase) return;
+  const fromSel = document.getElementById('tradutorFrom');
+  const inputEl = document.getElementById('tradutorInput');
+  if (fromSel) fromSel.value = 'pt';
+  if (inputEl) inputEl.value = phrase;
+  tradutorSyncSpeakLabels();
+  tradutorTranslate();
+}
+
+function initTranslatorPanel() {
+  tradutorSyncSpeakLabels();
+  tradutorRenderPhrases();
 }
 
 function renderNotesCard() {
@@ -11623,7 +12084,9 @@ function pdftoolsHandleDrop(event, kind) {
   if (kind === 'pdfjpg') { pdftoolsRunPdfToJpg(files[0]); return; }
 }
 
-/* ---------- Unificar PDF (até 5 arquivos / 15 páginas) ---------- */
+/* ---------- Unificar PDF (até 10 arquivos / 50 MB no total) ---------- */
+const PDFTOOLS_MERGE_MAX_FILES = 10;
+const PDFTOOLS_MERGE_MAX_BYTES = 50 * 1024 * 1024;
 const pdftoolsMergeState = { files: [] };
 
 async function pdftoolsAddMergeFiles(fileList) {
@@ -11638,8 +12101,8 @@ async function pdftoolsAddMergeFiles(fileList) {
     return;
   }
   for (const file of files) {
-    if (pdftoolsMergeState.files.length >= 5) {
-      pdftoolsSetStatus('pdftoolsMergeStatus', 'Limite de 5 arquivos atingido.', 'warn');
+    if (pdftoolsMergeState.files.length >= PDFTOOLS_MERGE_MAX_FILES) {
+      pdftoolsSetStatus('pdftoolsMergeStatus', `Limite de ${PDFTOOLS_MERGE_MAX_FILES} arquivos atingido.`, 'warn');
       break;
     }
     const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
@@ -11654,6 +12117,7 @@ async function pdftoolsAddMergeFiles(fileList) {
         id: 'm' + Date.now() + Math.random().toString(36).slice(2),
         name: file.name,
         bytes,
+        size: file.size,
         pages: doc.getPageCount()
       });
     } catch (e) {
@@ -11670,10 +12134,11 @@ function pdftoolsRenderMergeList() {
   const btn = document.getElementById('pdftoolsMergeBtn');
   if (!list) return;
   const totalPages = pdftoolsMergeState.files.reduce((s, f) => s + f.pages, 0);
+  const totalBytes = pdftoolsMergeState.files.reduce((s, f) => s + (f.size || 0), 0);
   list.innerHTML = pdftoolsMergeState.files.map((f, idx) => `
     <li class="pdftools-fileitem">
       <span class="pdftools-fileitem-name">${idx + 1}. ${escapeHtml(f.name)}</span>
-      <span class="pdftools-fileitem-meta">${f.pages} pág.</span>
+      <span class="pdftools-fileitem-meta">${f.pages} pág. · ${pdftoolsFormatBytes(f.size || 0)}</span>
       <span class="pdftools-fileitem-btns">
         <button type="button" class="pdftools-icon-btn" title="Mover para cima" ${idx === 0 ? 'disabled' : ''} onclick="pdftoolsMoveMergeFile('${f.id}', -1)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
@@ -11688,14 +12153,14 @@ function pdftoolsRenderMergeList() {
     </li>
   `).join('');
 
-  if (btn) btn.disabled = pdftoolsMergeState.files.length < 2 || totalPages > 15;
+  if (btn) btn.disabled = pdftoolsMergeState.files.length < 2 || totalBytes > PDFTOOLS_MERGE_MAX_BYTES;
 
   if (pdftoolsMergeState.files.length === 0) {
     pdftoolsSetStatus('pdftoolsMergeStatus', '', 'info');
-  } else if (totalPages > 15) {
-    pdftoolsSetStatus('pdftoolsMergeStatus', `Total de ${totalPages} páginas — o limite é 15. Remova algum arquivo.`, 'error');
+  } else if (totalBytes > PDFTOOLS_MERGE_MAX_BYTES) {
+    pdftoolsSetStatus('pdftoolsMergeStatus', `Total de ${pdftoolsFormatBytes(totalBytes)} — o limite é 50 MB. Remova algum arquivo.`, 'error');
   } else {
-    pdftoolsSetStatus('pdftoolsMergeStatus', `${pdftoolsMergeState.files.length} arquivo(s) · ${totalPages} de 15 páginas.`, 'info');
+    pdftoolsSetStatus('pdftoolsMergeStatus', `${pdftoolsMergeState.files.length} de ${PDFTOOLS_MERGE_MAX_FILES} arquivo(s) · ${totalPages} pág. · ${pdftoolsFormatBytes(totalBytes)} de 50 MB.`, 'info');
   }
 }
 
@@ -11714,8 +12179,8 @@ function pdftoolsRemoveMergeFile(id) {
 }
 
 async function pdftoolsMergePdfs() {
-  const totalPages = pdftoolsMergeState.files.reduce((s, f) => s + f.pages, 0);
-  if (pdftoolsMergeState.files.length < 2 || totalPages > 15) return;
+  const totalBytes = pdftoolsMergeState.files.reduce((s, f) => s + (f.size || 0), 0);
+  if (pdftoolsMergeState.files.length < 2 || totalBytes > PDFTOOLS_MERGE_MAX_BYTES) return;
   const btn = document.getElementById('pdftoolsMergeBtn');
   if (btn) btn.disabled = true;
   pdftoolsSetStatus('pdftoolsMergeStatus', 'Unificando PDFs...', 'info');
@@ -11901,13 +12366,18 @@ async function pdftoolsBuildDocx(paragraphsPerPage) {
   wordFolder.folder('_rels').file('document.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`);
 
+  /* Cada página é uma lista de parágrafos { text, bold, size } — size em
+     pontos (aprox. extraído do próprio PDF), convertido aqui para
+     meios-pontos (unidade w:sz do OOXML). */
   let bodyXml = '';
   paragraphsPerPage.forEach((pageParagraphs, pageIdx) => {
     if (!pageParagraphs.length) {
       bodyXml += '<w:p/>';
     } else {
-      pageParagraphs.forEach(paraText => {
-        bodyXml += `<w:p><w:r><w:t xml:space="preserve">${pdftoolsEscapeXml(paraText)}</w:t></w:r></w:p>`;
+      pageParagraphs.forEach(para => {
+        const halfPoints = Math.max(16, Math.min(72, Math.round((para.size || 11) * 2)));
+        const rPr = `<w:rPr>${para.bold ? '<w:b/><w:bCs/>' : ''}<w:sz w:val="${halfPoints}"/><w:szCs w:val="${halfPoints}"/></w:rPr>`;
+        bodyXml += `<w:p><w:pPr><w:spacing w:after="160" w:line="276" w:lineRule="auto"/>${para.bold ? '<w:rPr><w:b/></w:rPr>' : ''}</w:pPr><w:r>${rPr}<w:t xml:space="preserve">${pdftoolsEscapeXml(para.text)}</w:t></w:r></w:p>`;
       });
     }
     if (pageIdx < paragraphsPerPage.length - 1) {
@@ -11923,6 +12393,13 @@ async function pdftoolsBuildDocx(paragraphsPerPage) {
   return zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 }
 
+/* ---------- PDF → Word ---------- */
+/* Em vez de criar um parágrafo por linha física do PDF (o que deixava o
+   Word cheio de quebras artificiais), agrupamos as linhas em parágrafos
+   de verdade: uma nova linha só vira um novo parágrafo quando o espaço
+   vertical até a linha anterior é bem maior que o espaçamento normal
+   entre linhas da página (ou seja, uma quebra real de parágrafo/título),
+   e o tamanho/negrito da fonte é preservado a partir do próprio PDF. */
 async function pdftoolsRunPdfToWord(file, inputEl) {
   if (!file) return;
   if (inputEl) inputEl.disabled = true;
@@ -11933,29 +12410,67 @@ async function pdftoolsRunPdfToWord(file, inputEl) {
     await ensureJSZip();
     const bytes = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
-    const pages = [];
+    const pagesParagraphs = [];
+
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
-      const lines = [];
-      let lastY = null, currentLine = [];
+
+      // 1) Agrupa os itens de texto em linhas físicas, por posição vertical.
+      const rawLines = [];
+      let currentLine = null;
       content.items.forEach(item => {
+        if (!item.str) return;
         const y = item.transform[5];
-        if (lastY !== null && Math.abs(y - lastY) > 2) {
-          if (currentLine.length) lines.push(currentLine.join(' '));
-          currentLine = [];
+        const fontHeight = Math.abs(item.transform[3]) || Math.abs(item.transform[0]) || 10;
+        const isBold = /bold/i.test(item.fontName || '');
+        if (currentLine && Math.abs(y - currentLine.y) <= fontHeight * 0.4) {
+          currentLine.parts.push({ text: item.str, bold: isBold, size: fontHeight });
+          currentLine.y = (currentLine.y + y) / 2;
+        } else {
+          if (currentLine) rawLines.push(currentLine);
+          currentLine = { y, parts: [{ text: item.str, bold: isBold, size: fontHeight }] };
         }
-        currentLine.push(item.str);
-        lastY = y;
       });
-      if (currentLine.length) lines.push(currentLine.join(' '));
-      pages.push(lines.filter(l => l.trim().length));
+      if (currentLine) rawLines.push(currentLine);
+
+      // 2) Descobre o espaçamento típico entre linhas desta página, para
+      //    diferenciar "quebra de linha por largura" de "novo parágrafo".
+      const gaps = [];
+      for (let k = 1; k < rawLines.length; k++) gaps.push(rawLines[k - 1].y - rawLines[k].y);
+      const sortedGaps = gaps.filter(g => g > 0).sort((a, b) => a - b);
+      const typicalGap = sortedGaps.length ? sortedGaps[Math.floor(sortedGaps.length / 2)] : 14;
+
+      // 3) Funde linhas com espaçamento normal no mesmo parágrafo; um
+      //    espaçamento bem maior vira um parágrafo novo.
+      const paragraphs = [];
+      let currentPara = null;
+      rawLines.forEach((line, idx) => {
+        const text = line.parts.map(p => p.text).join(' ').replace(/\s+/g, ' ').trim();
+        if (!text) { if (currentPara) { paragraphs.push(currentPara); currentPara = null; } return; }
+        const avgSize = line.parts.reduce((s, p) => s + p.size, 0) / line.parts.length;
+        const isBoldLine = line.parts.every(p => p.bold);
+        const gap = idx > 0 ? rawLines[idx - 1].y - line.y : 0;
+        const isNewParagraph = !currentPara || gap > typicalGap * 1.6;
+        if (isNewParagraph) {
+          if (currentPara) paragraphs.push(currentPara);
+          currentPara = { text, bold: isBoldLine, size: avgSize };
+        } else {
+          currentPara.text += ' ' + text;
+          currentPara.bold = currentPara.bold && isBoldLine;
+          currentPara.size = Math.max(currentPara.size, avgSize);
+        }
+      });
+      if (currentPara) paragraphs.push(currentPara);
+
+      pagesParagraphs.push(paragraphs);
       pdftoolsSetProgress('PdfWord', i, pdf.numPages);
       pdftoolsSetStatus('pdftoolsPdfWordStatus', `Extraindo texto (${i}/${pdf.numPages})...`, 'info');
     }
-    const blob = await pdftoolsBuildDocx(pages);
+
+    const blob = await pdftoolsBuildDocx(pagesParagraphs);
     pdftoolsDownloadBlob(blob, (file.name.replace(/\.pdf$/i, '') || 'documento') + '.docx');
-    pdftoolsSetStatus('pdftoolsPdfWordStatus', 'Documento Word gerado! (conversão baseada no texto — layouts muito complexos podem mudar)', 'success');
+    pdftoolsSetStatus('pdftoolsPdfWordStatus', 'Documento Word gerado, com parágrafos, títulos e negrito preservados! (baseado no texto — layouts muito complexos podem mudar)', 'success');
   } catch (e) {
     pdftoolsSetStatus('pdftoolsPdfWordStatus', 'Não foi possível converter este PDF.', 'error');
   } finally {
@@ -11965,6 +12480,11 @@ async function pdftoolsRunPdfToWord(file, inputEl) {
 }
 
 /* ---------- Word → PDF ---------- */
+/* Percorre a árvore HTML gerada pelo mammoth preservando: títulos (H1-H6),
+   negrito/itálico dentro do mesmo parágrafo, listas com marcador/numeração,
+   tabelas (com bordas e cabeçalho destacado) e imagens embutidas —
+   quebrando linhas corretamente mesmo quando um parágrafo mistura trechos
+   normais e em negrito/itálico. */
 async function pdftoolsRunWordToPdf(file, inputEl) {
   if (!file) return;
   if (inputEl) inputEl.disabled = true;
@@ -11976,62 +12496,238 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
     const result = await mammothLib.convertToHtml({ arrayBuffer: bytes });
     const container = document.createElement('div');
     container.innerHTML = result.value;
-    const blocks = [];
-    container.childNodes.forEach(node => {
-      if (node.nodeType !== 1) return;
-      const text = (node.textContent || '').trim();
-      if (!text) return;
-      blocks.push({ text, heading: /^h[1-6]$/i.test(node.tagName) });
-    });
-    if (!blocks.length) {
-      pdftoolsSetStatus('pdftoolsWordPdfStatus', 'Não encontramos texto neste documento.', 'error');
+
+    const doc = await PDFLib.PDFDocument.create();
+    const fonts = {
+      regular: await doc.embedFont(PDFLib.StandardFonts.Helvetica),
+      bold: await doc.embedFont(PDFLib.StandardFonts.HelveticaBold),
+      italic: await doc.embedFont(PDFLib.StandardFonts.HelveticaOblique),
+      boldItalic: await doc.embedFont(PDFLib.StandardFonts.HelveticaBoldOblique)
+    };
+
+    const pageWidth = 595.28, pageHeight = 841.89, margin = 56;
+    const maxWidth = pageWidth - margin * 2;
+    const ctx = { page: doc.addPage([pageWidth, pageHeight]), y: pageHeight - margin };
+    let drewSomething = false;
+
+    const sanitize = t => t.replace(/[^\x20-\x7EÀ-ÿ""''–—•ºª§«»…]/g, '?');
+
+    function ensureSpace(height) {
+      if (ctx.y - height < margin) {
+        ctx.page = doc.addPage([pageWidth, pageHeight]);
+        ctx.y = pageHeight - margin;
+      }
+    }
+
+    function pickFont(bold, italic) {
+      if (bold && italic) return fonts.boldItalic;
+      if (bold) return fonts.bold;
+      if (italic) return fonts.italic;
+      return fonts.regular;
+    }
+
+    // Extrai o texto de um nó preservando negrito/itálico por trecho (run).
+    function extractRuns(node, bold, italic) {
+      const runs = [];
+      node.childNodes.forEach(child => {
+        if (child.nodeType === 3) {
+          if (child.textContent) runs.push({ text: child.textContent, bold, italic });
+        } else if (child.nodeType === 1) {
+          const tag = child.tagName.toLowerCase();
+          if (tag === 'img') return;
+          if (tag === 'br') { runs.push({ text: '\n', bold, italic }); return; }
+          const nb = bold || tag === 'strong' || tag === 'b';
+          const ni = italic || tag === 'em' || tag === 'i';
+          runs.push(...extractRuns(child, nb, ni));
+        }
+      });
+      return runs;
+    }
+
+    // Quebra os "runs" em linhas que cabem em `width`, respeitando a
+    // formatação de cada palavra individualmente (permite negrito/itálico
+    // misturados na mesma linha).
+    function wrapRuns(runs, size, width) {
+      const tokens = [];
+      runs.forEach(run => {
+        run.text.split(/(\n|\s+)/).forEach(p => {
+          if (p !== '') tokens.push({ text: p, bold: run.bold, italic: run.italic });
+        });
+      });
+      const lines = [];
+      let line = [], lineW = 0;
+      const trimTrailingSpace = () => { while (line.length && /^\s+$/.test(line[line.length - 1].text)) line.pop(); };
+      tokens.forEach(tok => {
+        if (tok.text === '\n') { trimTrailingSpace(); lines.push(line); line = []; lineW = 0; return; }
+        const font = pickFont(tok.bold, tok.italic);
+        const w = font.widthOfTextAtSize(sanitize(tok.text), size);
+        if (/^\s+$/.test(tok.text)) {
+          if (line.length) { line.push(tok); lineW += w; }
+          return;
+        }
+        if (lineW + w > width && line.length) {
+          trimTrailingSpace();
+          lines.push(line);
+          line = [tok]; lineW = w;
+        } else {
+          line.push(tok); lineW += w;
+        }
+      });
+      if (line.length) { trimTrailingSpace(); lines.push(line); }
+      return lines.filter(l => l.length);
+    }
+
+    function drawWrappedLines(lines, size, x0, lineHeight, indent) {
+      lines.forEach(line => {
+        ensureSpace(lineHeight);
+        let x = x0 + (indent || 0);
+        line.forEach(tok => {
+          const font = pickFont(tok.bold, tok.italic);
+          const text = sanitize(tok.text);
+          ctx.page.drawText(text, { x, y: ctx.y - size, size, font });
+          x += font.widthOfTextAtSize(text, size);
+        });
+        ctx.y -= lineHeight;
+        drewSomething = true;
+      });
+    }
+
+    async function drawImage(imgNode) {
+      const src = imgNode.getAttribute('src') || '';
+      const m = /^data:(image\/(png|jpe?g));base64,([^"]*)$/i.exec(src);
+      if (!m) return;
+      try {
+        const raw = atob(m[3]);
+        const bytes = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+        const img = /png/i.test(m[2]) ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
+        let { width, height } = img;
+        const scale = Math.min(maxWidth / width, 340 / height, 1);
+        width *= scale; height *= scale;
+        ensureSpace(height + 10);
+        ctx.page.drawImage(img, { x: margin, y: ctx.y - height, width, height });
+        ctx.y -= height + 10;
+        drewSomething = true;
+      } catch (e) { /* imagem em formato não suportado — ignora e segue o documento */ }
+    }
+
+    async function drawTable(tableNode) {
+      const rows = Array.from(tableNode.querySelectorAll('tr'));
+      if (!rows.length) return;
+      const colCount = Math.max(...rows.map(r => r.children.length));
+      if (!colCount) return;
+      const cellW = maxWidth / colCount;
+      const cellPad = 5, fontSize = 9.5, lineH = fontSize + 3;
+
+      rows.forEach(row => {
+        const cells = Array.from(row.children);
+        const isHeaderRow = cells.length > 0 && cells.every(c => c.tagName.toLowerCase() === 'th');
+        const cellLines = cells.map(cell => {
+          const runs = extractRuns(cell, isHeaderRow, false);
+          return wrapRuns(runs.length ? runs : [{ text: ' ', bold: isHeaderRow, italic: false }], fontSize, cellW - cellPad * 2);
+        });
+        const rowLineCount = Math.max(1, ...cellLines.map(l => l.length || 1));
+        const rowHeight = rowLineCount * lineH + cellPad * 2;
+        ensureSpace(rowHeight);
+        const rowTop = ctx.y;
+        if (isHeaderRow) {
+          ctx.page.drawRectangle({ x: margin, y: rowTop - rowHeight, width: cellW * cells.length, height: rowHeight, color: PDFLib.rgb(0.92, 0.92, 0.92) });
+        }
+        cells.forEach((cell, ci) => {
+          const x0 = margin + ci * cellW;
+          ctx.page.drawRectangle({ x: x0, y: rowTop - rowHeight, width: cellW, height: rowHeight, borderColor: PDFLib.rgb(0.55, 0.55, 0.55), borderWidth: 0.6 });
+          let ly = rowTop - cellPad;
+          (cellLines[ci] || []).forEach(line => {
+            let lx = x0 + cellPad;
+            line.forEach(tok => {
+              const font = pickFont(tok.bold, tok.italic);
+              const text = sanitize(tok.text);
+              ctx.page.drawText(text, { x: lx, y: ly - fontSize, size: fontSize, font });
+              lx += font.widthOfTextAtSize(text, fontSize);
+            });
+            ly -= lineH;
+          });
+        });
+        ctx.y = rowTop - rowHeight;
+        drewSomething = true;
+      });
+      ctx.y -= 8;
+    }
+
+    async function walkBlocks(nodes) {
+      for (const node of Array.from(nodes)) {
+        if (node.nodeType !== 1) continue;
+        const tag = node.tagName.toLowerCase();
+
+        if (tag === 'img') { await drawImage(node); continue; }
+        if (tag === 'table') { await drawTable(node); continue; }
+
+        if (tag === 'ul' || tag === 'ol') {
+          let idx = 1;
+          for (const li of Array.from(node.children)) {
+            if (li.tagName.toLowerCase() !== 'li') continue;
+            const marker = tag === 'ol' ? `${idx}. ` : '• ';
+            idx++;
+            const size = 11;
+            const indent = 16;
+            const markerWidth = fonts.regular.widthOfTextAtSize(marker, size);
+            const runs = extractRuns(li, false, false);
+            const lines = wrapRuns(runs, size, maxWidth - indent - markerWidth);
+            lines.forEach((line, li2) => {
+              ensureSpace(size + 5);
+              if (li2 === 0) {
+                ctx.page.drawText(marker, { x: margin + indent, y: ctx.y - size, size, font: fonts.regular });
+              }
+              let x = margin + indent + markerWidth;
+              line.forEach(tok => {
+                const font = pickFont(tok.bold, tok.italic);
+                const text = sanitize(tok.text);
+                ctx.page.drawText(text, { x, y: ctx.y - size, size, font });
+                x += font.widthOfTextAtSize(text, size);
+              });
+              ctx.y -= size + 5;
+              drewSomething = true;
+            });
+            ctx.y -= 3;
+          }
+          continue;
+        }
+
+        const isHeading = /^h[1-6]$/.test(tag);
+        if (tag === 'p' || isHeading || tag === 'blockquote' || tag === 'div') {
+          const imgs = node.querySelectorAll ? Array.from(node.querySelectorAll('img')) : [];
+          for (const img of imgs) await drawImage(img);
+          const text = (node.textContent || '').trim();
+          if (!text) continue;
+          const headingSizes = { h1: 20, h2: 17, h3: 15, h4: 13, h5: 12, h6: 11 };
+          const size = isHeading ? headingSizes[tag] : 11;
+          const lineHeight = size + (isHeading ? 6 : 5);
+          const runs = extractRuns(node, isHeading, false);
+          const lines = wrapRuns(runs, size, maxWidth);
+          drawWrappedLines(lines, size, margin, lineHeight);
+          ctx.y -= isHeading ? 8 : 6;
+          continue;
+        }
+
+        const fallbackText = (node.textContent || '').trim();
+        if (fallbackText) {
+          const lines = wrapRuns([{ text: fallbackText, bold: false, italic: false }], 11, maxWidth);
+          drawWrappedLines(lines, 11, margin, 16);
+          ctx.y -= 6;
+        }
+      }
+    }
+
+    await walkBlocks(container.childNodes);
+
+    if (!drewSomething) {
+      pdftoolsSetStatus('pdftoolsWordPdfStatus', 'Não encontramos conteúdo neste documento.', 'error');
       return;
     }
 
-    const doc = await PDFLib.PDFDocument.create();
-    const fontRegular = await doc.embedFont(PDFLib.StandardFonts.Helvetica);
-    const fontBold = await doc.embedFont(PDFLib.StandardFonts.HelveticaBold);
-    const pageWidth = 595.28, pageHeight = 841.89, margin = 56;
-    const maxWidth = pageWidth - margin * 2;
-    let page = doc.addPage([pageWidth, pageHeight]);
-    let y = pageHeight - margin;
-
-    const sanitize = t => t.replace(/[^\x20-\x7EÀ-ÿ""''–—•ºª§]/g, '?');
-
-    function wrapText(text, font, size) {
-      const words = text.split(/\s+/);
-      const lines = [];
-      let line = '';
-      words.forEach(word => {
-        const test = line ? line + ' ' + word : word;
-        if (font.widthOfTextAtSize(test, size) > maxWidth && line) {
-          lines.push(line);
-          line = word;
-        } else {
-          line = test;
-        }
-      });
-      if (line) lines.push(line);
-      return lines;
-    }
-
-    blocks.forEach(block => {
-      const font = block.heading ? fontBold : fontRegular;
-      const size = block.heading ? 14 : 11;
-      const lineHeight = size + 4;
-      const lines = wrapText(sanitize(block.text), font, size);
-      lines.forEach(line => {
-        if (y < margin + lineHeight) { page = doc.addPage([pageWidth, pageHeight]); y = pageHeight - margin; }
-        page.drawText(line, { x: margin, y: y - size, size, font });
-        y -= lineHeight;
-      });
-      y -= 6;
-      if (y < margin) { page = doc.addPage([pageWidth, pageHeight]); y = pageHeight - margin; }
-    });
-
     const pdfBytes = await doc.save();
     pdftoolsDownloadBlob(new Blob([pdfBytes], { type: 'application/pdf' }), (file.name.replace(/\.docx?$/i, '') || 'documento') + '.pdf');
-    pdftoolsSetStatus('pdftoolsWordPdfStatus', 'PDF gerado! (texto e títulos — imagens e tabelas não são reproduzidas)', 'success');
+    pdftoolsSetStatus('pdftoolsWordPdfStatus', 'PDF gerado, com títulos, negrito/itálico, listas, tabelas e imagens preservados!', 'success');
   } catch (e) {
     pdftoolsSetStatus('pdftoolsWordPdfStatus', 'Não foi possível converter este documento.', 'error');
   } finally {
