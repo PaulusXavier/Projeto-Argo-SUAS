@@ -1552,7 +1552,6 @@
   }
 
   .informe-badge,
-  .team-badge,
   .cas-badge,
   .cras-badge,
   .police-badge,
@@ -1570,7 +1569,6 @@
   }
 
   .informe-badge { color: var(--brand-info); background: rgba(180, 83, 9, 0.1); }
-  .team-badge { color: var(--brand-team); background: rgba(108, 92, 231, 0.1); }
   .cas-badge { color: var(--brand-cas); background: rgba(0, 151, 57, 0.1); }
   .cras-badge { color: var(--brand-cras); background: rgba(13, 148, 136, 0.1); }
   .police-badge { color: var(--brand-police-light); background: rgba(30, 58, 138, 0.1); }
@@ -1625,25 +1623,6 @@
   }
 
   .informe-meta span { color: var(--text-main); font-weight: 600; }
-
-  /* Cartão da categoria "Equipe Técnica" — visual de diretório de RH,
-     usando o acento roxo (--brand-team) para diferenciar de unidades e informes. */
-  .team-card {
-    border-top: none;
-    grid-column: 1 / -1;
-  }
-
-  .team-card::before {
-    background: linear-gradient(90deg, var(--brand-team), var(--brand-team-light));
-  }
-
-  .team-card .card-top {
-    background: linear-gradient(180deg, rgba(108, 92, 231, 0.07), rgba(108, 92, 231, 0) 80%);
-  }
-
-  .team-card .card-top h2 {
-    color: var(--brand-team);
-  }
 
   .team-tables {
     display: grid;
@@ -9394,115 +9373,6 @@ function cleanPrintField(value, fallback) {
   return display;
 }
 
-function renderTeamCard(i, query) {
-  const q = (query || '').toLowerCase();
-
-  const fixedRows = (i.fixedTeam || []).filter(t =>
-    !q || t.name.toLowerCase().includes(q) || t.role.toLowerCase().includes(q) || t.bairros.toLowerCase().includes(q)
-  ).map(t => `
-    <tr>
-      <td><span class="team-name">${t.name}</span></td>
-      <td><span class="team-role-badge">${t.role}</span></td>
-      <td>${t.bairros}</td>
-    </tr>
-  `).join('');
-
-  const volanteRows = (i.volanteTeam || []).filter(t =>
-    !q || t.name.toLowerCase().includes(q) || t.role.toLowerCase().includes(q)
-  ).map(t => `
-    <tr>
-      <td>
-        <span class="team-name">${t.name}</span>
-        <small style="color:var(--text-muted); font-size:0.72rem;">${t.note}</small>
-      </td>
-      <td><span class="team-role-badge volante">${t.role}</span></td>
-    </tr>
-  `).join('');
-
-  const fixedEmpty = !fixedRows ? `<tr><td colspan="3" style="color:var(--text-muted); text-align:center; padding:1.25rem;">Nenhum técnico encontrado.</td></tr>` : '';
-  const volanteEmpty = !volanteRows ? `<tr><td colspan="2" style="color:var(--text-muted); text-align:center; padding:1.25rem;">Nenhum técnico encontrado.</td></tr>` : '';
-
-  return `
-    <div class="tech-card team-card">
-      <div class="card-top">
-        <div style="display:flex; justify-content:space-between; align-items:start;">
-          <div style="display:flex; align-items:center; gap:0.55rem;">
-            <span class="team-badge">${ICONS.team}</span>
-            <h2 style="margin:0;">${i.fullName}</h2>
-          </div>
-        </div>
-        <span class="subtitle">👥 Equipe Técnica · SEMADS - Prefeitura de Boa Vista</span>
-      </div>
-      <div class="card-body">
-        <div class="info-group"><span class="info-icon">${ICONS.map}</span><div><span class="label-tech">Localização</span>${i.address}</div></div>
-        <div class="info-group"><span class="info-icon">${ICONS.phone}</span><div><span class="label-tech">Contato Técnico</span>${i.phones.join(' · ')}</div></div>
-        <div class="desc-box">
-          <span class="label-tech">Escopo de Atuação</span>
-          ${i.desc}
-        </div>
-
-        <div class="team-tables">
-          <div class="team-subcard">
-            <div class="team-subcard-header fixa">${ICONS.map} Equipe de Referência Territorial</div>
-            <div style="overflow-x:auto;">
-              <table class="team-table">
-                <thead>
-                  <tr>
-                    <th>Técnico(a)</th>
-                    <th>Formação</th>
-                    <th>Bairros de Referência</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${fixedRows || fixedEmpty}
-                </tbody>
-              </table>
-            </div>
-            <div class="team-subcard-note">
-              <strong style="display:block; margin-bottom:0.4rem; color:var(--text-main); font-size:0.7rem; text-transform:uppercase;">Abrangência Geral</strong>
-              <div class="team-tag-list">
-                ${(i.fixedCoverage || []).map(b => `<span class="team-tag">${b}</span>`).join('')}
-              </div>
-            </div>
-          </div>
-
-          <div class="team-subcard">
-            <div class="team-subcard-header volante">${ICONS.car} Equipe Volante</div>
-            <div class="team-subcard-note" style="border-bottom:none;">${i.volanteDesc}</div>
-            <div style="overflow-x:auto;">
-              <table class="team-table">
-                <thead>
-                  <tr>
-                    <th>Técnico(a)</th>
-                    <th>Formação</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${volanteRows || volanteEmpty}
-                </tbody>
-              </table>
-            </div>
-            <div class="team-subcard-note">
-              <strong style="display:block; margin-bottom:0.3rem; color:var(--text-main); font-size:0.7rem; text-transform:uppercase;">Território Volante</strong>
-              ${i.volanteCoverage}
-            </div>
-          </div>
-        </div>
-
-        ${renderUserDataFields(i.id)}
-        <div class="notes-box">
-          <label for="notes-${i.id}" class="label-tech">Anotações Técnicas / Conduta</label>
-          <textarea id="notes-${i.id}" class="tech-notes" placeholder="Registre aqui a avaliação, conduta ou observações técnicas..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
-        </div>
-      </div>
-      <div class="card-actions">
-        <button class="btn-tech btn-secondary" onclick="share('${i.id}')">Compartilhar</button>
-        <button class="btn-tech btn-primary" onclick="printGuide('${i.id}')">Gerar Guia</button>
-      </div>
-    </div>
-  `;
-}
-
 function renderCasCard(i, query) {
   const q = (query || '').toLowerCase();
 
@@ -9843,12 +9713,16 @@ function render() {
 
   if (cat === 'anotacoes') {
     if (resultsInfo) resultsInfo.style.display = 'none';
+    const infoBannerEarly = document.getElementById('categoryInfoBanner');
+    if (infoBannerEarly) { infoBannerEarly.style.display = 'none'; infoBannerEarly.innerHTML = ''; }
     grid.innerHTML = renderNotesCard();
     return;
   }
 
   if (cat === 'pdftools') {
     if (resultsInfo) resultsInfo.style.display = 'none';
+    const infoBannerEarly = document.getElementById('categoryInfoBanner');
+    if (infoBannerEarly) { infoBannerEarly.style.display = 'none'; infoBannerEarly.innerHTML = ''; }
     grid.innerHTML = renderPdfToolsCard();
     initPdfToolsPanel();
     return;
@@ -9856,6 +9730,8 @@ function render() {
 
   if (cat === 'tradutor') {
     if (resultsInfo) resultsInfo.style.display = 'none';
+    const infoBannerEarly = document.getElementById('categoryInfoBanner');
+    if (infoBannerEarly) { infoBannerEarly.style.display = 'none'; infoBannerEarly.innerHTML = ''; }
     grid.innerHTML = renderTranslatorCard();
     initTranslatorPanel();
     return;
@@ -10175,6 +10051,7 @@ function render() {
 
     const casSearchable = isCas ? [
       i.name, i.fullName, i.address, i.desc,
+      ...(i.phones || []), i.hours,
       ...(i.adminLinks || []).map(l => l.label),
       ...(i.systemLinks || []).map(l => l.label),
       ...(i.driveLinks || []).map(l => l.label)
@@ -10182,6 +10059,7 @@ function render() {
 
     const crasSearchable = isCras ? [
       i.name, i.fullName, i.address, i.desc,
+      ...(i.phones || []), i.hours,
       ...(i.municipalLinks || []).map(l => l.label),
       ...(i.federalLinks || []).map(l => l.label),
       ...(i.rmaLinks || []).map(l => l.label),
@@ -10449,6 +10327,12 @@ function handleAttachUpload(event, id) {
 
   if (!isImage && !isPdf) {
     showImageError(id, 'Selecione uma imagem ou um arquivo PDF válido.');
+    event.target.value = '';
+    return;
+  }
+
+  if (BPC_GUIDE_IDS.includes(id) && !isPdf) {
+    showImageError(id, 'Este campo aceita apenas arquivos PDF (Folha Resumo do CadÚnico).');
     event.target.value = '';
     return;
   }
@@ -11442,44 +11326,15 @@ async function printBpcGuide(id, lang) {
    é renderizado pelo motor de impressão de vários navegadores/dispositivos
    e resultava em página em branco — convertendo para imagem, o anexo em
    PDF passa a imprimir de forma confiável, igual à foto. */
-let pdfJsLoadingPromise = null;
-function ensurePdfJsLoaded() {
-  if (window.pdfjsLib) return Promise.resolve();
-  if (pdfJsLoadingPromise) return pdfJsLoadingPromise;
-  pdfJsLoadingPromise = new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    script.onload = () => {
-      try {
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        resolve();
-      } catch (e) {
-        // Falha ao configurar a lib mesmo com o <script> carregado: libera
-        // a trava para uma nova tentativa da próxima vez, em vez de deixar
-        // esta promise rejeitada "presa" para sempre (ver comentário abaixo).
-        pdfJsLoadingPromise = null;
-        script.remove();
-        reject(e);
-      }
-    };
-    script.onerror = () => {
-      // BUG CORRIGIDO: sem isto, uma falha de rede/CDN na primeira tentativa
-      // (comum no app offline-first) deixava pdfJsLoadingPromise apontando
-      // para sempre para essa mesma promise rejeitada — toda tentativa
-      // seguinte de gerar a ficha com anexo em PDF falhava direto, mesmo
-      // com a internet já restabelecida, até a página ser recarregada.
-      // Zerando aqui, a próxima chamada tenta carregar o script de novo.
-      pdfJsLoadingPromise = null;
-      script.remove();
-      reject(new Error('Não foi possível carregar o leitor de PDF.'));
-    };
-    document.head.appendChild(script);
-  });
-  return pdfJsLoadingPromise;
-}
-
+/* Loader unificado: usa o mesmo ensurePdfJs()/pdftoolsLoadScript() das
+   Ferramentas de Arquivo (definidos mais abaixo, mas já disponíveis aqui
+   em tempo de execução, já que funções async só rodam depois do script
+   inteiro ser avaliado). Antes havia um segundo loader independente
+   (pdfJsLoadingPromise) que baixava a mesma pdf.js de novo caso o usuário
+   usasse as duas funcionalidades na mesma sessão — desperdício de dados
+   em conexão fraca, cenário típico deste app. */
 async function pdfDataUrlToImages(dataUrl) {
-  await ensurePdfJsLoaded();
+  await ensurePdfJs();
   const pdf = await window.pdfjsLib.getDocument({ url: dataUrl }).promise;
   const images = [];
   for (let p = 1; p <= pdf.numPages; p++) {
