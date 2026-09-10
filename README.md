@@ -11,7 +11,7 @@ Um diretório técnico instalável (PWA) dos equipamentos socioassistenciais e d
 - Busca e filtros por tipo de serviço, categoria e território;
 - Ficha de encaminhamento técnico para impressão, com dados da unidade e conduta profissional;
 - Anexo de fotos e PDFs à ficha de encaminhamento;
-- Aba **"Unificar / Converter PDF"** (Ferramentas de Arquivo): unificar até 5 PDFs (até 15 páginas no total), converter PDF ⇄ Word e PDF ⇄ JPG — tudo processado no próprio navegador, sem enviar arquivos a servidor algum;
+- Aba **"Unificar / Converter PDF"** (Ferramentas de Arquivo): unificar até 10 PDFs (até 50 MB no total), converter PDF ⇄ Word e PDF ⇄ JPG — tudo processado no próprio navegador, sem enviar arquivos a servidor algum;
 - Funcionamento offline via Service Worker, com ícones e manifesto para instalação no celular/desktop (as ferramentas de PDF acima baixam pequenas bibliotecas do cdnjs.cloudflare.com na primeira vez que são usadas, então essa aba precisa de internet nesse primeiro uso).
 
 **Arquivos:** `index.html`, `manifest.json`, `sw.js`, `favicon.ico`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`
