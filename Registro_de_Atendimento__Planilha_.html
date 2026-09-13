@@ -81,6 +81,9 @@
 
 <div class="no-print">
     <button class="btn-save" onclick="saveData()">💾 SALVAR DADOS</button>
+    <button class="btn-save" style="background-color:#17a2b8;" onclick="exportRmaSomaBackup()" title="Baixa um arquivo .json com os dados preenchidos, para guardar em outro lugar">⬇️ BACKUP</button>
+    <button class="btn-save" style="background-color:#6f42c1;" onclick="document.getElementById('rmaSomaImportInput').click()" title="Restaura um arquivo de backup gerado por esta planilha">⬆️ RESTAURAR BACKUP</button>
+    <input type="file" id="rmaSomaImportInput" accept="application/json,.json" hidden onchange="importRmaSomaBackup(this)">
     <button class="btn-clear" onclick="clearData()">🗑️ APAGAR TUDO</button>
     <button class="btn-print" onclick="window.print()">🖨️ IMPRIMIR</button>
 </div>
@@ -212,6 +215,57 @@
         document.querySelectorAll('input').forEach((inp, i) => data['v'+i] = inp.value);
         localStorage.setItem('rma_backup_soma', JSON.stringify(data));
         alert('Dados salvos!');
+    }
+
+    // Baixa os dados atualmente salvos como um arquivo .json, para guardar
+    // em outro lugar ou levar para outro computador.
+    function exportRmaSomaBackup() {
+        const saved = localStorage.getItem('rma_backup_soma');
+        if (!saved) {
+            alert('Não há dados salvos ainda. Clique em "SALVAR DADOS" antes de fazer o backup.');
+            return;
+        }
+        const payload = {
+            app: 'RMA - Registro Mensal com Soma',
+            tipo: 'backup-rma-soma',
+            geradoEm: new Date().toISOString(),
+            dados: JSON.parse(saved)
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `rma_soma_backup_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+
+    // Restaura um arquivo de backup gerado por exportRmaSomaBackup().
+    function importRmaSomaBackup(fileInput) {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            try {
+                const payload = JSON.parse(e.target.result);
+                const dados = payload && typeof payload.dados === 'object' ? payload.dados : null;
+                if (!dados) throw new Error('formato inválido');
+                const ok = confirm('Importar este backup vai SOBRESCREVER os dados atualmente preenchidos nesta planilha. Deseja continuar?');
+                if (!ok) return;
+                localStorage.setItem('rma_backup_soma', JSON.stringify(dados));
+                document.querySelectorAll('input').forEach((inp, i) => {
+                    if (!inp.classList.contains('qtd-soma')) {
+                        inp.value = dados['v'+i] || '';
+                    }
+                });
+                calcularTodasAsSomas();
+                alert('Backup importado com sucesso!');
+            } catch (err) {
+                alert('Não foi possível importar este arquivo. Verifique se é um backup gerado por esta própria planilha.');
+            } finally {
+                fileInput.value = '';
+            }
+        };
+        reader.readAsText(file);
     }
 
     window.onload = () => {
