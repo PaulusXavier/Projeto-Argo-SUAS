@@ -3666,6 +3666,10 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
         <span>Acesso destinado à <strong>equipe técnica do SUAS</strong> em Boa Vista - RR. Em caso de dúvida sobre a senha, contate a coordenação.</span>
       </p>
+      <p class="login-footnote">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>Esta senha apenas esconde a tela — como o app roda direto no navegador, quem tiver acesso ao arquivo do site consegue ver o conteúdo mesmo sem a senha. Antes de emprestar ou devolver um computador compartilhado, use "Apagar dados salvos neste dispositivo" no rodapé para remover nomes, anotações e anexos de atendidos.</span>
+      </p>
     </div>
 
   </div>
@@ -4098,10 +4102,17 @@
           </a>
         </li>
         <li>
-          <a href="javascript:void(0)" onclick="exportData()">
+          <a href="javascript:void(0)" onclick="exportData()" title="Baixa um arquivo .json com anotações, dados de encaminhamento e anexos salvos neste navegador">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Backup de anotações
           </a>
+        </li>
+        <li>
+          <a href="javascript:void(0)" onclick="triggerImportData()" title="Restaura um arquivo de backup gerado pelo Argo SUAS neste navegador">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 8 12 3 17 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Importar backup
+          </a>
+          <input type="file" id="backupImportInput" accept="application/json,.json" hidden onchange="importData(this)">
         </li>
         <li>
           <a href="javascript:void(0)" onclick="clearAllLocalData()" title="Apaga nome, endereço, NIS, anotações e anexos salvos neste navegador">
@@ -4341,26 +4352,37 @@ function logout() {
   lockApp();
 }
 
+// Lista única de onde ficam os dados pessoais de usuários atendidos
+// (nome, endereço, NIS, fotos e PDFs anexados, anotações de encaminhamento).
+// Usada tanto para apagar quanto para fazer backup/restaurar esses dados —
+// mantendo as duas operações sempre em sincronia.
+const SENSITIVE_DATA_PREFIXES = ['attach_', 'img_', 'note_', 'userdata_'];
+const SENSITIVE_DATA_EXACT_KEYS = ['nota_geral_encaminhamento'];
+
+function isSensitiveDataKey(key) {
+  return SENSITIVE_DATA_EXACT_KEYS.includes(key) || SENSITIVE_DATA_PREFIXES.some(p => key.startsWith(p));
+}
+
+function collectSensitiveData() {
+  const data = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && isSensitiveDataKey(key)) data[key] = localStorage.getItem(key);
+  }
+  return data;
+}
+
 // Apaga do localStorage tudo o que possa conter dados pessoais de usuários
 // atendidos (nome, endereço, NIS, fotos e PDFs anexados, anotações de
 // encaminhamento). Útil antes de emprestar/devolver um computador
 // compartilhado, já que a tela de login NÃO protege esses dados.
 function clearAllLocalData() {
-  const sensitivePrefixes = ['attach_', 'img_', 'note_', 'userdata_'];
-  const sensitiveExactKeys = ['nota_geral_encaminhamento'];
-  const toRemove = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (!key) continue;
-    if (sensitiveExactKeys.includes(key) || sensitivePrefixes.some(p => key.startsWith(p))) {
-      toRemove.push(key);
-    }
-  }
+  const toRemove = Object.keys(collectSensitiveData());
   if (toRemove.length === 0) {
     alert('Não há dados sensíveis salvos neste navegador.');
     return;
   }
-  const ok = confirm(`Isso vai apagar ${toRemove.length} item(ns) salvos neste navegador (nomes, endereços, NIS, anotações e anexos de usuários atendidos). Esta ação não pode ser desfeita. Deseja continuar?`);
+  const ok = confirm(`Isso vai apagar ${toRemove.length} item(ns) salvos neste navegador (nomes, endereços, NIS, anotações e anexos de usuários atendidos).\n\nDica: se ainda não fez backup, use "Backup de anotações" no rodapé antes de apagar. Esta ação não pode ser desfeita.\n\nDeseja continuar?`);
   if (!ok) return;
   toRemove.forEach(key => safeStorage.remove(key));
   alert('Dados sensíveis apagados deste dispositivo.');
@@ -10699,7 +10721,7 @@ function renderTranslatorCard() {
       <div class="card-body">
         <div class="tradutor-privacy">
           ${ICONS.info}
-          <span>Digite o texto, toque em "Traduzir" e depois no alto-falante para ouvir em voz alta — útil para se comunicar com pessoas que não falam português, principalmente venezuelanos e outros estrangeiros em atendimento. A tradução do texto usa um serviço online gratuito (precisa de internet); a voz é gerada pelo próprio aparelho.</span>
+          <span>Digite o texto, toque em "Traduzir" e depois no alto-falante para ouvir em voz alta — útil para se comunicar com pessoas que não falam português, principalmente venezuelanos e outros estrangeiros em atendimento. A tradução do texto usa um serviço online gratuito (precisa de internet); a voz é gerada pelo próprio aparelho. <strong>Evite digitar nome, endereço, NIS ou outro dado que identifique a pessoa atendida</strong> — o texto traduzido é enviado a esse serviço externo. Prefira frases genéricas ou use as frases prontas abaixo.</span>
         </div>
 
         <div class="tradutor-langbar">
@@ -11716,17 +11738,65 @@ async function printGuide(id) {
   window.print();
 }
 
+// Exporta TODOS os dados sensíveis salvos neste navegador (anotações por
+// unidade, anotação geral, dados de encaminhamento preenchidos e anexos)
+// em um único arquivo .json, para guardar em outro lugar ou levar para
+// outro dispositivo. Complementa clearAllLocalData(): antes de apagar os
+// dados de um computador compartilhado, dá para salvar esse backup primeiro.
 function exportData() {
-  const notes = {};
-  DATA.forEach(i => {
-    const n = safeStorage.get('note_'+i.id);
-    if (n) notes[i.id] = { name: i.name, note: n };
-  });
-  const b = new Blob([JSON.stringify(notes,null,2)], {type:'application/json'});
+  const data = collectSensitiveData();
+  const keys = Object.keys(data);
+  if (keys.length === 0) {
+    alert('Não há anotações, dados de encaminhamento ou anexos salvos neste navegador para fazer backup.');
+    return;
+  }
+  const payload = {
+    app: 'Argo SUAS',
+    tipo: 'backup-local-argo-suas',
+    versaoBackup: 1,
+    geradoEm: new Date().toISOString(),
+    dados: data
+  };
+  const b = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(b);
-  a.download = `rede_apoio_backup_${new Date().toISOString().split('T')[0]}.json`;
+  a.download = `argo_suas_backup_${new Date().toISOString().split('T')[0]}.json`;
   a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// Abre o seletor de arquivo para restaurar um backup gerado por exportData().
+function triggerImportData() {
+  const input = document.getElementById('backupImportInput');
+  if (input) input.click();
+}
+
+// Lê o arquivo .json escolhido e restaura as anotações/dados/anexos nele
+// contidos neste navegador. Pede confirmação antes, pois isso pode
+// sobrescrever dados já salvos com o mesmo identificador.
+function importData(fileInput) {
+  const file = fileInput.files && fileInput.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    try {
+      const payload = JSON.parse(e.target.result);
+      const dados = payload && typeof payload.dados === 'object' && payload.dados ? payload.dados : null;
+      if (!dados) throw new Error('formato inválido');
+      const keys = Object.keys(dados).filter(isSensitiveDataKey);
+      if (keys.length === 0) throw new Error('nenhum dado reconhecido');
+      const ok = confirm(`Este arquivo contém ${keys.length} item(ns) de backup (anotações, dados de encaminhamento e/ou anexos).\n\nImportar agora vai SOBRESCREVER, neste navegador, qualquer dado já salvo com o mesmo identificador. Deseja continuar?`);
+      if (!ok) return;
+      keys.forEach(k => safeStorage.set(k, dados[k]));
+      alert(`Backup importado com sucesso: ${keys.length} item(ns) restaurado(s).`);
+      if (typeof render === 'function') render();
+    } catch (err) {
+      alert('Não foi possível importar este arquivo. Verifique se é um backup gerado pelo próprio Argo SUAS (botão "Backup de anotações").');
+    } finally {
+      fileInput.value = '';
+    }
+  };
+  reader.readAsText(file);
 }
 
 let searchDebounceTimer = null;
