@@ -6223,6 +6223,7 @@ function render() {
             <label for="notes-${i.id}" class="label-tech">Anotações Técnicas / Conduta</label>
             <textarea id="notes-${i.id}" class="tech-notes" placeholder="Registre aqui a avaliação, conduta ou observações técnicas..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
           </div>
+          ${BPC_GUIDE_IDS.includes(i.id) ? '' : renderSecondUnitField(i.id, i.name)}
           <div class="image-attach-wrapper" id="img-wrap-${i.id}">
             ${imageBlock}
             <div class="image-error-msg" id="img-error-${i.id}" role="alert" style="display:none;"></div>
@@ -6268,6 +6269,7 @@ function render() {
           <label for="notes-${i.id}" class="label-tech">Anotações Técnicas / Conduta</label>
           <textarea id="notes-${i.id}" class="tech-notes" placeholder="Registre aqui a avaliação, conduta ou observações técnicas..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
         </div>`}
+        ${BPC_GUIDE_IDS.includes(i.id) ? '' : renderSecondUnitField(i.id, i.name)}
         <div class="image-attach-wrapper" id="img-wrap-${i.id}">
           ${imageBlock}
           <div class="image-error-msg" id="img-error-${i.id}" role="alert" style="display:none;"></div>
@@ -6438,6 +6440,59 @@ function renderUserDataFields(id) {
     </div>
   `;
 }
+
+// --- Segunda unidade no mesmo encaminhamento --------------------------------
+// Permite marcar, dentro do card de UMA unidade, uma SEGUNDA unidade/serviço
+// para constar como página extra da Ficha de Encaminhamento Técnico (ver
+// printGuide). Nessa página extra só aparecem nome, endereço e horário da
+// segunda unidade — os demais dados (usuário, motivo, protocolo etc.) já
+// estão na 1ª página e não precisam se repetir. A página entra logo depois
+// da 1ª quando não há anexo, ou depois do(s) anexo(s) quando há (ver ordem
+// de montagem em printGuide: firstPage + secondPage + pdfPage + secondUnitPage).
+// Não é dado sensível do(a) atendido(a) (só liga dois IDs de unidades já
+// públicas do diretório), por isso a chave não entra em SENSITIVE_DATA_PREFIXES
+// e sobrevive a "Apagar dados salvos neste dispositivo".
+let _printableUnitsCache = null;
+function getPrintableUnitsSorted() {
+  if (!_printableUnitsCache) {
+    _printableUnitsCache = DATA
+      .filter(x => !x.cat.includes('cas') && !x.cat.includes('cras') && !BPC_GUIDE_IDS.includes(x.id) && x.address && x.address !== 'N/A')
+      .slice()
+      .sort((a, b) => a.fullName.localeCompare(b.fullName, 'pt-BR'));
+  }
+  return _printableUnitsCache;
+}
+
+function getSecondUnit(id) {
+  return safeStorage.get('second_unit_' + id, '') || '';
+}
+
+function setSecondUnit(id, secondId) {
+  if (secondId) {
+    safeStorage.set('second_unit_' + id, secondId);
+  } else {
+    safeStorage.remove('second_unit_' + id);
+  }
+}
+
+function renderSecondUnitField(id, name) {
+  const current = getSecondUnit(id);
+  const options = getPrintableUnitsSorted()
+    .filter(x => x.id !== id)
+    .map(x => `<option value="${x.id}"${x.id === current ? ' selected' : ''}>${escapeHtml(x.name)} — ${escapeHtml(x.fullName)}</option>`)
+    .join('');
+  return `
+    <div class="second-unit-box">
+      <label for="second-unit-${id}" class="label-tech">📄 Incluir 2ª unidade neste encaminhamento (opcional)</label>
+      <select id="second-unit-${id}" class="second-unit-select" onchange="setSecondUnit('${id}', this.value)">
+        <option value="">Nenhuma — encaminhar só para ${escapeHtml(name)}</option>
+        ${options}
+      </select>
+      <div class="second-unit-hint">Na ficha impressa, essa unidade entra em uma página extra só com nome, endereço e horário — sem repetir usuário, motivo ou protocolo.</div>
+    </div>
+  `;
+}
+
 
 function share(id) {
   const i = DATA.find(x => x.id === id);
