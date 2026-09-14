@@ -217,6 +217,50 @@
     header.hero { background-size: auto, 360px 270px, auto; }
   }
 
+  /* Gravura histórica do "Argo Navis" usada como marca d'água de fundo do
+     cabeçalho principal, bem transparente para não competir com o texto. */
+  .hero-historic-bg {
+    position: absolute;
+    inset: 0;
+    background-image: url('argo-navis-historico.jpg');
+    background-size: cover;
+    background-position: center 35%;
+    background-repeat: no-repeat;
+    opacity: 0.1;
+    mix-blend-mode: luminosity;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  @media (max-width: 640px) {
+    .hero-historic-bg { opacity: 0.07; }
+  }
+
+  /* Mesma gravura, exibida como emblema visível no canto esquerdo do cabeçalho. */
+  .hero-side-emblem {
+    position: absolute;
+    top: 50%;
+    left: 4%;
+    transform: translateY(-50%);
+    width: 200px;
+    height: auto;
+    max-height: 190px;
+    object-fit: cover;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    opacity: 0.92;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  @media (max-width: 1100px) {
+    .hero-side-emblem { width: 150px; max-height: 140px; }
+  }
+
+  @media (max-width: 900px) {
+    .hero-side-emblem { display: none; }
+  }
+
   .argo-emblem {
     position: absolute;
     top: 50%;
@@ -225,6 +269,7 @@
     width: 280px;
     height: 201px;
     opacity: 1;
+    z-index: 1;
     pointer-events: none;
   }
 
