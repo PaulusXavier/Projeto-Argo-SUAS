@@ -1,4 +1,4 @@
-  :root {
+:root {
     --brand-primary: #0091C2;
     --brand-primary-light: #29ABE2;
     --brand-secondary: #0F172A;
@@ -212,50 +212,6 @@
   }
 
   header.hero .container { width: 100%; max-width: 1200px; margin: 0 auto; position: relative; z-index: 1; }
-
-  /* Gravura "Argo Navis" (barco de estrelas) em destaque no canto esquerdo
-     do cabeçalho. Mascarada em vinheta circular e levemente esmaecida nas
-     bordas para se fundir ao degradê do fundo, com brilho dourado sutil e
-     uma leve deriva, como se navegasse lentamente entre as constelações. */
-  .hero-constellation {
-    position: absolute;
-    top: -8%;
-    left: -7%;
-    width: 230px;
-    max-width: 24%;
-    height: auto;
-    opacity: 0.85;
-    -webkit-mask-image: radial-gradient(circle at 38% 40%, black 34%, rgba(0,0,0,0.45) 52%, transparent 68%);
-    mask-image: radial-gradient(circle at 38% 40%, black 34%, rgba(0,0,0,0.45) 52%, transparent 68%);
-    filter: drop-shadow(0 0 18px rgba(232, 172, 61, 0.3)) drop-shadow(0 10px 22px rgba(0,0,0,0.4));
-    pointer-events: none;
-    animation: heroConstellationDrift 9s ease-in-out infinite;
-    z-index: 0;
-  }
-
-  @keyframes heroConstellationDrift {
-    0%, 100% { transform: translateY(0) rotate(0deg); }
-    50% { transform: translateY(-5px) rotate(0.8deg); }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .hero-constellation { animation: none; }
-  }
-
-  @media (max-width: 900px) {
-    .hero-constellation {
-      width: 170px;
-      max-width: 30%;
-      opacity: 0.6;
-      top: -6%;
-      left: -8%;
-    }
-  }
-
-  @media (max-width: 640px) {
-    .hero-constellation { display: none; }
-  }
-
 
   @media (max-width: 640px) {
     header.hero { background-size: auto, 360px 270px, auto; }
