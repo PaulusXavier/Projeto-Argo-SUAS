@@ -1,31 +1,70 @@
 /* ===================== Autenticação (Tela de Login) =====================
-   AVISO DE SEGURANÇA: esta é uma barreira de acesso *local*, no navegador,
-   não uma autenticação de servidor. Como o app é um site estático (HTML +
-   JS), todo o conteúdo desta página — incluindo os dados de DATA abaixo —
-   já é entregue ao navegador antes de qualquer senha ser digitada. Ou seja:
-   qualquer pessoa com a URL pode ver o código-fonte (Ctrl+U) ou abrir o
-   DevTools e ler tudo, senha ou não. Esta tela SOMENTE evita que alguém
-   passando na frente da tela abra o app "sem querer"; ela NÃO protege
-   dados sigilosos. Para proteção real, é necessário: (1) publicar o site
-   atrás de autenticação no servidor/hospedagem (ex.: Cloudflare Access,
-   Basic Auth no proxy, um backend com login) e (2) parar de guardar
-   nome/endereço/NIS/fotos de usuários no localStorage do navegador — ver
-   clearAllLocalData() abaixo para apagar o que já foi salvo no aparelho.
+   AVISO DE SEGURANÇA: esta tela de login é uma barreira de acesso *local*,
+   no navegador, não uma autenticação de servidor. Como o app é um site
+   estático (HTML + JS), o código-fonte e a estrutura da página são
+   entregues ao navegador antes de qualquer senha ser digitada — quem tiver
+   o arquivo do site sempre vai poder ler o CÓDIGO (Ctrl+U / DevTools).
 
-   A senha não fica mais em texto puro no código: comparamos o hash
+   Isso NÃO significa mais, porém, que os DADOS de atendidos fiquem
+   expostos: nome, endereço, NIS, anotações técnicas e anexos (chaves
+   attach_/img_/note_/userdata_/nota_geral_encaminhamento) são gravados no
+   localStorage já CIFRADOS com uma chave derivada da própria senha do app
+   (ver deriveSessionKey/encryptForStorage/decryptFromStorage abaixo). Sem
+   digitar a senha correta nesta tela, abrir o DevTools e olhar o
+   localStorage mostra apenas texto cifrado (prefixo "enc1:"), não os dados
+   em si. A chave só existe na memória da aba enquanto o app está
+   desbloqueado; ela nunca é salva em disco e é apagada ao trancar/sair.
+
+   Limitações importantes, para quem for avaliar isso com espírito crítico:
+   - Não é criptografia de nível bancário/auditado (não usa WebCrypto/AES,
+     para poder cifrar e decifrar de forma síncrona durante a renderização
+     dos cards); é um cifrador de fluxo (stream cipher) próprio, com chave
+     de 256 bits derivada por SHA-256 da senha. Ainda assim é uma cifra de
+     verdade (dados diferentes a cada vez, nonce aleatório por valor), não
+     apenas ofuscação/base64.
+   - Qualquer pessoa que souber a senha da equipe também consegue decifrar
+     os dados — a proteção é contra quem NÃO tem a senha (ex.: alguém que
+     só tenha acesso ao arquivo do site ou a um HD/backup do navegador).
+   - Se a senha do app (APP_PASSWORD_HASH) for trocada, os dados já
+     cifrados com a senha antiga deixam de poder ser lidos com a senha
+     nova. Antes de trocar a senha, use "Backup de anotações" no rodapé
+     para exportar os dados (o backup é salvo em texto legível) e depois
+     "Restaurar backup" já com a senha nova.
+   - Para proteção completa (inclusive do código-fonte da página), ainda é
+     necessário publicar o site atrás de autenticação no servidor/
+     hospedagem (ex.: Cloudflare Access, Basic Auth no proxy, um backend
+     com login). Em computador compartilhado, use "Apagar dados salvos
+     neste dispositivo" no rodapé antes de emprestar/devolver o aparelho.
+
+   A senha do app não fica mais em texto puro no código: comparamos o hash
    SHA-256 dela, e o campo tenta pouco a pouco travar após várias
-   tentativas erradas seguidas. Isso dificulta um pouco a leitura casual
-   do código-fonte, mas não substitui uma autenticação de verdade. */
+   tentativas erradas seguidas. */
 const APP_PASSWORD_HASH = '0a94e7ea0d2d585c64b206eeadaf4327045bc5398774fe04d8b9605b299e7431'; // para trocar a senha, rode setAppPassword('nova-senha') no console e cole o resultado aqui
 const AUTH_MAX_ATTEMPTS = 5;
 const AUTH_LOCKOUT_MS = 30000;
 let authFailedAttempts = 0;
 let authLockedUntil = 0;
 
+// Chave de cifragem da sessão atual (Uint8Array de 32 bytes), derivada da
+// senha digitada no login. Só existe na memória da aba enquanto o app
+// estiver desbloqueado — nunca é persistida em disco/localStorage. Sem ela,
+// decryptFromStorage() não consegue ler os dados sensíveis salvos.
+let sessionEncKey = null;
+
 async function sha256Hex(text) {
   const enc = new TextEncoder().encode(text);
   const digest = await crypto.subtle.digest('SHA-256', enc);
   return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Deriva a chave de cifragem dos dados sensíveis a partir da senha digitada
+// no login. Usa um "tempero" (prefixo) diferente do hash usado para
+// conferir a senha (APP_PASSWORD_HASH), para que os dois valores nunca
+// coincidam mesmo sendo derivados da mesma senha.
+async function deriveSessionKey(password) {
+  const enc = new TextEncoder().encode('argo-suas-enc-v1:' + password);
+  const digest = await crypto.subtle.digest('SHA-256', enc);
+  return new Uint8Array(digest);
 }
 
 // Utilitário de uso único (rodar no console) para gerar o hash de uma nova
@@ -46,6 +85,10 @@ function unlockApp() {
 }
 
 function lockApp() {
+  // Ao trancar (inclusive ao carregar a página, antes do login), a chave de
+  // cifragem sai da memória — os dados sensíveis salvos ficam ilegíveis até
+  // a senha correta ser digitada de novo.
+  sessionEncKey = null;
   const appRoot = document.getElementById('appRoot');
   const loginScreen = document.getElementById('loginScreen');
   if (appRoot) appRoot.dataset.locked = 'true';
@@ -99,6 +142,7 @@ function initAuth() {
       if (valueHash === APP_PASSWORD_HASH) {
         authFailedAttempts = 0;
         errorEl.classList.remove('visible');
+        sessionEncKey = await deriveSessionKey(value);
         unlockApp();
       } else {
         authFailedAttempts++;
@@ -147,11 +191,19 @@ function isSensitiveDataKey(key) {
   return SENSITIVE_DATA_EXACT_KEYS.includes(key) || SENSITIVE_DATA_PREFIXES.some(p => key.startsWith(p));
 }
 
+// Usa safeStorage.get (não localStorage.getItem direto) para que os valores
+// aqui já venham DECIFRADOS: tanto para clearAllLocalData() (que só precisa
+// das chaves) quanto para exportData() (backup em .json, que deve continuar
+// legível/portável — a reimportação, em importData(), volta a cifrar cada
+// valor com a senha da sessão em uso no momento da restauração).
 function collectSensitiveData() {
   const data = {};
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (key && isSensitiveDataKey(key)) data[key] = localStorage.getItem(key);
+    if (key && isSensitiveDataKey(key)) {
+      const value = safeStorage.get(key);
+      if (value !== null && value !== undefined) data[key] = value;
+    }
   }
   return data;
 }
@@ -4728,11 +4780,109 @@ const ICONS = {
 
 const MAX_ATTACH_BYTES = 3.5 * 1024 * 1024;
 
+/* ===================== Cifragem dos dados sensíveis em repouso =====================
+   Tudo aqui embaixo cifra/decifra, de forma síncrona (sem depender de
+   Promises), o conteúdo salvo sob as chaves sensíveis (attach_/img_/note_/
+   userdata_/nota_geral_encaminhamento) antes de gravar no localStorage e ao
+   lê-lo de volta. A chave de cifragem (sessionEncKey) é derivada da senha
+   do login — ver bloco de Autenticação, no topo do arquivo. */
+
+function bytesToBase64(bytes) {
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+
+function base64ToBytes(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+// PRNG determinístico e rápido (mulberry32): a partir de uma semente de 32
+// bits, gera um fluxo de números pseudoaleatórios sempre igual para a mesma
+// semente — é o que transforma "chave + nonce" em um fluxo de bytes de
+// cifragem (keystream), de forma totalmente síncrona.
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function() {
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Mistura um array de bytes numa única semente de 32 bits (hash simples,
+// estilo FNV) — usado para combinar a chave da sessão com o nonce de cada
+// valor cifrado.
+function seedFromBytes(bytes) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < bytes.length; i++) {
+    h ^= bytes[i];
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+// Gera "length" bytes pseudoaleatórios a partir da chave da sessão + de um
+// nonce aleatório específico deste valor salvo (para que o mesmo texto
+// nunca produza o mesmo resultado cifrado duas vezes).
+function keystream(length, keyBytes, nonceBytes) {
+  const combined = new Uint8Array(keyBytes.length + nonceBytes.length);
+  combined.set(keyBytes, 0);
+  combined.set(nonceBytes, keyBytes.length);
+  const rnd = mulberry32(seedFromBytes(combined));
+  const out = new Uint8Array(length);
+  for (let i = 0; i < length; i++) out[i] = Math.floor(rnd() * 256);
+  return out;
+}
+
+function xorBytes(a, b) {
+  const out = new Uint8Array(a.length);
+  for (let i = 0; i < a.length; i++) out[i] = a[i] ^ b[i % b.length];
+  return out;
+}
+
+// Cifra um texto para guardar no localStorage. Formato salvo:
+// "enc1:<nonce em base64>:<texto cifrado em base64>".
+function encryptForStorage(plainText) {
+  if (!sessionEncKey) {
+    console.warn('Argo SUAS: tentativa de salvar dado sensível sem chave de sessão (app trancado?). Dado NÃO foi cifrado.');
+    return plainText;
+  }
+  const nonce = crypto.getRandomValues(new Uint8Array(16));
+  const plainBytes = new TextEncoder().encode(plainText == null ? '' : String(plainText));
+  const cipherBytes = xorBytes(plainBytes, keystream(plainBytes.length, sessionEncKey, nonce));
+  return 'enc1:' + bytesToBase64(nonce) + ':' + bytesToBase64(cipherBytes);
+}
+
+// Decifra um valor lido do localStorage. Valores antigos, salvos antes desta
+// cifragem existir (ou sem o prefixo "enc1:"), são devolvidos como estão —
+// isso permite migrar dados antigos automaticamente: eles continuam sendo
+// lidos normalmente e passam a ser salvos já cifrados na próxima edição.
+function decryptFromStorage(stored) {
+  if (typeof stored !== 'string' || !stored.startsWith('enc1:')) return stored;
+  if (!sessionEncKey) return ''; // trancado: sem a senha, não dá para decifrar
+  const parts = stored.split(':');
+  if (parts.length !== 3) return '';
+  try {
+    const nonce = base64ToBytes(parts[1]);
+    const cipherBytes = base64ToBytes(parts[2]);
+    const plainBytes = xorBytes(cipherBytes, keystream(cipherBytes.length, sessionEncKey, nonce));
+    return new TextDecoder().decode(plainBytes);
+  } catch (e) {
+    return '';
+  }
+}
+
 const safeStorage = {
   get(key, fallback = null) {
     try {
       const v = localStorage.getItem(key);
-      return v === null ? fallback : v;
+      if (v === null) return fallback;
+      return isSensitiveDataKey(key) ? decryptFromStorage(v) : v;
     } catch (e) {
       return fallback;
     }
@@ -4741,14 +4891,17 @@ const safeStorage = {
     try {
       const raw = localStorage.getItem(key);
       if (raw === null) return fallback;
-      return JSON.parse(raw);
+      const text = isSensitiveDataKey(key) ? decryptFromStorage(raw) : raw;
+      if (!text) return fallback;
+      return JSON.parse(text);
     } catch (e) {
       return fallback;
     }
   },
   set(key, value) {
     try {
-      localStorage.setItem(key, value);
+      const toStore = isSensitiveDataKey(key) ? encryptForStorage(value) : value;
+      localStorage.setItem(key, toStore);
       return true;
     } catch (e) {
       return false;
