@@ -165,6 +165,28 @@
     box-shadow: var(--shadow-sm);
     cursor: pointer;
     transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease), border-color 0.25s var(--ease);
+    /* Pula o trabalho de layout/pintura de cards fora da tela — com listas
+       de centenas de itens (ex.: aba "Todos", 374 fichas), isso reduz bastante
+       o custo de montar o grid a cada busca/troca de aba, sem precisar
+       reescrever o render() para virtualizar a lista. contain-intrinsic-size
+       é só uma altura estimada, usada como placeholder antes do primeiro
+       cálculo real — não afeta a altura visível do card. */
+    content-visibility: auto;
+    contain-intrinsic-size: 0 420px;
+    /* Entrada suave ao aparecer (nova busca, troca de aba/filtro) — dá
+       sensação de "dinâmico" sem custo de performance, já que anima só
+       opacity/transform (que o navegador acelera por GPU). Roda uma única
+       vez por card, na inserção no DOM. */
+    animation: cardFadeIn 0.3s var(--ease) both;
+  }
+
+  @keyframes cardFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tech-card { animation: none; }
   }
 
   .tech-card::before {
