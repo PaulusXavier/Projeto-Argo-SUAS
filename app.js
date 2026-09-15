@@ -7610,6 +7610,23 @@ async function printGuide(id) {
   const secondUnitId = getSecondUnit(id);
   const secondUnitItem = secondUnitId ? DATA.find(x => x.id === secondUnitId) : null;
 
+  // Dados do equipamento/serviço da 2ª unidade, para exibir na página extra
+  // do encaminhamento — mesmos campos (categoria, serviços, descrição,
+  // contato) já usados no quadro "Dados do Equipamento / Serviço" da 1ª
+  // página, só que referentes à unidade marcada em renderSecondUnitField.
+  let secondUnitCatDisplay = '', secondUnitServicesDisplay = '', secondUnitDescDisplay = '',
+      secondUnitSummaryLine = '', secondUnitPhonesDisplay = '';
+  if (secondUnitItem) {
+    secondUnitCatDisplay = (secondUnitItem.cat || []).map(c => CATEGORY_LABELS_PRINT[c] || c).join(' · ');
+    const secondUnitServicesRaw = Array.isArray(secondUnitItem.services) ? secondUnitItem.services.join(', ') : secondUnitItem.services;
+    secondUnitServicesDisplay = cleanPrintField(secondUnitServicesRaw, '');
+    const secondUnitDescRaw = cleanPrintField(secondUnitItem.desc, '');
+    secondUnitDescDisplay = secondUnitDescRaw ? formatInformeDesc(secondUnitDescRaw) : '';
+    secondUnitSummaryLine = [truncateForPrint(secondUnitServicesDisplay, 100), truncateForPrint(secondUnitDescDisplay, 140)]
+      .filter(Boolean).join(' — ');
+    secondUnitPhonesDisplay = cleanPrintField((secondUnitItem.phones || []).join('<br>'), '—');
+  }
+
   // Protocolo e data/hora de emissão da ficha (antes ausentes, o que
   // quebrava a impressão com "protocolCode/emissionDisplay is not defined").
   const now = new Date();
@@ -7657,6 +7674,18 @@ async function printGuide(id) {
   };
   const addressPrint = capSegmentsForPrint(addressDisplay, 2, 110, 'endereço(s) — consulte a unidade');
   const phonesPrint = capSegmentsForPrint(phonesDisplay, 3, 70, 'contato(s) — consulte a unidade');
+
+  // Mesmo corte de segurança acima, agora para a 2ª unidade (evita que um
+  // cadastro com muitos endereços/telefones estoure a página extra do
+  // encaminhamento — antes só a 1ª página tinha essa proteção).
+  let secondUnitAddressPrint = '', secondUnitPhonesPrint = '';
+  if (secondUnitItem) {
+    secondUnitAddressPrint = capSegmentsForPrint(
+      cleanPrintField(secondUnitItem.address, 'Endereço não informado — consultar coordenação.'),
+      2, 110, 'endereço(s) — consulte a unidade'
+    );
+    secondUnitPhonesPrint = capSegmentsForPrint(secondUnitPhonesDisplay, 3, 70, 'contato(s) — consulte a unidade');
+  }
 
   // Estima quantas linhas visuais um texto vai ocupar na coluna direita,
   // considerando tanto quebras explícitas (<br>) quanto o provável
@@ -7891,18 +7920,27 @@ async function printGuide(id) {
             </td>
           </tr>
         </table>
+        ${secondUnitSummaryLine ? `<div style="margin-bottom:10px; padding:8px 12px; border:1.5px solid #0F172A; border-radius:4px; font-size:0.78rem; line-height:1.4; color:#475569; background:rgba(17,94,89,0.02);"><strong style="color:#0091C2;">Unidade:</strong> ${secondUnitSummaryLine}</div>` : ''}
         <div style="border:1.5px solid #0F172A; border-radius:4px; overflow:hidden; flex-shrink:0;">
+          ${secondUnitCatDisplay ? `<div style="padding:10px 14px; border-bottom:1px solid #CBD5E1; background:rgba(0,145,194,0.05);">
+            <div style="font-size:0.6rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#0091C2; margin-bottom:4px;">Categoria</div>
+            <div style="font-size:0.9rem; line-height:1.3; color:#0F172A; font-weight:700;">${secondUnitCatDisplay}</div>
+          </div>` : ''}
           <div style="padding:10px 14px; border-bottom:1px solid #CBD5E1;">
             <div style="font-size:0.6rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#475569; margin-bottom:4px;">Unidade</div>
             <div style="font-size:0.95rem; line-height:1.4; color:#0F172A; font-weight:800;">${escapeHtml(secondUnitItem.name)}</div>
           </div>
           <div style="padding:10px 14px; border-bottom:1px solid #CBD5E1;">
             <div style="font-size:0.6rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#475569; margin-bottom:4px;">Endereço</div>
-            <div style="font-size:0.86rem; line-height:1.4; color:#0F172A; font-weight:700;">${cleanPrintField(secondUnitItem.address, 'Endereço não informado — consultar coordenação.')}</div>
+            <div style="font-size:0.86rem; line-height:1.4; color:#0F172A; font-weight:700;">${secondUnitAddressPrint}</div>
           </div>
-          <div style="padding:10px 14px; background:rgba(17,94,89,0.04);">
+          <div style="padding:10px 14px; border-bottom:1px solid #CBD5E1; background:rgba(17,94,89,0.04);">
             <div style="font-size:0.6rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#475569; margin-bottom:4px;">Horário</div>
             <div style="font-size:0.86rem; line-height:1.4; color:#0F172A; font-weight:700;">${cleanPrintField(secondUnitItem.hours, 'A confirmar diretamente com a unidade.')}</div>
+          </div>
+          <div style="padding:10px 14px;">
+            <div style="font-size:0.6rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#475569; margin-bottom:4px;">Contato</div>
+            <div style="font-size:0.86rem; line-height:1.3; color:#0091C2; font-weight:800;">${secondUnitPhonesPrint}</div>
           </div>
         </div>
         <div style="font-size:0.56rem; line-height:1.4; color:#94A3B8; text-align:center; padding-top:6px; margin-top:8px; border-top:1px dashed #CBD5E1; flex-shrink:0;">
