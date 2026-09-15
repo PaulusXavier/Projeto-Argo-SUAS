@@ -251,55 +251,20 @@
                     </tr>
                 </thead>
                 <tbody id="fixedTable">
-                    <tr>
-                        <td><span class="tech-name">Fernanda Gomes</span></td>
-                        <td><span class="badge badge-azul">Psicóloga</span></td>
-                        <td>Buritis e Caimbé</td>
-                    </tr>
-                    <tr>
-                        <td><span class="tech-name">Cléo Sousa</span></td>
-                        <td><span class="badge badge-azul">Assistente Social</span></td>
-                        <td>Liberdade e Pricumã</td>
-                    </tr>
-                    <tr>
-                        <td><span class="tech-name">Bárbara Parente</span></td>
-                        <td><span class="badge badge-azul">Assistente Social</span></td>
-                        <td>Tancredo Neves, Cambará e Olímpico</td>
-                    </tr>
-                    <tr>
-                        <td><span class="tech-name">Susy Andrade</span></td>
-                        <td><span class="badge badge-azul">Pedagoga</span></td>
-                        <td>Centenário e Nova Canaã</td>
-                    </tr>
-                    <tr>
-                        <td><span class="tech-name">Paloma de Assis</span></td>
-                        <td><span class="badge badge-azul">Assistente Social</span></td>
-                        <td>Cinturão Verde e Jóquei Clube</td>
-                    </tr>
-                    <tr>
-                        <td><span class="tech-name">Rafaela Garcia</span></td>
-                        <td><span class="badge badge-azul">Assistente Social</span></td>
-                        <td>Asa Branca</td>
-                    </tr>
+                    <!-- Linhas geradas dinamicamente a partir de EQUIPE_CRAS_CRISTIANA (equipe-cras-cristiana.js) -->
                 </tbody>
             </table>
             <div class="card-footer">
                 <strong>Abrangência Geral:</strong>
-                <div class="tag-list">
-                    <span class="tag">13 de Setembro</span><span class="tag">Asa Branca</span><span class="tag">Buritis</span>
-                    <span class="tag">Caimbé</span><span class="tag">Cambará</span><span class="tag">Centenário</span>
-                    <span class="tag">Cinturão Verde</span><span class="tag">Jóquei Clube</span><span class="tag">Liberdade</span>
-                    <span class="tag">Marechal Rondon</span><span class="tag">Nova Canaã</span><span class="tag">Olímpico</span>
-                    <span class="tag">Pricumã</span><span class="tag">Araceli Souto Maior</span><span class="tag">Tancredo Neves</span>
+                <div class="tag-list" id="fixedCoverageTags">
+                    <!-- Tags geradas dinamicamente a partir de EQUIPE_CRAS_CRISTIANA.fixedCoverage -->
                 </div>
             </div>
         </div>
 
         <div class="card">
             <div class="card-header header-volante">🚗 Equipe Volante</div>
-            <div style="padding: 15px 20px; font-size: 13px; background: #fbfbff; border-bottom: 1px solid #eee;">
-                Responsável por levar serviços (PAIF, CadÚnico) a áreas de difícil acesso e populações dispersas.
-            </div>
+            <div id="volanteDescText" style="padding: 15px 20px; font-size: 13px; background: #fbfbff; border-bottom: 1px solid #eee;"></div>
             <table>
                 <thead>
                     <tr>
@@ -308,32 +273,12 @@
                     </tr>
                 </thead>
                 <tbody id="volanteTable">
-                    <tr>
-                        <td>
-                            <span class="tech-name">Keomara Teles</span>
-                            <small style="color:var(--text-muted)">Atendimento Itinerante</small>
-                        </td>
-                        <td><span class="badge badge-roxo">Assistente Social</span></td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <span class="tech-name">Danilo Braga</span>
-                            <small style="color:var(--text-muted)">Atendimento Itinerante</small>
-                        </td>
-                        <td><span class="badge badge-roxo">Psicólogo</span></td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <span class="tech-name">Paulo Xavier</span>
-                            <small style="color:var(--text-muted)">Atendimento Itinerante</small>
-                        </td>
-                        <td><span class="badge badge-roxo">Psicólogo</span></td>
-                    </tr>
+                    <!-- Linhas geradas dinamicamente a partir de EQUIPE_CRAS_CRISTIANA (equipe-cras-cristiana.js) -->
                 </tbody>
             </table>
             <div class="card-footer" style="flex-grow: 1;">
                 <strong>Território Volante:</strong>
-                <p style="margin: 8px 0; color: var(--text-muted); font-size: 12px;">Professora Araceli Souto Maior, 13 de Setembro e Ocupação Nova Vida.</p>
+                <p id="volanteCoverageText" style="margin: 8px 0; color: var(--text-muted); font-size: 12px;"></p>
             </div>
         </div>
 
@@ -349,7 +294,44 @@
     </footer>
 </div>
 
+<script src="equipe-cras-cristiana.js"></script>
 <script>
+// Monta as tabelas, a lista de bairros e os textos da Equipe Volante a partir
+// de EQUIPE_CRAS_CRISTIANA (equipe-cras-cristiana.js) — a mesma fonte de dados
+// usada pelo app principal (app.js). Para atualizar nomes/bairros/equipe,
+// edite apenas o arquivo equipe-cras-cristiana.js.
+function renderEquipe() {
+    const dados = typeof EQUIPE_CRAS_CRISTIANA !== "undefined" ? EQUIPE_CRAS_CRISTIANA : null;
+    if (!dados) return; // equipe-cras-cristiana.js não carregou; tabelas ficam vazias
+
+    const fixedBody = document.getElementById("fixedTable");
+    fixedBody.innerHTML = dados.fixedTeam.map(t => `
+        <tr>
+            <td><span class="tech-name">${t.name}</span></td>
+            <td><span class="badge badge-azul">${t.role}</span></td>
+            <td>${t.bairros}</td>
+        </tr>
+    `).join("");
+
+    const volanteBody = document.getElementById("volanteTable");
+    volanteBody.innerHTML = dados.volanteTeam.map(t => `
+        <tr>
+            <td>
+                <span class="tech-name">${t.name}</span>
+                <small style="color:var(--text-muted)">${t.note}</small>
+            </td>
+            <td><span class="badge badge-roxo">${t.role}</span></td>
+        </tr>
+    `).join("");
+
+    const tagsWrap = document.getElementById("fixedCoverageTags");
+    tagsWrap.innerHTML = dados.fixedCoverage.map(b => `<span class="tag">${b}</span>`).join("");
+
+    document.getElementById("volanteDescText").textContent = dados.volanteDesc;
+    document.getElementById("volanteCoverageText").textContent = dados.volanteCoverage;
+}
+renderEquipe();
+
 function search() {
     const input = document.getElementById("searchInput");
     const filter = input.value.toUpperCase();
