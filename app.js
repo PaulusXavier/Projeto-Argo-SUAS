@@ -82,6 +82,15 @@ function unlockApp() {
   if (appRoot) appRoot.dataset.locked = 'false';
   if (loginScreen) loginScreen.hidden = true;
   document.body.style.overflow = '';
+  // A lista completa (374 fichas) só é montada por render() logo em seguida
+  // (ver comentário no submit do login, mais abaixo), o que leva uma fração
+  // de segundo. Mostra um aviso simples nesse intervalo em vez de deixar a
+  // tela em branco, para o desbloqueio parecer imediato mesmo enquanto o
+  // grid ainda está sendo construído.
+  const grid = document.getElementById('grid');
+  if (grid && !grid.innerHTML.trim()) {
+    grid.innerHTML = '<div class="empty-state" id="unlockLoadingHint"><strong>Carregando diretório…</strong></div>';
+  }
 }
 
 function lockApp() {
@@ -144,6 +153,20 @@ function initAuth() {
         errorEl.classList.remove('visible');
         sessionEncKey = await deriveSessionKey(value);
         unlockApp();
+        // Monta a lista de 374 fichas (render()) só DEPOIS que o navegador
+        // já pintou a tela desbloqueada (ver comentário em unlockApp) —
+        // antes, esse processamento pesado rodava competindo com o próprio
+        // clique em "Entrar" (já que é síncrono e trava a thread principal
+        // por um instante), dando a impressão de que o clique demorava para
+        // responder. O duplo requestAnimationFrame garante que o quadro com
+        // a tela desbloqueada/aviso de carregamento já foi desenhado antes
+        // de começar o trabalho pesado.
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (typeof render === 'function') render();
+            if (typeof syncCategoryToggleLabel === 'function') syncCategoryToggleLabel();
+          });
+        });
       } else {
         authFailedAttempts++;
         if (authFailedAttempts >= AUTH_MAX_ATTEMPTS) {
@@ -9008,17 +9031,19 @@ function initPdfToolsPanel() {
 }
 
 // A tela de login precisa ficar pronta (travada e com o campo de senha
-// interativo) IMEDIATAMENTE. Antes, render() rodava primeiro e montava de
-// uma vez o HTML das 374 fichas do diretório (com leitura de anotações/
-// anexos no localStorage a cada uma) — era esse processamento pesado,
-// executado antes mesmo de travar a tela, que travava/atrasava o login.
-// Agora initAuth() trava a tela e liga os listeners primeiro, e o
-// render() pesado só roda depois, num próximo quadro (requestAnimationFrame),
-// dando tempo do navegador pintar a tela de login antes de processar a lista.
+// interativo) IMEDIATAMENTE, e o clique em "Entrar" precisa responder na
+// hora. Antes, o render() pesado (as 374 fichas do diretório, com leitura
+// de anotações/anexos no localStorage a cada uma) rodava logo depois do
+// carregamento da página, num requestAnimationFrame — mas isso acontecia
+// ainda ENQUANTO a pessoa digitava a senha, então se ela clicasse em
+// "Entrar" nesse meio-tempo, o clique ficava esperando essa montagem pesada
+// (síncrona) liberar a thread principal antes de ser processado, dando a
+// sensação de lentidão para entrar no aplicativo.
+// Agora esse render() só é chamado uma vez, e só DEPOIS do login bem
+// sucedido (ver o submit do #loginForm, em initAuth), nunca antes — assim
+// ele nunca concorre com o clique de entrar, e a tela de login em si fica
+// leve e responsiva do início ao fim.
 initAuth();
 applyStoredTheme();
 updateHeaderFooterStats();
-requestAnimationFrame(() => {
-  render();
-  syncCategoryToggleLabel();
-});
+syncCategoryToggleLabel();
