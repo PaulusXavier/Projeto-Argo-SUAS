@@ -224,6 +224,26 @@
 
   header.hero .container { width: 100%; max-width: 1200px; margin: 0 auto; position: relative; z-index: 1; }
 
+  /* Foto do navio Argo como fundo discreto do cabeçalho, mesma técnica usada
+     no painel da tela de login (.login-story-historic): baixa opacidade +
+     mix-blend-mode, para não competir com o texto em primeiro plano. */
+  .hero-ship-photo {
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    background-image: url('argo-navis-historico.jpg');
+    background-size: cover;
+    background-position: center 38%;
+    background-repeat: no-repeat;
+    opacity: 0.24;
+    mix-blend-mode: luminosity;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  @media (max-width: 760px) {
+    .hero-ship-photo { opacity: 0.16; }
+  }
+
 
 
   .argo-emblem {
