@@ -4639,22 +4639,13 @@ const DATA = [
     phones: ["(95) 98402-6617"],
     services: "PAIF, busca ativa, acompanhamento familiar e articulação em rede, além de acesso rápido a sistemas municipais, sistemas federais do Bolsa Família/CadÚnico, gestão de atendimentos (RMA) e pastas compartilhadas da equipe no Google Drive.",
     desc: "O CRAS (Centro de Referência de Assistência Social) é a porta de entrada do SUAS. A equipe técnica, composta por assistentes sociais, psicólogos e pedagogos, atua no atendimento a famílias em vulnerabilidade social, realizando o PAIF, busca ativa, acompanhamento e articulação em rede. A Equipe Volante é responsável por levar serviços (PAIF, CadÚnico) a áreas de difícil acesso e populações dispersas. Este painel também reúne os atalhos técnicos de uso interno da equipe: sistemas municipais (BV Cidadão, Cidade Social, Contracheque, Banco de Talentos, Cédula C), sistemas federais (SIBEC, SIGPBF, Carteira do Idoso, CadÚnico, calendários de condicionalidades e pagamento do PBF), a gestão de atendimentos via RMA e as nuvens de arquivos de cada técnico no Google Drive.",
-    fixedTeam: [
-      { name: "Fernanda Gomes", role: "Psicóloga", bairros: "Buritis e Caimbé" },
-      { name: "Cléo Sousa", role: "Assistente Social", bairros: "Liberdade e Pricumã" },
-      { name: "Bárbara Parente", role: "Assistente Social", bairros: "Tancredo Neves, Cambará e Olímpico" },
-      { name: "Susy Andrade", role: "Pedagoga", bairros: "Centenário e Nova Canaã" },
-      { name: "Paloma de Assis", role: "Assistente Social", bairros: "Cinturão Verde e Jóquei Clube" },
-      { name: "Rafaela Garcia", role: "Assistente Social", bairros: "Asa Branca" }
-    ],
-    fixedCoverage: ["13 de Setembro", "Asa Branca", "Buritis", "Caimbé", "Cambará", "Centenário", "Cinturão Verde", "Jóquei Clube", "Liberdade", "Marechal Rondon", "Nova Canaã", "Olímpico", "Pricumã", "Araceli Souto Maior", "Tancredo Neves"],
-    volanteTeam: [
-      { name: "Keomara Teles", role: "Assistente Social", note: "Atendimento Itinerante" },
-      { name: "Danilo Braga", role: "Psicólogo", note: "Atendimento Itinerante" },
-      { name: "Paulo Xavier", role: "Psicólogo", note: "Atendimento Itinerante" }
-    ],
-    volanteDesc: "Responsável por levar serviços (PAIF, CadÚnico) a áreas de difícil acesso e populações dispersas.",
-    volanteCoverage: "Professora Araceli Souto Maior, 13 de Setembro e Ocupação Nova Vida.",
+    // Dados da equipe vêm de equipe-cras-cristiana.js (fonte única, compartilhada
+    // com o painel avulso Divisão_Territorial___Equipe_Técnica_-_CRAS_Cristiana.html).
+    fixedTeam: EQUIPE_CRAS_CRISTIANA.fixedTeam,
+    fixedCoverage: EQUIPE_CRAS_CRISTIANA.fixedCoverage,
+    volanteTeam: EQUIPE_CRAS_CRISTIANA.volanteTeam,
+    volanteDesc: EQUIPE_CRAS_CRISTIANA.volanteDesc,
+    volanteCoverage: EQUIPE_CRAS_CRISTIANA.volanteCoverage,
     municipalLinks: [
       { label: "BV Cidadão", icon: "badge", url: "https://bvcidadao.prefeitura.boavista.br/proton/login.asp" },
       { label: "Cidade Social", icon: "building", url: "https://cidadesocial1.ae3tecnologia.com.br/login" },
