@@ -5816,37 +5816,49 @@ function renderCrasCard(i, query) {
   `;
 }
 
+// Contagem por categoria (para os números nos chips da barra lateral) é
+// recalculada em TODO render() — ou seja, a cada tecla digitada na busca e a
+// cada troca de aba. Como o conjunto de categorias de cada unidade (i.cat)
+// nunca muda depois que o app carrega, a varredura das ~370 unidades × ~24
+// categorias é sempre o mesmo resultado, refeita à toa. Agora ela roda uma
+// única vez (cacheada em _staticChipCounts) e só o total de favoritos, que
+// realmente muda com a interação da pessoa, é recalculado a cada chamada.
+let _staticChipCounts = null;
 function updateChipCounts() {
-  const counts = {
-    all: DATA.length, hospitalar: 0, saude: 0, tea: 0, social: 0, educacao: 0, juridico: 0,
-    conselho: 0, delegacias: 0, bancos: 0, previdencia: 0, trabalho: 0, documentacao: 0, habitacao: 0, mobilidade: 0, informes: 0, cas: 0,
-    cras: 0, migracao: 0, alimentar: 0, mulher: 0, cultura: 0, defesacivil: 0, conselhosdireitos: 0, favoritos: 0
-  };
-  DATA.forEach(i => {
-    if (i.cat.includes('hospitalar')) counts.hospitalar++;
-    if (i.cat.includes('saude')) counts.saude++;
-    if (i.cat.includes('tea')) counts.tea++;
-    if (i.cat.includes('social') || i.cat.includes('idoso')) counts.social++;
-    if (i.cat.includes('educacao')) counts.educacao++;
-    if (i.cat.includes('juridico')) counts.juridico++;
-    if (i.cat.includes('conselho')) counts.conselho++;
-    if (i.cat.includes('delegacias')) counts.delegacias++;
-    if (i.cat.includes('bancos')) counts.bancos++;
-    if (i.cat.includes('previdencia')) counts.previdencia++;
-    if (i.cat.includes('trabalho')) counts.trabalho++;
-    if (i.cat.includes('documentacao')) counts.documentacao++;
-    if (i.cat.includes('migracao')) counts.migracao++;
-    if (i.cat.includes('habitacao')) counts.habitacao++;
-    if (i.cat.includes('mobilidade')) counts.mobilidade++;
-    if (i.cat.includes('informes')) counts.informes++;
-    if (i.cat.includes('cas')) counts.cas++;
-    if (i.cat.includes('cras')) counts.cras++;
-    if (i.cat.includes('alimentar')) counts.alimentar++;
-    if (i.cat.includes('mulher')) counts.mulher++;
-    if (i.cat.includes('cultura')) counts.cultura++;
-    if (i.cat.includes('defesacivil')) counts.defesacivil++;
-    if (i.cat.includes('conselhosdireitos')) counts.conselhosdireitos++;
-  });
+  if (!_staticChipCounts) {
+    const counts = {
+      all: DATA.length, hospitalar: 0, saude: 0, tea: 0, social: 0, educacao: 0, juridico: 0,
+      conselho: 0, delegacias: 0, bancos: 0, previdencia: 0, trabalho: 0, documentacao: 0, habitacao: 0, mobilidade: 0, informes: 0, cas: 0,
+      cras: 0, migracao: 0, alimentar: 0, mulher: 0, cultura: 0, defesacivil: 0, conselhosdireitos: 0
+    };
+    DATA.forEach(i => {
+      if (i.cat.includes('hospitalar')) counts.hospitalar++;
+      if (i.cat.includes('saude')) counts.saude++;
+      if (i.cat.includes('tea')) counts.tea++;
+      if (i.cat.includes('social') || i.cat.includes('idoso')) counts.social++;
+      if (i.cat.includes('educacao')) counts.educacao++;
+      if (i.cat.includes('juridico')) counts.juridico++;
+      if (i.cat.includes('conselho')) counts.conselho++;
+      if (i.cat.includes('delegacias')) counts.delegacias++;
+      if (i.cat.includes('bancos')) counts.bancos++;
+      if (i.cat.includes('previdencia')) counts.previdencia++;
+      if (i.cat.includes('trabalho')) counts.trabalho++;
+      if (i.cat.includes('documentacao')) counts.documentacao++;
+      if (i.cat.includes('migracao')) counts.migracao++;
+      if (i.cat.includes('habitacao')) counts.habitacao++;
+      if (i.cat.includes('mobilidade')) counts.mobilidade++;
+      if (i.cat.includes('informes')) counts.informes++;
+      if (i.cat.includes('cas')) counts.cas++;
+      if (i.cat.includes('cras')) counts.cras++;
+      if (i.cat.includes('alimentar')) counts.alimentar++;
+      if (i.cat.includes('mulher')) counts.mulher++;
+      if (i.cat.includes('cultura')) counts.cultura++;
+      if (i.cat.includes('defesacivil')) counts.defesacivil++;
+      if (i.cat.includes('conselhosdireitos')) counts.conselhosdireitos++;
+    });
+    _staticChipCounts = counts;
+  }
+  const counts = _staticChipCounts;
   counts.favoritos = getFavoriteIds().size;
 
   const setCount = (id, value) => {
