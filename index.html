@@ -1,722 +1,3495 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<script>
-  // Aplica o tema salvo (claro/escuro) o mais cedo possível, antes do
-  // CSS ser pintado, para não haver um "flash" com o tema errado.
-  // Sem preferência salva, o app segue o tema do sistema operacional
-  // normalmente (nenhum atributo é definido).
-  (function () {
-    try {
-      var pref = localStorage.getItem('argo_theme_pref');
-      if (pref === 'light' || pref === 'dark') {
-        document.documentElement.setAttribute('data-theme', pref);
-      }
-    } catch (e) { /* localStorage indisponível (modo privado) - segue o sistema */ }
-  })();
-</script>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://upload.wikimedia.org; connect-src 'self' https://api.mymemory.translated.net https://nominatim.openstreetmap.org; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
-<meta name="referrer" content="strict-origin-when-cross-origin">
-<title>Argo SUAS · Gestão Técnica de Equipamentos</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Lora:ital,wght@0,400;0,500;1,400&amp;display=swap" rel="stylesheet">
-<meta name="theme-color" content="#0F4A41">
-<!-- PWA em tela cheia no iOS (adicionar à Tela de Início) -->
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Argo SUAS">
-<meta name="format-detection" content="telephone=no">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="icon" href="favicon.ico">
+:root {
+    --brand-primary: #0091C2;
+    --brand-primary-light: #29ABE2;
+    --brand-secondary: #0F172A;
+    --brand-info: #B45309;
+    --brand-info-light: #D97706;
+    --brand-team: #6c5ce7;
+    --brand-team-light: #8b7bf0;
+    --text-main: #1E293B;
+    --text-muted: #475569;
+    --bg-main: #F8FAFC;
+    --bg-card: #FFFFFF;
+    --border-ui: #E2E8F0;
+    --radius-ui: 12px;
+    --font-sans: 'Inter', -apple-system, sans-serif;
+    --font-serif: 'Lora', serif;
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+    --shadow-sm: 0 2px 8px -2px rgba(15, 23, 42, 0.08);
+    --shadow-md: 0 12px 28px -8px rgba(15, 23, 42, 0.16);
+    --shadow-lg: 0 24px 48px -12px rgba(15, 23, 42, 0.28);
+  }
 
-<link rel="stylesheet" href="styles.css">
-</head>
-<body>
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --text-main: #F1F5F9;
+      --text-muted: #A7B7CC;
+      --bg-main: #050912;
+      --bg-card: #151F35;
+      --border-ui: #2B3B58;
+      --shadow-xs: 0 0 0 1px rgba(255, 255, 255, 0.06);
+      --shadow-sm: 0 4px 16px -4px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.07);
+      --shadow-md: 0 14px 32px -8px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.09);
+      --shadow-lg: 0 26px 56px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.11);
+    }
+  }
 
-<div id="loginScreen" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
-  <div class="login-shell">
+  :root[data-theme="dark"] {
+    --text-main: #F1F5F9;
+    --text-muted: #A7B7CC;
+    --bg-main: #050912;
+    --bg-card: #151F35;
+    --border-ui: #2B3B58;
+    --shadow-xs: 0 0 0 1px rgba(255, 255, 255, 0.06);
+    --shadow-sm: 0 4px 16px -4px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.07);
+    --shadow-md: 0 14px 32px -8px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.09);
+    --shadow-lg: 0 26px 56px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.11);
+  }
 
-    <div class="login-story" aria-hidden="true">
-      <div class="login-story-stripe"></div>
-      <div class="login-story-historic"></div>
-      <div class="login-story-glow"></div>
+  html {
+    scroll-behavior: smooth;
+    scrollbar-color: var(--border-ui) var(--bg-main);
+    scrollbar-width: thin;
+  }
 
-      <svg class="login-story-emblem" viewBox="0 0 320 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Constelação real de Argo Navis, com a estrela-guia Canopus em destaque">
-        <g class="const-lines">
-            <line class="const-line" x1="133.8" y1="27.1" x2="86.9" y2="75.6"/>
-            <line class="const-line" x1="86.9" y1="75.6" x2="37.2" y2="134.7"/>
-            <line class="const-line" x1="37.2" y1="134.7" x2="147.7" y2="160.5"/>
-            <line class="const-line" x1="147.7" y1="160.5" x2="198.5" y2="159.6"/>
-            <line class="const-line" x1="198.5" y1="159.6" x2="203.0" y2="143.4"/>
-            <line class="const-line" x1="203.0" y1="143.4" x2="278.4" y2="179.0"/>
-            <line class="const-line" x1="278.4" y1="179.0" x2="293.4" y2="171.1"/>
-            <line class="const-line" x1="130.4" y1="86.6" x2="135.4" y2="114.4"/>
-            <line class="const-line" x1="135.4" y1="114.4" x2="189.6" y2="99.6"/>
-            <line class="const-line" x1="189.6" y1="99.6" x2="211.9" y2="88.4"/>
-            <line class="const-line" x1="211.9" y1="88.4" x2="225.9" y2="151.1"/>
-            <line class="const-line" x1="225.9" y1="151.1" x2="203.0" y2="143.4"/>
-            <line class="const-line" x1="167.3" y1="60.8" x2="168.4" y2="142.3"/>
-            <line class="const-line" x1="168.4" y1="142.3" x2="147.7" y2="160.5"/>
-            <line class="const-line" x1="135.4" y1="114.4" x2="37.2" y2="134.7"/>
-        </g>
-        <g class="const-stars">
-            <circle class="const-star guide-star-glow" cx="37.2" cy="134.7" r="13.0"/>
-            <circle class="const-star guide-star" cx="37.2" cy="134.7" r="3.81"/>
-            <circle class="const-star" cx="130.4" cy="86.6" r="2.18"/>
-            <circle class="const-star" cx="135.4" cy="114.4" r="2.44"/>
-            <circle class="const-star" cx="147.7" cy="160.5" r="2.38"/>
-            <circle class="const-star" cx="168.4" cy="142.3" r="2.34"/>
-            <circle class="const-star" cx="167.3" cy="60.8" r="1.38"/>
-            <circle class="const-star" cx="189.6" cy="99.6" r="2.18"/>
-            <circle class="const-star" cx="194.6" cy="199.2" r="2.48"/>
-            <circle class="const-star" cx="198.5" cy="159.6" r="2.16"/>
-            <circle class="const-star" cx="203.0" cy="143.4" r="2.04"/>
-            <circle class="const-star" cx="133.8" cy="27.1" r="1.85"/>
-            <circle class="const-star" cx="86.9" cy="75.6" r="1.91"/>
-            <circle class="const-star" cx="278.4" cy="179.0" r="1.89"/>
-            <circle class="const-star" cx="211.9" cy="88.4" r="1.42"/>
-            <circle class="const-star" cx="225.9" cy="151.1" r="1.68"/>
-            <circle class="const-star" cx="293.4" cy="171.1" r="1.29"/>
-        </g>
-      </svg>
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg-main); }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-ui);
+    border-radius: 999px;
+    border: 2px solid var(--bg-main);
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--brand-primary-light); }
 
-      <div class="login-story-top">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#29ABE2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        <span class="login-story-eyebrow">Acesso Restrito</span>
-      </div>
+  ::selection {
+    background: var(--brand-primary);
+    color: #fff;
+  }
 
-      <div class="login-story-content">
-        <p class="login-story-brand">
-          Argo<span>SUAS</span>
-        </p>
-        <p class="login-story-tagline">Rede de Políticas Públicas de Roraima</p>
-        <p class="login-story-desc">Diretório técnico de equipamentos de Políticas Públicas do estado de Roraima.</p>
-        <div class="login-story-tags" aria-hidden="true">
-          <span>Assistência Social</span><span>Educação</span><span>Saúde</span><span>Segurança Pública</span>
-        </div>
-      </div>
-    </div>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-    <div class="login-panel">
-      <span class="login-eyebrow">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        Equipe Técnica
-      </span>
-      <h1 id="loginTitle" class="login-title">Entrar no painel</h1>
-      <svg class="login-river" viewBox="0 0 84 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <path d="M0,5 C10,0 15,10 25,5 C35,0 40,10 50,5 C60,0 65,10 75,5 C78,4 81,5 84,5" stroke-width="2" stroke-linecap="round"/>
-      </svg>
-      <p class="login-sub">Use a senha compartilhada da equipe para acessar o diretório de equipamentos.</p>
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible {
+    outline: 3px solid var(--brand-primary-light);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
 
-      <form id="loginForm" autocomplete="off" novalidate>
-        <div class="login-field">
-          <label for="loginPassword">Senha de acesso</label>
-          <div class="login-input-wrapper">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            <input type="password" id="loginPassword" name="password" placeholder="Digite a senha da equipe" autocomplete="current-password" required>
-            <button type="button" id="loginToggleVisibility" class="login-toggle-visibility" aria-label="Mostrar senha" aria-pressed="false">
-              <svg class="icon-eye" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
-              <svg class="icon-eye-off" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.62 21.62 0 0 1 5.06-6.06M9.9 4.24A10.4 10.4 0 0 1 12 4c7 0 11 8 11 8a21.6 21.6 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-            </button>
-          </div>
-        </div>
+  .skip-link {
+    position: absolute;
+    top: -60px;
+    left: 1rem;
+    background: var(--brand-primary);
+    color: white;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    z-index: 1000;
+    transition: top 0.2s;
+  }
 
-        <div id="loginError" class="login-error" role="alert">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <span id="loginErrorText">Senha incorreta. Tente novamente.</span>
-        </div>
+  .skip-link:focus {
+    top: 1rem;
+  }
 
-        <button type="submit" class="login-submit">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-          Entrar
-        </button>
+  /* Plano de fundo temático: a constelação de Argo Navis (argo-constellation-bg.svg,
+     mesmas estrelas reais usadas no cabeçalho e na tela de login) cobrindo
+     todo o plano de fundo do aplicativo (background-size: cover), em opacidade
+     alta — como a foto do navio na tela de login — reforçando a identidade
+     náutica do "Argo SUAS" sem depender de uma foto do navio.
+     O emblema do navio fica no rodapé (footer.site-footer), onde tem fundo
+     escuro contínuo e fica sempre visível — em vez de depender das margens
+     ao redor do container, que somem na maior parte das larguras de tela. */
+  body {
+    margin: 0;
+    background-color: var(--bg-main);
+    background-image:
+      radial-gradient(120% 60% at 50% 0%, rgba(15, 74, 65, 0.07) 0%, rgba(15, 74, 65, 0) 62%),
+      url('argo-constellation-bg.svg'),
+      url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgNDgiIHdpZHRoPSIyNDAiIGhlaWdodD0iNDgiPgo8cGF0aCBkPSJNMCwzMCBDMTUsMjEgMTUsMzkgMzAsMzAgQzQ1LDM5IDQ1LDIxIDYwLDMwIEM3NSwyMSA3NSwzOSA5MCwzMCBDMTA1LDM5IDEwNSwyMSAxMjAsMzAgQzEzNSwyMSAxMzUsMzkgMTUwLDMwIEMxNjUsMzkgMTY1LDIxIDE4MCwzMCBDMTk1LDIxIDE5NSwzOSAyMTAsMzAgQzIyNSwzOSAyMjUsMjEgMjQwLDMwIiBmaWxsPSJub25lIiBzdHJva2U9IiMwMDkxQzIiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuMDkiLz4KPHBhdGggZD0iTTAsMTQgQzE1LDggMTUsMjAgMzAsMTQgQzQ1LDIwIDQ1LDggNjAsMTQgQzc1LDggNzUsMjAgOTAsMTQgQzEwNSwyMCAxMDUsOCAxMjAsMTQgQzEzNSw4IDEzNSwyMCAxNTAsMTQgQzE2NSwyMCAxNjUsOCAxODAsMTQgQzE5NSw4IDE5NSwyMCAyMTAsMTQgQzIyNSwyMCAyMjUsOCAyNDAsMTQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0U4QUMzRCIgc3Ryb2tlLXdpZHRoPSIxLjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4xMCIvPgo8L3N2Zz4=');
+    background-repeat: no-repeat, no-repeat, repeat;
+    background-position: top center, center center, top left;
+    background-size: 100% 480px, cover, 240px 48px;
+    background-attachment: scroll, scroll, scroll;
+    color: var(--text-main);
+    font-family: var(--font-sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
 
-        <p class="login-trust-note">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          <span>Verificação feita neste dispositivo — a senha não é enviada a servidores.</span>
-        </p>
-      </form>
+  /* background-attachment: fixed cria uma camada extra que o navegador
+     precisa repintar a cada evento de rolagem — em celulares isso é uma
+     causa conhecida de scroll travado/lento. Por isso o fundo é "scroll"
+     por padrão (acompanha a página normalmente) e só vira "fixed" (efeito
+     parallax sutil) em telas grandes com mouse, onde o custo é desprezível. */
+  @media (min-width: 900px) and (pointer: fine) {
+    body { background-attachment: fixed, fixed, fixed; }
+  }
 
-      <p class="login-footnote">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-        <span>Acesso destinado à <strong>equipe técnica do SUAS</strong> em Boa Vista - RR. Em caso de dúvida sobre a senha, contate a coordenação.</span>
-      </p>
-      <p class="login-footnote">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <span>Nomes, endereços, NIS, anotações e anexos salvos neste navegador ficam cifrados com esta senha — quem não souber a senha não consegue lê-los, mesmo acessando o arquivo do site ou o armazenamento do navegador. Ainda assim, o código do app pode ser visto por qualquer pessoa com a URL. Antes de emprestar ou devolver um computador compartilhado, use "Apagar dados salvos neste dispositivo" no rodapé para remover nomes, anotações e anexos de atendidos.</span>
-      </p>
-    </div>
+  @media (prefers-color-scheme: dark) {
+    html:not([data-theme="light"]) body {
+      background-image:
+        radial-gradient(120% 55% at 50% 0%, rgba(232, 172, 61, 0.09) 0%, rgba(232, 172, 61, 0) 60%),
+        url('argo-constellation-bg.svg'),
+        url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgNDgiIHdpZHRoPSIyNDAiIGhlaWdodD0iNDgiPgo8cGF0aCBkPSJNMCwzMCBDMTUsMjEgMTUsMzkgMzAsMzAgQzQ1LDM5IDQ1LDIxIDYwLDMwIEM3NSwyMSA3NSwzOSA5MCwzMCBDMTA1LDM5IDEwNSwyMSAxMjAsMzAgQzEzNSwyMSAxMzUsMzkgMTUwLDMwIEMxNjUsMzkgMTY1LDIxIDE4MCwzMCBDMTk1LDIxIDE5NSwzOSAyMTAsMzAgQzIyNSwzOSAyMjUsMjEgMjQwLDMwIiBmaWxsPSJub25lIiBzdHJva2U9IiMyOUFCRTIiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuMTQiLz4KPHBhdGggZD0iTTAsMTQgQzE1LDggMTUsMjAgMzAsMTQgQzQ1LDIwIDQ1LDggNjAsMTQgQzc1LDggNzUsMjAgOTAsMTQgQzEwNSwyMCAxMDUsOCAxMjAsMTQgQzEzNSw4IDEzNSwyMCAxNTAsMTQgQzE2NSwyMCAxNjUsOCAxODAsMTQgQzE5NSw4IDE5NSwyMCAyMTAsMTQgQzIyNSwyMCAyMjUsOCAyNDAsMTQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0U4QUMzRCIgc3Ryb2tlLXdpZHRoPSIxLjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4xMiIvPgo8L3N2Zz4=');
+      background-repeat: no-repeat, no-repeat, repeat;
+      background-position: top center, center center, top left;
+      background-size: 100% 560px, cover, 240px 48px;
+    }
+  }
 
-  </div>
-</div>
+  html[data-theme="dark"] body {
+    background-image:
+      radial-gradient(120% 55% at 50% 0%, rgba(232, 172, 61, 0.09) 0%, rgba(232, 172, 61, 0) 60%),
+      url('argo-constellation-bg.svg'),
+      url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgNDgiIHdpZHRoPSIyNDAiIGhlaWdodD0iNDgiPgo8cGF0aCBkPSJNMCwzMCBDMTUsMjEgMTUsMzkgMzAsMzAgQzQ1LDM5IDQ1LDIxIDYwLDMwIEM3NSwyMSA3NSwzOSA5MCwzMCBDMTA1LDM5IDEwNSwyMSAxMjAsMzAgQzEzNSwyMSAxMzUsMzkgMTUwLDMwIEMxNjUsMzkgMTY1LDIxIDE4MCwzMCBDMTk1LDIxIDE5NSwzOSAyMTAsMzAgQzIyNSwzOSAyMjUsMjEgMjQwLDMwIiBmaWxsPSJub25lIiBzdHJva2U9IiMyOUFCRTIiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuMTQiLz4KPHBhdGggZD0iTTAsMTQgQzE1LDggMTUsMjAgMzAsMTQgQzQ1LDIwIDQ1LDggNjAsMTQgQzc1LDggNzUsMjAgOTAsMTQgQzEwNSwyMCAxMDUsOCAxMjAsMTQgQzEzNSw4IDEzNSwyMCAxNTAsMTQgQzE2NSwyMCAxNjUsOCAxODAsMTQgQzE5NSw4IDE5NSwyMCAyMTAsMTQgQzIyNSwyMCAyMjUsOCAyNDAsMTQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0U4QUMzRCIgc3Ryb2tlLXdpZHRoPSIxLjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4xMiIvPgo8L3N2Zz4=');
+    background-repeat: no-repeat, no-repeat, repeat;
+    background-position: top center, center center, top left;
+    background-size: 100% 560px, cover, 240px 48px;
+  }
 
-<div id="appRoot" data-locked="true">
 
-<a href="#mainContent" class="skip-link">Pular para o conteúdo</a>
+  .tech-card {
+    position: relative;
+    z-index: 1;
+    background: var(--bg-card);
+    border: 1px solid var(--border-ui);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease), border-color 0.25s var(--ease);
+  }
 
-<header class="hero">
-  <!-- Foto do navio Argo usada como imagem de fundo discreta no canto esquerdo
-       do cabeçalho, na mesma técnica (baixa opacidade + mix-blend-mode) usada
-       no painel da tela de login — no lugar do antigo navio animado em SVG. -->
-  <div class="hero-ship-photo" aria-hidden="true"></div>
-  <svg class="argo-emblem" viewBox="0 0 320 230" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" aria-label="Constelação real de Argo Navis, com a estrela-guia Canopus em destaque">
-    <g class="const-lines">
-        <line class="const-line" x1="133.8" y1="27.1" x2="86.9" y2="75.6"/>
-        <line class="const-line" x1="86.9" y1="75.6" x2="37.2" y2="134.7"/>
-        <line class="const-line" x1="37.2" y1="134.7" x2="147.7" y2="160.5"/>
-        <line class="const-line" x1="147.7" y1="160.5" x2="198.5" y2="159.6"/>
-        <line class="const-line" x1="198.5" y1="159.6" x2="203.0" y2="143.4"/>
-        <line class="const-line" x1="203.0" y1="143.4" x2="278.4" y2="179.0"/>
-        <line class="const-line" x1="278.4" y1="179.0" x2="293.4" y2="171.1"/>
-        <line class="const-line" x1="130.4" y1="86.6" x2="135.4" y2="114.4"/>
-        <line class="const-line" x1="135.4" y1="114.4" x2="189.6" y2="99.6"/>
-        <line class="const-line" x1="189.6" y1="99.6" x2="211.9" y2="88.4"/>
-        <line class="const-line" x1="211.9" y1="88.4" x2="225.9" y2="151.1"/>
-        <line class="const-line" x1="225.9" y1="151.1" x2="203.0" y2="143.4"/>
-        <line class="const-line" x1="167.3" y1="60.8" x2="168.4" y2="142.3"/>
-        <line class="const-line" x1="168.4" y1="142.3" x2="147.7" y2="160.5"/>
-        <line class="const-line" x1="135.4" y1="114.4" x2="37.2" y2="134.7"/>
-    </g>
-    <g class="const-stars">
-        <circle class="const-star guide-star-glow" cx="37.2" cy="134.7" r="13.0"/>
-        <circle class="const-star guide-star" cx="37.2" cy="134.7" r="3.81"/>
-        <circle class="const-star" cx="130.4" cy="86.6" r="2.18"/>
-        <circle class="const-star" cx="135.4" cy="114.4" r="2.44"/>
-        <circle class="const-star" cx="147.7" cy="160.5" r="2.38"/>
-        <circle class="const-star" cx="168.4" cy="142.3" r="2.34"/>
-        <circle class="const-star" cx="167.3" cy="60.8" r="1.38"/>
-        <circle class="const-star" cx="189.6" cy="99.6" r="2.18"/>
-        <circle class="const-star" cx="194.6" cy="199.2" r="2.48"/>
-        <circle class="const-star" cx="198.5" cy="159.6" r="2.16"/>
-        <circle class="const-star" cx="203.0" cy="143.4" r="2.04"/>
-        <circle class="const-star" cx="133.8" cy="27.1" r="1.85"/>
-        <circle class="const-star" cx="86.9" cy="75.6" r="1.91"/>
-        <circle class="const-star" cx="278.4" cy="179.0" r="1.89"/>
-        <circle class="const-star" cx="211.9" cy="88.4" r="1.42"/>
-        <circle class="const-star" cx="225.9" cy="151.1" r="1.68"/>
-        <circle class="const-star" cx="293.4" cy="171.1" r="1.29"/>
-    </g>
-  </svg>
-  <div class="container">
-    <p class="hero-eyebrow">
-      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAScAAAETCAYAAAB0scD6AAAOXklEQVR4nO3d7ZLjKBJGYTxR93/L3h89nnWpJQQoId9MzhOxsTFdVbaMpWOQv17v97sAFWc7yGv5VmA7/3hvAKRdPXLxiIbpiBMAScQJgCTihFEs7TAVcQLwxLQHqZ9ZFwwglVqErn726FldZk6oudu5WNrl9v7635O/H8LMCcC3GQ84n8vsmkkxcwJQysNZTsd1NCNOAFYuz5sjSJzwFOedYvO6/26vl3NOdTsceLxPDl7epbL/7RanHWLTizHZl8J9fxmojHFSGPDd3I05szN0yxIngqSt5f4hYPs6nT1liBNhyoHZ197+ClSGOGEPxGszxAlZTHl/F5b6NXsiTsiOaJ2TPx1CnLAroqXpv9kTcQJ+I1oiMsTpVQJMUREe30KzzruU8uK9dcA4HhQnIk7AMwRqkixxYnoNT9ECFWF731niBCAZ4gTYiDAbCSVTnFjaAYlkihPgjdmToQyvcwKwRm11Yh5mZk6ALfXZ08j2vcr9aZOW3+mSLU6cd4IC9UC1GgmO2TGYLU4AbLg/0BMnYI7Is6enYTIJG3EC8M19xvSRMU4yg4vtRZ49ucsYJwDnQn0OO3ECUIpYmEohTsBsLO0GEScAcrOmUvLGSXKwsS1mTwOyxglAcMQJWMN79uR9/d2IE7A32VMgxAmAJOIErBNuaeWJOAGwZhLhzHGSXUsDuJc5ToAij6Xd1XVKP4ATJyC/swhJh6kUvuAA8PAu6+MgH6MjZk4ALJktW4kTAEnECfDBa57qXsQJgCTiBMCK6WyQOAGQlD1O4Z4+xVY471SRPU4A1jAPLXECIIk4Ab5Y2v3tVQpxAvDclMASJwCSiBOAJ6YtS4kT4I/zTieIE4BRM6L632sTiRMAScQJwIjpS1HiBEAScQI0RDopvmRbiRMAFb/eqE+cAPRYNsMjTgAkEScArZaeFyNOgA7lk+Kzt+2vD4YkTgAkEScAd1xmdMQJQI3bUpM4AfB2+kUkxAnAFdcT9MQJwBn3Zw6JE6DFPQpFYxuIE4BfVofp8otvs8dJ4hEAQL/scQLQzurB/HI21IM4ASjFZ5VRjRhxAmAZppfV5REnYG/WYTJDnIB9eYbp9veJE7CnWWEyu1ziBOxHdin37WfWBQOQY/2M3DFMrZffFDRmTsAeZofJHHEC9FiHJFyYSskdJ966AqwLk+mSrhTOOQFZzXhwXjJj+sg8cwJ2tTpMU1YpzJyAPNRnS12XRZyA+GadX126jDsiTkBcM5/0aQ3TtG0gTkA8ClGafrnECYhj+VeC35i6PVnjxGuckMmK/dn1/NKZrHECMlCOUs+2DV0Hr3MCNCmHaQlmTsB+pKP0QZyAfVhFafqSrhSWdcAuQsyWvjFzAnKzjtKSWVMpOePEywiAgDOlo4xxAnY2M0pLH/iJE5CD2kzp8fYQJyC2VVFafrqEOAExqc2UvplsW7Y4cTIc2SlHyVS2OAEZeQfJ5UGfOAG6vKM0wmybiROgRylKbqdKiBOgQSlIEjLFiZPhiEY9SL3HlOntyRQnIAL1IMkgTsAa0aLkOmsqhTgBM0ULkpQsceJ8ExQQI0NZ4gR4yRgk9yVdKcQJGJExSHKIE3BvpxhJzJpKyREnzjdhhp2CJClDnAALxEjsgZ44YVfE6LmpY0icsAtiVCc1ayolfpzkBhQyiFFw0eMEfBCjtaaPN3FCVMTIjuQKhDghCmKkY8l9ETlOkrWHGWK0huxxFDlOyIMQ4S/ECR6IUVzL7ruocZKdiuIUMdIkfRxFjRO0ESM8RpxggRjFMzJrWno/R4yT9FR0E8QI00WME9YjRliOOOEMMcpNfklXSrw4saSbgxhBTrQ4wU6GIH0/WGW4PSuEeYCPFKcwgyoq08F7ti+8S67bqMRlXCPFCf12O1gJVCLEKZ/sBycz6HGhxi5KnEINqoPsQerB7MmW21hGiRP+tuMByIPURohTLKuDxLNheYQLe4Q4hRtUY15ROI47yyUsFSFOO/KOwNUDAoHai+t9/Y/nlTfYbdb0KvoH/273SQYh7zNmTv7UYhRyR0Y+ynHKfpCoRQmQohynjLIEiXNPcYR9kFc/55RFhHNJ6sIeZIG5jrlqnLLsiNGilGHcI413BG77BMs6exwc9jJEMzKXZbzizCnqjhhtlnSG7c/F8lhaflwqximaDFFS1npQcB/MtzRQasu6SLOmnQ+GVbf9bn/Y+T7wsmyJpxYnddkPBqUHB8Kka0mglOKkdGAczbojlN71rzz+R95jFUGk+/MU55zqZp5POnvXfwQrwhBlLHY2/T5SiZPazjj7JHftXf8elE46s5yLY+r+qhInFSueeVMLsVKY7ihsA36btj8rnHNSOFiVdnql9615fvImxqUYR+84eQ+iSgS81MZfLUye95XFfpp5X5vygOodJy8qH33rSWlb7qiF0vIy1aL1KiL7hmecPAZAbUdQlSEGvRSejFDZPz/b0TMm5rOnnU6Iq9zxLWYfKCznfl+/QhxL+f+2qGxP79ibbrfXzGnl4EeK0goqO7439XFQmVG5LfM8Zk6rbihvyO23y6xJPUxHPbOpJ7ftarx77gezsc24rMsQJY+DkjDp81zypf88p5kDmyFKM0U+KPGbV6Rajy+TbVt5zml2mHDN+6Tzkef2HM+h1K5LPeif7Vt5/y07BxX9dU6RoqS+o6+iEMrW6zj7PcX7cXWklgRqVZysb8iTO8HjWZCe22+9TQoxyGTkNUCrKG3T49c9rTjnpBqmz38r3aHZw6S2PU9E2tYZpt/+SM/WPT3hrfAK4JrsO3umMH3s/iTM3W1/dMzNXtZFecPkrE8C8DwglWKgNDudQeb9aJnMnDkphUlxx9klTC3Utgftpt13s+L0NAYe02XrgCkG0UO0UI7KcjtkKL6UIMOdzHIOo67uH+UHu9qydviUyYw4jQ7iLgfNTmFS254Irg7m1+F30rNe1hGmTXacBoRpXMvYqT1TaL4tlnEaOSjVBvgplnN/EOh1IhxDQ/uD1bJuNEw72SVMLayeele7XZZ6z9Uov3J9iEWcegcj6w6VZqd4qGUcrMbq7HJ2/3x4z0iZvt7raZwI0x8s5/5QOEA9gqVwu4/CvzD0SZw838zaw/vtI7uESdnMYCkHoDdQs94pMWQ0TtnCpH4dEUQbh9FPBY12O3uXeU8DdRXE7ssdiZP3TGSG0W1lORfvYG2R8Tb1zKIkZlC9LyWIFCbvHSx7mNQ+bgb3FI7LZj1xyhimJ68R2fnA3Pm2R7f0c8CfaF3WtWyoQpRaWGznrss59x0WJlqXeKPLO5NnCltmTtHCNHqi0wphgoXZ+6r8K8vv4pQpTJGuQ82Otxl/uN33tWWdwklXS7st59SC4vFJo1GpfdWTy7N3V3GKGKbZO6pymFp/Z7UVS5MjxXHo4XFsSb6a/BinaMu4j4gxbSW309zwHmv1GWSN59jdBWrkjchmX3AQNUx3Ii3nIh1IR6r7RuRYrSY1g/rEKfLMI+pyTmYneEh53zijGiuVcZzykbsjfiob8qEyaGcibbvKQWBFaWyf8P74W8VxlJhB3b0IU3HgWiks59zv4Aki7xN3Vocq4lgumz3V4qQ+cN7LOau/iUR9n7A0a/kXZQzdZ09ncYoweArLuXQfi3ojwn4x05OXLUQdO7OPPxnx87UBUQfwaMVyrvV3MsiyX8zA2Ez0eftKpEFWXM5lFWm/wBxX+8D042TW15HPorCc2wVjiQ+XfUHx68hHrVrOKYn4CZ5Ak0hx2nE55/U+K+Do7OT41HPVUeI085FeIUoqX99EmGDp0csRIsQp29tHVL+NhjDhztLXPkWIkyXennAuwjZCU+vSrnsfU4+T1axpZZRUD/SrMVDdXmhaNntSjpNFmFZFKeoBHnW74asnUMP7mHKcnpgdpWgHtcJJf+Q15Vk71TiNzpqIUrtMtwUJKcZpJEwzoxT9ID4bm+i3Cf6+l3ZT9ifFOPWYFaXMB2/m24a1pu5LanFqnTXNiFLGg5ZzTQhLKU4tYSJKz+x0WxGcUpzuWIZpx4N0x9uMwFTixOuR7LGkQ2gKceLp//kYA4SjEKdZOCCBwLzjxAnueRgHhOYZJ+swcTACiXjPnJ4iSEBSXl9wYDFrIkxAYh4zp6dhIkrABlbH6UmYiBKwkVVxIkoAuqyI02iYiBKwsZlxIkoAhs2K00iYiBKA/1jHiSgBMGEZp94wESUAlyzixGwJgLmncWK2BGCKJ3HqCRNRAtBl9L11hAnAVL0zJ6IEYImeOE3/bnQA+Ghd1hEmAEvdzZyIEgAXtZkTYQLg5mrm1BImogRgmrOZE2EC4O44c7oLE1ECsMT3zIkwAZDxiRNhAiDlp9TDRJQAuKi9lIAwAXBzFSfCBMDVTyFEAAR5fR05AFQRJwCSiBMAScQJgCTiBEAScer3LuNfta4ky+1AUrO+jhy/fSLwuvhvy8vO4BjN47i1/vvx8kYvp/Xfr352tz04QZyg5uyAv5rh1f796oHA+vJLuY5P7TIJ0w3iVNeyk5XyZ0cbOQg+O/nZI3Pvkqt2WVfbc7Zddwfa6Pb2HowWs5mW941azJauLv/s/kYjzjm1eR3+/6j1zdOvk/8+C0NtmfK9LbXL+t42izCNzDxqv/Mu59t2vF2tWm5n63Yeb/fd9pz9Te/14IA4tbk6t2A9Na+dw6j9ztnfnG3b6+Zntcs7/s7ddbRc7p2WJVDLA0bvbevZntfJz59sD/7Fsq7uOFuY+UjXspw6bkvknbxlNtLye9+/8/03rX9fmx2ehedqFssXghgjTnVnO3vr31z97OqR9uqcUeu2tJxruZqZfZYYPcvWmaGuhaVlfI7//vRy7v6tZyxYyjViWdfmyfLizt1B0LMtLcus2jYczwP1XIeVY2Rr4Wx5Sv/4897Ludqe2mWf/Q4zpk7/A4XVolbd7LY6AAAAAElFTkSuQmCC" alt="" aria-hidden="true" style="width:52px; height:auto; display:inline-block; flex-shrink:0;">
-      <span>Sistema Único de Assistência Social · Boa Vista, Roraima</span>
-    </p>
-    <div class="hero-top">
-      <h1>
-        <span class="brand-mark">Argo</span><span class="brand-mark" style="font-size:0.55em; font-style:normal; font-weight:600; color:#CFE3DD; vertical-align:middle; margin-left:0.3em;">SUAS</span>
-        <span class="brand-sub">Rede de Políticas Públicas de Roraima</span>
-      </h1>
-    </div>
-    <p>Diretório técnico de encaminhamento para os mais diversos equipamentos de políticas públicas do estado de Roraima. Gestão centralizada para técnicos de referência lotados nas mais diversas áreas das políticas públicas.</p>
+  .tech-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--brand-primary), var(--brand-primary-light));
+  }
 
-    <div class="hero-stats">
-      <div class="hero-stat">
-        <span class="hero-stat-value" id="heroStatTotal">0</span>
-        <span class="hero-stat-label">Unidades e recursos</span>
-      </div>
-      <div class="hero-stat-divider" aria-hidden="true"></div>
-      <div class="hero-stat">
-        <span class="hero-stat-value" id="heroStatCategories">0</span>
-        <span class="hero-stat-label">Categorias de acesso</span>
-      </div>
-      <div class="hero-stat-divider" aria-hidden="true"></div>
-      <div class="hero-stat">
-        <span class="hero-stat-value">CRAS</span>
-        <span class="hero-stat-label">Cristiana Vicente Nunes</span>
-      </div>
-      <div class="hero-stat-divider" aria-hidden="true"></div>
-      <div class="hero-stat">
-        <span class="hero-stat-value">CAS</span>
-        <span class="hero-stat-label">Centro de Atendimento Social</span>
-      </div>
-    </div>
-  </div>
-</header>
-<div class="flag-stripe"></div>
+  .tech-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-4px);
+    border-color: rgba(0, 145, 194, 0.35);
+  }
 
-<div class="controls">
-  <div class="container">
-    <div class="search-wrapper">
-      <div class="search-input-wrapper">
-        <label for="mainSearch" class="sr-only">Pesquisar unidade, bairro ou serviço</label>
-        <input type="text" id="mainSearch" class="search-input" placeholder="Pesquisar por unidade, bairro ou serviço técnico..." aria-label="Pesquisar unidade, bairro ou serviço">
-        <button type="button" id="searchClearBtn" class="search-clear-btn" title="Limpar busca" aria-label="Limpar busca">✕</button>
-      </div>
-      <button type="button" class="btn-tech btn-secondary" id="proximityBtn" onclick="toggleProximitySort()" title="Ordenar os equipamentos exibidos pela distância até sua localização atual" aria-pressed="false">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-        <span class="proximity-label">Ordenar por proximidade</span>
-      </button>
-      <a class="btn-tech btn-secondary btn-link" href="https://mapa-social.mds.gov.br/" target="_blank" rel="noopener noreferrer" title="Abrir Mapa Social (MDS) em nova aba">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-        Mapa Social (MDS)
-      </a>
-      <button class="btn-tech btn-secondary" id="themeToggleBtn" onclick="toggleTheme()" title="Alternar modo claro/escuro" aria-label="Alternar entre modo claro e escuro" aria-pressed="false">
-        <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.07" y2="4.93"/></svg>
-        <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-      </button>
-      <button class="btn-tech btn-secondary" onclick="exportData()" title="Backup de Dados" aria-label="Baixar backup das anotações técnicas">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      </button>
-      <button class="btn-tech btn-secondary" onclick="logout()" title="Sair" aria-label="Sair e bloquear o acesso novamente">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      </button>
-    </div>
-  </div>
-</div>
+  /* Card em destaque: fica assim depois de clicado, com anel colorido,
+     sombra mais forte e a barrinha superior em degradê quente/frio —
+     ajuda a marcar visualmente qual card está em foco no meio da lista. */
+  .tech-card.is-selected {
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 3px rgba(0, 145, 194, 0.22), var(--shadow-lg);
+    transform: translateY(-4px);
+  }
 
-<div class="container">
-<div class="app-layout">
+  .tech-card.is-selected::before {
+    background: linear-gradient(90deg, var(--brand-info-light), var(--brand-primary), var(--brand-primary-light));
+    height: 4px;
+  }
 
-  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  .container { max-width: 1680px; margin: 0 auto; padding: 0 1.5rem; }
 
-  <aside class="category-sidebar" id="categorySidebar">
-    <div class="category-sidebar-header">
-      <span>Categorias</span>
-      <button class="sidebar-close-btn" id="sidebarCloseBtn" type="button" aria-label="Fechar categorias">✕</button>
-    </div>
-    <div class="filter-bar-wrapper">
-      <div class="filter-bar" id="filterBar" role="tablist" aria-label="Filtrar por categoria de equipamento">
-        <button class="filter-chip active" data-cat="all" role="tab" aria-selected="true">
-          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
-          <span>Rede Intersetorial de Serviços</span>
-          <span class="chip-count" id="count-all">0</span>
-        </button>
+  header.hero {
+    --hero-teal-1: #12564A;         /* base um pouco mais escura → mais contraste com o texto claro */
+    --hero-teal-2: #0B3C35;
+    --hero-teal-3: #051F1A;         /* canto mais escuro/sólido, casa com o rodapé (#071E1A) */
+    --hero-gold: #E8AC3D;
+    --hero-gold-soft: #F2CB7E;
+    --hero-neutral: #C7DED8;        /* era #A9C7C0 → texto secundário mais legível */
+    background:
+      radial-gradient(120% 160% at 100% 0%, rgba(232, 172, 61, 0.12) 0%, rgba(232, 172, 61, 0) 45%),
+      url('argo-navis-historico.jpg'),
+      linear-gradient(155deg, var(--hero-teal-1) 0%, var(--hero-teal-2) 48%, var(--hero-teal-3) 100%);
+    background-repeat: no-repeat, no-repeat, no-repeat;
+    background-position: top center, right 6% 30%, top center;
+    background-size: auto, 480px 360px, auto;
+    color: white;
+    padding: 3rem 0;
+    min-height: 460px;
+    display: flex;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    border-bottom: 4px solid var(--hero-gold);   /* linha um pouco mais espessa, reforça a divisão */
+  }
 
-        <button class="filter-chip" data-cat="favoritos" role="tab" aria-selected="false">
-          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
-          <span>Favoritos</span>
-          <span class="chip-count" id="count-favoritos">0</span>
-        </button>
+  header.hero .container { width: 100%; max-width: 1200px; margin: 0 auto; position: relative; z-index: 1; }
 
-        <!-- Seção: Saúde -->
-        <div class="filter-group">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Rede de Atenção à Saúde<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
-          <div class="filter-group-chips">
-            <button class="filter-chip filter-chip-panel" data-cat="hospitalar" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v12"/><path d="M6 12h12"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg></span>
-              <span>Rede Hospitalar e Atenção Básica</span>
-              <span class="chip-count" id="count-hospitalar">0</span>
-            </button>
-            <button class="filter-chip filter-chip-panel" data-cat="saude" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
-              <span>Rede de Atenção Psicossocial (RAPS)</span>
-              <span class="chip-count" id="count-saude">0</span>
-            </button>
-            <button class="filter-chip filter-chip-panel" data-cat="tea" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 9.5a2.5 2.5 0 1 0-3.9-2.9A2.5 2.5 0 1 0 12 8a2.5 2.5 0 1 0-3.6-1.4A2.5 2.5 0 1 0 4.5 9.5a2.5 2.5 0 0 0 0 5 2.5 2.5 0 1 0 3.9 2.9 2.5 2.5 0 1 0 3.6-3.4 2.5 2.5 0 1 0 3.6 3.4 2.5 2.5 0 1 0 3.9-2.9 2.5 2.5 0 0 0 0-5Z"/></svg></span>
-              <span>Rede de Atenção à Pessoa com Deficiência e TEA</span>
-              <span class="chip-count" id="count-tea">0</span>
-            </button>
-          </div>
-        </div>
+  @media (max-width: 640px) {
+    header.hero { background-size: auto, 360px 270px, auto; }
+  }
 
-        <!-- Seção: Assistência Social -->
-        <div class="filter-group">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Sistema Único de Assistência Social (SUAS)<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
-          <div class="filter-group-chips">
-            <button class="filter-chip filter-chip-panel" data-cat="social" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
-              <span>Proteção Social Básica e Especial</span>
-              <span class="chip-count" id="count-social">0</span>
-            </button>
-            <button class="filter-chip filter-chip-panel" data-cat="alimentar" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h0a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg></span>
-              <span>Segurança Alimentar e Nutricional</span>
-              <span class="chip-count" id="count-alimentar">0</span>
-            </button>
-          </div>
-        </div>
+  .argo-emblem {
+    position: absolute;
+    top: 50%;
+    right: 4%;
+    transform: translateY(-50%);
+    width: 280px;
+    height: 201px;
+    opacity: 1;
+    z-index: 1;
+    pointer-events: none;
+  }
 
-        <!-- Seção: Educação -->
-        <div class="filter-group">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Rede de Ensino<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
-          <div class="filter-group-chips">
-            <button class="filter-chip filter-chip-panel" data-cat="educacao" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/></svg></span>
-              <span>Educação Básica</span>
-              <span class="chip-count" id="count-educacao">0</span>
-            </button>
-          </div>
-        </div>
+  /* Constelação real de Argo Navis (Carina, Vela, Puppis e Pyxis) desenhada com
+     as posições astronômicas verdadeiras das estrelas, no lugar do antigo
+     barquinho estilizado. Canopus, a estrela-guia, recebe um brilho pulsante. */
+  .argo-emblem .const-line {
+    fill: none;
+    stroke: #E8AC3D;
+    stroke-width: 1.1;
+    stroke-opacity: 0.5;
+    stroke-dasharray: 3 4;
+    stroke-linecap: round;
+  }
 
-        <!-- Seção: Justiça & Segurança (dentro de "Mais categorias") -->
-        <div class="filter-group" data-group="more">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Sistema de Justiça e Segurança Pública<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
-          <div class="filter-group-chips">
-            <button class="filter-chip filter-chip-panel" data-cat="juridico" data-group="more" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 8h14"/><path d="M5 8 2 15a3 3 0 0 0 6 0Z"/><path d="M19 8l-3 7a3 3 0 0 0 6 0Z"/></svg></span>
-              <span>Poder Judiciário</span>
-              <span class="chip-count" id="count-juridico">0</span>
-            </button>
-            <button class="filter-chip filter-chip-panel" data-cat="conselho" data-group="more" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg></span>
-              <span>Conselho Tutelar (Proteção à Criança e ao Adolescente)</span>
-              <span class="chip-count" id="count-conselho">0</span>
-            </button>
-            <button class="filter-chip filter-chip-panel" data-cat="delegacias" data-group="more" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="M9.5 12.5l1.8 1.8 3.2-3.6"/></svg></span>
-              <span>Segurança Pública</span>
-              <span class="chip-count" id="count-delegacias">0</span>
-            </button>
-          </div>
-        </div>
+  .argo-emblem .const-star {
+    fill: #F8FAFC;
+    animation: heroStarTwinkle 4.5s ease-in-out infinite;
+  }
 
-        <!-- Seção: Rede de Proteção à Mulher (dentro de "Mais categorias") -->
-        <div class="filter-group" data-group="more">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Rede de Enfrentamento à Violência contra a Mulher<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
-          <div class="filter-group-chips">
-            <button class="filter-chip filter-chip-panel" data-cat="mulher" data-group="more" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.7-4.35-9.3-8.4C1 9.3 2 5.7 5.4 4.7 7.7 4 10 5 12 7c2-2 4.3-3 6.6-2.3 3.4 1 4.4 4.6 2.7 7.9C18.7 16.65 12 21 12 21Z"/></svg></span>
-              <span>Rede de Enfrentamento à Violência contra a Mulher</span>
-              <span class="chip-count" id="count-mulher">0</span>
-            </button>
-          </div>
-        </div>
+  .argo-emblem .const-star:nth-child(odd) { animation-delay: -1.5s; }
+  .argo-emblem .const-star:nth-child(3n) { animation-delay: -3s; }
 
-        <!-- Seção: Conselhos de Direitos (dentro de "Mais categorias") -->
-        <div class="filter-group" data-group="more">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Conselhos de Direitos<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
-          <div class="filter-group-chips">
-            <button class="filter-chip filter-chip-panel" data-cat="conselhosdireitos" data-group="more" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
-              <span>Conselhos Municipais de Direitos</span>
-              <span class="chip-count" id="count-conselhosdireitos">0</span>
-            </button>
-          </div>
-        </div>
+  @keyframes heroStarTwinkle {
+    0%, 100% { opacity: 0.75; }
+    50% { opacity: 1; }
+  }
 
-        <!-- Seção: Cidadania & Documentação (dentro de "Mais categorias") -->
-        <div class="filter-group" data-group="more">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Cidadania e Documentação Civil<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
-          <div class="filter-group-chips">
-            <button class="filter-chip filter-chip-panel" data-cat="documentacao" data-group="more" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M15 9h3"/><path d="M15 13h3"/><path d="M6 17c.5-1.8 2-3 3-3s2.5 1.2 3 3"/></svg></span>
-              <span>Documentação Civil e Fiscal</span>
-              <span class="chip-count" id="count-documentacao">0</span>
-            </button>
-            <button class="filter-chip filter-chip-panel" data-cat="bancos" data-group="more" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="21" x2="21" y2="21"/><line x1="5" y1="21" x2="5" y2="10"/><line x1="19" y1="21" x2="19" y2="10"/><line x1="12" y1="21" x2="12" y2="10"/><polygon points="12 2 21 8 3 8"/></svg></span>
-              <span>Rede Bancária e Correspondentes</span>
-              <span class="chip-count" id="count-bancos">0</span>
-            </button>
-            <button class="filter-chip filter-chip-panel" data-cat="previdencia" data-group="more" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg></span>
-              <span>Previdência Social (INSS)</span>
-              <span class="chip-count" id="count-previdencia">0</span>
-            </button>
-          </div>
-        </div>
+  @media (prefers-reduced-motion: reduce) {
+    .argo-emblem .const-star { animation: none; }
+  }
 
-        <!-- Seção: Migração (dentro de "Mais categorias") -->
-        <div class="filter-group" data-group="more">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Política Migratória e Rede de Apoio ao Migrante<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
-          <div class="filter-group-chips">
-            <button class="filter-chip filter-chip-panel" data-cat="migracao" data-group="more" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M12 2c2.8 3 4.4 6.7 4.4 10s-1.6 7-4.4 10c-2.8-3-4.4-6.7-4.4-10S9.2 5 12 2Z"/></svg></span>
-              <span>Serviço de Migração</span>
-              <span class="chip-count" id="count-migracao">0</span>
-            </button>
-          </div>
-        </div>
+  .argo-emblem .guide-star {
+    fill: #FEDD00;
+    animation: heroGuideStarPulse 4s ease-in-out infinite;
+  }
 
-        <!-- Seção: Trabalho & Renda (dentro de "Mais categorias") -->
-        <div class="filter-group" data-group="more">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Trabalho, Emprego e Renda<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
-          <div class="filter-group-chips">
-            <button class="filter-chip filter-chip-panel" data-cat="trabalho" data-group="more" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><line x1="2" y1="13" x2="22" y2="13"/></svg></span>
-              <span>Trabalho, Emprego e Renda</span>
-              <span class="chip-count" id="count-trabalho">0</span>
-            </button>
-          </div>
-        </div>
+  .argo-emblem .guide-star-glow {
+    fill: #FEDD00;
+    animation: heroGuideStarGlow 4s ease-in-out infinite;
+  }
 
-        <!-- Seção: Cultura, Esporte e Lazer (dentro de "Mais categorias") -->
-        <div class="filter-group" data-group="more">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Cultura, Esporte e Lazer<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
-          <div class="filter-group-chips">
-            <button class="filter-chip filter-chip-panel" data-cat="cultura" data-group="more" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></span>
-              <span>Cultura, Esporte e Lazer</span>
-              <span class="chip-count" id="count-cultura">0</span>
-            </button>
-          </div>
-        </div>
+  @media (prefers-reduced-motion: reduce) {
+    .argo-emblem .guide-star,
+    .argo-emblem .guide-star-glow {
+      animation: none;
+    }
+  }
 
-        <!-- Seção: Território (dentro de "Mais categorias") -->
-        <div class="filter-group" data-group="more">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Ordenamento Territorial e Mobilidade<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
-          <div class="filter-group-chips">
-            <button class="filter-chip filter-chip-panel" data-cat="habitacao" data-group="more" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 10v10a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1V10"/></svg></span>
-              <span>Habitação e Moradia</span>
-              <span class="chip-count" id="count-habitacao">0</span>
-            </button>
-            <button class="filter-chip filter-chip-panel" data-cat="mobilidade" data-group="more" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11 6.5 6.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11"/><rect x="2" y="11" width="20" height="7" rx="2"/><circle cx="7" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/></svg></span>
-              <span>Mobilidade Urbana</span>
-              <span class="chip-count" id="count-mobilidade">0</span>
-            </button>
-          </div>
-        </div>
+  @keyframes heroGuideStarPulse {
+    0%, 100% { opacity: 0.95; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.12); }
+  }
 
-        <!-- Seção: Defesa Civil e Situações de Emergência (dentro de "Mais categorias") -->
-        <div class="filter-group" data-group="more">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Defesa Civil e Situações de Emergência<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
-          <div class="filter-group-chips">
-            <button class="filter-chip filter-chip-panel" data-cat="defesacivil" data-group="more" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 6v6c0 5 3.8 8.7 9 10 5.2-1.3 9-5 9-10V6l-9-4Z"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg></span>
-              <span>Defesa Civil e Situações de Emergência</span>
-              <span class="chip-count" id="count-defesacivil">0</span>
-            </button>
-          </div>
-        </div>
+  @keyframes heroGuideStarGlow {
+    0%, 100% { opacity: 0.18; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(1.12); }
+  }
 
-        <!-- Seção: Programas, Projetos e Serviços -->
-        <div class="filter-group">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Programas, Projetos e Serviços<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
-          <div class="filter-group-chips">
-            <button class="filter-chip filter-chip-panel" data-cat="informes" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
-              <span>Programas, Projetos e Serviços</span>
-              <span class="chip-count" id="count-informes">0</span>
-            </button>
-          </div>
-        </div>
+  @media (max-width: 900px) {
+    .argo-emblem { display: none; }
+  }
 
-        <!-- Seção: Painéis internos -->
-        <div class="filter-group">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Gestão Interna e Registro Técnico<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
-          <div class="filter-group-chips">
-            <button class="filter-chip filter-chip-panel" data-cat="cas" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
-              <span>Registro de Atendimento (CAS)</span>
-              <span class="chip-count" id="count-cas">0</span>
-            </button>
-            <button class="filter-chip filter-chip-panel" data-cat="cras" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="1"/><line x1="9" y1="6" x2="9" y2="6.01"/><line x1="15" y1="6" x2="15" y2="6.01"/><line x1="9" y1="10" x2="9" y2="10.01"/><line x1="15" y1="10" x2="15" y2="10.01"/><line x1="9" y1="14" x2="9" y2="14.01"/><line x1="15" y1="14" x2="15" y2="14.01"/></svg></span>
-              <span>Registro de Atendimento (CRAS)</span>
-              <span class="chip-count" id="count-cras-panel">0</span>
-            </button>
-          </div>
-        </div>
+  .hero-top {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
 
-        <!-- Seção: Anotações -->
-        <div class="filter-group">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Anotações Técnicas Pessoais<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
-          <div class="filter-group-chips">
-            <button class="filter-chip filter-chip-panel" data-cat="anotacoes" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></span>
-              <span>Minhas Anotações</span>
-            </button>
-          </div>
-        </div>
+  .flag-stripe {
+    height: 7px;
+    background: linear-gradient(
+      90deg,
+      #0091C2 0%, #0091C2 34%,
+      #FFFFFF 34%, #FFFFFF 40%,
+      #009739 40%, #009739 92%,
+      #ED1C24 92%, #ED1C24 100%
+    );
+  }
 
-        <!-- Seção: Ferramentas de Arquivo -->
-        <div class="filter-group">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Ferramentas de Arquivo<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
-          <div class="filter-group-chips">
-            <button class="filter-chip filter-chip-panel" data-cat="pdftools" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg></span>
-              <span>Unificar / Converter PDF</span>
-            </button>
-          </div>
-        </div>
+  .hero h1 .flag-star {
+    color: #FEDD00;
+    -webkit-text-stroke: 0.5px rgba(0,0,0,0.15);
+    margin-right: 0.3rem;
+    font-size: 0.7em;
+    vertical-align: middle;
+  }
 
-        <!-- Seção: Tradutor -->
-        <div class="filter-group">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Atendimento a Estrangeiros<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
-          <div class="filter-group-chips">
-            <button class="filter-chip filter-chip-panel" data-cat="tradutor" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h9"/><path d="M9.5 5.5v3.2c0 3.2-2 5.9-4.5 7.3"/><path d="M6.5 12c1.3 1.5 3.3 2.7 6 3.4"/><path d="M12.5 21l4-9 4 9"/><path d="M13.9 18h5.2"/></svg></span>
-              <span>Tradutor (Es / En / Fr)</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </aside>
+  .brand-mark {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-style: italic;
+    color: #F2CB7E;
+    letter-spacing: 0.01em;
+  }
 
-  <main class="content-area" id="mainContent">
-  <div style="margin-top: 1.5rem; display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
-    <button class="category-toggle-btn" id="categoryToggleBtn" type="button" aria-expanded="false" aria-controls="categorySidebar">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/></svg>
-      <span id="categoryToggleLabel">Categorias</span>
-      <span class="chip-count-badge" id="categoryToggleCount">0</span>
-    </button>
-    <div id="resultsInfo" role="status" aria-live="polite" style="display:inline-flex; align-items:center; gap:0.4rem; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: var(--brand-primary); background: rgba(0, 145, 194, 0.08); padding: 0.4rem 0.9rem; border-radius: 999px; box-shadow: var(--shadow-xs);">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-      <span id="counter">0</span> registros localizados
-    </div>
-  </div>
+  .hero h1 {
+    font-family: var(--font-serif);
+    font-size: 3rem;
+    margin: 0;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
 
-  <div class="external-resource-card">
-    <div class="external-resource-text">
-      <h2 style="margin:0 0 0.35rem 0; font-size:1rem; font-weight:800; color:var(--brand-primary);">Mapa Social · Ministério do Desenvolvimento e Assistência Social (MDS)</h2>
-      <p>Plataforma federal de geolocalização de equipamentos e serviços da rede de assistência social (CRAS, CREAS, Centros POP e outros) em todo o Brasil. Útil como referência complementar a este diretório local.</p>
-    </div>
-    <a class="btn-tech btn-primary btn-link" href="https://mapa-social.mds.gov.br/" target="_blank" rel="noopener noreferrer">
-      Abrir Mapa Social
-    </a>
-  </div>
+  .hero .brand-sub {
+    display: block;
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--hero-neutral);    /* era #A9C7C0, fixo → agora acompanha o tom mais claro da var */
+    margin-top: 0.5rem;
+  }
 
-  <div class="category-info-banner" id="categoryInfoBanner" style="display:none;"></div>
-  <div class="equipment-grid" id="grid" aria-live="polite"></div>
-  </main>
+  .hero p {
+    color: #DCEDE7;                /* era #B9D2CC → texto de apoio bem mais legível sobre o fundo escuro */
+    max-width: 700px;
+    font-size: 1.1rem;
+    margin-top: 1.25rem;
+  }
 
-</div>
-</div>
+  .hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--hero-gold-soft, #F2CB7E);   /* era #E8AC3D → dourado mais claro, mais fácil de ler */
+    margin: 0 0 1.15rem;
+  }
 
-<footer class="site-footer">
-  <div class="footer-flag-line" aria-hidden="true"></div>
-  <div class="container footer-grid">
+  .hero-eyebrow svg { flex-shrink: 0; }
 
-    <div class="footer-col-brand">
-      <span class="footer-brand-mark">Argo<span class="footer-brand-suas">SUAS</span></span>
-      <p class="footer-tagline">Rede de Políticas Públicas de Roraima</p>
-      <p class="footer-mission">Diretório técnico colaborativo com equipamentos socioassistenciais, de saúde e proteção social de Boa Vista, para consulta rápida da equipe em campo.</p>
-    </div>
+  .hero-stats {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 1.75rem;
+    margin-top: 2rem;
+    flex-wrap: wrap;
+    padding: 0.9rem 1.25rem;                          /* painel próprio, como no rodapé, para dar peso visual */
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(232, 172, 61, 0.22);
+    border-radius: 10px;
+    width: fit-content;
+  }
 
-    <div class="footer-col-links">
-      <span class="footer-col-title">Atalhos</span>
-      <ul class="footer-link-list">
-        <li>
-          <a href="#mainContent">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg>
-            Voltar ao topo
-          </a>
-        </li>
-        <li>
-          <a href="https://mapa-social.mds.gov.br/" target="_blank" rel="noopener noreferrer">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-            Mapa Social (MDS)
-          </a>
-        </li>
-        <li>
-          <a href="https://github.com/PaulusXavier/Projeto-Argo-SUAS" target="_blank" rel="noopener noreferrer">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.1.83-.27.83-.58v-2.17c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.75.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.07 1.83 2.8 1.3 3.49 1 .1-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.3-1.55 3.3-1.23 3.3-1.23.66 1.66.25 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.8 5.63-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .31.22.69.83.57A12 12 0 0 0 12 .3Z"/></svg>
-            Repositório no GitHub
-          </a>
-        </li>
-        <li>
-          <a href="javascript:void(0)" onclick="exportData()" title="Baixa um arquivo .json com anotações, dados de encaminhamento e anexos salvos neste navegador">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Backup de anotações
-          </a>
-        </li>
-        <li>
-          <a href="javascript:void(0)" onclick="triggerImportData()" title="Restaura um arquivo de backup gerado pelo Argo SUAS neste navegador">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 8 12 3 17 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            Importar backup
-          </a>
-          <input type="file" id="backupImportInput" accept="application/json,.json" hidden onchange="importData(this)">
-        </li>
-        <li>
-          <a href="javascript:void(0)" onclick="clearAllLocalData()" title="Apaga nome, endereço, NIS, anotações e anexos salvos neste navegador">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-            Apagar dados salvos neste dispositivo
-          </a>
-        </li>
-        <li>
-          <a href="javascript:void(0)" onclick="logout()">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            Sair
-          </a>
-        </li>
-      </ul>
-    </div>
+  .hero-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
 
-    <div class="footer-col-contact">
-      <div class="footer-contact-unit">
-        <span class="footer-col-title">CRAS Cristiana Vicente Nunes</span>
-        <ul class="footer-contact-list">
-          <li>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-            <span>
-              <a class="footer-address-link" href="https://www.google.com/maps/search/?api=1&query=Rua+Santo+Agostinho%2C+193+-+Centen%C3%A1rio%2C+Boa+Vista-RR" target="_blank" rel="noopener noreferrer">Rua Santo Agostinho, 193 - Centenário, Boa Vista-RR</a>
-              <span class="footer-address-hint">Ver no mapa →</span>
-            </span>
-          </li>
-          <li>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-            <a href="tel:+5595984026617">(95) 98402-6617</a>
-          </li>
-          <li>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
-            <span>Segunda a sexta, 08:00 às 18:00</span>
-          </li>
-        </ul>
-      </div>
+  .hero-stat-value {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 1.65rem;
+    color: #fff;
+    line-height: 1;
+  }
 
-      <div class="footer-contact-unit">
-        <span class="footer-col-title">CAS · Centro de Atendimento Social</span>
-        <ul class="footer-contact-list">
-          <li>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-            <span>
-              <a class="footer-address-link" href="https://www.google.com/maps/search/?api=1&query=R.+James+Meirelles+Sobreiro+J%C3%BAnior%2C+1876+-+Cidade+Sat%C3%A9lite%2C+Boa+Vista-RR" target="_blank" rel="noopener noreferrer">R. James Meirelles Sobreiro Júnior, 1876 - Cidade Satélite, Boa Vista-RR</a>
-              <span class="footer-address-hint">Ver no mapa →</span>
-            </span>
-          </li>
-        </ul>
-      </div>
-    </div>
+  .hero-stat-label {
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--hero-neutral);    /* era #A9C7C0, fixo → mais claro e legível */
+  }
 
-    <div class="footer-col-credit">
-      <span class="footer-col-title">Responsável Técnico</span>
-      <div class="footer-credit-row">
-        <div class="footer-badge" aria-hidden="true">
-          <svg width="24" height="24" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <g fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M28,20 C28,40 38,44 50,52"/>
-              <path d="M72,20 C72,40 62,44 50,52"/>
-              <path d="M50,18 L50,52"/>
-              <path d="M50,52 L50,82"/>
-            </g>
-          </svg>
-        </div>
-        <div class="footer-text">
-          <p class="footer-name">Paulo Xavier</p>
-          <p class="footer-meta">
-            <span>CRP-20/09816</span>
-            <span class="footer-sep">·</span>
-            <span>Psicólogo</span>
-          </p>
-          <p class="footer-meta">Boa Vista, RR</p>
-        </div>
-      </div>
-    </div>
+  .hero-stat-divider {
+    width: 1px;
+    height: 32px;
+    background: rgba(232, 172, 61, 0.3);
+  }
 
-  </div>
+  @media (max-width: 640px) {
+    .hero-stats { gap: 1.1rem; margin-top: 1.5rem; width: 100%; }
+    .hero-stat-divider { display: none; }
+  }
 
-  <div class="footer-bottom">
-    <div class="footer-bottom-inner">
-      <span>© <span id="footerYear">2026</span> Argo SUAS</span>
-      <span class="footer-bottom-sep">·</span>
-      <span class="footer-suas-full">Sistema Único de Assistência Social (SUAS)</span>
-      <span class="footer-bottom-sep">·</span>
-      <span>Uso interno da equipe técnica</span>
-      <span class="footer-bottom-sep">·</span>
-      <span id="footerItemCount">0 registros no diretório</span>
-    </div>
-  </div>
-</footer>
+  .controls {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bg-main);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-ui);
+    padding: 1rem 0;
+    box-shadow: 0 4px 16px -8px rgba(15, 23, 42, 0.08);
+  }
 
-<button id="backToTop" class="back-to-top" title="Voltar ao topo" aria-label="Voltar ao topo" tabindex="-1">
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg>
-</button>
+  .search-wrapper {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
 
-</div>
+  .search-input {
+    flex: 1;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-ui);
+    padding: 0.8rem 1.2rem;
+    border-radius: 8px;
+    color: var(--text-main);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    box-shadow: var(--shadow-xs);
+    transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+  }
 
-<div id="print-area"></div>
+  .search-input:focus {
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 3px rgba(0, 145, 194, 0.12);
+  }
 
-<script src="equipe-cras-cristiana.js" defer></script>
-<script src="app.js" defer></script>
-</body>
-</html>
+  .filter-bar-wrapper {
+    position: relative;
+    margin-top: 0.35rem;
+  }
+
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+
+  .filter-bar::-webkit-scrollbar { display: none; }
+
+  .filter-bar > .filter-chip,
+  .filter-bar > .filter-chip-toggle {
+    align-self: center;
+  }
+
+  @media (max-width: 767px) {
+    .filter-bar-wrapper {
+      -webkit-mask-image: linear-gradient(to right, transparent 0, black 20px, black calc(100% - 28px), transparent 100%);
+      mask-image: linear-gradient(to right, transparent 0, black 20px, black calc(100% - 28px), transparent 100%);
+    }
+  }
+
+  @media (min-width: 768px) {
+    .filter-bar {
+      flex-wrap: wrap;
+      overflow-x: visible;
+      padding-bottom: 0;
+      row-gap: 0.25rem;
+    }
+  }
+
+  /* Seções: cada bloco temático de categorias vira uma caixa própria,
+     com um rótulo curto ao lado (não em cima) dos chips daquela área —
+     layout em linha para ocupar menos altura vertical. */
+  .filter-group {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.35rem;
+    flex-shrink: 0;
+    scroll-snap-align: start;
+    padding: 0.22rem 0.4rem;
+    border: 1px solid var(--border-ui);
+    border-radius: 8px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(0, 145, 194, 0.05));
+    box-shadow: 0 1px 2px -1px rgba(15, 23, 42, 0.12);
+  }
+
+  .filter-group-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.3rem;
+    white-space: nowrap;
+    font-size: 0.56rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    border-right: 1px solid var(--border-ui);
+    padding-right: 0.35rem;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .filter-group-label:focus-visible {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  .group-toggle-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: var(--brand-primary);
+    transition: transform 0.2s var(--ease);
+  }
+
+  /* Fechado por padrão: seta aponta para o lado (para a direita);
+     aberto: seta aponta para baixo. */
+  .filter-group.collapsed .group-toggle-icon {
+    transform: rotate(-90deg);
+  }
+
+  .filter-group-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem;
+  }
+
+  /* Grupo recolhido: some com os chips, deixando só o cabeçalho
+     do grupo visível — assim a lista inteira cabe numa rolagem
+     bem mais curta, e o usuário abre só as seções que precisa. */
+  .filter-group.collapsed .filter-group-chips {
+    display: none;
+  }
+
+  .filter-chip-toggle {
+    white-space: nowrap;
+    background: linear-gradient(180deg, var(--bg-card), rgba(0, 145, 194, 0.04));
+    border: 1px solid var(--border-ui);
+    padding: 0.24rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    cursor: pointer;
+    color: var(--brand-primary);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    scroll-snap-align: start;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 2px 5px -2px rgba(15, 23, 42, 0.18);
+    transition: background 0.2s var(--ease), border-color 0.2s var(--ease), box-shadow 0.15s var(--ease), transform 0.15s var(--ease);
+  }
+
+  .filter-chip-toggle:hover {
+    background: linear-gradient(180deg, rgba(0, 145, 194, 0.1), rgba(0, 145, 194, 0.14));
+    border-color: var(--brand-primary);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 4px 9px -3px rgba(0, 145, 194, 0.35);
+    transform: translateY(-1px);
+  }
+
+  .filter-chip-toggle:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.15) inset;
+  }
+
+  .filter-chip-toggle .chip-icon {
+    display: inline-flex;
+    transition: transform 0.2s var(--ease);
+  }
+
+  .filter-bar.is-expanded .filter-chip-toggle .chip-icon {
+    transform: rotate(180deg);
+  }
+
+  @media (min-width: 768px) {
+    .filter-chip-toggle {
+      margin-left: 0.75rem;
+      padding-left: calc(1rem + 0.75rem);
+      position: relative;
+    }
+
+    .filter-chip-toggle::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 1px;
+      height: 22px;
+      background: var(--border-ui);
+    }
+  }
+
+  .filter-chip {
+    white-space: nowrap;
+    background: linear-gradient(180deg, var(--bg-card) 0%, rgba(15, 23, 42, 0.025) 100%);
+    border: 1px solid var(--border-ui);
+    padding: 0.24rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text-muted);
+    box-shadow: 0 1px 2px -1px rgba(15, 23, 42, 0.12);
+    transition: background 0.2s var(--ease), color 0.2s var(--ease), border-color 0.2s var(--ease), box-shadow 0.2s var(--ease), transform 0.15s var(--ease);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    scroll-snap-align: start;
+  }
+
+  .filter-chip .chip-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    opacity: 0.85;
+    filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.5));
+  }
+
+  .filter-chip .chip-icon svg { display: block; width: 12px; height: 12px; }
+
+  .filter-chip .chip-count {
+    font-size: 0.58rem;
+    font-weight: 800;
+    line-height: 1;
+    background: linear-gradient(180deg, rgba(0, 145, 194, 0.16), rgba(0, 145, 194, 0.08));
+    color: var(--brand-primary);
+    padding: 0.12rem 0.28rem;
+    border-radius: 999px;
+    min-width: 1em;
+    text-align: center;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12) inset, 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+
+  .filter-chip:hover {
+    border-color: var(--brand-primary);
+    color: var(--brand-primary);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 5px 12px -4px rgba(0, 145, 194, 0.35);
+    transform: translateY(-1.5px);
+  }
+
+  .filter-chip[aria-selected="true"]:hover {
+    color: white;
+    border-color: var(--brand-primary-light);
+    background: linear-gradient(180deg, var(--brand-primary-light), var(--brand-primary));
+  }
+
+  .search-input-wrapper {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+  }
+
+  .search-input-wrapper .search-input {
+    width: 100%;
+    padding-right: 2.6rem;
+  }
+
+  .search-clear-btn {
+    position: absolute;
+    right: 0.6rem;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  .search-clear-btn:hover {
+    background: var(--bg-main);
+    color: var(--text-main);
+  }
+
+  .search-clear-btn.visible {
+    display: flex;
+  }
+
+  .filter-chip[aria-selected="true"] {
+    background: linear-gradient(180deg, var(--brand-primary-light) 0%, var(--brand-primary) 100%);
+    color: white;
+    border-color: var(--brand-primary);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35) inset, 0 5px 14px -4px rgba(0, 145, 194, 0.55), 0 2px 4px rgba(15, 23, 42, 0.15);
+  }
+
+  .filter-chip:active {
+    transform: translateY(1px) scale(0.97);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.18) inset;
+  }
+
+  .filter-chip[aria-selected="true"] .chip-count {
+    background: rgba(255, 255, 255, 0.25);
+    color: white;
+  }
+
+  /* Chips dos "Painéis Internos" (Informes, Atendimento CAS, Atendimento CRAS)
+     usam o mesmo estilo neutro dos demais chips e só ficam azuis quando
+     selecionados (clicados) — igual ao restante dos filtros. */
+  .filter-chip.filter-chip-panel[aria-selected="true"] {
+    background: linear-gradient(180deg, var(--brand-primary-light) 0%, var(--brand-primary) 100%);
+    color: white;
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.7) inset, 0 5px 14px -4px rgba(0, 145, 194, 0.55), 0 2px 4px rgba(15, 23, 42, 0.15);
+  }
+
+  .filter-chip.filter-chip-panel[aria-selected="true"] .chip-count {
+    background: rgba(255, 255, 255, 0.25);
+    color: white;
+  }
+
+  /* ==========================================================
+     BARRA LATERAL DE CATEGORIAS
+     Desktop/tablet largo: coluna fixa (sticky) ao lado dos cards,
+     com rolagem vertical própria — mais fácil de percorrer do que
+     a rolagem horizontal de chips.
+     Celular/tablet estreito: vira uma gaveta que desliza da lateral,
+     aberta por um botão "Categorias" acima da lista de resultados.
+     ========================================================== */
+
+  .app-layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .category-sidebar {
+    flex: 0 0 270px;
+    width: 270px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-ui);
+    border-radius: var(--radius-ui);
+    box-shadow: var(--shadow-sm);
+    padding: 0.75rem 0.5rem 0.9rem 0.75rem;
+    position: sticky;
+    top: 6.9rem;
+    max-height: calc(100vh - 8rem);
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--brand-primary-light) rgba(0, 145, 194, 0.08);
+    /* Truque para jogar a barra de rolagem para a borda esquerda:
+       inverte a direção do contêiner (a rolagem nativa vai para a
+       esquerda) e depois volta o conteúdo interno para o sentido
+       normal de leitura. */
+    direction: rtl;
+    box-sizing: border-box;
+  }
+
+  .category-sidebar-header,
+  .category-sidebar .filter-bar-wrapper {
+    direction: ltr;
+  }
+
+  .category-sidebar::-webkit-scrollbar { width: 10px; }
+  .category-sidebar::-webkit-scrollbar-track {
+    background: rgba(0, 145, 194, 0.07);
+    border-radius: 999px;
+    margin: 4px 0;
+  }
+  .category-sidebar::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--brand-primary-light), var(--brand-primary));
+    border-radius: 999px;
+    border: 2px solid var(--bg-card);
+    background-clip: padding-box;
+  }
+  .category-sidebar::-webkit-scrollbar-thumb:hover {
+    background: var(--brand-primary);
+    background-clip: padding-box;
+  }
+
+  .category-sidebar-header,
+  .sidebar-backdrop {
+    display: none;
+  }
+
+  .content-area { flex: 1 1 0; min-width: 0; }
+
+  .category-toggle-btn { display: none; }
+
+  /* Dentro da barra lateral, os chips e grupos passam a empilhar
+     verticalmente em vez da fileira horizontal usada em telas largas
+     no rodapé de busca. */
+  .category-sidebar .filter-bar-wrapper {
+    margin-top: 0;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .category-sidebar .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+    overflow: visible;
+    gap: 0.45rem;
+    scroll-snap-type: none;
+    padding-bottom: 0;
+  }
+
+  .category-sidebar .filter-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.4rem;
+    padding: 0.65rem 0.6rem;
+    border-width: 1.5px;
+    border-color: rgba(0, 145, 194, 0.22);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(0, 145, 194, 0.07));
+    box-shadow: 0 2px 6px -3px rgba(15, 23, 42, 0.18);
+    margin-bottom: 0.5rem;
+    border-radius: 10px;
+  }
+
+  .category-sidebar .filter-bar {
+    gap: 0.5rem;
+  }
+
+  .category-sidebar .filter-group-label {
+    border-right: none;
+    border-bottom: 1.5px solid rgba(0, 145, 194, 0.2);
+    padding-right: 0;
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.1rem;
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    color: var(--brand-primary);
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.25;
+    cursor: default;
+  }
+
+  .category-sidebar .group-toggle-icon {
+    display: none;
+  }
+
+  .category-sidebar .filter-group-chips {
+    flex-direction: column;
+    gap: 0.42rem;
+  }
+
+  .category-sidebar .filter-chip {
+    width: 100%;
+    box-sizing: border-box;
+    justify-content: flex-start;
+    align-items: center;
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+    padding-right: 0.5rem;
+    padding-left: 0.5rem;
+    min-height: 42px;
+    white-space: normal;
+    text-align: left;
+    font-size: 0.8rem;
+    font-weight: 700;
+    gap: 0.45rem;
+    border-radius: 8px;
+    border-width: 1.5px;
+  }
+
+  .category-sidebar .filter-chip[data-cat="all"] {
+    min-height: 48px;
+    font-size: 0.88rem;
+    font-weight: 800;
+    border-width: 2px;
+    border-radius: 10px;
+    margin-bottom: 0.15rem;
+  }
+
+  .category-sidebar .filter-chip[data-cat="all"] .chip-icon svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .category-sidebar .filter-chip .chip-icon svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .category-sidebar .filter-chip .chip-icon {
+    flex-shrink: 0;
+  }
+
+  .category-sidebar .filter-chip > span:not(.chip-icon):not(.chip-count) {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.3;
+  }
+
+  .category-sidebar .filter-chip .chip-count {
+    margin-left: auto;
+    flex-shrink: 0;
+    font-size: 0.76rem;
+    font-weight: 800;
+    padding: 0.2rem 0.55rem;
+    min-width: 2em;
+    border-radius: 999px;
+    background: rgba(0, 145, 194, 0.14);
+    color: var(--brand-primary);
+    box-shadow: 0 0 0 1.5px rgba(0, 145, 194, 0.18) inset;
+  }
+
+  .category-sidebar .filter-chip[aria-selected="true"] .chip-count {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.4) inset;
+  }
+
+  @media (max-width: 1023px) {
+    .app-layout { display: block; }
+
+    .category-toggle-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--bg-card);
+      border: 1.5px solid var(--border-ui);
+      padding: 0.6rem 1rem;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: var(--brand-primary);
+      cursor: pointer;
+      box-shadow: var(--shadow-xs);
+      transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease), transform 0.15s var(--ease);
+    }
+
+    .category-toggle-btn:hover {
+      border-color: var(--brand-primary);
+      box-shadow: 0 4px 10px -3px rgba(0, 145, 194, 0.3);
+    }
+
+    .category-toggle-btn:active { transform: translateY(1px); }
+
+    .category-toggle-btn .chip-count-badge {
+      background: var(--brand-primary);
+      color: #fff;
+      font-size: 0.66rem;
+      font-weight: 800;
+      padding: 0.1rem 0.42rem;
+      border-radius: 999px;
+    }
+
+    .category-sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100%;
+      max-height: none;
+      width: min(340px, 88vw);
+      z-index: 300;
+      border-radius: 0;
+      border: none;
+      border-right: 1px solid var(--border-ui);
+      box-shadow: var(--shadow-lg);
+      padding: 0;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      transform: translateX(-105%);
+      transition: transform 0.28s var(--ease);
+    }
+
+    .category-sidebar.is-open { transform: translateX(0); }
+
+    .category-sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 1rem 1.1rem;
+      border-bottom: 1px solid var(--border-ui);
+      position: sticky;
+      top: 0;
+      background: var(--bg-card);
+      font-weight: 800;
+      font-size: 0.95rem;
+      color: var(--brand-primary);
+      z-index: 1;
+    }
+
+    .sidebar-close-btn {
+      background: none;
+      border: none;
+      font-size: 1.15rem;
+      line-height: 1;
+      cursor: pointer;
+      color: var(--text-muted);
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .sidebar-close-btn:hover { background: var(--bg-main); color: var(--text-main); }
+
+    .category-sidebar .filter-bar-wrapper {
+      padding: 0.8rem 1.1rem 1.5rem;
+    }
+
+    .sidebar-backdrop {
+      display: block;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      z-index: 290;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s var(--ease);
+    }
+
+    .sidebar-backdrop.is-visible { opacity: 1; pointer-events: auto; }
+  }
+
+  body.sidebar-open { overflow: hidden; }
+
+  .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 3.5rem 1.5rem;
+    color: var(--text-muted);
+    border: 1.5px dashed var(--border-ui);
+    border-radius: var(--radius-ui);
+    background: var(--bg-card);
+  }
+
+  .empty-state-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: rgba(0, 145, 194, 0.08);
+    color: var(--brand-primary);
+    margin-bottom: 1.1rem;
+  }
+
+  .empty-state strong {
+    display: block;
+    color: var(--text-main);
+    font-size: 1.05rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .back-to-top {
+    position: fixed;
+    right: calc(1.25rem + env(safe-area-inset-right));
+    bottom: calc(1.25rem + env(safe-area-inset-bottom));
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--brand-primary);
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    transform: translateY(12px);
+    pointer-events: none;
+    visibility: hidden;
+    transition: opacity 0.2s var(--ease), transform 0.2s var(--ease), background 0.2s var(--ease), visibility 0.2s, box-shadow 0.2s var(--ease);
+    z-index: 200;
+  }
+
+  .back-to-top.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+    visibility: visible;
+  }
+
+  .back-to-top:hover {
+    background: var(--brand-primary-light);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .equipment-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 2.25rem;
+    padding: 2rem 0;
+  }
+
+  .card-top {
+    padding: 1.6rem 1.75rem 1.35rem;
+    border-bottom: 1px solid var(--border-ui);
+    background: linear-gradient(180deg, rgba(0, 145, 194, 0.07), rgba(0, 145, 194, 0) 85%);
+  }
+
+  .card-top h2 {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--text-main);
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+
+  .card-top .subtitle {
+    font-size: 0.72rem;
+    color: var(--brand-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    margin-top: 0.4rem;
+    display: block;
+  }
+
+  .card-body {
+    padding: 1.6rem 1.75rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .info-group {
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    gap: 0.85rem;
+    font-size: 0.92rem;
+    align-items: start;
+  }
+
+  .info-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    background: rgba(0, 145, 194, 0.1);
+    color: var(--brand-primary);
+    flex-shrink: 0;
+  }
+
+  .info-group svg {
+    color: inherit;
+  }
+
+  .label-tech {
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 0.2rem;
+  }
+
+  .desc-box {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    background: var(--bg-main);
+    border-left: 3px solid var(--brand-primary-light);
+    padding: 1rem 1.1rem;
+    border-radius: 4px 10px 10px 4px;
+    margin-top: 0.5rem;
+  }
+
+  .tech-notes {
+    width: 100%;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-ui);
+    border-radius: 10px;
+    padding: 1.1rem 1.15rem;
+    font-family: var(--font-sans);
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: var(--text-main);
+    resize: vertical;
+    min-height: 160px;
+    transition: box-shadow 0.2s var(--ease), background 0.2s var(--ease), border-color 0.2s var(--ease);
+  }
+
+  .tech-notes::placeholder {
+    color: var(--text-muted);
+    opacity: 0.85;
+  }
+
+  .notes-box {
+    margin-top: 0.5rem;
+    background: linear-gradient(180deg, rgba(212, 160, 23, 0.14), rgba(212, 160, 23, 0.05));
+    border: 2px solid rgba(212, 160, 23, 0.55);
+    border-radius: 14px;
+    padding: 1.1rem 1.1rem 1.25rem;
+    box-shadow: 0 4px 14px -6px rgba(212, 160, 23, 0.35);
+  }
+
+  .notes-box .label-tech {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.6rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+    color: #8a6200;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    html:not([data-theme="light"]) .notes-box .label-tech { color: #F2CB7E; }
+    html:not([data-theme="light"]) .notes-box { border-color: rgba(212, 160, 23, 0.4); }
+  }
+
+  html[data-theme="dark"] .notes-box .label-tech { color: #F2CB7E; }
+  html[data-theme="dark"] .notes-box { border-color: rgba(212, 160, 23, 0.4); }
+
+  .notes-box .label-tech::before {
+    content: "📝";
+    font-size: 0.95rem;
+  }
+
+  .tech-notes:focus {
+    outline: none;
+    border-color: rgba(212, 160, 23, 0.7);
+    box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.35);
+  }
+
+  .image-attach-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .image-upload-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    width: 100%;
+  }
+
+  .image-attach-hint {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  .image-preview {
+    position: relative;
+    border: 1.5px solid var(--border-ui);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--bg-main);
+    box-shadow: var(--shadow-xs);
+  }
+
+  .image-preview img {
+    display: block;
+    width: 100%;
+    max-height: 220px;
+    object-fit: contain;
+    background: repeating-conic-gradient(#f1f5f9 0% 25%, #ffffff 0% 50%) 50% / 16px 16px;
+  }
+
+  .image-preview .image-remove-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(15, 23, 42, 0.75);
+    color: white;
+    font-size: 0.9rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s var(--ease), transform 0.15s var(--ease);
+  }
+
+  .image-preview .image-remove-btn:hover {
+    background: #DC2626;
+    transform: scale(1.08);
+  }
+
+  .image-error-msg {
+    font-size: 0.75rem;
+    color: #DC2626;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .pdf-preview {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border: 1.5px solid var(--border-ui);
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    background: var(--bg-main);
+    box-shadow: var(--shadow-xs);
+  }
+
+  .pdf-preview .pdf-icon-box {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: rgba(220, 38, 38, 0.1);
+    color: #DC2626;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pdf-preview .pdf-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .pdf-preview .pdf-filename {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+  }
+
+  .pdf-preview .pdf-open-link {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--brand-primary);
+    text-decoration: none;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+    width: fit-content;
+  }
+
+  .pdf-preview .pdf-open-link:hover {
+    text-decoration: underline;
+  }
+
+  .pdf-preview .pdf-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+  }
+
+  .pdf-preview .image-remove-btn {
+    position: static;
+    width: 28px;
+    height: 28px;
+    background: rgba(15, 23, 42, 0.08);
+    color: var(--text-muted);
+  }
+
+  .pdf-preview .image-remove-btn:hover {
+    background: #DC2626;
+    color: white;
+  }
+
+  .card-actions {
+    padding: 1.1rem 1.25rem 1.25rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.65rem;
+    background: transparent;
+    border-top: 1px solid var(--border-ui);
+  }
+
+  .btn-tech {
+    padding: 0.68rem;
+    border-radius: 9px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid var(--border-ui);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    transition: background 0.2s var(--ease), color 0.2s var(--ease), border-color 0.2s var(--ease), transform 0.12s var(--ease), box-shadow 0.2s var(--ease);
+  }
+
+  .btn-tech:active { transform: scale(0.97); }
+
+  .btn-primary { background: linear-gradient(180deg, var(--brand-primary-light), var(--brand-primary)); color: white; border-color: var(--brand-primary); box-shadow: 0 4px 10px -3px rgba(0, 145, 194, 0.5); }
+  .btn-primary:hover { box-shadow: 0 6px 16px -3px rgba(0, 145, 194, 0.6); transform: translateY(-1px); }
+  .btn-secondary { background: var(--bg-card); color: var(--text-main); }
+  .btn-secondary:hover { background: var(--bg-main); border-color: var(--brand-primary-light); color: var(--brand-primary); }
+
+  .btn-tech.btn-link {
+    text-decoration: none;
+  }
+
+  .info-banner {
+    grid-column: 1 / -1;
+    background: linear-gradient(180deg, rgba(0, 145, 194, 0.06), rgba(0, 145, 194, 0) 60%);
+    border: 1.5px dashed var(--brand-primary);
+    border-radius: var(--radius-ui);
+    padding: 1.5rem;
+  }
+
+  .info-banner h3 {
+    margin: 0 0 0.75rem 0;
+    color: var(--brand-primary);
+    font-size: 1.1rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .info-banner ul {
+    margin: 0;
+    padding-left: 1.2rem;
+    font-size: 0.88rem;
+    color: var(--text-main);
+  }
+
+  .info-banner li { margin-bottom: 0.4rem; }
+  .info-banner .info-note {
+    margin-top: 0.75rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  /* Cartões da categoria "Informes" — visual de aviso/notícia informativa,
+     usando o acento âmbar (--brand-info) para diferenciar de unidades físicas. */
+  .informe-card {
+    border-top: none;
+  }
+
+  .informe-card::before {
+    background: linear-gradient(90deg, var(--brand-info), var(--brand-info-light));
+  }
+
+  .informe-card .card-top {
+    background: linear-gradient(180deg, rgba(180, 83, 9, 0.08), rgba(180, 83, 9, 0) 80%);
+  }
+
+  .informe-card .card-top h2 {
+    color: var(--brand-info-light);
+  }
+
+  .informe-badge,
+  .cas-badge,
+  .cras-badge,
+  .police-badge,
+  .notes-badge,
+  .interior-badge,
+  .pdftools-badge,
+  .tradutor-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .informe-badge { color: var(--brand-info); background: rgba(180, 83, 9, 0.1); }
+  .cas-badge { color: var(--brand-cas); background: rgba(0, 151, 57, 0.1); }
+  .cras-badge { color: var(--brand-cras); background: rgba(13, 148, 136, 0.1); }
+  .police-badge { color: var(--brand-police-light); background: rgba(30, 58, 138, 0.1); }
+  .notes-badge { color: var(--brand-notes); background: rgba(190, 18, 60, 0.1); }
+  .interior-badge { color: var(--brand-interior); background: rgba(180, 133, 6, 0.1); }
+  .pdftools-badge { color: var(--brand-pdftools); background: rgba(29, 78, 216, 0.1); }
+  .tradutor-badge { color: var(--brand-tradutor); background: rgba(180, 89, 6, 0.1); }
+
+  .informe-box {
+    font-size: 0.85rem;
+    color: var(--text-main);
+    background: linear-gradient(180deg, rgba(180, 83, 9, 0.06), rgba(180, 83, 9, 0) 60%);
+    border: 1.5px dashed var(--brand-info);
+    border-radius: 8px;
+    padding: 1rem;
+    line-height: 1.55;
+  }
+
+  .informe-box strong {
+    display: block;
+    margin-top: 0.7rem;
+    margin-bottom: 0.15rem;
+    color: var(--brand-info-light);
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .informe-box strong:first-child { margin-top: 0; }
+
+  .informe-box a {
+    color: var(--brand-info-light);
+    font-weight: 700;
+    word-break: break-all;
+    text-decoration-color: transparent;
+    text-underline-offset: 2px;
+    transition: text-decoration-color 0.2s var(--ease), color 0.2s var(--ease);
+  }
+
+  .informe-box a:hover {
+    color: var(--brand-info);
+    text-decoration-color: currentColor;
+  }
+
+  .informe-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .informe-meta span { color: var(--text-main); font-weight: 600; }
+
+  .team-tables {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.25rem;
+  }
+
+  @media (max-width: 900px) {
+    .team-tables { grid-template-columns: 1fr; }
+  }
+
+  .team-subcard {
+    border: 1px solid var(--border-ui);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-xs);
+    transition: box-shadow 0.25s var(--ease);
+  }
+
+  .team-subcard:hover {
+    box-shadow: var(--shadow-sm);
+  }
+
+  .team-subcard-header {
+    padding: 0.85rem 1.1rem;
+    font-weight: 800;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .team-subcard-header.fixa {
+    background: rgba(0, 145, 194, 0.08);
+    color: var(--brand-primary);
+  }
+
+  .team-subcard-header.volante {
+    background: rgba(108, 92, 231, 0.08);
+    color: var(--brand-team);
+  }
+
+  .team-subcard-note {
+    padding: 0.65rem 1.1rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: var(--bg-main);
+    border-bottom: 1px solid var(--border-ui);
+  }
+
+  .team-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+
+  .team-table th {
+    text-align: left;
+    padding: 0.6rem 1.1rem;
+    background: var(--bg-main);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    font-weight: 800;
+  }
+
+  .team-table td {
+    padding: 0.65rem 1.1rem;
+    border-top: 1px solid var(--border-ui);
+    vertical-align: top;
+    transition: background 0.15s var(--ease);
+  }
+
+  .team-table tbody tr:hover td {
+    background: var(--bg-main);
+  }
+
+  .team-name {
+    font-weight: 700;
+    color: var(--text-main);
+    display: block;
+  }
+
+  .team-role-badge {
+    display: inline-block;
+    padding: 0.2rem 0.55rem;
+    border-radius: 5px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    background: rgba(0, 145, 194, 0.1);
+    color: var(--brand-primary);
+    white-space: nowrap;
+  }
+
+  .team-role-badge.volante {
+    background: rgba(108, 92, 231, 0.12);
+    color: var(--brand-team);
+  }
+
+  .team-tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .team-tag {
+    background: var(--bg-card);
+    border: 1px solid var(--border-ui);
+    padding: 0.3rem 0.6rem;
+    border-radius: 5px;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+  }
+
+  /* Cartão da categoria "Atendimento CAS" — painel de acesso rápido a
+     sistemas administrativos e pastas do Drive, usando o acento verde
+     (--brand-cas) para diferenciar dos demais cartões. */
+  :root {
+    --brand-cas: #009739;
+    --brand-cas-light: #16A34A;
+    --brand-cras: #0D9488;
+    --brand-cras-light: #14B8A6;
+    --brand-police: #1E3A8A;
+    --brand-police-light: #2563EB;
+    --brand-interior: #B45906;
+    --brand-interior-light: #EA580C;
+    --brand-pdftools: #1D4ED8;
+    --brand-pdftools-light: #3B82F6;
+    --brand-tradutor: #B45906;
+    --brand-tradutor-light: #EA9A2E;
+  }
+
+  .cas-card {
+    border-top: none;
+    grid-column: 1 / -1;
+  }
+
+  .cas-card::before {
+    background: linear-gradient(90deg, var(--brand-cas), var(--brand-cas-light));
+  }
+
+  .cas-card .card-top {
+    background: linear-gradient(180deg, rgba(0, 151, 57, 0.07), rgba(0, 151, 57, 0) 80%);
+  }
+
+  .cas-card .card-top h2 {
+    color: var(--brand-cas);
+  }
+
+  /* Cartão da aba "Ferramentas de Arquivo" (unificar PDF, PDF<->Word,
+     PDF<->JPG), com o acento azul (--brand-pdftools). Todo o processamento
+     acontece no próprio navegador, sem enviar arquivos a nenhum servidor. */
+  .pdftools-card {
+    border-top: none;
+    grid-column: 1 / -1;
+  }
+
+  .pdftools-card::before {
+    background: linear-gradient(90deg, var(--brand-pdftools), var(--brand-pdftools-light));
+  }
+
+  .pdftools-card .card-top {
+    background: linear-gradient(180deg, rgba(29, 78, 216, 0.07), rgba(29, 78, 216, 0) 80%);
+  }
+
+  .pdftools-card .card-top h2 {
+    color: var(--brand-pdftools);
+  }
+
+  .pdftools-privacy {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    background: rgba(29, 78, 216, 0.06);
+    border: 1px dashed var(--brand-pdftools-light);
+    border-radius: 8px;
+    padding: 0.6rem 0.9rem;
+    margin-bottom: 1.1rem;
+  }
+
+  .pdftools-privacy svg { color: var(--brand-pdftools); flex-shrink: 0; }
+
+  .pdftools-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.1rem;
+  }
+
+  @media (max-width: 860px) {
+    .pdftools-grid { grid-template-columns: 1fr; }
+  }
+
+  .pdftools-tool {
+    background: var(--bg-main);
+    border: 1.5px solid var(--border-ui);
+    border-radius: var(--radius-ui);
+    padding: 1.1rem 1.1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+  }
+
+  .pdftools-tool:hover { border-color: var(--brand-pdftools-light); }
+
+  .pdftools-tool-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .pdftools-tool-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: rgba(29, 78, 216, 0.1);
+    color: var(--brand-pdftools);
+    flex-shrink: 0;
+  }
+
+  .pdftools-tool-title {
+    font-weight: 800;
+    font-size: 0.98rem;
+    color: var(--text-main);
+    line-height: 1.25;
+  }
+
+  .pdftools-tool-limit {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .pdftools-tool-desc {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin: 0 0 0.85rem;
+  }
+
+  .pdftools-dropzone {
+    position: relative;
+    border: 1.5px dashed var(--border-ui);
+    border-radius: 10px;
+    background: var(--bg-card);
+    padding: 1.1rem 0.8rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s var(--ease), background 0.2s var(--ease);
+  }
+
+  .pdftools-dropzone:hover,
+  .pdftools-dropzone.dragover {
+    border-color: var(--brand-pdftools);
+    background: rgba(29, 78, 216, 0.05);
+  }
+
+  .pdftools-dropzone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .pdftools-dropzone-icon { color: var(--brand-pdftools-light); margin-bottom: 0.3rem; }
+
+  .pdftools-dropzone-text {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-main);
+  }
+
+  .pdftools-dropzone-hint {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+  }
+
+  .pdftools-filelist {
+    list-style: none;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .pdftools-fileitem {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-ui);
+    border-radius: 8px;
+    padding: 0.4rem 0.5rem 0.4rem 0.7rem;
+    font-size: 0.76rem;
+  }
+
+  .pdftools-fileitem-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--text-main);
+  }
+
+  .pdftools-fileitem-meta {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    flex-shrink: 0;
+  }
+
+  .pdftools-fileitem-btns {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+    flex-shrink: 0;
+  }
+
+  .pdftools-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .pdftools-icon-btn:hover { background: var(--bg-main); color: var(--brand-pdftools); }
+  .pdftools-icon-btn.pdftools-remove:hover { color: #DC2626; }
+
+  .pdftools-actions {
+    margin-top: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  .pdftools-btn {
+    appearance: none;
+    border: none;
+    border-radius: 9px;
+    padding: 0.55rem 1rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease), opacity 0.15s var(--ease);
+    background: linear-gradient(180deg, var(--brand-pdftools-light), var(--brand-pdftools));
+    color: #fff;
+    box-shadow: 0 4px 10px -3px rgba(29, 78, 216, 0.5);
+  }
+
+  .pdftools-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 16px -3px rgba(29, 78, 216, 0.6); }
+  .pdftools-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+
+  .pdftools-status {
+    margin-top: 0.65rem;
+    font-size: 0.76rem;
+    line-height: 1.45;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.4rem;
+    min-height: 1.1em;
+  }
+
+  .pdftools-status.is-error { color: #DC2626; font-weight: 600; }
+  .pdftools-status.is-warn { color: #B45309; font-weight: 600; }
+  .pdftools-status.is-success { color: #15803D; font-weight: 600; }
+  .pdftools-status.is-info { color: var(--text-muted); }
+
+  .pdftools-progress {
+    display: none;
+    margin-top: 0.6rem;
+    height: 6px;
+    border-radius: 4px;
+    background: var(--border-ui);
+    overflow: hidden;
+  }
+
+  .pdftools-progress.active { display: block; }
+
+  .pdftools-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--brand-pdftools), var(--brand-pdftools-light));
+    transition: width 0.2s ease;
+  }
+
+  /* Cartão da aba "Tradutor" — comunicação com estrangeiros (espanhol,
+     inglês e francês) em texto e áudio, com o acento laranja
+     (--brand-tradutor). A tradução usa uma API pública gratuita; a voz
+     usa a síntese de fala nativa do navegador (sem custo, sem envio de
+     áudio a servidor). */
+  .tradutor-card {
+    border-top: none;
+    grid-column: 1 / -1;
+  }
+
+  .tradutor-card::before {
+    background: linear-gradient(90deg, var(--brand-tradutor), var(--brand-tradutor-light));
+  }
+
+  .tradutor-card .card-top h2 { color: var(--brand-tradutor); }
+
+  .tradutor-privacy {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    background: rgba(180, 89, 6, 0.05);
+    border: 1px dashed var(--brand-tradutor-light);
+    border-radius: 8px;
+    padding: 0.7rem 0.9rem;
+    margin-bottom: 1.1rem;
+    line-height: 1.5;
+  }
+
+  .tradutor-privacy svg { color: var(--brand-tradutor); flex-shrink: 0; margin-top: 0.1rem; }
+
+  .tradutor-langbar {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+
+  .tradutor-langbar select {
+    flex: 1 1 160px;
+    min-width: 140px;
+    padding: 0.6rem 0.8rem;
+    border-radius: 8px;
+    border: 1.5px solid var(--border-ui);
+    background: var(--bg-card);
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  .tradutor-swap-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-ui);
+    background: var(--bg-card);
+    color: var(--brand-tradutor);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: 0.15s;
+  }
+
+  .tradutor-swap-btn:hover { background: rgba(180, 89, 6, 0.1); border-color: var(--brand-tradutor-light); }
+
+  .tradutor-panes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  @media (max-width: 720px) {
+    .tradutor-panes { grid-template-columns: 1fr; }
+  }
+
+  .tradutor-pane {
+    display: flex;
+    flex-direction: column;
+    border: 1.5px solid var(--border-ui);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--bg-card);
+  }
+
+  .tradutor-pane-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.55rem 0.8rem;
+    background: var(--bg-main);
+    border-bottom: 1px solid var(--border-ui);
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+  }
+
+  .tradutor-speak-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border: none;
+    background: none;
+    color: var(--brand-tradutor);
+    cursor: pointer;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 0.25rem 0.4rem;
+    border-radius: 6px;
+  }
+
+  .tradutor-speak-btn:hover { background: rgba(180, 89, 6, 0.1); }
+  .tradutor-speak-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .tradutor-pane textarea {
+    flex: 1;
+    min-height: 140px;
+    border: none;
+    resize: vertical;
+    padding: 0.9rem;
+    font-family: inherit;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--text-main);
+    background: transparent;
+    outline: none;
+  }
+
+  .tradutor-pane textarea[readonly] { background: var(--bg-main); color: var(--text-main); }
+
+  .tradutor-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    margin: 1rem 0;
+    flex-wrap: wrap;
+  }
+
+  .tradutor-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.4rem;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(180deg, var(--brand-tradutor-light), var(--brand-tradutor));
+    color: #fff;
+    font-weight: 800;
+    font-size: 0.9rem;
+    cursor: pointer;
+    box-shadow: 0 4px 12px -3px rgba(180, 89, 6, 0.5);
+  }
+
+  .tradutor-btn:hover:not(:disabled) { transform: translateY(-1px); }
+  .tradutor-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+
+  .tradutor-status {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .tradutor-status.is-error { color: #DC2626; }
+  .tradutor-status.is-success { color: #15803D; }
+
+  .tradutor-phrases {
+    margin-top: 1.4rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--border-ui);
+  }
+
+  .tradutor-phrases h3 {
+    margin: 0 0 0.8rem;
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--brand-tradutor);
+  }
+
+  .tradutor-phrase-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+  }
+
+  @media (max-width: 720px) {
+    .tradutor-phrase-list { grid-template-columns: 1fr; }
+  }
+
+  .tradutor-phrase-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    padding: 0.6rem 0.85rem;
+    border: 1px solid var(--border-ui);
+    border-radius: 8px;
+    background: var(--bg-main);
+    font-size: 0.85rem;
+    color: var(--text-main);
+  }
+
+  .tradutor-phrase-item button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border: none;
+    background: var(--brand-tradutor);
+    color: #fff;
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.72rem;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+
+  .cas-groups {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
+
+  .cas-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 1.6rem 0 0.9rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid rgba(0, 151, 57, 0.25);
+    font-weight: 800;
+    font-size: 0.95rem;
+    color: var(--brand-cas);
+  }
+
+  .cas-section-title:first-of-type {
+    margin-top: 0.4rem;
+  }
+
+  .cas-section-title svg {
+    color: var(--brand-cas);
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 900px) {
+    .cas-groups { grid-template-columns: 1fr; }
+  }
+
+  .cas-group {
+    border: 1px solid var(--border-ui);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-xs);
+    transition: box-shadow 0.25s var(--ease);
+  }
+
+  .cas-group:hover {
+    box-shadow: var(--shadow-sm);
+  }
+
+  .cas-group-header {
+    padding: 0.7rem 1.1rem;
+    font-weight: 800;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: rgba(0, 151, 57, 0.08);
+    color: var(--brand-cas);
+  }
+
+  .cas-link-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .cas-link-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.7rem 1.1rem;
+    border-top: 1px solid var(--border-ui);
+    text-decoration: none;
+    color: var(--text-main);
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: background 0.2s var(--ease);
+  }
+
+  .cas-link-item:hover {
+    background: var(--bg-main);
+  }
+
+  .cas-link-item:hover .cas-link-arrow {
+    opacity: 1;
+    transform: translateX(2px);
+  }
+
+  .cas-link-item svg {
+    color: var(--brand-cas);
+    flex-shrink: 0;
+  }
+
+  .cas-link-item .cas-link-arrow {
+    margin-left: auto;
+    color: var(--text-muted);
+    opacity: 0.6;
+    transition: opacity 0.2s var(--ease), transform 0.2s var(--ease);
+  }
+
+  /* Cartão da categoria "Atendimento CRAS" — painel de acesso rápido a
+     sistemas municipais/federais, RMA e nuvens da equipe, usando o acento
+     turquesa (--brand-cras) para diferenciar dos demais cartões. */
+  .cras-card {
+    border-top: none;
+    grid-column: 1 / -1;
+  }
+
+  .cras-card::before {
+    background: linear-gradient(90deg, var(--brand-cras), var(--brand-cras-light));
+  }
+
+  .cras-card .card-top {
+    background: linear-gradient(180deg, rgba(13, 148, 136, 0.07), rgba(13, 148, 136, 0) 80%);
+  }
+
+  .cras-card .card-top h2 {
+    color: var(--brand-cras);
+  }
+
+  .cras-groups {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
+
+  .cras-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 1.6rem 0 0.9rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid rgba(13, 148, 136, 0.25);
+    font-weight: 800;
+    font-size: 0.95rem;
+    color: var(--brand-cras);
+  }
+
+  .cras-section-title:first-of-type {
+    margin-top: 0.4rem;
+  }
+
+  .cras-section-title svg {
+    color: var(--brand-cras);
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 900px) {
+    .cras-groups { grid-template-columns: 1fr; }
+  }
+
+  .cras-group {
+    border: 1px solid var(--border-ui);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-xs);
+    transition: box-shadow 0.25s var(--ease);
+  }
+
+  .cras-group:hover {
+    box-shadow: var(--shadow-sm);
+  }
+
+  .cras-group-header {
+    padding: 0.7rem 1.1rem;
+    font-weight: 800;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: rgba(13, 148, 136, 0.08);
+    color: var(--brand-cras);
+  }
+
+  .cras-link-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .cras-link-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.7rem 1.1rem;
+    border-top: 1px solid var(--border-ui);
+    text-decoration: none;
+    color: var(--text-main);
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: background 0.2s var(--ease);
+  }
+
+  .cras-link-item:hover {
+    background: var(--bg-main);
+  }
+
+  .cras-link-item:hover .cras-link-arrow {
+    opacity: 1;
+    transform: translateX(2px);
+  }
+
+  .cras-link-item svg {
+    color: var(--brand-cras);
+    flex-shrink: 0;
+  }
+
+  .cras-link-item .cras-link-arrow {
+    margin-left: auto;
+    color: var(--text-muted);
+    opacity: 0.6;
+    transition: opacity 0.2s var(--ease), transform 0.2s var(--ease);
+  }
+
+  /* Cartões da categoria "Delegacias" — visual de segurança pública,
+     usando o acento azul-marinho (--brand-police) para diferenciar das
+     demais unidades (saúde, social, etc). */
+  .police-card {
+    border-top: none;
+  }
+
+  .police-card::before {
+    background: linear-gradient(90deg, var(--brand-police), var(--brand-police-light));
+  }
+
+  .police-card .card-top {
+    background: linear-gradient(180deg, rgba(30, 58, 138, 0.07), rgba(30, 58, 138, 0) 80%);
+  }
+
+  .police-card .card-top h2 {
+    color: var(--brand-police-light);
+  }
+
+  .police-group-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--brand-police-light);
+    background: rgba(30, 58, 138, 0.08);
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    margin-top: 0.5rem;
+  }
+
+  /* Cartões da categoria "CRAS/CREAS Interior" — visual de rede
+     municipal do interior, usando o acento laranja-terroso
+     (--brand-interior) para diferenciar das unidades da Capital. */
+  .interior-card {
+    border-top: none;
+  }
+
+  .interior-card::before {
+    background: linear-gradient(90deg, var(--brand-interior), var(--brand-interior-light));
+  }
+
+  .interior-card .card-top {
+    background: linear-gradient(180deg, rgba(180, 89, 6, 0.07), rgba(180, 89, 6, 0) 80%);
+  }
+
+  .interior-card .card-top h2 {
+    color: var(--brand-interior-light);
+  }
+
+  .interior-group-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--brand-interior-light);
+    background: rgba(180, 89, 6, 0.08);
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    margin-top: 0.5rem;
+  }
+
+  /* Cartão da aba "Anotações" — espaço livre de anotação para encaminhamentos
+     gerais, sem vínculo a uma unidade específica. Usa o acento rosa
+     (--brand-notes) para diferenciar das demais categorias. */
+  :root {
+    --brand-notes: #BE123C;
+    --brand-notes-light: #E11D48;
+  }
+
+  .notes-card {
+    border-top: none;
+    grid-column: 1 / -1;
+  }
+
+  .notes-card::before {
+    background: linear-gradient(90deg, var(--brand-notes), var(--brand-notes-light));
+  }
+
+  .notes-card .card-top {
+    background: linear-gradient(180deg, rgba(190, 18, 60, 0.07), rgba(190, 18, 60, 0) 80%);
+  }
+
+  .notes-card .card-top h2 {
+    color: var(--brand-notes-light);
+  }
+
+  .notes-textarea {
+    width: 100%;
+    min-height: 260px;
+    background: var(--bg-main);
+    border: 1.5px solid var(--border-ui);
+    border-radius: 8px;
+    padding: 1rem;
+    font-family: var(--font-sans);
+    font-size: 16px; /* >=16px evita o zoom automático do Safari iOS ao focar */
+    line-height: 1.6;
+    color: var(--text-main);
+    resize: vertical;
+    transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+  }
+
+  .notes-textarea:focus {
+    border-color: var(--brand-notes);
+    box-shadow: 0 0 0 3px rgba(190, 18, 60, 0.12);
+    outline: none;
+  }
+
+  .notes-save-status {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .notes-save-status svg { color: var(--brand-notes); flex-shrink: 0; }
+
+  .user-data-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .user-data-fields .user-data-field:nth-child(1),
+  .user-data-fields .user-data-field:nth-child(2),
+  .user-data-fields .user-data-field:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+
+  @media (max-width: 640px) {
+    .user-data-fields { grid-template-columns: 1fr; }
+  }
+
+  .user-data-field label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+    margin-bottom: 0.45rem;
+  }
+
+  .user-data-field input {
+    width: 100%;
+    background: var(--bg-main);
+    border: 1.5px solid var(--border-ui);
+    border-radius: 10px;
+    padding: 0.95rem 1.05rem;
+    font-family: var(--font-sans);
+    font-size: 1.05rem;
+    line-height: 1.3;
+    color: var(--text-main);
+    transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+  }
+
+  .user-data-field input:focus {
+    border-color: var(--brand-notes);
+    box-shadow: 0 0 0 3px rgba(190, 18, 60, 0.12);
+    outline: none;
+  }
+
+  .external-resource-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    background: var(--bg-card);
+    border: 1px solid var(--border-ui);
+    border-left: 4px solid var(--brand-primary);
+    border-radius: var(--radius-ui);
+    padding: 1.25rem 1.5rem;
+    margin-top: 1.5rem;
+    box-shadow: var(--shadow-xs);
+    transition: box-shadow 0.25s var(--ease), transform 0.25s var(--ease);
+  }
+
+  .category-info-banner {
+    background: var(--bg-card);
+    border: 1px solid var(--border-ui);
+    border-left: 4px solid var(--brand-primary);
+    border-radius: var(--radius-ui);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+    box-shadow: var(--shadow-xs);
+    font-size: 0.85rem;
+    line-height: 1.55;
+    color: var(--text-muted);
+  }
+
+  .category-info-banner strong {
+    color: var(--brand-primary);
+  }
+
+  .category-info-banner .cib-title {
+    display: block;
+    margin: 0 0 0.4rem 0;
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--brand-primary);
+  }
+
+  .category-info-banner details {
+    margin-top: 0.5rem;
+  }
+
+  .category-info-banner summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--brand-primary);
+  }
+
+  .category-info-banner ul {
+    margin: 0.5rem 0 0 0;
+    padding-left: 1.1rem;
+  }
+
+  .external-resource-card:hover {
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
+  }
+
+  .external-resource-card .external-resource-text h3 {
+    margin: 0 0 0.35rem 0;
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--brand-primary);
+  }
+
+  .external-resource-card .external-resource-text p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    max-width: 640px;
+  }
+
+  .external-resource-card .btn-tech {
+    white-space: nowrap;
+  }
+
+  footer.site-footer {
+    margin-top: 3.5rem;
+    padding: 0;
+    background: #071E1A;           /* mais escuro/sólido que antes → maior contraste com o texto */
+    color: #EAF1F5;                /* texto base bem mais claro (era #D5DEE8) */
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Navio Argo como marca d'água do rodapé — mesmo emblema do login,
+     em tamanho grande e bem discreto. Fica no rodapé (fundo escuro e
+     contínuo, ponta a ponta) para garantir que sempre apareça, ao
+     contrário de um watermark solto nas margens da página. */
+  footer.site-footer::before {
+    content: "";
+    position: absolute;
+    right: -40px;
+    bottom: -50px;
+    width: 340px;
+    height: 340px;
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIiB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCI+CjxkZWZzPjxyZWN0IGlkPSJ0IiB4PSItMyIgeT0iLTEwNCIgd2lkdGg9IjYiIGhlaWdodD0iMTQiIHJ4PSIxIi8+PC9kZWZzPgo8ZyBvcGFjaXR5PSIwLjE0Ij4KPGNpcmNsZSBjeD0iMTAwIiBjeT0iMTAwIiByPSI5MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMjlBQkUyIiBzdHJva2Utd2lkdGg9IjQiLz4KPGNpcmNsZSBjeD0iMTAwIiBjeT0iMTAwIiByPSI3OCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMjlBQkUyIiBzdHJva2Utd2lkdGg9IjEuNSIgb3BhY2l0eT0iMC42Ii8+CjxnIGZpbGw9IiMyOUFCRTIiPjx1c2UgaHJlZj0iI3QiIHRyYW5zZm9ybT0icm90YXRlKDAuMCAxMDAgMTAwKSIvPjx1c2UgaHJlZj0iI3QiIHRyYW5zZm9ybT0icm90YXRlKDExLjI1IDEwMCAxMDApIi8+PHVzZSBocmVmPSIjdCIgdHJhbnNmb3JtPSJyb3RhdGUoMjIuNSAxMDAgMTAwKSIvPjx1c2UgaHJlZj0iI3QiIHRyYW5zZm9ybT0icm90YXRlKDMzLjc1IDEwMCAxMDApIi8+PHVzZSBocmVmPSIjdCIgdHJhbnNmb3JtPSJyb3RhdGUoNDUuMCAxMDAgMTAwKSIvPjx1c2UgaHJlZj0iI3QiIHRyYW5zZm9ybT0icm90YXRlKDU2LjI1IDEwMCAxMDApIi8+PHVzZSBocmVmPSIjdCIgdHJhbnNmb3JtPSJyb3RhdGUoNjcuNSAxMDAgMTAwKSIvPjx1c2UgaHJlZj0iI3QiIHRyYW5zZm9ybT0icm90YXRlKDc4Ljc1IDEwMCAxMDApIi8+PHVzZSBocmVmPSIjdCIgdHJhbnNmb3JtPSJyb3RhdGUoOTAuMCAxMDAgMTAwKSIvPjx1c2UgaHJlZj0iI3QiIHRyYW5zZm9ybT0icm90YXRlKDEwMS4yNSAxMDAgMTAwKSIvPjx1c2UgaHJlZj0iI3QiIHRyYW5zZm9ybT0icm90YXRlKDExMi41IDEwMCAxMDApIi8+PHVzZSBocmVmPSIjdCIgdHJhbnNmb3JtPSJyb3RhdGUoMTIzLjc1IDEwMCAxMDApIi8+PHVzZSBocmVmPSIjdCIgdHJhbnNmb3JtPSJyb3RhdGUoMTM1LjAgMTAwIDEwMCkiLz48dXNlIGhyZWY9IiN0IiB0cmFuc2Zvcm09InJvdGF0ZSgxNDYuMjUgMTAwIDEwMCkiLz48dXNlIGhyZWY9IiN0IiB0cmFuc2Zvcm09InJvdGF0ZSgxNTcuNSAxMDAgMTAwKSIvPjx1c2UgaHJlZj0iI3QiIHRyYW5zZm9ybT0icm90YXRlKDE2OC43NSAxMDAgMTAwKSIvPjx1c2UgaHJlZj0iI3QiIHRyYW5zZm9ybT0icm90YXRlKDE4MC4wIDEwMCAxMDApIi8+PHVzZSBocmVmPSIjdCIgdHJhbnNmb3JtPSJyb3RhdGUoMTkxLjI1IDEwMCAxMDApIi8+PHVzZSBocmVmPSIjdCIgdHJhbnNmb3JtPSJyb3RhdGUoMjAyLjUgMTAwIDEwMCkiLz48dXNlIGhyZWY9IiN0IiB0cmFuc2Zvcm09InJvdGF0ZSgyMTMuNzUgMTAwIDEwMCkiLz48dXNlIGhyZWY9IiN0IiB0cmFuc2Zvcm09InJvdGF0ZSgyMjUuMCAxMDAgMTAwKSIvPjx1c2UgaHJlZj0iI3QiIHRyYW5zZm9ybT0icm90YXRlKDIzNi4yNSAxMDAgMTAwKSIvPjx1c2UgaHJlZj0iI3QiIHRyYW5zZm9ybT0icm90YXRlKDI0Ny41IDEwMCAxMDApIi8+PHVzZSBocmVmPSIjdCIgdHJhbnNmb3JtPSJyb3RhdGUoMjU4Ljc1IDEwMCAxMDApIi8+PHVzZSBocmVmPSIjdCIgdHJhbnNmb3JtPSJyb3RhdGUoMjcwLjAgMTAwIDEwMCkiLz48dXNlIGhyZWY9IiN0IiB0cmFuc2Zvcm09InJvdGF0ZSgyODEuMjUgMTAwIDEwMCkiLz48dXNlIGhyZWY9IiN0IiB0cmFuc2Zvcm09InJvdGF0ZSgyOTIuNSAxMDAgMTAwKSIvPjx1c2UgaHJlZj0iI3QiIHRyYW5zZm9ybT0icm90YXRlKDMwMy43NSAxMDAgMTAwKSIvPjx1c2UgaHJlZj0iI3QiIHRyYW5zZm9ybT0icm90YXRlKDMxNS4wIDEwMCAxMDApIi8+PHVzZSBocmVmPSIjdCIgdHJhbnNmb3JtPSJyb3RhdGUoMzI2LjI1IDEwMCAxMDApIi8+PHVzZSBocmVmPSIjdCIgdHJhbnNmb3JtPSJyb3RhdGUoMzM3LjUgMTAwIDEwMCkiLz48dXNlIGhyZWY9IiN0IiB0cmFuc2Zvcm09InJvdGF0ZSgzNDguNzUgMTAwIDEwMCkiLz48L2c+CjxwYXRoIGZpbGw9IiMyOUFCRTIiIGQ9Ik00NSwzNSBMMTM1LDMyIEMxNTgsMzAgMTc2LDQ0IDE3NCw2NCBDMTczLDc2IDE2Myw4NiAxNDgsOTAgQzE2MCw5NiAxNjgsMTA0IDE2NSwxMTIgQzE2MiwxMjAgMTUwLDEyMiAxNDIsMTE2IEMxNDQsMTA4IDE0MCwxMDAgMTQwLDk1IEw0NSwxNTAgWiIvPgo8cGF0aCBmaWxsPSIjMjlBQkUyIiBkPSJNMTUwLDEyMCBDMTY1LDExOCAxNzUsMTI4IDE2OCwxMzggQzE2MiwxNDYgMTQ4LDE0NCAxNDUsMTM1IEMxNDMsMTI4IDE0NiwxMjIgMTUwLDEyMCBaIi8+CjxsaW5lIHgxPSI5MCIgeTE9IjE4IiB4Mj0iOTAiIHkyPSIzMiIgc3Ryb2tlPSIjMjlBQkUyIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8ZyBmaWxsPSIjMjlBQkUyIiBzdHJva2U9IiMyOUFCRTIiPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIuNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBkPSJNMjgsMTgyIEM0NSwxNjggNjAsMTU1IDcwLDE0MCIvPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIuNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBkPSJNMjgsMTgyIEM1MCwxNjMgNzIsMTQ4IDkwLDEzMCIvPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjIuNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBkPSJNMjgsMTgyIEM1NiwxNTggODQsMTQwIDExMCwxMTgiLz4KPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIyLjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgZD0iTTI4LDE4MiBDNjIsMTUzIDk2LDEzMiAxMzAsMTA4Ii8+CjxlbGxpcHNlIGN4PSI3MCIgY3k9IjE0MCIgcng9IjQuNSIgcnk9IjciIHRyYW5zZm9ybT0icm90YXRlKC00MCA3MCAxNDApIi8+CjxlbGxpcHNlIGN4PSI5MCIgY3k9IjEzMCIgcng9IjQuNSIgcnk9IjciIHRyYW5zZm9ybT0icm90YXRlKC0zMyA5MCAxMzApIi8+CjxlbGxpcHNlIGN4PSIxMTAiIGN5PSIxMTgiIHJ4PSI0LjUiIHJ5PSI3IiB0cmFuc2Zvcm09InJvdGF0ZSgtMjcgMTEwIDExOCkiLz4KPGVsbGlwc2UgY3g9IjEzMCIgY3k9IjEwOCIgcng9IjQuNSIgcnk9IjciIHRyYW5zZm9ybT0icm90YXRlKC0yMiAxMzAgMTA4KSIvPgo8L2c+CjwvZz4KPC9zdmc+');
+    background-repeat: no-repeat;
+    background-size: contain;
+    pointer-events: none;
+  }
+
+  .footer-flag-line {
+    height: 5px;                   /* linha da bandeira um pouco mais espessa, marca melhor a divisão */
+    background: linear-gradient(
+      90deg,
+      #0091C2 0%, #0091C2 34%,
+      #FFFFFF 34%, #FFFFFF 40%,
+      #009739 40%, #009739 92%,
+      #ED1C24 92%, #ED1C24 100%
+    );
+    opacity: 1;
+  }
+
+  .footer-grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1.2fr 0.85fr 1fr 1fr;
+    gap: 2.25rem;
+    padding: 3rem 1.5rem 2.5rem;
+  }
+
+  @media (max-width: 980px) {
+    .footer-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  @media (max-width: 760px) {
+    .footer-grid {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+      text-align: center;
+      padding: 2.5rem 1.5rem 2rem;
+    }
+  }
+
+  /* Títulos de coluna: cor dourada + linha inferior para virar um cabeçalho
+     de verdade, em vez de um texto cinza quase imperceptível */
+  .footer-col-title {
+    display: inline-block;
+    font-size: 0.74rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--hero-gold-soft, #F2CB7E);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid rgba(232, 172, 61, 0.35);
+  }
+
+  @media (max-width: 760px) {
+    .footer-col-title { padding-bottom: 0.4rem; }
+  }
+
+  .footer-col-brand .footer-brand-mark {
+    display: block;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 700;
+    font-size: 1.55rem;            /* maior, marca melhor a identidade */
+    color: var(--hero-gold-soft, #F2CB7E);
+  }
+
+  .footer-col-brand .footer-brand-suas {
+    font-family: var(--font-sans);
+    font-style: normal;
+    font-weight: 800;
+    font-size: 0.5em;
+    color: #D7E4EC;                /* mais claro que antes */
+    letter-spacing: 0.06em;
+    margin-left: 0.35em;
+  }
+
+  .footer-col-brand .footer-tagline {
+    margin: 0.5rem 0 1rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #B9CBD9;                /* melhor contraste que o cinza anterior */
+  }
+
+  .footer-mission {
+    margin: 0;
+    font-size: 0.88rem;            /* levemente maior */
+    line-height: 1.65;
+    color: #DCE6ED;                /* bem mais legível sobre o fundo escuro */
+    max-width: 320px;
+  }
+
+  @media (max-width: 760px) {
+    .footer-mission { margin: 0 auto; }
+  }
+
+  .footer-link-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;                  /* mais respiro entre os links */
+  }
+
+  @media (max-width: 760px) {
+    .footer-link-list { align-items: center; }
+  }
+
+  .footer-link-list a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #F1F5F9;                /* branco quase puro → contraste máximo */
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 700;
+    padding: 0.15rem 0;
+    border-bottom: 1px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .footer-link-list a:hover,
+  .footer-link-list a:focus-visible {
+    color: var(--hero-gold-soft, #F2CB7E);
+    border-bottom-color: rgba(232, 172, 61, 0.6);
+  }
+
+  .footer-credit-row {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.9rem;
+    background: rgba(255, 255, 255, 0.04);   /* painel sutil para destacar o bloco do responsável técnico */
+    border: 1px solid rgba(232, 172, 61, 0.2);
+    border-radius: 10px;
+  }
+
+  @media (max-width: 760px) { .footer-credit-row { justify-content: center; } }
+
+  .footer-badge {
+    position: relative;
+    flex-shrink: 0;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-serif);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--hero-gold-soft, #F2CB7E);
+    background: rgba(232, 172, 61, 0.14);
+    border: 1px solid rgba(232, 172, 61, 0.45);
+  }
+
+  .footer-badge::after {
+    content: "";
+    position: absolute;
+    inset: -5px;
+    border-radius: 50%;
+    border: 1px solid rgba(232, 172, 61, 0.18);
+  }
+
+  .footer-text { display: flex; flex-direction: column; gap: 0.22rem; }
+
+  .footer-name {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-style: italic;
+    color: #FFFFFF;
+    font-size: 1.15rem;
+    letter-spacing: 0.01em;
+  }
+
+  .footer-meta {
+    margin: 0;
+    font-size: 0.86rem;
+    letter-spacing: 0.02em;
+    color: #DCE6ED;
+  }
+
+  .footer-meta .footer-sep { color: #8FA3B5; margin: 0 0.5rem; }
+
+  .footer-contact-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .footer-contact-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    font-size: 0.87rem;
+    line-height: 1.55;
+    color: #DCE6ED;
+  }
+
+  @media (max-width: 760px) { .footer-contact-list li { justify-content: center; } }
+
+  .footer-contact-list svg { flex-shrink: 0; margin-top: 0.15rem; color: var(--hero-gold-soft, #F2CB7E); }
+
+  .footer-contact-list a {
+    color: #F1F5F9;
+    font-weight: 700;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(232, 172, 61, 0.35);
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .footer-contact-list a:hover,
+  .footer-contact-list a:focus-visible {
+    color: var(--hero-gold-soft, #F2CB7E);
+    border-bottom-color: var(--hero-gold-soft, #F2CB7E);
+  }
+
+  .footer-contact-list .footer-address-link {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 0.3rem;
+  }
+
+  .footer-address-hint {
+    display: block;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--hero-gold-soft, #F2CB7E);   /* CTA "Ver no mapa" mais visível */
+    margin-top: 0.2rem;
+  }
+
+  @media (max-width: 760px) { .footer-contact-list .footer-address-link { justify-content: center; } }
+
+  .footer-contact-unit + .footer-contact-unit {
+    margin-top: 1.6rem;
+    padding-top: 1.6rem;
+    border-top: 1px solid rgba(232, 172, 61, 0.18);   /* linha dourada em vez de cinza quase invisível */
+  }
+
+  .footer-contact-unit .footer-col-title { margin-bottom: 0.85rem; }
+
+  .footer-bottom {
+    border-top: 1px solid rgba(232, 172, 61, 0.3);
+    background: #04120F;           /* mais escuro/opaco que o rgba anterior → separa bem do resto */
+  }
+
+  .footer-bottom-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    padding: 1.1rem 1.5rem;
+    font-size: 0.78rem;             /* maior que antes (0.72rem) */
+    font-weight: 600;
+    color: #C7D6E1;                 /* mais claro que #9FB3C8 */
+    text-align: center;
+  }
+
+  .footer-bottom-sep { color: #5C7385; }
+
+  .footer-bottom-inner .footer-suas-full {
+    color: #EAF1F5;
+    font-weight: 700;
+  }
+
+  @media (max-width: 560px) {
+    .footer-bottom-inner { flex-direction: column; gap: 0.35rem; }
+    .footer-bottom-sep { display: none; }
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  #print-area { display: none; }
+
+  /* Dimensões da página impressa (A4 paisagem: 29,7cm x 21cm, menos 0,5cm
+     de margem de cada lado definida em @page = 28,7cm x 20cm de área útil).
+     Isso precisa valer FORA de @media print também: a função printGuide()
+     mede a altura do texto de anotações (noteBox.scrollHeight vs
+     clientHeight) fora da tela, em modo "tela" (screen), para decidir se
+     deve reduzir a fonte antes de imprimir. Se essas dimensões só existirem
+     dentro de @media print, a medição ocorre sem nenhuma altura de
+     referência, o container cresce para caber qualquer texto e o ajuste
+     automático de fonte nunca é acionado — anotações longas saem cortadas
+     silenciosamente na impressão (a caixa tem overflow:hidden). */
+  #print-area .print-page {
+    width: 28.7cm;
+    height: 20cm;
+    overflow: hidden;
+  }
+
+  @media print {
+    @page { size: A4 landscape; margin: 0.5cm; }
+
+    body > *:not(#print-area) {
+      display: none !important;
+    }
+
+    #print-area {
+      display: block !important;
+      position: static;
+      width: 100%;
+      background: white;
+      z-index: 9999;
+      padding: 0;
+      margin: 0;
+    }
+
+    #print-area .print-page {
+      page-break-after: always;
+    }
+    #print-area .print-page:last-child {
+      page-break-after: auto;
+    }
+
+    #print-area * { word-break: break-word !important; overflow-wrap: break-word !important; }
+  }
+
+  @media (max-width: 640px) {
+    .equipment-grid { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 2rem; }
+    .external-resource-card { flex-direction: column; align-items: stretch; text-align: center; }
+  }
+
+  /* ===================== Tela de Login ===================== */
+  #loginScreen {
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    background-color: var(--brand-secondary);
+    /* Constelação de Argo Navis (estrelas reais de Carina, Vela, Puppis e Pyxis,
+       com a estrela-guia Canopus em destaque) pontilhada no fundo da tela de
+       login, ecoando o ícone do app. */
+    background-image: url('argo-navis-historico.jpg');
+    background-repeat: no-repeat;
+    background-position: center 38%;
+    background-size: 560px 420px;
+    display: flex;
+    align-items: center;
+    align-items: safe center;
+    justify-content: center;
+    padding: 1.5rem;
+    overflow-y: auto;
+  }
+
+  @media (max-width: 640px) {
+    #loginScreen { background-size: 340px 255px; }
+  }
+
+  #loginScreen[hidden] { display: none; }
+
+  .login-shell {
+    position: relative;
+    width: 100%;
+    max-width: 900px;
+    margin: auto;
+    display: grid;
+    grid-template-columns: 1fr 1.05fr;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 30px 70px -15px rgba(0, 0, 0, 0.55);
+    background: var(--bg-card);
+    animation: loginShellIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes loginShellIn {
+    from { opacity: 0; transform: translateY(10px) scale(0.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .login-shell { animation: none; }
+  }
+
+  @media (max-width: 760px) {
+    .login-shell {
+      grid-template-columns: 1fr;
+      max-width: 420px;
+    }
+  }
+
+  /* ---- Painel esquerdo: identidade Argo SUAS ---- */
+  .login-story {
+    position: relative;
+    background: var(--brand-secondary);
+    color: #fff;
+    padding: 2.5rem 2.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 1.75rem;
+    overflow: hidden;
+    min-height: 460px;
+  }
+
+  @media (max-width: 760px) {
+    .login-story {
+      min-height: unset;
+      padding: 1.6rem 1.5rem;
+      gap: 0.9rem;
+    }
+  }
+
+  .login-story-stripe {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 5px;
+    background: linear-gradient(
+      90deg,
+      #0091C2 0%, #0091C2 34%,
+      #FFFFFF 34%, #FFFFFF 40%,
+      #009739 40%, #009739 92%,
+      #ED1C24 92%, #ED1C24 100%
+    );
+  }
+
+  .login-story-glow {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(480px circle at 18% 15%, rgba(0, 145, 194, 0.3), transparent 62%),
+      radial-gradient(420px circle at 88% 92%, rgba(0, 151, 57, 0.22), transparent 60%);
+    pointer-events: none;
+  }
+
+  /* Constelação real de Argo Navis (estrelas de Carina, Vela, Puppis e Pyxis em
+     posições astronômicas verdadeiras) usada como marca d'água de fundo do painel
+     de login, remetendo ao nome do app.
+     Opacidade baixa e mix-blend-mode para não competir com o texto em primeiro plano. */
+  .login-story-historic {
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    background-image: url('argo-navis-historico.jpg');
+    background-size: cover;
+    background-position: center 38%;
+    background-repeat: no-repeat;
+    opacity: 0.24;
+    mix-blend-mode: luminosity;
+    pointer-events: none;
+  }
+
+  @media (max-width: 760px) {
+    .login-story-historic { opacity: 0.16; }
+  }
+
+  .login-story-emblem {
+    position: absolute;
+    right: -10%;
+    bottom: -8%;
+    width: 78%;
+    max-width: 340px;
+    height: auto;
+    opacity: 0.92;
+    pointer-events: none;
+  }
+
+  @media (max-width: 760px) {
+    .login-story-emblem {
+      width: 44%;
+      max-width: 160px;
+      right: -6%;
+      bottom: -18%;
+      opacity: 0.5;
+    }
+  }
+
+  /* Mesma constelação real de Argo Navis do cabeçalho, agora no painel de login,
+     no lugar do antigo barquinho estilizado. */
+  .login-story-emblem .const-line {
+    fill: none;
+    stroke: #29ABE2;
+    stroke-width: 1.1;
+    stroke-opacity: 0.45;
+    stroke-dasharray: 3 4;
+    stroke-linecap: round;
+  }
+
+  .login-story-emblem .const-star {
+    fill: #F8FAFC;
+    animation: heroStarTwinkle 4.5s ease-in-out infinite;
+  }
+
+  .login-story-emblem .const-star:nth-child(odd) { animation-delay: -1.5s; }
+  .login-story-emblem .const-star:nth-child(3n) { animation-delay: -3s; }
+
+  .login-story-emblem .guide-star {
+    fill: #FEDD00;
+    animation: loginSunPulse 4s ease-in-out infinite;
+  }
+
+  .login-story-emblem .guide-star-glow {
+    fill: #FEDD00;
+    animation: heroGuideStarGlow 4s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .login-story-emblem .const-star,
+    .login-story-emblem .guide-star,
+    .login-story-emblem .guide-star-glow {
+      animation: none;
+    }
+  }
+
+  @keyframes loginSunPulse {
+    0%, 100% { opacity: 0.95; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.14); }
+  }
+
+  .login-story-top {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .login-story-top svg { flex-shrink: 0; }
+
+  .login-story-ship-badge {
+    overflow: visible;
+    vertical-align: middle;
+    margin-right: 0.5rem;
+    flex-shrink: 0;
+  }
+  .login-story-ship-badge .argo-ship-sail { fill: #F1F5F9; }
+  .login-story-ship-badge .argo-ship-swirl { fill: #F1F5F9; }
+  .login-story-ship-badge .argo-ship-mast { stroke: #F1F5F9; stroke-width: 3; stroke-linecap: round; }
+  .login-story-ship-badge .argo-ship-oars { fill: #F1F5F9; stroke: #F1F5F9; }
+  .login-story-ship-badge .argo-ship-oars path { fill: none; stroke-width: 2.4; stroke-linecap: round; }
+
+  .login-story-eyebrow {
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #94A3B8;
+  }
+
+  .login-story-content { position: relative; z-index: 1; }
+
+  .login-story-brand {
+    display: flex;
+    align-items: center;
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-style: italic;
+    font-size: 2.1rem;
+    margin: 0 0 0.35rem;
+    letter-spacing: 0.01em;
+    line-height: 1.1;
+  }
+
+  .login-story-brand span {
+    font-family: var(--font-sans);
+    font-style: normal;
+    font-weight: 700;
+    font-size: 0.42em;
+    color: #29ABE2;
+    vertical-align: middle;
+    margin-left: 0.3em;
+  }
+
+  .login-story-tagline {
+    margin: 0 0 0.9rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94A3B8;
+  }
+
+  .login-story-desc {
+    margin: 0;
+    max-width: 320px;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: #CBD5E1;
+  }
+
+  .login-story-tags {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 1.1rem;
+  }
+
+  .login-story-tags span {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: #CFE3DD;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    padding: 0.25rem 0.6rem;
+    border-radius: 5px;
+  }
+
+  @media (max-width: 760px) {
+    .login-story-desc { display: none; }
+    .login-story-tags { display: none; }
+    .login-story-content { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
+    .login-story-brand { font-size: 1.4rem; margin: 0; }
+    .login-story-tagline { margin: 0; font-size: 0.6rem; }
+  }
+
+  /* ---- Painel direito: formulário ---- */
+  .login-panel {
+    position: relative;
+    background: var(--bg-card);
+    padding: 2.75rem 2.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  @media (max-width: 760px) {
+    .login-panel { padding: 2rem 1.75rem 1.85rem; }
+  }
+
+  .login-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--brand-primary);
+    margin-bottom: 0.65rem;
+  }
+
+  .login-title {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 1.55rem;
+    color: var(--text-main);
+    margin: 0 0 0.7rem;
+    line-height: 1.2;
+  }
+
+  .login-river {
+    display: block;
+    width: 84px;
+    height: 10px;
+    margin-bottom: 1.1rem;
+    overflow: visible;
+  }
+
+  .login-river path {
+    stroke: var(--brand-primary);
+    opacity: 0.45;
+    fill: none;
+  }
+
+  .login-sub {
+    margin: 0 0 1.75rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .login-field { text-align: left; margin-bottom: 1rem; }
+
+  .login-field label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    margin-bottom: 0.4rem;
+  }
+
+  .login-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .login-input-wrapper svg {
+    position: absolute;
+    left: 0.95rem;
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+
+  #loginPassword {
+    width: 100%;
+    background: var(--bg-main);
+    border: 1.5px solid var(--border-ui);
+    padding: 0.8rem 2.7rem;
+    border-radius: 9px;
+    color: var(--text-main);
+    font-family: var(--font-sans);
+    font-size: 16px; /* >=16px evita o zoom automático do Safari iOS ao focar */
+    transition: all 0.2s;
+  }
+
+  #loginPassword:focus {
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 3px rgba(0, 145, 194, 0.15);
+    outline: none;
+  }
+
+  .login-toggle-visibility {
+    position: absolute;
+    right: 0.5rem;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .login-toggle-visibility:hover {
+    background: var(--border-ui);
+    color: var(--text-main);
+  }
+
+  .login-error {
+    display: none;
+    align-items: center;
+    gap: 0.4rem;
+    text-align: left;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #DC2626;
+    background: rgba(220, 38, 38, 0.08);
+    border: 1px solid rgba(220, 38, 38, 0.25);
+    border-radius: 7px;
+    padding: 0.6rem 0.8rem;
+    margin-bottom: 1rem;
+  }
+
+  .login-error.visible { display: flex; }
+
+  .login-error.shake { animation: loginShake 0.4s; }
+
+  @keyframes loginShake {
+    10%, 90% { transform: translateX(-1px); }
+    20%, 80% { transform: translateX(2px); }
+    30%, 50%, 70% { transform: translateX(-4px); }
+    40%, 60% { transform: translateX(4px); }
+  }
+
+  .login-submit {
+    width: 100%;
+    padding: 0.85rem;
+    border-radius: 9px;
+    border: none;
+    background: var(--brand-primary);
+    color: white;
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: background 0.2s, transform 0.15s;
+  }
+
+  .login-submit:hover { background: var(--brand-primary-light); }
+  .login-submit:active { transform: scale(0.98); }
+  .login-submit:disabled { opacity: 0.7; cursor: default; }
+
+  .login-trust-note {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    margin: 0.8rem 0 0;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+  }
+
+  .login-trust-note svg { flex-shrink: 0; }
+
+  .login-footnote {
+    margin: 1.6rem 0 0;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.45rem;
+  }
+
+  .login-footnote svg { flex-shrink: 0; margin-top: 0.15rem; color: var(--text-muted); }
+  .login-footnote strong { color: var(--text-main); }
+
+  #appRoot[data-locked="true"] {
+    display: none;
+  }
