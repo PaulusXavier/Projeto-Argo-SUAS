@@ -1,6 +1,6 @@
 // Troque este número toda vez que publicar uma alteração no app.
 // É essa mudança de versão que dispara a atualização automática.
-const CACHE_VERSION = 'v16';
+const CACHE_VERSION = 'v20';
 const CACHE_NAME = `rede-apoio-bv-${CACHE_VERSION}`;
 
 const ASSETS = [
@@ -16,6 +16,7 @@ const ASSETS = [
   './icon-512.png',
   './icon-maskable-512.png',
   './argo-navis-historico.jpg',
+  './argo-constellation-bg.svg',
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;1,400&display=swap'
 ];
 
