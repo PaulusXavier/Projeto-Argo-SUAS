@@ -96,21 +96,24 @@
     top: 1rem;
   }
 
-  /* Plano de fundo temático: padrão sutil de ondas percorrendo toda a
-     página, reforçando a identidade náutica do "Argo SUAS". O emblema
-     do navio fica no rodapé (footer.site-footer), onde tem fundo escuro
-     contínuo e fica sempre visível — em vez de depender das margens ao
-     redor do container, que somem na maior parte das larguras de tela. */
+  /* Plano de fundo temático: a constelação de Argo Navis (argo-constellation-bg.svg,
+     mesmas estrelas reais usadas no cabeçalho e na tela de login) cobrindo
+     todo o plano de fundo do aplicativo (background-size: cover), em opacidade
+     alta — como a foto do navio na tela de login — reforçando a identidade
+     náutica do "Argo SUAS" sem depender de uma foto do navio.
+     O emblema do navio fica no rodapé (footer.site-footer), onde tem fundo
+     escuro contínuo e fica sempre visível — em vez de depender das margens
+     ao redor do container, que somem na maior parte das larguras de tela. */
   body {
     margin: 0;
     background-color: var(--bg-main);
     background-image:
       radial-gradient(120% 60% at 50% 0%, rgba(15, 74, 65, 0.07) 0%, rgba(15, 74, 65, 0) 62%),
-      url('argo-navis-historico.jpg'),
+      url('argo-constellation-bg.svg'),
       url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgNDgiIHdpZHRoPSIyNDAiIGhlaWdodD0iNDgiPgo8cGF0aCBkPSJNMCwzMCBDMTUsMjEgMTUsMzkgMzAsMzAgQzQ1LDM5IDQ1LDIxIDYwLDMwIEM3NSwyMSA3NSwzOSA5MCwzMCBDMTA1LDM5IDEwNSwyMSAxMjAsMzAgQzEzNSwyMSAxMzUsMzkgMTUwLDMwIEMxNjUsMzkgMTY1LDIxIDE4MCwzMCBDMTk1LDIxIDE5NSwzOSAyMTAsMzAgQzIyNSwzOSAyMjUsMjEgMjQwLDMwIiBmaWxsPSJub25lIiBzdHJva2U9IiMwMDkxQzIiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuMDkiLz4KPHBhdGggZD0iTTAsMTQgQzE1LDggMTUsMjAgMzAsMTQgQzQ1LDIwIDQ1LDggNjAsMTQgQzc1LDggNzUsMjAgOTAsMTQgQzEwNSwyMCAxMDUsOCAxMjAsMTQgQzEzNSw4IDEzNSwyMCAxNTAsMTQgQzE2NSwyMCAxNjUsOCAxODAsMTQgQzE5NSw4IDE5NSwyMCAyMTAsMTQgQzIyNSwyMCAyMjUsOCAyNDAsMTQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0U4QUMzRCIgc3Ryb2tlLXdpZHRoPSIxLjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4xMCIvPgo8L3N2Zz4=');
     background-repeat: no-repeat, no-repeat, repeat;
-    background-position: top center, top center, top left;
-    background-size: 100% 480px, 460px 345px, 240px 48px;
+    background-position: top center, center center, top left;
+    background-size: 100% 480px, cover, 240px 48px;
     background-attachment: fixed, fixed, fixed;
     color: var(--text-main);
     font-family: var(--font-sans);
@@ -122,22 +125,22 @@
     html:not([data-theme="light"]) body {
       background-image:
         radial-gradient(120% 55% at 50% 0%, rgba(232, 172, 61, 0.09) 0%, rgba(232, 172, 61, 0) 60%),
-        url('argo-navis-historico.jpg'),
+        url('argo-constellation-bg.svg'),
         url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgNDgiIHdpZHRoPSIyNDAiIGhlaWdodD0iNDgiPgo8cGF0aCBkPSJNMCwzMCBDMTUsMjEgMTUsMzkgMzAsMzAgQzQ1LDM5IDQ1LDIxIDYwLDMwIEM3NSwyMSA3NSwzOSA5MCwzMCBDMTA1LDM5IDEwNSwyMSAxMjAsMzAgQzEzNSwyMSAxMzUsMzkgMTUwLDMwIEMxNjUsMzkgMTY1LDIxIDE4MCwzMCBDMTk1LDIxIDE5NSwzOSAyMTAsMzAgQzIyNSwzOSAyMjUsMjEgMjQwLDMwIiBmaWxsPSJub25lIiBzdHJva2U9IiMyOUFCRTIiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuMTQiLz4KPHBhdGggZD0iTTAsMTQgQzE1LDggMTUsMjAgMzAsMTQgQzQ1LDIwIDQ1LDggNjAsMTQgQzc1LDggNzUsMjAgOTAsMTQgQzEwNSwyMCAxMDUsOCAxMjAsMTQgQzEzNSw4IDEzNSwyMCAxNTAsMTQgQzE2NSwyMCAxNjUsOCAxODAsMTQgQzE5NSw4IDE5NSwyMCAyMTAsMTQgQzIyNSwyMCAyMjUsOCAyNDAsMTQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0U4QUMzRCIgc3Ryb2tlLXdpZHRoPSIxLjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4xMiIvPgo8L3N2Zz4=');
       background-repeat: no-repeat, no-repeat, repeat;
-      background-position: top center, top center, top left;
-      background-size: 100% 560px, 460px 345px, 240px 48px;
+      background-position: top center, center center, top left;
+      background-size: 100% 560px, cover, 240px 48px;
     }
   }
 
   html[data-theme="dark"] body {
     background-image:
       radial-gradient(120% 55% at 50% 0%, rgba(232, 172, 61, 0.09) 0%, rgba(232, 172, 61, 0) 60%),
-      url('argo-navis-historico.jpg'),
+      url('argo-constellation-bg.svg'),
       url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgNDgiIHdpZHRoPSIyNDAiIGhlaWdodD0iNDgiPgo8cGF0aCBkPSJNMCwzMCBDMTUsMjEgMTUsMzkgMzAsMzAgQzQ1LDM5IDQ1LDIxIDYwLDMwIEM3NSwyMSA3NSwzOSA5MCwzMCBDMTA1LDM5IDEwNSwyMSAxMjAsMzAgQzEzNSwyMSAxMzUsMzkgMTUwLDMwIEMxNjUsMzkgMTY1LDIxIDE4MCwzMCBDMTk1LDIxIDE5NSwzOSAyMTAsMzAgQzIyNSwzOSAyMjUsMjEgMjQwLDMwIiBmaWxsPSJub25lIiBzdHJva2U9IiMyOUFCRTIiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuMTQiLz4KPHBhdGggZD0iTTAsMTQgQzE1LDggMTUsMjAgMzAsMTQgQzQ1LDIwIDQ1LDggNjAsMTQgQzc1LDggNzUsMjAgOTAsMTQgQzEwNSwyMCAxMDUsOCAxMjAsMTQgQzEzNSw4IDEzNSwyMCAxNTAsMTQgQzE2NSwyMCAxNjUsOCAxODAsMTQgQzE5NSw4IDE5NSwyMCAyMTAsMTQgQzIyNSwyMCAyMjUsOCAyNDAsMTQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0U4QUMzRCIgc3Ryb2tlLXdpZHRoPSIxLjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4xMiIvPgo8L3N2Zz4=');
     background-repeat: no-repeat, no-repeat, repeat;
-    background-position: top center, top center, top left;
-    background-size: 100% 560px, 460px 345px, 240px 48px;
+    background-position: top center, center center, top left;
+    background-size: 100% 560px, cover, 240px 48px;
   }
 
 
@@ -217,104 +220,33 @@
     header.hero { background-size: auto, 360px 270px, auto; }
   }
 
-  /* Navio Argo animado, exibido no canto esquerdo do cabeçalho — balançando
-     sobre as ondas, com a vela ao vento, no lugar da antiga marca d'água/
-     emblema estático da constelação. */
-  .hero-ship-emblem {
+  /* Foto do navio Argo como marca d'água discreta no canto esquerdo do
+     cabeçalho — mesma técnica (baixa opacidade + mix-blend-mode luminosity)
+     usada no painel da tela de login (.login-story-historic), no lugar do
+     antigo navio animado em SVG. Uma máscara em degradê esmaece a foto até
+     transparente na borda direita, para não deixar uma quina dura no meio
+     do cabeçalho. */
+  .hero-ship-photo {
     position: absolute;
-    top: 50%;
-    left: 4%;
-    transform: translateY(-50%);
-    width: 190px;
-    height: auto;
-    max-height: 170px;
-    overflow: visible;
-    filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35));
-    opacity: 0.95;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 48%;
+    max-width: 430px;
+    background-image: url('argo-navis-historico.jpg');
+    background-size: cover;
+    background-position: center 35%;
+    background-repeat: no-repeat;
+    opacity: 0.24;
+    mix-blend-mode: luminosity;
     pointer-events: none;
-    z-index: 1;
-  }
-
-  @media (max-width: 1100px) {
-    .hero-ship-emblem { width: 145px; max-height: 130px; }
+    z-index: 0;
+    -webkit-mask-image: linear-gradient(to right, #000 55%, transparent 100%);
+    mask-image: linear-gradient(to right, #000 55%, transparent 100%);
   }
 
   @media (max-width: 900px) {
-    .hero-ship-emblem { display: none; }
-  }
-
-  .hero-ship-emblem .argo-ship-hull {
-    fill: var(--hero-teal-3, #051F1A);
-    stroke: var(--hero-gold, #E8AC3D);
-    stroke-width: 2.5;
-  }
-
-  .hero-ship-emblem .argo-ship-oars circle {
-    fill: var(--hero-gold, #E8AC3D);
-    opacity: 0.85;
-  }
-
-  .hero-ship-emblem .argo-ship-mast {
-    stroke: var(--hero-gold-soft, #F2CB7E);
-    stroke-width: 2.5;
-    stroke-linecap: round;
-  }
-
-  .hero-ship-emblem .argo-ship-sail {
-    fill: #F1F5F9;
-    opacity: 0.94;
-  }
-
-  .hero-ship-emblem .argo-ship-swirl {
-    fill: #FEDD00;
-  }
-
-  .hero-ship-emblem .ship-wave {
-    fill: none;
-    stroke: var(--hero-gold, #E8AC3D);
-    stroke-width: 2;
-    opacity: 0.35;
-  }
-
-  .hero-ship-emblem .ship-wave-2 { opacity: 0.22; }
-
-  /* Animações: barco balançando nas ondas, vela ondulando ao vento e ondas
-     correndo por baixo do casco. */
-  .hero-ship-emblem .ship-bob {
-    animation: shipBob 6s ease-in-out infinite;
-    transform-origin: 110px 160px;
-  }
-
-  .hero-ship-emblem .argo-ship-sail {
-    animation: shipSailSway 5s ease-in-out infinite;
-    transform-origin: 110px 86px;
-  }
-
-  .hero-ship-emblem .ship-wave-1 { animation: shipWaveDrift 7s linear infinite; }
-  .hero-ship-emblem .ship-wave-2 { animation: shipWaveDrift 9s linear infinite reverse; }
-
-  @keyframes shipBob {
-    0%, 100% { transform: translateY(0) rotate(0deg); }
-    50% { transform: translateY(-5px) rotate(-1.4deg); }
-  }
-
-  @keyframes shipSailSway {
-    0%, 100% { transform: skewX(0deg); }
-    50% { transform: skewX(2.5deg); }
-  }
-
-  @keyframes shipWaveDrift {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(-60px); }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .hero-ship-emblem .ship-bob,
-    .hero-ship-emblem .argo-ship-sail,
-    .hero-ship-emblem .ship-wave-1,
-    .hero-ship-emblem .ship-wave-2 {
-      animation: none;
-    }
+    .hero-ship-photo { display: none; }
   }
 
   .argo-emblem {
