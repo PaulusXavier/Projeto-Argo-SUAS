@@ -1,6 +1,6 @@
 // Troque este número toda vez que publicar uma alteração no app.
 // É essa mudança de versão que dispara a atualização automática.
-const CACHE_VERSION = 'v20';
+const CACHE_VERSION = 'v22';
 const CACHE_NAME = `rede-apoio-bv-${CACHE_VERSION}`;
 
 const ASSETS = [
@@ -41,16 +41,30 @@ self.addEventListener('activate', event => {
   );
 });
 
-// FETCH: tenta buscar da rede primeiro (para pegar o mais novo);
-// se estiver offline, cai para o cache.
+// FETCH: responde com o cache IMEDIATAMENTE quando existe (app abre na hora,
+// sem esperar a rede) e, ao mesmo tempo, busca a versão nova em segundo
+// plano para atualizar o cache — na próxima abertura, o usuário já vê a
+// versão atualizada. Se não houver cache ainda (primeira visita) ou o
+// recurso não estiver na lista, espera a rede normalmente; se a rede falhar
+// e não houver cache, o pedido simplesmente falha (offline sem visita prévia).
+// Só GET passa pelo cache — outros métodos vão direto para a rede.
 self.addEventListener('fetch', event => {
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
-    fetch(event.request)
-      .then(response => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-        return response;
-      })
-      .catch(() => caches.match(event.request))
+    caches.open(CACHE_NAME).then(async cache => {
+      const cached = await cache.match(event.request);
+
+      const networkUpdate = fetch(event.request)
+        .then(response => {
+          if (response && response.ok) {
+            cache.put(event.request, response.clone());
+          }
+          return response;
+        })
+        .catch(() => cached);
+
+      return cached || networkUpdate;
+    })
   );
 });
