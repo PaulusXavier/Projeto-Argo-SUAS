@@ -2601,7 +2601,8 @@
 
   .user-data-fields .user-data-field:nth-child(1),
   .user-data-fields .user-data-field:nth-child(2),
-  .user-data-fields .user-data-field:nth-child(3) {
+  .user-data-fields .user-data-field:nth-child(3),
+  .user-data-fields .user-data-field:nth-child(6) {
     grid-column: 1 / -1;
   }
 
