@@ -114,11 +114,20 @@
     background-repeat: no-repeat, no-repeat, repeat;
     background-position: top center, center center, top left;
     background-size: 100% 480px, cover, 240px 48px;
-    background-attachment: fixed, fixed, fixed;
+    background-attachment: scroll, scroll, scroll;
     color: var(--text-main);
     font-family: var(--font-sans);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
+  }
+
+  /* background-attachment: fixed cria uma camada extra que o navegador
+     precisa repintar a cada evento de rolagem — em celulares isso é uma
+     causa conhecida de scroll travado/lento. Por isso o fundo é "scroll"
+     por padrão (acompanha a página normalmente) e só vira "fixed" (efeito
+     parallax sutil) em telas grandes com mouse, onde o custo é desprezível. */
+  @media (min-width: 900px) and (pointer: fine) {
+    body { background-attachment: fixed, fixed, fixed; }
   }
 
   @media (prefers-color-scheme: dark) {
@@ -218,35 +227,6 @@
 
   @media (max-width: 640px) {
     header.hero { background-size: auto, 360px 270px, auto; }
-  }
-
-  /* Foto do navio Argo como marca d'água discreta no canto esquerdo do
-     cabeçalho — mesma técnica (baixa opacidade + mix-blend-mode luminosity)
-     usada no painel da tela de login (.login-story-historic), no lugar do
-     antigo navio animado em SVG. Uma máscara em degradê esmaece a foto até
-     transparente na borda direita, para não deixar uma quina dura no meio
-     do cabeçalho. */
-  .hero-ship-photo {
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    width: 48%;
-    max-width: 430px;
-    background-image: url('argo-navis-historico.jpg');
-    background-size: cover;
-    background-position: center 35%;
-    background-repeat: no-repeat;
-    opacity: 0.24;
-    mix-blend-mode: luminosity;
-    pointer-events: none;
-    z-index: 0;
-    -webkit-mask-image: linear-gradient(to right, #000 55%, transparent 100%);
-    mask-image: linear-gradient(to right, #000 55%, transparent 100%);
-  }
-
-  @media (max-width: 900px) {
-    .hero-ship-photo { display: none; }
   }
 
   .argo-emblem {
@@ -947,7 +927,7 @@
     margin-left: auto;
     flex-shrink: 0;
     font-size: 0.76rem;
-    font-weight: 900;
+    font-weight: 800;
     padding: 0.2rem 0.55rem;
     min-width: 2em;
     border-radius: 999px;
