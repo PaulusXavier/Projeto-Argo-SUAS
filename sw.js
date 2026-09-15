@@ -1,6 +1,6 @@
 // Troque este número toda vez que publicar uma alteração no app.
 // É essa mudança de versão que dispara a atualização automática.
-const CACHE_VERSION = 'v27';
+const CACHE_VERSION = 'v28';
 const CACHE_NAME = `rede-apoio-bv-${CACHE_VERSION}`;
 
 const ASSETS = [
@@ -41,16 +41,31 @@ self.addEventListener('activate', event => {
   );
 });
 
-// FETCH: tenta buscar da rede primeiro (para pegar o mais novo);
-// se estiver offline, cai para o cache.
+// FETCH: responde IMEDIATAMENTE com o que já estiver em cache (o app abre
+// na hora, sem esperar a rede) e, em paralelo, busca a versão mais nova no
+// servidor para atualizar o cache silenciosamente — a próxima abertura já
+// usa o conteúdo atualizado. Antes o app esperava a resposta da rede antes
+// de mostrar qualquer coisa, mesmo com tudo já salvo em cache; isso deixava
+// a abertura lenta em conexão ruim (3G/4G fraco), já que cada carregamento
+// dependia de uma ida e volta ao servidor mesmo sem nada novo para buscar.
+// A rede só decide sozinha a resposta quando o arquivo ainda não está em
+// cache (primeiro acesso) ou quando o dispositivo está offline e não há
+// nada salvo. Requisições que não sejam GET (ex.: chamadas às APIs de
+// tradução/geocodificação) seguem direto para a rede, sem passar pelo cache.
 self.addEventListener('fetch', event => {
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
-    fetch(event.request)
-      .then(response => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-        return response;
-      })
-      .catch(() => caches.match(event.request))
+    caches.match(event.request).then(cached => {
+      const networkFetch = fetch(event.request)
+        .then(response => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          return response;
+        })
+        .catch(() => cached);
+
+      return cached || networkFetch;
+    })
   );
 });
