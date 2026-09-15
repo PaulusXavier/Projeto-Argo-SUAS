@@ -5929,6 +5929,15 @@ function render() {
     return;
   }
 
+  if (cat === 'mapa') {
+    if (resultsInfo) resultsInfo.style.display = 'none';
+    const infoBannerEarly = document.getElementById('categoryInfoBanner');
+    if (infoBannerEarly) { infoBannerEarly.style.display = 'none'; infoBannerEarly.innerHTML = ''; }
+    grid.innerHTML = renderMapCard();
+    initMapPanel();
+    return;
+  }
+
   const infoBanner = document.getElementById('categoryInfoBanner');
   if (infoBanner) {
     if (cat === 'saude') {
@@ -7154,6 +7163,251 @@ function tradutorUsePhrase(idx) {
 function initTranslatorPanel() {
   tradutorSyncSpeakLabels();
   tradutorRenderPhrases();
+}
+
+/* ============================================================
+   MAPA DA REDE — mapa Leaflet com "minha localização" e pins dos
+   equipamentos, reaproveitando o mesmo cache de geocodificação e a
+   mesma lógica de distância já usados pelo botão "Ordenar por
+   proximidade" da lista. O Leaflet (JS + CSS) só é baixado do cdnjs
+   na primeira vez que essa aba é aberta — mesmo princípio das
+   Ferramentas de Arquivo (PDF) — por isso não entra no cache
+   offline do Service Worker.
+   ============================================================ */
+const MAPA_REDE_CDN = {
+  leafletJs: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
+  leafletCss: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'
+};
+
+const mapaRedeScriptPromises = {};
+function mapaRedeLoadScript(url) {
+  if (mapaRedeScriptPromises[url]) return mapaRedeScriptPromises[url];
+  mapaRedeScriptPromises[url] = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = url;
+    s.onload = () => resolve();
+    s.onerror = () => { delete mapaRedeScriptPromises[url]; reject(new Error('Falha ao carregar ' + url)); };
+    document.head.appendChild(s);
+  });
+  return mapaRedeScriptPromises[url];
+}
+function mapaRedeLoadCss(url) {
+  if (document.querySelector(`link[href="${url}"]`)) return;
+  const l = document.createElement('link');
+  l.rel = 'stylesheet';
+  l.href = url;
+  document.head.appendChild(l);
+}
+async function ensureLeaflet() {
+  mapaRedeLoadCss(MAPA_REDE_CDN.leafletCss);
+  if (!window.L) await mapaRedeLoadScript(MAPA_REDE_CDN.leafletJs);
+  return window.L;
+}
+
+// Centro padrão do mapa: Boa Vista - RR (usado até a localização do
+// usuário ou o primeiro equipamento geocodificado estarem disponíveis).
+const MAPA_REDE_DEFAULT_CENTER = { lat: 2.8235, lon: -60.6758 };
+
+let mapaRedeMap = null;
+let mapaRedeMarkersLayer = null;
+let mapaRedeUserMarker = null;
+
+function renderMapCard() {
+  const activeChip = document.querySelector('.filter-chip.active[data-cat="mapa"]');
+  const categoryOptions = ['<option value="all">Todas as categorias</option>']
+    .concat(Object.entries(CATEGORY_LABELS_PRINT)
+      .filter(([cat]) => cat !== 'cas' && cat !== 'cras' && cat !== 'interior')
+      .map(([cat, label]) => `<option value="${escapeHtml(cat)}">${escapeHtml(label)}</option>`))
+    .join('');
+
+  return `
+    <div class="tech-card mapa-rede-card">
+      <div class="card-top">
+        <div style="display:flex; align-items:center; gap:0.55rem;">
+          <span class="tradutor-badge">${ICONS.map}</span>
+          <h2 style="margin:0;">Mapa da Rede</h2>
+        </div>
+        <span class="subtitle">🗺️ Visualize os equipamentos no mapa e encontre os mais próximos de você</span>
+      </div>
+      <div class="card-body">
+        <div class="tradutor-privacy">
+          ${ICONS.info}
+          <span>Os endereços são localizados por um serviço online gratuito de geocodificação (Nominatim/OpenStreetMap) e ficam guardados neste navegador para não repetir a consulta. A primeira exibição de cada categoria pode levar alguns segundos.</span>
+        </div>
+
+        <div style="display:flex; flex-wrap:wrap; gap:0.6rem; align-items:center; margin:0.75rem 0;">
+          <select id="mapaRedeCatSelect" onchange="renderMapaRedeMarkers()" aria-label="Filtrar categoria no mapa" style="flex:1; min-width:200px; padding:0.5rem 0.7rem; border-radius:8px; border:1px solid #dbe3ea;">
+            ${categoryOptions}
+          </select>
+          <button type="button" id="mapaRedeLocateBtn" class="tradutor-btn" onclick="mapaRedeLocateMe()">
+            ${ICONS.map} Minha localização
+          </button>
+        </div>
+
+        <div id="mapaRedeStatus" style="font-size:0.85rem; color:var(--text-muted, #64748b); margin-bottom:0.5rem;"></div>
+
+        <div id="mapaRedeMapContainer" style="height:480px; border-radius:12px; overflow:hidden; border:1px solid #dbe3ea; background:#eef2f5;"></div>
+
+        <div id="mapaRedeNearbyList" style="margin-top:0.85rem;"></div>
+      </div>
+    </div>
+  `;
+}
+
+function mapaRedeSetStatus(msg) {
+  const el = document.getElementById('mapaRedeStatus');
+  if (el) el.textContent = msg || '';
+}
+
+async function initMapPanel() {
+  mapaRedeSetStatus('Carregando mapa…');
+  let L;
+  try {
+    L = await ensureLeaflet();
+  } catch (e) {
+    mapaRedeSetStatus('Não foi possível carregar o mapa. Verifique sua conexão com a internet e tente novamente.');
+    return;
+  }
+
+  const container = document.getElementById('mapaRedeMapContainer');
+  // O usuário pode ter trocado de aba enquanto o Leaflet carregava.
+  if (!container) return;
+
+  if (mapaRedeMap) {
+    mapaRedeMap.remove();
+    mapaRedeMap = null;
+  }
+
+  const center = proximityState.active
+    ? [proximityState.lat, proximityState.lon]
+    : [MAPA_REDE_DEFAULT_CENTER.lat, MAPA_REDE_DEFAULT_CENTER.lon];
+
+  mapaRedeMap = L.map(container).setView(center, proximityState.active ? 13 : 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">colaboradores do OpenStreetMap</a>'
+  }).addTo(mapaRedeMap);
+
+  mapaRedeMarkersLayer = L.layerGroup().addTo(mapaRedeMap);
+
+  if (proximityState.active) {
+    mapaRedeShowUserMarker(L, proximityState.lat, proximityState.lon);
+  }
+
+  mapaRedeSetStatus('');
+  await renderMapaRedeMarkers();
+}
+
+function mapaRedeShowUserMarker(L, lat, lon) {
+  if (!mapaRedeMap) return;
+  if (mapaRedeUserMarker) mapaRedeMap.removeLayer(mapaRedeUserMarker);
+  const userIcon = L.divIcon({
+    className: 'mapa-rede-user-icon',
+    html: `<div style="width:16px; height:16px; border-radius:50%; background:#0091c2; border:3px solid #fff; box-shadow:0 0 0 2px #0091c2;"></div>`,
+    iconSize: [16, 16],
+    iconAnchor: [8, 8]
+  });
+  mapaRedeUserMarker = L.marker([lat, lon], { icon: userIcon, zIndexOffset: 1000 })
+    .bindPopup('Você está aqui')
+    .addTo(mapaRedeMap);
+}
+
+function mapaRedeLocateMe() {
+  const btn = document.getElementById('mapaRedeLocateBtn');
+  if (!navigator.geolocation) {
+    alert('Este navegador não permite obter a localização atual.');
+    return;
+  }
+  if (btn) btn.disabled = true;
+  mapaRedeSetStatus('Localizando...');
+
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    proximityState = { active: true, lat: pos.coords.latitude, lon: pos.coords.longitude, loading: false };
+
+    const proximityBtn = document.getElementById('proximityBtn');
+    if (proximityBtn) {
+      proximityBtn.setAttribute('aria-pressed', 'true');
+      proximityBtn.classList.add('is-active');
+    }
+    setProximityButtonLabel('Mais próximos primeiro');
+
+    if (mapaRedeMap && window.L) {
+      mapaRedeMap.setView([proximityState.lat, proximityState.lon], 13);
+      mapaRedeShowUserMarker(window.L, proximityState.lat, proximityState.lon);
+    }
+    if (btn) btn.disabled = false;
+    mapaRedeSetStatus('');
+    await renderMapaRedeMarkers();
+  }, () => {
+    if (btn) btn.disabled = false;
+    mapaRedeSetStatus('Não foi possível obter sua localização. Verifique se a permissão de localização foi concedida ao navegador.');
+  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+}
+
+async function renderMapaRedeMarkers() {
+  if (!mapaRedeMap || !mapaRedeMarkersLayer || !window.L) return;
+  const L = window.L;
+  const catSelect = document.getElementById('mapaRedeCatSelect');
+  const cat = catSelect ? catSelect.value : 'all';
+
+  const items = DATA.filter(i =>
+    i.address &&
+    !i.cat.includes('cas') && !i.cat.includes('cras') &&
+    (cat === 'all' || i.cat.includes(cat))
+  );
+
+  mapaRedeSetStatus(`Localizando ${items.length} equipamento(s)...`);
+  await ensureGeocodedFor(items, (done, total) => {
+    mapaRedeSetStatus(`Localizando endereços (${done}/${total})...`);
+  });
+  mapaRedeSetStatus('');
+
+  mapaRedeMarkersLayer.clearLayers();
+  const cache = getGeocodeCache();
+  const bounds = [];
+  const withCoords = [];
+
+  items.forEach(item => {
+    const coords = cache[item.id];
+    if (!coords) return;
+    withCoords.push({ item, coords });
+    bounds.push([coords.lat, coords.lon]);
+    const marker = L.marker([coords.lat, coords.lon]);
+    const distanceLabel = proximityState.active
+      ? (() => {
+          const km = haversineKm(proximityState.lat, proximityState.lon, coords.lat, coords.lon);
+          return `<br><strong>${km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(1) + ' km'}</strong> daqui`;
+        })()
+      : '';
+    marker.bindPopup(`<strong>${escapeHtml(item.name || '')}</strong><br>${escapeHtml(item.address || '')}${distanceLabel}`);
+    marker.addTo(mapaRedeMarkersLayer);
+  });
+
+  if (proximityState.active) bounds.push([proximityState.lat, proximityState.lon]);
+  if (bounds.length) {
+    mapaRedeMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
+  }
+
+  const nearbyList = document.getElementById('mapaRedeNearbyList');
+  if (nearbyList) {
+    if (!proximityState.active) {
+      nearbyList.innerHTML = withCoords.length
+        ? `<p style="font-size:0.85rem; color:var(--text-muted, #64748b);">${withCoords.length} equipamento(s) no mapa. Toque em "Minha localização" para ver os mais próximos.</p>`
+        : '';
+    } else {
+      const sorted = withCoords
+        .map(({ item, coords }) => ({ item, km: haversineKm(proximityState.lat, proximityState.lon, coords.lat, coords.lon) }))
+        .sort((a, b) => a.km - b.km)
+        .slice(0, 5);
+      nearbyList.innerHTML = sorted.length
+        ? `<h3 style="margin:0.5rem 0;">Mais próximos</h3><div class="tradutor-phrase-list">${sorted.map(({ item, km }) => `
+            <div class="tradutor-phrase-item">
+              <span>${escapeHtml(item.name || '')} — ${km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(1) + ' km'}</span>
+            </div>
+          `).join('')}</div>`
+        : '';
+    }
+  }
 }
 
 function renderNotesCard() {
