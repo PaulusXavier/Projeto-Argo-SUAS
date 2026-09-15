@@ -7706,7 +7706,20 @@ async function printBpcGuide(id, lang) {
    em conexão fraca, cenário típico deste app. */
 async function pdfDataUrlToImages(dataUrl) {
   await ensurePdfJs();
-  const pdf = await window.pdfjsLib.getDocument({ url: dataUrl }).promise;
+  // Importante: usar { data: bytes } (bytes decodificados aqui, na própria
+  // aba) em vez de { url: dataUrl }. Passar a dataURL como "url" faz o
+  // pdf.js buscá-la via fetch() internamente, o que é bloqueado pela
+  // Content-Security-Policy da página (connect-src não inclui "data:"),
+  // fazendo TODO anexo em PDF cair silenciosamente no aviso de erro
+  // ("Não foi possível carregar o anexo em PDF para impressão") mesmo com
+  // o anexo salvo corretamente. Decodificando o base64 aqui, não há
+  // nenhuma requisição de rede envolvida — só leitura de memória — então a
+  // CSP não entra em jogo e a conversão funciona também offline.
+  const commaIndex = dataUrl.indexOf(',');
+  const binary = atob(dataUrl.slice(commaIndex + 1));
+  const pdfBytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) pdfBytes[i] = binary.charCodeAt(i);
+  const pdf = await window.pdfjsLib.getDocument({ data: pdfBytes }).promise;
   const images = [];
   for (let p = 1; p <= pdf.numPages; p++) {
     const page = await pdf.getPage(p);
@@ -7757,6 +7770,17 @@ async function printGuide(id) {
   const protocolCode = `FE-${shortUnitCode}-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
   const emissionDisplay = now.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
   const dateLong = now.toLocaleDateString('pt-BR', { day:'numeric', month:'long', year:'numeric' });
+
+  // Em ~46 dos 374 cadastros, "name" (mostrado como selo colorido, ex.:
+  // "HCSA") é igual ou é apenas o começo de "fullName" (ex.: "Hospital da
+  // Criança Santo Antônio" vs "Hospital da Criança Santo Antônio (HCSA)"),
+  // então o selo e o título ficavam colados repetindo o mesmo texto duas
+  // vezes na ficha impressa. Só mostra o selo quando ele agrega alguma
+  // informação (é de fato uma sigla/abreviação diferente do nome completo).
+  const destUnitName = escapeHtml(i.name);
+  const destUnitFullName = escapeHtml(i.fullName);
+  const showDestUnitBadge = i.name && i.fullName &&
+    !i.fullName.toLowerCase().startsWith(i.name.toLowerCase().replace(/\.$/, ''));
 
   const addressDisplay = cleanPrintField(i.address, 'Endereço não informado — consultar coordenação.');
   const hoursDisplay = cleanPrintField(i.hours, 'A confirmar diretamente com a unidade.');
@@ -7895,8 +7919,8 @@ async function printGuide(id) {
 
             <!-- Sigla em destaque + Nome completo -->
             <div style="display:flex; align-items:baseline; gap:8px; margin:2px 0 6px 0; border-bottom:1px solid #CBD5E1; padding-bottom:6px;">
-              <span style="flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; padding:2px 8px; border-radius:5px; background:#0091C2; color:#fff; font-weight:800; font-size:0.78rem; letter-spacing:0.02em; white-space:nowrap;">${i.name}</span>
-              <h2 style="margin:0; font-size:1.02rem; line-height:1.2; color:#0F172A; font-family:'Lora', serif; font-weight:700;">${i.fullName}</h2>
+              ${showDestUnitBadge ? `<span style="flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; padding:2px 8px; border-radius:5px; background:#0091C2; color:#fff; font-weight:800; font-size:0.78rem; letter-spacing:0.02em; white-space:nowrap;">${destUnitName}</span>` : ''}
+              <h2 style="margin:0; font-size:1.02rem; line-height:1.2; color:#0F172A; font-family:'Lora', serif; font-weight:700;">${destUnitFullName}</h2>
             </div>
 
             <div style="border:1.5px solid #0F172A; border-radius:4px; overflow:hidden; margin-bottom:6px;">
@@ -8000,7 +8024,7 @@ async function printGuide(id) {
           <tr>
             <td style="border:1.5px solid #0F172A; padding:8px 14px;">
               <div style="font-size:1rem; font-weight:800; color:#0F172A;">ANEXO FOTOGRÁFICO</div>
-              <div style="font-size:0.68rem; font-weight:700; color:#475569; text-transform:uppercase;">${i.fullName}</div>
+              <div style="font-size:0.68rem; font-weight:700; color:#475569; text-transform:uppercase;">${destUnitFullName}</div>
             </td>
           </tr>
         </table>
@@ -8022,7 +8046,7 @@ async function printGuide(id) {
               <tr>
                 <td style="border:1.5px solid #0F172A; padding:8px 14px;">
                   <div style="font-size:1rem; font-weight:800; color:#0F172A;">ANEXO EM PDF${pdfImages.length > 1 ? ` — Página ${idx + 1} de ${pdfImages.length}` : ''}</div>
-                  <div style="font-size:0.68rem; font-weight:700; color:#475569; text-transform:uppercase;">${i.fullName}</div>
+                  <div style="font-size:0.68rem; font-weight:700; color:#475569; text-transform:uppercase;">${destUnitFullName}</div>
                 </td>
               </tr>
             </table>
