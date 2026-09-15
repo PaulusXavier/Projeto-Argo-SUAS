@@ -6645,7 +6645,7 @@ function saveNote(id, value) {
 }
 
 function getUserData(id) {
-  return safeStorage.getJSON('userdata_'+id, {nome:'', endereco:'', nis:'', unidadeOrigem:''});
+  return safeStorage.getJSON('userdata_'+id, {nome:'', endereco:'', nis:'', unidadeOrigem:'', cpf:'', dataNascimento:''});
 }
 
 function saveUserDataField(id, field, value) {
@@ -6674,8 +6674,43 @@ function renderUserDataFields(id) {
         <label for="nis-${id}">Nº NIS</label>
         <input type="text" id="nis-${id}" value="${escapeHtml(d.nis)}" placeholder="NIS" oninput="saveUserDataField('${id}','nis',this.value)">
       </div>
+      <div class="user-data-field">
+        <label for="cpf-${id}">CPF</label>
+        <input type="text" id="cpf-${id}" value="${escapeHtml(d.cpf)}" placeholder="000.000.000-00" inputmode="numeric" maxlength="14" oninput="saveUserDataField('${id}','cpf',formatCpfInput(this))">
+      </div>
+      <div class="user-data-field">
+        <label for="nasc-${id}">Data de Nascimento</label>
+        <input type="date" id="nasc-${id}" value="${escapeHtml(d.dataNascimento)}" placeholder="Data de nascimento" oninput="saveUserDataField('${id}','dataNascimento',this.value)">
+      </div>
     </div>
   `;
+}
+
+// Formata o CPF digitado como 000.000.000-00 conforme o usuário digita,
+// mantendo só os números internamente (o valor exibido no campo já sai
+// formatado, e é esse valor formatado que é salvo em saveUserDataField).
+function formatCpfInput(inputEl) {
+  const digits = inputEl.value.replace(/\D/g, '').slice(0, 11);
+  let formatted = digits;
+  if (digits.length > 9) {
+    formatted = `${digits.slice(0,3)}.${digits.slice(3,6)}.${digits.slice(6,9)}-${digits.slice(9)}`;
+  } else if (digits.length > 6) {
+    formatted = `${digits.slice(0,3)}.${digits.slice(3,6)}.${digits.slice(6)}`;
+  } else if (digits.length > 3) {
+    formatted = `${digits.slice(0,3)}.${digits.slice(3)}`;
+  }
+  inputEl.value = formatted;
+  return formatted;
+}
+
+// Converte a data salva pelo <input type="date"> (formato ISO "AAAA-MM-DD")
+// para o formato brasileiro "DD/MM/AAAA" usado nas fichas impressas.
+function formatBirthDateDisplay(isoDate) {
+  if (!isoDate) return '';
+  const parts = String(isoDate).split('-');
+  if (parts.length !== 3) return isoDate;
+  const [y, m, d] = parts;
+  return `${d}/${m}/${y}`;
 }
 
 // --- Segunda unidade no mesmo encaminhamento --------------------------------
@@ -7247,6 +7282,16 @@ async function printGeneralNote() {
             <td style="border:1.5px solid #0F172A; border-left:none; padding:8px 12px; width:20%; vertical-align:top;">
               <div style="font-size:0.6rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:12px;">Nº NIS</div>
               <div style="border-bottom:1px solid #94A3B8; font-size:0.85rem; font-weight:700; color:#0F172A; min-height:1.2em;">${userData.nis ? escapeHtml(userData.nis) : '&nbsp;'}</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="border:1.5px solid #0F172A; border-top:none; padding:8px 12px; width:44%; vertical-align:top;">
+              <div style="font-size:0.6rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:12px;">CPF</div>
+              <div style="border-bottom:1px solid #94A3B8; font-size:0.85rem; font-weight:700; color:#0F172A; min-height:1.2em;">${userData.cpf ? escapeHtml(userData.cpf) : '&nbsp;'}</div>
+            </td>
+            <td colspan="2" style="border:1.5px solid #0F172A; border-top:none; border-left:none; padding:8px 12px; width:56%; vertical-align:top;">
+              <div style="font-size:0.6rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.02em; margin-bottom:12px;">Data de Nascimento</div>
+              <div style="border-bottom:1px solid #94A3B8; font-size:0.85rem; font-weight:700; color:#0F172A; min-height:1.2em;">${userData.dataNascimento ? escapeHtml(formatBirthDateDisplay(userData.dataNascimento)) : '&nbsp;'}</div>
             </td>
           </tr>
         </table>
@@ -7868,6 +7913,16 @@ async function printGuide(id) {
                 <div style="flex:0.7; padding:5px 10px;">
                   <div style="font-size:0.55rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.02em;">Nº NIS</div>
                   <div style="font-size:0.8rem; font-weight:700; color:#0F172A; min-height:1.1em;">${userData.nis ? escapeHtml(userData.nis) : '&nbsp;'}</div>
+                </div>
+              </div>
+              <div style="display:flex; border-top:1px solid #CBD5E1;">
+                <div style="flex:1; padding:5px 10px; border-right:1px solid #CBD5E1;">
+                  <div style="font-size:0.55rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.02em;">CPF</div>
+                  <div style="font-size:0.8rem; font-weight:700; color:#0F172A; min-height:1.1em;">${userData.cpf ? escapeHtml(userData.cpf) : '&nbsp;'}</div>
+                </div>
+                <div style="flex:1; padding:5px 10px;">
+                  <div style="font-size:0.55rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.02em;">Data de Nascimento</div>
+                  <div style="font-size:0.8rem; font-weight:700; color:#0F172A; min-height:1.1em;">${userData.dataNascimento ? escapeHtml(formatBirthDateDisplay(userData.dataNascimento)) : '&nbsp;'}</div>
                 </div>
               </div>
             </div>
