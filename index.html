@@ -17,7 +17,7 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://upload.wikimedia.org; connect-src 'self' https://api.mymemory.translated.net; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://upload.wikimedia.org; connect-src 'self' https://api.mymemory.translated.net https://nominatim.openstreetmap.org; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Argo SUAS · Gestão Técnica de Equipamentos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -160,8 +160,29 @@
 <a href="#mainContent" class="skip-link">Pular para o conteúdo</a>
 
 <header class="hero">
-  <div class="hero-historic-bg" aria-hidden="true"></div>
-  <img src="argo-navis-constelacao.svg" alt="Constelação real de Argo Navis: estrelas de Carina, Vela, Puppis e Pyxis em suas posições verdadeiras" class="hero-side-emblem">
+  <svg class="hero-ship-emblem" viewBox="0 0 220 190" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Navio Argo, emblema do aplicativo, navegando sobre as ondas">
+    <g class="ship-bob">
+      <g class="ship-waves" aria-hidden="true">
+        <path class="ship-wave ship-wave-1" d="M-20,150 Q10,140 40,150 T100,150 T160,150 T220,150 T280,150"/>
+        <path class="ship-wave ship-wave-2" d="M-20,164 Q10,156 40,164 T100,164 T160,164 T220,164 T280,164"/>
+      </g>
+      <path class="argo-ship-hull" d="M28,132 C34,150 60,160 110,160 C160,160 186,150 192,132 C178,120 150,116 110,116 C70,116 42,120 28,132 Z"/>
+      <path class="argo-ship-hull argo-ship-prow" d="M188,134 C202,130 210,118 206,104 C202,112 194,120 184,126 Z"/>
+      <path class="argo-ship-hull argo-ship-stern" d="M32,130 C20,124 14,112 18,100 C22,108 28,116 36,122 Z"/>
+      <g class="argo-ship-oars">
+        <circle cx="60" cy="134" r="6.5"/>
+        <circle cx="85" cy="138" r="6.5"/>
+        <circle cx="110" cy="140" r="6.5"/>
+        <circle cx="135" cy="138" r="6.5"/>
+        <circle cx="160" cy="134" r="6.5"/>
+      </g>
+      <line class="argo-ship-mast" x1="110" y1="116" x2="110" y2="18"/>
+      <line class="argo-ship-mast argo-ship-yard" x1="70" y1="34" x2="150" y2="34"/>
+      <path class="argo-ship-sail" d="M112,36 C142,40 156,68 150,100 C136,90 120,84 112,86 Z"/>
+      <path class="argo-ship-sail argo-ship-sail-back" d="M108,36 C80,42 68,70 74,100 C88,90 102,84 108,86 Z" opacity="0.82"/>
+      <circle class="argo-ship-swirl" cx="110" cy="16" r="4.5"/>
+    </g>
+  </svg>
   <svg class="argo-emblem" viewBox="0 0 320 230" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" aria-label="Constelação real de Argo Navis, com a estrela-guia Canopus em destaque">
     <g class="const-lines">
         <line class="const-line" x1="133.8" y1="27.1" x2="86.9" y2="75.6"/>
@@ -246,6 +267,10 @@
         <input type="text" id="mainSearch" class="search-input" placeholder="Pesquisar por unidade, bairro ou serviço técnico..." aria-label="Pesquisar unidade, bairro ou serviço">
         <button type="button" id="searchClearBtn" class="search-clear-btn" title="Limpar busca" aria-label="Limpar busca">✕</button>
       </div>
+      <button type="button" class="btn-tech btn-secondary" id="proximityBtn" onclick="toggleProximitySort()" title="Ordenar os equipamentos exibidos pela distância até sua localização atual" aria-pressed="false">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        <span class="proximity-label">Ordenar por proximidade</span>
+      </button>
       <a class="btn-tech btn-secondary btn-link" href="https://mapa-social.mds.gov.br/" target="_blank" rel="noopener noreferrer" title="Abrir Mapa Social (MDS) em nova aba">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
         Mapa Social (MDS)
@@ -280,6 +305,12 @@
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
           <span>Rede Intersetorial de Serviços</span>
           <span class="chip-count" id="count-all">0</span>
+        </button>
+
+        <button class="filter-chip" data-cat="favoritos" role="tab" aria-selected="false">
+          <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
+          <span>Favoritos</span>
+          <span class="chip-count" id="count-favoritos">0</span>
         </button>
 
         <!-- Seção: Saúde -->
