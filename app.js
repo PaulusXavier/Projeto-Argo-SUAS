@@ -6248,6 +6248,33 @@ function render() {
     return matchSearch && matchCat;
   });
 
+  // "Ordenar por proximidade": o botão (toggleProximitySort) só geocodificava
+  // os endereços e guardava a distância em cache, mas a lista nunca era
+  // realmente reordenada por distância nem o card mostrava o quão perto
+  // cada equipamento estava — a função renderDistanceBadge existia, porém
+  // não era chamada em lugar nenhum. Corrigido: com o modo ativo, os itens
+  // com localização já conhecida (cache de geocodificação) vêm primeiro, do
+  // mais perto para o mais longe; os sem localização conhecida ficam por
+  // último, na ordem em que já estavam. Os agrupamentos por seção (interior/
+  // por grupo) não fazem sentido junto com essa ordenação, então são
+  // ignorados enquanto o modo estiver ativo.
+  if (proximityState.active) {
+    const geoCache = getGeocodeCache();
+    filtered = filtered
+      .map((item, originalIndex) => ({ item, originalIndex }))
+      .sort((a, b) => {
+        const ca = geoCache[a.item.id];
+        const cb = geoCache[b.item.id];
+        if (!ca && !cb) return a.originalIndex - b.originalIndex;
+        if (!ca) return 1;
+        if (!cb) return -1;
+        const da = haversineKm(proximityState.lat, proximityState.lon, ca.lat, ca.lon);
+        const db = haversineKm(proximityState.lat, proximityState.lon, cb.lat, cb.lon);
+        return da - db;
+      })
+      .map(x => x.item);
+  }
+
   // Em qualquer aba, mantém os equipamentos do interior como um
   // segmento à parte, sempre exibido por último, depois dos
   // equipamentos de Boa Vista.
@@ -6262,7 +6289,7 @@ function render() {
   // Aplicado em qualquer aba (inclusive "Todos"): tabs sem itens do
   // interior (CAS, CRAS, Anotações, etc.) simplesmente não sofrem alteração,
   // pois "interior" fica vazio e a condição abaixo não entra em ação.
-  if (cat !== 'cas' && cat !== 'cras' && cat !== 'anotacoes') {
+  if (!proximityState.active && cat !== 'cas' && cat !== 'cras' && cat !== 'anotacoes') {
     const boaVista = filtered.filter(i => !i.cat.includes('interior'));
     const interior = filtered.filter(i => i.cat.includes('interior'));
     if (boaVista.length && interior.length) {
@@ -6299,7 +6326,7 @@ function render() {
     // ou por município no interior) sempre que o campo "group" do item mudar
     // em relação ao anterior na lista já filtrada.
     const prevItem = filtered[idx - 1];
-    const groupChanged = i.group && i.group !== (prevItem ? prevItem.group : undefined) && !i.cat.includes('cas') && !i.cat.includes('cras');
+    const groupChanged = !proximityState.active && i.group && i.group !== (prevItem ? prevItem.group : undefined) && !i.cat.includes('cas') && !i.cat.includes('cras');
     const groupDivider = groupChanged ? `
       <div class="group-section-divider" style="grid-column:1/-1; display:flex; align-items:center; gap:10px; margin:${idx === socialDividerIndex ? '0.6rem' : '1.25rem'} 0 0.15rem;">
         <span style="display:inline-flex; align-items:center; gap:6px; font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:var(--brand-primary); background:rgba(0,145,194,0.08); padding:5px 12px; border-radius:999px;">
@@ -6372,6 +6399,7 @@ function render() {
             <h2 style="margin:0;">${i.name}</h2>
           </div>
           <span class="subtitle">📋 Programa/Serviço · ${i.fullName}</span>
+          ${renderDistanceBadge(i.id)}
         </div>
         <div class="card-body">
           ${metaRows}
@@ -6414,6 +6442,7 @@ function render() {
         <span class="subtitle">${i.fullName}</span>
         ${isPolice && i.group ? `<span class="police-group-tag">${ICONS.shield} ${i.group}</span>` : ''}
         ${isInterior && i.group ? `<span class="interior-group-tag">${ICONS.home} Município: ${i.group}</span>` : ''}
+        ${renderDistanceBadge(i.id)}
       </div>
       <div class="card-body">
         <div class="info-group"><span class="info-icon">${ICONS.map}</span><div><span class="label-tech">Localização</span>${i.address}</div></div>
@@ -8978,8 +9007,18 @@ function initPdfToolsPanel() {
   pdftoolsRenderJpgPdfList();
 }
 
-render();
+// A tela de login precisa ficar pronta (travada e com o campo de senha
+// interativo) IMEDIATAMENTE. Antes, render() rodava primeiro e montava de
+// uma vez o HTML das 374 fichas do diretório (com leitura de anotações/
+// anexos no localStorage a cada uma) — era esse processamento pesado,
+// executado antes mesmo de travar a tela, que travava/atrasava o login.
+// Agora initAuth() trava a tela e liga os listeners primeiro, e o
+// render() pesado só roda depois, num próximo quadro (requestAnimationFrame),
+// dando tempo do navegador pintar a tela de login antes de processar a lista.
 initAuth();
-updateHeaderFooterStats();
-syncCategoryToggleLabel();
 applyStoredTheme();
+updateHeaderFooterStats();
+requestAnimationFrame(() => {
+  render();
+  syncCategoryToggleLabel();
+});
