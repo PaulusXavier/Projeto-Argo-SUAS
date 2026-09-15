@@ -106,7 +106,7 @@
     background-color: var(--bg-main);
     background-image:
       radial-gradient(120% 60% at 50% 0%, rgba(15, 74, 65, 0.07) 0%, rgba(15, 74, 65, 0) 62%),
-      url('argo-navis-constelacao.svg'),
+      url('argo-navis-historico.jpg'),
       url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgNDgiIHdpZHRoPSIyNDAiIGhlaWdodD0iNDgiPgo8cGF0aCBkPSJNMCwzMCBDMTUsMjEgMTUsMzkgMzAsMzAgQzQ1LDM5IDQ1LDIxIDYwLDMwIEM3NSwyMSA3NSwzOSA5MCwzMCBDMTA1LDM5IDEwNSwyMSAxMjAsMzAgQzEzNSwyMSAxMzUsMzkgMTUwLDMwIEMxNjUsMzkgMTY1LDIxIDE4MCwzMCBDMTk1LDIxIDE5NSwzOSAyMTAsMzAgQzIyNSwzOSAyMjUsMjEgMjQwLDMwIiBmaWxsPSJub25lIiBzdHJva2U9IiMwMDkxQzIiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuMDkiLz4KPHBhdGggZD0iTTAsMTQgQzE1LDggMTUsMjAgMzAsMTQgQzQ1LDIwIDQ1LDggNjAsMTQgQzc1LDggNzUsMjAgOTAsMTQgQzEwNSwyMCAxMDUsOCAxMjAsMTQgQzEzNSw4IDEzNSwyMCAxNTAsMTQgQzE2NSwyMCAxNjUsOCAxODAsMTQgQzE5NSw4IDE5NSwyMCAyMTAsMTQgQzIyNSwyMCAyMjUsOCAyNDAsMTQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0U4QUMzRCIgc3Ryb2tlLXdpZHRoPSIxLjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4xMCIvPgo8L3N2Zz4=');
     background-repeat: no-repeat, no-repeat, repeat;
     background-position: top center, top center, top left;
@@ -122,7 +122,7 @@
     html:not([data-theme="light"]) body {
       background-image:
         radial-gradient(120% 55% at 50% 0%, rgba(232, 172, 61, 0.09) 0%, rgba(232, 172, 61, 0) 60%),
-        url('argo-navis-constelacao.svg'),
+        url('argo-navis-historico.jpg'),
         url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgNDgiIHdpZHRoPSIyNDAiIGhlaWdodD0iNDgiPgo8cGF0aCBkPSJNMCwzMCBDMTUsMjEgMTUsMzkgMzAsMzAgQzQ1LDM5IDQ1LDIxIDYwLDMwIEM3NSwyMSA3NSwzOSA5MCwzMCBDMTA1LDM5IDEwNSwyMSAxMjAsMzAgQzEzNSwyMSAxMzUsMzkgMTUwLDMwIEMxNjUsMzkgMTY1LDIxIDE4MCwzMCBDMTk1LDIxIDE5NSwzOSAyMTAsMzAgQzIyNSwzOSAyMjUsMjEgMjQwLDMwIiBmaWxsPSJub25lIiBzdHJva2U9IiMyOUFCRTIiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuMTQiLz4KPHBhdGggZD0iTTAsMTQgQzE1LDggMTUsMjAgMzAsMTQgQzQ1LDIwIDQ1LDggNjAsMTQgQzc1LDggNzUsMjAgOTAsMTQgQzEwNSwyMCAxMDUsOCAxMjAsMTQgQzEzNSw4IDEzNSwyMCAxNTAsMTQgQzE2NSwyMCAxNjUsOCAxODAsMTQgQzE5NSw4IDE5NSwyMCAyMTAsMTQgQzIyNSwyMCAyMjUsOCAyNDAsMTQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0U4QUMzRCIgc3Ryb2tlLXdpZHRoPSIxLjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4xMiIvPgo8L3N2Zz4=');
       background-repeat: no-repeat, no-repeat, repeat;
       background-position: top center, top center, top left;
@@ -133,7 +133,7 @@
   html[data-theme="dark"] body {
     background-image:
       radial-gradient(120% 55% at 50% 0%, rgba(232, 172, 61, 0.09) 0%, rgba(232, 172, 61, 0) 60%),
-      url('argo-navis-constelacao.svg'),
+      url('argo-navis-historico.jpg'),
       url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgNDgiIHdpZHRoPSIyNDAiIGhlaWdodD0iNDgiPgo8cGF0aCBkPSJNMCwzMCBDMTUsMjEgMTUsMzkgMzAsMzAgQzQ1LDM5IDQ1LDIxIDYwLDMwIEM3NSwyMSA3NSwzOSA5MCwzMCBDMTA1LDM5IDEwNSwyMSAxMjAsMzAgQzEzNSwyMSAxMzUsMzkgMTUwLDMwIEMxNjUsMzkgMTY1LDIxIDE4MCwzMCBDMTk1LDIxIDE5NSwzOSAyMTAsMzAgQzIyNSwzOSAyMjUsMjEgMjQwLDMwIiBmaWxsPSJub25lIiBzdHJva2U9IiMyOUFCRTIiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuMTQiLz4KPHBhdGggZD0iTTAsMTQgQzE1LDggMTUsMjAgMzAsMTQgQzQ1LDIwIDQ1LDggNjAsMTQgQzc1LDggNzUsMjAgOTAsMTQgQzEwNSwyMCAxMDUsOCAxMjAsMTQgQzEzNSw4IDEzNSwyMCAxNTAsMTQgQzE2NSwyMCAxNjUsOCAxODAsMTQgQzE5NSw4IDE5NSwyMCAyMTAsMTQgQzIyNSwyMCAyMjUsOCAyNDAsMTQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0U4QUMzRCIgc3Ryb2tlLXdpZHRoPSIxLjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4xMiIvPgo8L3N2Zz4=');
     background-repeat: no-repeat, no-repeat, repeat;
     background-position: top center, top center, top left;
@@ -196,7 +196,7 @@
     --hero-neutral: #C7DED8;        /* era #A9C7C0 → texto secundário mais legível */
     background:
       radial-gradient(120% 160% at 100% 0%, rgba(232, 172, 61, 0.12) 0%, rgba(232, 172, 61, 0) 45%),
-      url('argo-navis-constelacao.svg'),
+      url('argo-navis-historico.jpg'),
       linear-gradient(155deg, var(--hero-teal-1) 0%, var(--hero-teal-2) 48%, var(--hero-teal-3) 100%);
     background-repeat: no-repeat, no-repeat, no-repeat;
     background-position: top center, right 6% 30%, top center;
@@ -3112,7 +3112,7 @@
     /* Constelação de Argo Navis (estrelas reais de Carina, Vela, Puppis e Pyxis,
        com a estrela-guia Canopus em destaque) pontilhada no fundo da tela de
        login, ecoando o ícone do app. */
-    background-image: url('argo-navis-constelacao.svg');
+    background-image: url('argo-navis-historico.jpg');
     background-repeat: no-repeat;
     background-position: center 38%;
     background-size: 560px 420px;
@@ -3211,7 +3211,7 @@
   .login-story-historic {
     position: absolute;
     top: 0; right: 0; bottom: 0; left: 0;
-    background-image: url('argo-navis-constelacao.svg');
+    background-image: url('argo-navis-historico.jpg');
     background-size: cover;
     background-position: center 38%;
     background-repeat: no-repeat;
