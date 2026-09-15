@@ -208,11 +208,10 @@
     --hero-neutral: #C7DED8;        /* era #A9C7C0 → texto secundário mais legível */
     background:
       radial-gradient(120% 160% at 100% 0%, rgba(232, 172, 61, 0.12) 0%, rgba(232, 172, 61, 0) 45%),
-      url('argo-navis-historico.jpg'),
       linear-gradient(155deg, var(--hero-teal-1) 0%, var(--hero-teal-2) 48%, var(--hero-teal-3) 100%);
-    background-repeat: no-repeat, no-repeat, no-repeat;
-    background-position: top center, right 6% 30%, top center;
-    background-size: auto, 480px 360px, auto;
+    background-repeat: no-repeat, no-repeat;
+    background-position: top center, top center;
+    background-size: auto, auto;
     color: white;
     padding: 3rem 0;
     min-height: 460px;
@@ -225,9 +224,7 @@
 
   header.hero .container { width: 100%; max-width: 1200px; margin: 0 auto; position: relative; z-index: 1; }
 
-  @media (max-width: 640px) {
-    header.hero { background-size: auto, 360px 270px, auto; }
-  }
+
 
   .argo-emblem {
     position: absolute;
