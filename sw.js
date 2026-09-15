@@ -1,12 +1,13 @@
 // Troque este número toda vez que publicar uma alteração no app.
 // É essa mudança de versão que dispara a atualização automática.
-const CACHE_VERSION = 'v15';
+const CACHE_VERSION = 'v16';
 const CACHE_NAME = `rede-apoio-bv-${CACHE_VERSION}`;
 
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
+  './equipe-cras-cristiana.js',
   './app.js',
   './manifest.json',
   './favicon.ico',
