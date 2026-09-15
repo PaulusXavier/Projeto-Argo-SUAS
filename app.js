@@ -6203,42 +6203,45 @@ function render() {
   if (resultsInfo) resultsInfo.style.display = '';
 
   let filtered = DATA.filter(i => {
-    const isCas = i.cat.includes('cas');
-    const isCras = i.cat.includes('cras');
+    // Índice de busca (todos os campos pesquisáveis, já em minúsculas)
+    // calculado uma única vez por unidade e reaproveitado nas buscas
+    // seguintes, em vez de remontar essas strings a cada tecla digitada —
+    // isso era uma causa real de lentidão com a lista grande de unidades.
+    if (!i._searchIdx) {
+      const isCas = i.cat.includes('cas');
+      const isCras = i.cat.includes('cras');
+      let parts;
+      if (isCas) {
+        parts = [
+          i.name, i.fullName, i.address, i.desc,
+          ...(i.phones || []), i.hours,
+          ...(i.adminLinks || []).map(l => l.label),
+          ...(i.systemLinks || []).map(l => l.label),
+          ...(i.driveLinks || []).map(l => l.label)
+        ];
+      } else if (isCras) {
+        parts = [
+          i.name, i.fullName, i.address, i.desc,
+          ...(i.phones || []), i.hours,
+          ...(i.municipalLinks || []).map(l => l.label),
+          ...(i.federalLinks || []).map(l => l.label),
+          ...(i.rmaLinks || []).map(l => l.label),
+          ...(i.driveLinks || []).map(l => l.label),
+          ...(i.fixedTeam || []).flatMap(t => [t.name, t.role, t.bairros]),
+          ...(i.volanteTeam || []).flatMap(t => [t.name, t.role])
+        ];
+      } else {
+        parts = [
+          i.name, i.fullName, i.address, i.desc,
+          ...(Array.isArray(i.services) ? i.services : [i.services || '']),
+          ...(i.phones || []),
+          i.group || ''
+        ];
+      }
+      i._searchIdx = parts.join(' ').toLowerCase();
+    }
 
-    const casSearchable = isCas ? [
-      i.name, i.fullName, i.address, i.desc,
-      ...(i.phones || []), i.hours,
-      ...(i.adminLinks || []).map(l => l.label),
-      ...(i.systemLinks || []).map(l => l.label),
-      ...(i.driveLinks || []).map(l => l.label)
-    ].join(' ').toLowerCase() : null;
-
-    const crasSearchable = isCras ? [
-      i.name, i.fullName, i.address, i.desc,
-      ...(i.phones || []), i.hours,
-      ...(i.municipalLinks || []).map(l => l.label),
-      ...(i.federalLinks || []).map(l => l.label),
-      ...(i.rmaLinks || []).map(l => l.label),
-      ...(i.driveLinks || []).map(l => l.label),
-      ...(i.fixedTeam || []).flatMap(t => [t.name, t.role, t.bairros]),
-      ...(i.volanteTeam || []).flatMap(t => [t.name, t.role])
-    ].join(' ').toLowerCase() : null;
-
-    const servicesText = (Array.isArray(i.services) ? i.services.join(' ') : (i.services || '')).toLowerCase();
-    const phonesText = (i.phones || []).join(' ').toLowerCase();
-
-    const matchSearch = isCas
-      ? casSearchable.includes(query)
-      : isCras
-      ? crasSearchable.includes(query)
-      : (i.name.toLowerCase().includes(query) ||
-         i.fullName.toLowerCase().includes(query) ||
-         i.address.toLowerCase().includes(query) ||
-         i.desc.toLowerCase().includes(query) ||
-         servicesText.includes(query) ||
-         phonesText.includes(query) ||
-         (i.group || '').toLowerCase().includes(query));
+    const matchSearch = i._searchIdx.includes(query);
     const matchCat = cat === 'all' ||
                      (cat === 'social' ? (i.cat.includes('social') || i.cat.includes('idoso')) :
                      i.cat.includes(cat));
@@ -6341,7 +6344,7 @@ function render() {
                </div>
              </div>`
           : `<div class="image-preview">
-               <img src="${attach.data}" alt="Anexo de ${i.name}">
+               <img data-attach-src="${i.id}" alt="Anexo de ${i.name}" loading="lazy" decoding="async">
                <button type="button" class="image-remove-btn" title="Remover imagem" aria-label="Remover imagem de ${escapeHtml(i.name)}" onclick="removeAttachment('${i.id}')">✕</button>
              </div>`)
       : `<label class="btn-tech btn-secondary image-upload-label">
@@ -6446,6 +6449,17 @@ function render() {
     </div>
   `;
   }).join('');
+
+  // Anexos de imagem: em vez de embutir o base64 inteiro de cada foto direto
+  // no HTML acima (o que deixava a busca lenta/travando a cada tecla digitada,
+  // principalmente com vários anexos já salvos), os cards recebem só um
+  // placeholder (data-attach-src) e a imagem real é atribuída aqui embaixo,
+  // via DOM, apenas para os cards que realmente estão sendo exibidos agora.
+  grid.querySelectorAll('img[data-attach-src]').forEach(img => {
+    const attachId = img.getAttribute('data-attach-src');
+    const savedAttach = getAttachment(attachId);
+    if (savedAttach && savedAttach.data) img.src = savedAttach.data;
+  });
 }
 
 function showImageError(id, msg) {
