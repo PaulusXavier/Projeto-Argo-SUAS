@@ -4778,6 +4778,172 @@ const ICONS = {
   swap: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>'
 };
 
+// ---------------------------------------------------------------------
+// Favoritos / atalhos pessoais: cada técnico marca os equipamentos que
+// mais usa no dia a dia, para não precisar navegar pelas categorias
+// toda vez. Guardado em localStorage puro (não é dado sensível do
+// usuário atendido, então não passa pelo safeStorage cifrado).
+// ---------------------------------------------------------------------
+const FAVORITES_KEY = 'argo_favorites';
+
+function getFavoriteIds() {
+  try {
+    const raw = localStorage.getItem(FAVORITES_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch (e) {
+    return new Set();
+  }
+}
+
+function isFavorite(id) {
+  return getFavoriteIds().has(id);
+}
+
+function toggleFavorite(id) {
+  const set = getFavoriteIds();
+  if (set.has(id)) set.delete(id); else set.add(id);
+  try {
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify([...set]));
+  } catch (e) {
+    showImageError(id, 'Não foi possível salvar o favorito (armazenamento indisponível).');
+  }
+  render();
+}
+
+// ---------------------------------------------------------------------
+// Ordenar por proximidade: usa a geolocalização do navegador (posição
+// atual do dispositivo) e compara com a localização de cada equipamento,
+// obtida por geocodificação do endereço cadastrado via Nominatim
+// (OpenStreetMap, serviço público e gratuito). Os resultados são
+// guardados em cache local, então cada endereço só precisa de internet
+// para ser localizado uma vez; depois disso a ordenação funciona mesmo
+// offline. É uma ordenação aproximada (depende da precisão do endereço
+// cadastrado e do serviço de geocodificação), útil para priorizar rotas
+// da Equipe Volante e visitas domiciliares.
+// ---------------------------------------------------------------------
+const GEOCODE_CACHE_KEY = 'argo_geocode_cache_v1';
+let proximityState = { active: false, lat: null, lon: null, loading: false };
+
+function getGeocodeCache() {
+  try {
+    return JSON.parse(localStorage.getItem(GEOCODE_CACHE_KEY) || '{}');
+  } catch (e) {
+    return {};
+  }
+}
+
+function setGeocodeCacheEntry(id, lat, lon) {
+  const cache = getGeocodeCache();
+  cache[id] = { lat, lon };
+  try {
+    localStorage.setItem(GEOCODE_CACHE_KEY, JSON.stringify(cache));
+  } catch (e) {
+    // Cache é apenas uma otimização; se não puder salvar, segue sem ele.
+  }
+}
+
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+async function geocodeAddress(address) {
+  const q = encodeURIComponent(address.replace(/\s+/g, ' ').trim() + ', Roraima, Brasil');
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${q}`;
+  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  if (!res.ok) throw new Error('Falha ao consultar o serviço de geocodificação.');
+  const data = await res.json();
+  if (!data || !data[0]) return null;
+  return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+}
+
+async function ensureGeocodedFor(items, onProgress) {
+  const cache = getGeocodeCache();
+  const pending = items.filter(i => !cache[i.id] && i.address);
+  for (let idx = 0; idx < pending.length; idx++) {
+    const item = pending[idx];
+    if (onProgress) onProgress(idx + 1, pending.length);
+    try {
+      const coords = await geocodeAddress(item.address);
+      if (coords) setGeocodeCacheEntry(item.id, coords.lat, coords.lon);
+    } catch (e) {
+      // Ignora falha pontual num endereço e segue para o próximo.
+    }
+    // Respeita o limite de uso do Nominatim (no máximo ~1 requisição por segundo).
+    if (idx < pending.length - 1) await new Promise(r => setTimeout(r, 1100));
+  }
+}
+
+function setProximityButtonLabel(text) {
+  const btn = document.getElementById('proximityBtn');
+  if (!btn) return;
+  const label = btn.querySelector('.proximity-label');
+  if (label) label.textContent = text;
+}
+
+function toggleProximitySort() {
+  const btn = document.getElementById('proximityBtn');
+
+  if (proximityState.active) {
+    proximityState = { active: false, lat: null, lon: null, loading: false };
+    if (btn) {
+      btn.setAttribute('aria-pressed', 'false');
+      btn.classList.remove('is-active');
+    }
+    setProximityButtonLabel('Ordenar por proximidade');
+    render();
+    return;
+  }
+
+  if (!navigator.geolocation) {
+    alert('Este navegador não permite obter a localização atual.');
+    return;
+  }
+
+  if (btn) btn.disabled = true;
+  setProximityButtonLabel('Localizando...');
+
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    proximityState = { active: true, lat: pos.coords.latitude, lon: pos.coords.longitude, loading: true };
+
+    const activeChip = document.querySelector('.filter-chip.active');
+    const cat = activeChip ? activeChip.dataset.cat : 'all';
+    const visible = DATA.filter(i => (cat === 'all' || i.cat.includes(cat)) &&
+      !i.cat.includes('cas') && !i.cat.includes('cras'));
+
+    await ensureGeocodedFor(visible, (done, total) => {
+      setProximityButtonLabel(`Localizando (${done}/${total})...`);
+    });
+
+    proximityState.loading = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.setAttribute('aria-pressed', 'true');
+      btn.classList.add('is-active');
+    }
+    setProximityButtonLabel('Mais próximos primeiro');
+    render();
+  }, () => {
+    if (btn) btn.disabled = false;
+    setProximityButtonLabel('Ordenar por proximidade');
+    alert('Não foi possível obter sua localização. Verifique se a permissão de localização foi concedida ao navegador.');
+  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+}
+
+function renderDistanceBadge(id) {
+  if (!proximityState.active) return '';
+  const cache = getGeocodeCache();
+  const coords = cache[id];
+  if (!coords) return `<span class="distance-badge distance-badge-unknown" title="Não foi possível localizar o endereço cadastrado">${ICONS.map} local não encontrado</span>`;
+  const km = haversineKm(proximityState.lat, proximityState.lon, coords.lat, coords.lon);
+  const label = km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
+  return `<span class="distance-badge">${ICONS.map} ${label}</span>`;
+}
+
 const MAX_ATTACH_BYTES = 3.5 * 1024 * 1024;
 
 /* ===================== Cifragem dos dados sensíveis em repouso =====================
@@ -5640,7 +5806,7 @@ function updateChipCounts() {
   const counts = {
     all: DATA.length, hospitalar: 0, saude: 0, tea: 0, social: 0, educacao: 0, juridico: 0,
     conselho: 0, delegacias: 0, bancos: 0, previdencia: 0, trabalho: 0, documentacao: 0, habitacao: 0, mobilidade: 0, informes: 0, cas: 0,
-    cras: 0, migracao: 0, alimentar: 0, mulher: 0, cultura: 0, defesacivil: 0, conselhosdireitos: 0
+    cras: 0, migracao: 0, alimentar: 0, mulher: 0, cultura: 0, defesacivil: 0, conselhosdireitos: 0, favoritos: 0
   };
   DATA.forEach(i => {
     if (i.cat.includes('hospitalar')) counts.hospitalar++;
@@ -5667,6 +5833,7 @@ function updateChipCounts() {
     if (i.cat.includes('defesacivil')) counts.defesacivil++;
     if (i.cat.includes('conselhosdireitos')) counts.conselhosdireitos++;
   });
+  counts.favoritos = getFavoriteIds().size;
 
   const setCount = (id, value) => {
     const el = document.getElementById(id);
@@ -5696,6 +5863,7 @@ function updateChipCounts() {
   setCount('count-cultura', counts.cultura);
   setCount('count-defesacivil', counts.defesacivil);
   setCount('count-conselhosdireitos', counts.conselhosdireitos);
+  setCount('count-favoritos', counts.favoritos);
 }
 
 function render() {
@@ -6496,7 +6664,7 @@ function renderSecondUnitField(id, name) {
 
 function share(id) {
   const i = DATA.find(x => x.id === id);
-  const t = `*UNIDADE:* ${i.fullName}\n*ENDEREÇO:* ${stripHtml(i.address)}\n*CONTATO:* ${stripHtml(i.phones.join(' / '))}`;
+  const t = `*UNIDADE:* ${i.fullName}\n*ENDEREÇO:* ${stripHtml(i.address)}\n*HORÁRIO:* ${stripHtml(i.hours || 'Não informado')}\n*CONTATO:* ${stripHtml(i.phones.join(' / '))}`;
   window.open(`https://wa.me/?text=${encodeURIComponent(t)}`, '_blank', 'noopener,noreferrer');
 }
 
