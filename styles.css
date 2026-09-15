@@ -217,49 +217,104 @@
     header.hero { background-size: auto, 360px 270px, auto; }
   }
 
-  /* Constelação real de Argo Navis (estrelas de Carina, Vela, Puppis e Pyxis
-     em posições verdadeiras) usada como marca d'água de fundo do cabeçalho
-     principal, bem transparente para não competir com o texto. */
-  .hero-historic-bg {
-    position: absolute;
-    inset: 0;
-    background-image: url('argo-navis-constelacao.svg');
-    background-size: cover;
-    background-position: center 35%;
-    background-repeat: no-repeat;
-    opacity: 0.1;
-    mix-blend-mode: luminosity;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  @media (max-width: 640px) {
-    .hero-historic-bg { opacity: 0.07; }
-  }
-
-  /* Mesma constelação, exibida como emblema visível no canto esquerdo do cabeçalho. */
-  .hero-side-emblem {
+  /* Navio Argo animado, exibido no canto esquerdo do cabeçalho — balançando
+     sobre as ondas, com a vela ao vento, no lugar da antiga marca d'água/
+     emblema estático da constelação. */
+  .hero-ship-emblem {
     position: absolute;
     top: 50%;
     left: 4%;
     transform: translateY(-50%);
-    width: 200px;
+    width: 190px;
     height: auto;
-    max-height: 190px;
-    object-fit: cover;
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-    opacity: 0.92;
+    max-height: 170px;
+    overflow: visible;
+    filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35));
+    opacity: 0.95;
     pointer-events: none;
     z-index: 1;
   }
 
   @media (max-width: 1100px) {
-    .hero-side-emblem { width: 150px; max-height: 140px; }
+    .hero-ship-emblem { width: 145px; max-height: 130px; }
   }
 
   @media (max-width: 900px) {
-    .hero-side-emblem { display: none; }
+    .hero-ship-emblem { display: none; }
+  }
+
+  .hero-ship-emblem .argo-ship-hull {
+    fill: var(--hero-teal-3, #051F1A);
+    stroke: var(--hero-gold, #E8AC3D);
+    stroke-width: 2.5;
+  }
+
+  .hero-ship-emblem .argo-ship-oars circle {
+    fill: var(--hero-gold, #E8AC3D);
+    opacity: 0.85;
+  }
+
+  .hero-ship-emblem .argo-ship-mast {
+    stroke: var(--hero-gold-soft, #F2CB7E);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+  }
+
+  .hero-ship-emblem .argo-ship-sail {
+    fill: #F1F5F9;
+    opacity: 0.94;
+  }
+
+  .hero-ship-emblem .argo-ship-swirl {
+    fill: #FEDD00;
+  }
+
+  .hero-ship-emblem .ship-wave {
+    fill: none;
+    stroke: var(--hero-gold, #E8AC3D);
+    stroke-width: 2;
+    opacity: 0.35;
+  }
+
+  .hero-ship-emblem .ship-wave-2 { opacity: 0.22; }
+
+  /* Animações: barco balançando nas ondas, vela ondulando ao vento e ondas
+     correndo por baixo do casco. */
+  .hero-ship-emblem .ship-bob {
+    animation: shipBob 6s ease-in-out infinite;
+    transform-origin: 110px 160px;
+  }
+
+  .hero-ship-emblem .argo-ship-sail {
+    animation: shipSailSway 5s ease-in-out infinite;
+    transform-origin: 110px 86px;
+  }
+
+  .hero-ship-emblem .ship-wave-1 { animation: shipWaveDrift 7s linear infinite; }
+  .hero-ship-emblem .ship-wave-2 { animation: shipWaveDrift 9s linear infinite reverse; }
+
+  @keyframes shipBob {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-5px) rotate(-1.4deg); }
+  }
+
+  @keyframes shipSailSway {
+    0%, 100% { transform: skewX(0deg); }
+    50% { transform: skewX(2.5deg); }
+  }
+
+  @keyframes shipWaveDrift {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-60px); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-ship-emblem .ship-bob,
+    .hero-ship-emblem .argo-ship-sail,
+    .hero-ship-emblem .ship-wave-1,
+    .hero-ship-emblem .ship-wave-2 {
+      animation: none;
+    }
   }
 
   .argo-emblem {
