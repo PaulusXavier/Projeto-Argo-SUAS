@@ -7984,8 +7984,8 @@ async function printGuide(id) {
           <div style="text-align:center; width:280px;">
             <div style="height:22px;"></div>
             <div style="border-top:2px solid #0F172A; margin-bottom:6px;"></div>
-            <p style="margin:0; font-size:1rem; font-weight:800; color:#0F172A;">Paulo Xavier</p>
-            <p style="margin:0; font-size:0.85rem; color:#475569; font-weight:700;">Psicólogo · CRP-20/09816</p>
+            <p style="margin:0; font-size:0.72rem; font-weight:800; color:#0F172A;">Paulo Xavier</p>
+            <p style="margin:0; font-size:0.6rem; color:#475569; font-weight:700;">Psicólogo · CRP-20/09816</p>
           </div>
         </div>
       </div>
