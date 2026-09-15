@@ -2489,6 +2489,30 @@
     margin-top: 0.5rem;
   }
 
+  /* Badge de distância — aparece nos cards apenas quando o botão "Ordenar
+     por proximidade" está ativo (ver renderDistanceBadge/toggleProximitySort
+     em app.js), mostrando o quão perto o equipamento está da localização
+     atual do usuário. */
+  .distance-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--brand-primary);
+    background: rgba(0, 145, 194, 0.08);
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    margin-top: 0.5rem;
+  }
+
+  .distance-badge-unknown {
+    color: var(--text-muted);
+    background: rgba(100, 116, 139, 0.1);
+  }
+
   /* Cartão da aba "Anotações" — espaço livre de anotação para encaminhamentos
      gerais, sem vínculo a uma unidade específica. Usa o acento rosa
      (--brand-notes) para diferenciar das demais categorias. */
@@ -3038,23 +3062,20 @@
     inset: 0;
     z-index: 5000;
     background-color: var(--brand-secondary);
-    /* Constelação de Argo Navis (estrelas reais de Carina, Vela, Puppis e Pyxis,
-       com a estrela-guia Canopus em destaque) pontilhada no fundo da tela de
-       login, ecoando o ícone do app. */
-    background-image: url('argo-navis-historico.jpg');
+    /* Mesmo fundo de constelação de Argo Navis usado no restante do
+       aplicativo (body, argo-constellation-bg.svg) — antes esta tela usava
+       a FOTO do navio (argo-navis-historico.jpg) como fundo maior, o que
+       destoava do resto do app. */
+    background-image: url('argo-constellation-bg.svg');
     background-repeat: no-repeat;
-    background-position: center 38%;
-    background-size: 560px 420px;
+    background-position: center center;
+    background-size: cover;
     display: flex;
     align-items: center;
     align-items: safe center;
     justify-content: center;
     padding: 1.5rem;
     overflow-y: auto;
-  }
-
-  @media (max-width: 640px) {
-    #loginScreen { background-size: 340px 255px; }
   }
 
   #loginScreen[hidden] { display: none; }
