@@ -1395,6 +1395,26 @@ function updateChipCounts() {
   setCount('count-favoritos', counts.favoritos);
 }
 
+// Liga/desliga a busca principal conforme a aba aberta. Ao desligar, limpa o
+// texto para que uma pesquisa antiga não volte filtrando a lista quando o
+// usuário retornar para uma aba de equipamentos.
+const MAIN_SEARCH_PLACEHOLDER = 'Pesquisar por unidade, bairro ou serviço técnico...';
+function setMainSearchEnabled(enabled) {
+  const input = document.getElementById('mainSearch');
+  if (!input) return;
+  if (input.disabled === !enabled) return;
+  input.disabled = !enabled;
+  input.style.opacity = enabled ? '' : '0.55';
+  if (enabled) {
+    input.placeholder = MAIN_SEARCH_PLACEHOLDER;
+  } else {
+    input.value = '';
+    input.placeholder = 'Busca disponível nas abas de equipamentos';
+    const clearBtn = document.getElementById('searchClearBtn');
+    if (clearBtn) clearBtn.classList.remove('visible');
+  }
+}
+
 function render() {
   const query = document.getElementById('mainSearch').value.toLowerCase();
   const cat = document.querySelector('.filter-chip.active').dataset.cat;
@@ -1414,32 +1434,39 @@ function render() {
     return;
   }
 
-  if (cat === 'pdftools') {
+  // Abas de painel (ferramentas, e não listas de equipamentos). Cada uma tem um
+  // elemento-raiz próprio; se ele JÁ estiver na tela, o painel não é remontado.
+  //
+  // Correção: antes, qualquer chamada de render() — inclusive a disparada a
+  // cada tecla digitada na busca principal — refazia o innerHTML do painel
+  // aberto. Isso apagava o texto já digitado no tradutor, zerava a fila de
+  // arquivos do "Unificar PDF", destruía e recriava o mapa (piscando a tela e
+  // perdendo o zoom) e reiniciava a busca de notícias. Agora a montagem só
+  // acontece na primeira vez que a aba é aberta.
+  const PANEL_TABS = {
+    pdftools: { rootId: 'pdftoolsMergeList', render: renderPdfToolsCard, init: initPdfToolsPanel },
+    tradutor: { rootId: 'tradutorInput',     render: renderTranslatorCard, init: initTranslatorPanel },
+    noticias: { rootId: 'noticiasList',      render: renderNewsCard,       init: initNewsPanel },
+    mapa:     { rootId: 'mapaRedeMapContainer', render: renderMapCard,     init: initMapPanel }
+  };
+
+  if (PANEL_TABS[cat]) {
+    const panel = PANEL_TABS[cat];
     if (resultsInfo) resultsInfo.style.display = 'none';
     const infoBannerEarly = document.getElementById('categoryInfoBanner');
     if (infoBannerEarly) { infoBannerEarly.style.display = 'none'; infoBannerEarly.innerHTML = ''; }
-    grid.innerHTML = renderPdfToolsCard();
-    initPdfToolsPanel();
+    // A busca principal procura equipamentos; nas abas de ferramenta ela não
+    // tem o que filtrar, então fica desligada em vez de aceitar texto e não
+    // fazer nada (cada aba que precisa de filtro tem o seu próprio campo).
+    setMainSearchEnabled(false);
+    if (!document.getElementById(panel.rootId)) {
+      grid.innerHTML = panel.render();
+      panel.init();
+    }
     return;
   }
 
-  if (cat === 'tradutor') {
-    if (resultsInfo) resultsInfo.style.display = 'none';
-    const infoBannerEarly = document.getElementById('categoryInfoBanner');
-    if (infoBannerEarly) { infoBannerEarly.style.display = 'none'; infoBannerEarly.innerHTML = ''; }
-    grid.innerHTML = renderTranslatorCard();
-    initTranslatorPanel();
-    return;
-  }
-
-  if (cat === 'mapa') {
-    if (resultsInfo) resultsInfo.style.display = 'none';
-    const infoBannerEarly = document.getElementById('categoryInfoBanner');
-    if (infoBannerEarly) { infoBannerEarly.style.display = 'none'; infoBannerEarly.innerHTML = ''; }
-    grid.innerHTML = renderMapCard();
-    initMapPanel();
-    return;
-  }
+  setMainSearchEnabled(true);
 
   const infoBanner = document.getElementById('categoryInfoBanner');
   if (infoBanner) {
@@ -2715,6 +2742,287 @@ const MAPA_REDE_DEFAULT_CENTER = { lat: 2.8235, lon: -60.6758 };
 let mapaRedeMap = null;
 let mapaRedeMarkersLayer = null;
 let mapaRedeUserMarker = null;
+
+/* ==========================================================================
+   ABA "NOTÍCIAS DO MDS"
+   --------------------------------------------------------------------------
+   Lê o feed RSS público do Ministério do Desenvolvimento e Assistência Social
+   (https://www.gov.br/mds/RSS) e lista as publicações mais recentes: notícias,
+   instruções normativas e portarias.
+
+   O portal gov.br não envia o cabeçalho Access-Control-Allow-Origin, então o
+   navegador bloqueia a leitura direta do feed a partir de outro domínio
+   (CORS). Por isso tentamos, nesta ordem:
+     1) buscar o feed direto (funciona se o gov.br um dia liberar CORS, e
+        funciona hoje quando o app é aberto como arquivo local em alguns
+        navegadores);
+     2) reler o mesmo endereço através de um repassador público (allorigins,
+        depois corsproxy), que apenas copia o XML e devolve com CORS liberado.
+   Nenhum dado de atendido sai do aparelho: a única coisa pedida é a lista
+   pública de notícias do ministério.
+
+   O resultado fica guardado em localStorage, sem criptografia (é conteúdo
+   público), para que a aba abra instantaneamente e continue mostrando a
+   última lista baixada mesmo sem internet.
+   ========================================================================== */
+
+// Feed raiz do portal (traz notícias, portarias e instruções normativas) e,
+// como reforço, o feed da pasta de notícias. Se o segundo endereço mudar ou
+// sair do ar, ele é simplesmente ignorado e a aba segue com o primeiro.
+const NEWS_FEED_URLS = [
+  'https://www.gov.br/mds/RSS',
+  'https://www.gov.br/mds/pt-br/noticias/RSS'
+];
+const NEWS_SITE_URL = 'https://www.gov.br/mds/pt-br';
+const NEWS_CACHE_KEY = 'argo_noticias_mds_v1';
+const NEWS_MAX_ITEMS = 30;
+
+// Repassadores tentados em ordem. O primeiro é a tentativa direta.
+const NEWS_FETCHERS = [
+  { label: 'direto', build: url => url },
+  { label: 'allorigins', build: url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url) },
+  { label: 'corsproxy', build: url => 'https://corsproxy.io/?url=' + encodeURIComponent(url) }
+];
+
+function newsReadCache() {
+  try {
+    const raw = localStorage.getItem(NEWS_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.items) || !parsed.items.length) return null;
+    return parsed;
+  } catch (e) {
+    return null;
+  }
+}
+
+function newsWriteCache(items) {
+  try {
+    localStorage.setItem(NEWS_CACHE_KEY, JSON.stringify({ ts: Date.now(), items }));
+  } catch (e) {
+    // Sem espaço no navegador: a aba continua funcionando, só não guarda offline.
+  }
+}
+
+// Lê um campo de um <item> sem depender do prefixo de namespace (o feed do
+// gov.br é RSS 1.0/RDF e usa dc:date, dc:type etc.).
+function newsField(item, tag) {
+  const found = item.getElementsByTagNameNS('*', tag);
+  return found && found.length ? (found[0].textContent || '').trim() : '';
+}
+
+function newsParseFeed(xmlText) {
+  const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+  if (doc.getElementsByTagName('parsererror').length) throw new Error('XML inválido');
+
+  const nodes = Array.from(doc.getElementsByTagNameNS('*', 'item'));
+  return nodes
+    .map(item => ({
+      title: newsField(item, 'title'),
+      link: newsField(item, 'link') || item.getAttribute('rdf:about') || '',
+      desc: newsField(item, 'description'),
+      date: newsField(item, 'date') || newsField(item, 'pubDate'),
+      type: newsField(item, 'type')
+    }))
+    // O feed traz também PDFs e imagens soltas do portal (dc:type "File" e
+    // "Image"), que não interessam aqui. Ficam só os conteúdos editoriais
+    // (notícias, instruções normativas, portarias) com título preenchido.
+    .filter(it => it.title && it.link && it.type !== 'File' && it.type !== 'Image')
+    .slice(0, NEWS_MAX_ITEMS);
+}
+
+// Busca UM feed, tentando o acesso direto e depois os repassadores.
+async function newsFetchOne(feedUrl) {
+  let lastError = null;
+  for (const fetcher of NEWS_FETCHERS) {
+    try {
+      const resp = await fetch(fetcher.build(feedUrl), { cache: 'no-store' });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const items = newsParseFeed(await resp.text());
+      if (items.length) return items;
+      throw new Error('feed vazio');
+    } catch (e) {
+      lastError = e;
+    }
+  }
+  throw lastError || new Error('falha ao buscar o feed');
+}
+
+// Busca os dois feeds, junta, tira repetidos pelo endereço e ordena do mais
+// novo para o mais antigo. Só dá erro se NENHUM dos feeds responder.
+async function newsFetchFeed() {
+  const results = await Promise.allSettled(NEWS_FEED_URLS.map(newsFetchOne));
+  const merged = new Map();
+
+  results.forEach(r => {
+    if (r.status !== 'fulfilled') return;
+    r.value.forEach(it => { if (!merged.has(it.link)) merged.set(it.link, it); });
+  });
+
+  if (!merged.size) {
+    const firstError = results.find(r => r.status === 'rejected');
+    throw (firstError && firstError.reason) || new Error('falha ao buscar o feed');
+  }
+
+  return Array.from(merged.values())
+    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+    .slice(0, NEWS_MAX_ITEMS);
+}
+
+function newsFormatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function newsFormatUpdated(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (isNaN(d)) return '';
+  return d.toLocaleDateString('pt-BR') + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+// Classifica o item só pelo título, para dar uma etiqueta visual útil.
+function newsKind(item) {
+  const t = item.title.toLowerCase();
+  if (t.startsWith('instrução normativa') || t.startsWith('instrucao normativa')) return 'Instrução Normativa';
+  if (t.startsWith('portaria')) return 'Portaria';
+  if (t.startsWith('resolução') || t.startsWith('resolucao')) return 'Resolução';
+  if (t.startsWith('decreto')) return 'Decreto';
+  if (t.startsWith('lei ')) return 'Lei';
+  return 'Notícia';
+}
+
+function renderNewsCard() {
+  return `
+    <div class="tech-card noticias-card">
+      <div class="card-top">
+        <div style="display:flex; align-items:center; gap:0.55rem;">
+          <span class="tradutor-badge">${ICONS.form}</span>
+          <h2 style="margin:0;">Notícias do MDS</h2>
+        </div>
+        <span class="subtitle">📰 Últimas publicações do Ministério do Desenvolvimento e Assistência Social, Família e Combate à Fome</span>
+      </div>
+      <div class="card-body">
+        <div class="tradutor-privacy">
+          ${ICONS.info}
+          <span>A lista vem do feed público do portal gov.br/mds. Como o portal não libera leitura direta por outros sites, o app pode buscar o mesmo endereço por um repassador público (allorigins/corsproxy) — só o endereço do feed é enviado, nenhum dado de atendido. A última lista baixada fica salva neste navegador e continua visível offline.</span>
+        </div>
+
+        <div style="display:flex; flex-wrap:wrap; gap:0.6rem; align-items:center; margin:0.85rem 0;">
+          <input type="search" id="noticiasFilter" placeholder="Filtrar por palavra (ex.: Bolsa Família, CadÚnico, SUAS)…"
+                 aria-label="Filtrar notícias por palavra"
+                 oninput="renderNewsList()"
+                 style="flex:1; min-width:220px; padding:0.55rem 0.75rem; border-radius:8px; border:1px solid #dbe3ea; font:inherit;">
+          <button type="button" class="tradutor-btn" id="noticiasRefreshBtn" onclick="refreshNews()">
+            ${ICONS.cloud} Atualizar
+          </button>
+          <a class="tradutor-btn" href="${NEWS_SITE_URL}" target="_blank" rel="noopener noreferrer"
+             style="text-decoration:none; display:inline-flex; align-items:center; gap:0.4rem;">
+            ${ICONS.external} Abrir o site do MDS
+          </a>
+        </div>
+
+        <div id="noticiasStatus" style="font-size:0.85rem; color:var(--text-muted, #64748b); margin-bottom:0.6rem;"></div>
+        <div id="noticiasList"></div>
+      </div>
+    </div>
+  `;
+}
+
+// Lista atualmente carregada em memória (preenchida pelo cache e pela rede).
+let newsState = { items: [], ts: 0, loading: false };
+
+function newsSetStatus(msg) {
+  const el = document.getElementById('noticiasStatus');
+  if (el) el.innerHTML = msg || '';
+}
+
+function renderNewsList() {
+  const list = document.getElementById('noticiasList');
+  if (!list) return;
+
+  const filterEl = document.getElementById('noticiasFilter');
+  const filter = filterEl ? filterEl.value.trim().toLowerCase() : '';
+  const items = filter
+    ? newsState.items.filter(it => (it.title + ' ' + it.desc).toLowerCase().includes(filter))
+    : newsState.items;
+
+  if (!items.length) {
+    list.innerHTML = `<p style="color:var(--text-muted,#64748b); padding:1rem 0;">${
+      newsState.items.length
+        ? 'Nenhuma publicação corresponde a esse filtro.'
+        : (newsState.loading ? 'Carregando publicações…' : 'Nenhuma publicação carregada ainda.')
+    }</p>`;
+    return;
+  }
+
+  list.innerHTML = items.map(it => `
+    <article style="border:1px solid #e2e8f0; border-radius:12px; padding:0.9rem 1rem; margin-bottom:0.7rem; background:#fff;">
+      <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom:0.35rem;">
+        <span style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; background:#e8f1f9; color:#0f4a41; padding:0.2rem 0.5rem; border-radius:6px;">${escapeHtml(newsKind(it))}</span>
+        <span style="font-size:0.78rem; color:var(--text-muted,#64748b);">${escapeHtml(newsFormatDate(it.date))}</span>
+      </div>
+      <h3 style="margin:0 0 0.3rem 0; font-size:1rem; line-height:1.35;">
+        <a href="${escapeHtml(it.link)}" target="_blank" rel="noopener noreferrer" style="color:#0f4a41; text-decoration:none;">${escapeHtml(it.title)}</a>
+      </h3>
+      ${it.desc ? `<p style="margin:0; font-size:0.88rem; line-height:1.5; color:#475569;">${escapeHtml(it.desc)}</p>` : ''}
+    </article>
+  `).join('');
+}
+
+async function refreshNews() {
+  const btn = document.getElementById('noticiasRefreshBtn');
+  if (btn) btn.disabled = true;
+  newsState.loading = true;
+  newsSetStatus(newsState.items.length ? 'Buscando publicações mais recentes…' : 'Carregando publicações…');
+  renderNewsList();
+
+  try {
+    const items = await newsFetchFeed();
+    newsState.items = items;
+    newsState.ts = Date.now();
+    newsWriteCache(items);
+    newsSetStatus(`${items.length} publicações · atualizado em ${escapeHtml(newsFormatUpdated(newsState.ts))}`);
+  } catch (e) {
+    if (newsState.items.length) {
+      newsSetStatus(`Não foi possível atualizar agora. Mostrando a lista salva em ${escapeHtml(newsFormatUpdated(newsState.ts))}.`);
+    } else {
+      newsSetStatus(`Não foi possível carregar as publicações. Verifique a conexão e toque em “Atualizar”, ou acesse <a href="${NEWS_SITE_URL}" target="_blank" rel="noopener noreferrer">gov.br/mds</a> direto no navegador.`);
+    }
+  } finally {
+    newsState.loading = false;
+    if (btn) btn.disabled = false;
+    renderNewsList();
+  }
+}
+
+function initNewsPanel() {
+  const cached = newsReadCache();
+  if (cached) {
+    newsState.items = cached.items;
+    newsState.ts = cached.ts;
+    newsSetStatus(`${cached.items.length} publicações · lista salva em ${escapeHtml(newsFormatUpdated(cached.ts))}`);
+    renderNewsList();
+  }
+
+  // Sem internet: fica só com o que estiver salvo.
+  if (navigator.onLine === false) {
+    if (!cached) newsSetStatus('Você está offline e ainda não há publicações salvas neste aparelho.');
+    renderNewsList();
+    return;
+  }
+
+  // Com cache recente (menos de 2 horas), não refaz a busca automaticamente.
+  const TWO_HOURS = 2 * 60 * 60 * 1000;
+  if (cached && Date.now() - cached.ts < TWO_HOURS) {
+    renderNewsList();
+    return;
+  }
+
+  refreshNews();
+}
 
 function renderMapCard() {
   const activeChip = document.querySelector('.filter-chip.active[data-cat="mapa"]');
