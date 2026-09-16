@@ -4428,6 +4428,12 @@ const DATA = [
     volanteTeam: EQUIPE_CRAS_CRISTIANA.volanteTeam,
     volanteDesc: EQUIPE_CRAS_CRISTIANA.volanteDesc,
     volanteCoverage: EQUIPE_CRAS_CRISTIANA.volanteCoverage,
+    // Painel avulso (tela cheia) com a mesma equipe acima, com busca por
+    // bairro ou nome de técnico — útil pra abrir isolado ou compartilhar
+    // com quem não usa o Argo SUAS. Ver Divisão_Territorial___Equipe_
+    // Técnica_-_CRAS_Cristiana.html, que lê os mesmos dados de
+    // equipe-cras-cristiana.js.
+    teamPanelLink: { label: "Consulta em Tela Cheia (buscar por bairro)", icon: "building", url: "Divisão_Territorial___Equipe_Técnica_-_CRAS_Cristiana.html" },
     municipalLinks: [
       { label: "BV Cidadão", icon: "badge", url: "https://bvcidadao.prefeitura.boavista.br/proton/login.asp" },
       { label: "Cidade Social", icon: "building", url: "https://cidadesocial1.ae3tecnologia.com.br/login" },
