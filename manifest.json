@@ -1,9 +1,14 @@
 {
+  "id": "./index.html",
   "name": "Argo SUAS",
   "short_name": "Argo SUAS",
-  "description": "Sistema de Gestão de Equipamentos Socioassistenciais e Rede de Apoio TEA em Boa Vista-RR.",
+  "description": "Diretório técnico de equipamentos de Políticas Públicas do estado de Roraima: Assistência Social, Saúde/RAPS, Educação, Justiça, Previdência e mais, com ficha de encaminhamento técnico para impressão.",
+  "lang": "pt-BR",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
+  "orientation": "any",
+  "categories": ["government", "utilities", "productivity"],
   "background_color": "#F8FAFC",
   "theme_color": "#0F4A41",
   "icons": [
