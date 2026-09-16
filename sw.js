@@ -1,6 +1,6 @@
 // Troque este número toda vez que publicar uma alteração no app.
 // É essa mudança de versão que dispara a atualização automática.
-const CACHE_VERSION = 'v35';
+const CACHE_VERSION = 'v37';
 const CACHE_NAME = `rede-apoio-bv-${CACHE_VERSION}`;
 
 // Cache separado e SEM número de versão, para conteúdo pesado de fora do
@@ -70,18 +70,47 @@ self.addEventListener('activate', event => {
 // Pedidos de fora do domínio do app (cdnjs, tiles do OpenStreetMap etc.)
 // usam o RUNTIME_CACHE_NAME acima, que não é apagado a cada publicação;
 // pedidos do próprio app usam o cache versionado normal.
+// Endereços que NUNCA devem sair do cache primeiro: o feed de notícias do
+// gov.br e os repassadores usados para lê-lo. Sem isso, a aba "Notícias do
+// MDS" continuaria mostrando a lista antiga mesmo online e mesmo depois de
+// tocar em "Atualizar", porque o Service Worker responderia na hora com a
+// cópia salva. Aqui a rede vem primeiro e o cache só entra como reserva
+// quando não há internet.
+const NETWORK_FIRST_HOSTS = ['www.gov.br', 'api.allorigins.win', 'corsproxy.io'];
+
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
 
   const isSameOrigin = event.request.url.startsWith(self.location.origin);
   const targetCacheName = isSameOrigin ? CACHE_NAME : RUNTIME_CACHE_NAME;
+  const isNetworkFirst = NETWORK_FIRST_HOSTS.some(host => event.request.url.includes('://' + host + '/'));
+
+  if (isNetworkFirst) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          if (response && response.ok) {
+            const clone = response.clone();
+            caches.open(RUNTIME_CACHE_NAME).then(cache => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(event.request).then(cached => {
       const networkFetch = fetch(event.request)
         .then(response => {
-          const clone = response.clone();
-          caches.open(targetCacheName).then(cache => cache.put(event.request, clone));
+          // Só guarda respostas boas. Antes, um 404 ou um erro do servidor
+          // também era gravado no cache e depois servido como se fosse o
+          // arquivo certo.
+          if (response && (response.ok || response.type === 'opaque')) {
+            const clone = response.clone();
+            caches.open(targetCacheName).then(cache => cache.put(event.request, clone));
+          }
           return response;
         })
         .catch(() => cached);
