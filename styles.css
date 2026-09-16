@@ -280,9 +280,9 @@
     pointer-events: none;
   }
 
-  /* Constelação real de Argo Navis (Carina, Vela, Puppis e Pyxis) desenhada com
-     as posições astronômicas verdadeiras das estrelas, no lugar do antigo
-     barquinho estilizado. Canopus, a estrela-guia, recebe um brilho pulsante. */
+  /* Constelação de Argo Navis desenhada como a própria embarcação — as linhas
+     ligam as estrelas formando casco, convés, mastro, verga e velas. Canopus,
+     a estrela-guia, fica na proa e recebe um brilho pulsante. */
   .argo-emblem .const-line {
     fill: none;
     stroke: #E8AC3D;
@@ -334,6 +334,66 @@
   @keyframes heroGuideStarGlow {
     0%, 100% { opacity: 0.18; transform: scale(1); }
     50% { opacity: 0.3; transform: scale(1.12); }
+  }
+
+  /* ---- O navio em movimento (cabeçalho e tela de login) ----
+     A constelação deixou de ser só um mapa de estrelas solto: as linhas agora
+     desenham um navio — casco curvo, convés, mastro com verga e as duas velas
+     triangulares formadas pelos estais —, com Canopus na ponta da proa.
+     O grupo .const-ship balança devagar, como um barco em marcha, e as duas
+     linhas de onda correm em sentidos opostos por baixo do casco. As estrelas
+     soltas do céu (.const-sky) ficam mais apagadas que as do navio, para que o
+     desenho da embarcação se destaque. Tudo para em prefers-reduced-motion. */
+  .argo-emblem .const-ship,
+  .login-story-emblem .const-ship {
+    transform-box: fill-box;
+    transform-origin: 50% 85%;
+    animation: argoShipSail 9s ease-in-out infinite;
+  }
+
+  @keyframes argoShipSail {
+    0%, 100% { transform: translateY(0) rotate(-0.7deg); }
+    50%      { transform: translateY(-3px) rotate(0.7deg); }
+  }
+
+  /* Cor com transparência embutida (e não a propriedade opacity), porque a
+     animação de cintilação das estrelas controla o opacity e sobrescreveria
+     qualquer valor declarado aqui. */
+  .argo-emblem .const-sky .const-star,
+  .login-story-emblem .const-sky .const-star {
+    fill: rgba(207, 227, 216, 0.6);
+  }
+
+  .argo-emblem .const-wave,
+  .login-story-emblem .const-wave {
+    fill: none;
+    stroke: #29ABE2;
+    stroke-width: 1.2;
+    stroke-opacity: 0.4;
+    stroke-dasharray: 5 6;
+    stroke-linecap: round;
+    animation: argoWaveDrift 12s linear infinite;
+  }
+
+  .argo-emblem .const-sea path:nth-child(2),
+  .login-story-emblem .const-sea path:nth-child(2) {
+    stroke-opacity: 0.26;
+    animation-duration: 17s;
+    animation-direction: reverse;
+  }
+
+  @keyframes argoWaveDrift {
+    from { stroke-dashoffset: 0; }
+    to   { stroke-dashoffset: -44; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .argo-emblem .const-ship,
+    .login-story-emblem .const-ship,
+    .argo-emblem .const-wave,
+    .login-story-emblem .const-wave {
+      animation: none;
+    }
   }
 
   @media (max-width: 900px) {
@@ -3218,8 +3278,7 @@
     }
   }
 
-  /* Mesma constelação real de Argo Navis do cabeçalho, agora no painel de login,
-     no lugar do antigo barquinho estilizado. */
+  /* Mesma constelação-navio do cabeçalho, agora no painel da tela de login. */
   .login-story-emblem .const-line {
     fill: none;
     stroke: #29ABE2;
