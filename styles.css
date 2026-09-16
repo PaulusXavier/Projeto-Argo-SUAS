@@ -283,116 +283,411 @@
   /* Constelação de Argo Navis desenhada como a própria embarcação — as linhas
      ligam as estrelas formando casco, convés, mastro, verga e velas. Canopus,
      a estrela-guia, fica na proa e recebe um brilho pulsante. */
+  /* Constelação de Argo Navis desenhada como a própria embarcação — as linhas
+     ligam as estrelas formando casco, convés, mastro, verga e velas. Canopus,
+     a estrela-guia, fica na proa e recebe um brilho pulsante. */
   .argo-emblem .const-line {
     fill: none;
-    stroke: #E8AC3D;
-    stroke-width: 1.1;
-    stroke-opacity: 0.5;
-    stroke-dasharray: 3 4;
+    stroke: #FFD400;               /* reserva, se o gradiente não carregar */
+    stroke: url(#argoShipHero);
+    stroke-width: 1.5;
+    stroke-opacity: 0.65;
     stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
   .argo-emblem .const-star {
-    fill: #F8FAFC;
-    animation: heroStarTwinkle 4.5s ease-in-out infinite;
-  }
-
-  .argo-emblem .const-star:nth-child(odd) { animation-delay: -1.5s; }
-  .argo-emblem .const-star:nth-child(3n) { animation-delay: -3s; }
-
-  @keyframes heroStarTwinkle {
-    0%, 100% { opacity: 0.75; }
-    50% { opacity: 1; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .argo-emblem .const-star { animation: none; }
+    fill: #FFFBEA;
   }
 
   .argo-emblem .guide-star {
     fill: #FEDD00;
-    animation: heroGuideStarPulse 4s ease-in-out infinite;
   }
 
-  .argo-emblem .guide-star-glow {
+  .argo-emblem .guide-star-glow,
+  .argo-emblem .guide-star-halo {
     fill: #FEDD00;
-    animation: heroGuideStarGlow 4s ease-in-out infinite;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .argo-emblem .guide-star,
-    .argo-emblem .guide-star-glow {
-      animation: none;
-    }
-  }
-
-  @keyframes heroGuideStarPulse {
-    0%, 100% { opacity: 0.95; transform: scale(1); }
-    50% { opacity: 1; transform: scale(1.12); }
-  }
-
-  @keyframes heroGuideStarGlow {
-    0%, 100% { opacity: 0.18; transform: scale(1); }
-    50% { opacity: 0.3; transform: scale(1.12); }
   }
 
   /* ---- O navio em movimento (cabeçalho e tela de login) ----
-     A constelação deixou de ser só um mapa de estrelas solto: as linhas agora
+     A constelação deixou de ser só um mapa de estrelas solto: as linhas
      desenham um navio — casco curvo, convés, mastro com verga e as duas velas
      triangulares formadas pelos estais —, com Canopus na ponta da proa.
-     O grupo .const-ship balança devagar, como um barco em marcha, e as duas
-     linhas de onda correm em sentidos opostos por baixo do casco. As estrelas
-     soltas do céu (.const-sky) ficam mais apagadas que as do navio, para que o
-     desenho da embarcação se destaque. Tudo para em prefers-reduced-motion. */
+
+     O movimento é montado em camadas de tempos diferentes (11s, 17s, 13s...),
+     que nunca voltam a coincidir. É isso que tira a cara de "GIF em loop" da
+     animação anterior, em que tudo repetia junto a cada 9 segundos:
+
+       1. o grupo .const-ship arfa e adorna (sobe/desce + inclina) em 11s;
+       2. dentro dele, linhas e estrelas deslizam juntas de lado em 17s —
+          como se o navio também derivasse, sem sair do lugar;
+       3. as ondas correm (stroke-dashoffset) e ainda sobem e descem, em
+          sentidos e tempos opostos entre as duas linhas de água;
+       4. cada estrela cintila com duração e atraso próprios, então nenhuma
+          pisca junto da vizinha;
+       5. as linhas da constelação acendem em sequência, da proa à popa,
+          como se o desenho estivesse sendo traçado no céu;
+       6. de tempos em tempos um meteoro cruza o fundo e some.
+
+     As estrelas soltas do céu (.const-sky) ficam mais apagadas que as do
+     navio, para que o desenho da embarcação se destaque.
+     Tudo para em prefers-reduced-motion. */
+
+  /* Brilho suave: um halo amarelo no navio e verde no rio, no lugar do traço
+     chapado. É um único filtro por grupo (e não um por estrela), para não
+     pesar no celular. */
+  .argo-emblem .const-ship,
+  .login-story-emblem .const-ship {
+    filter: drop-shadow(0 0 2.5px rgba(255, 212, 0, 0.45));
+  }
+
+  .argo-emblem .const-sea,
+  .login-story-emblem .const-sea {
+    filter: drop-shadow(0 0 3px rgba(34, 200, 138, 0.4));
+  }
+
+  /* 1. Arfagem + adernagem do casco. */
   .argo-emblem .const-ship,
   .login-story-emblem .const-ship {
     transform-box: fill-box;
     transform-origin: 50% 85%;
-    animation: argoShipSail 9s ease-in-out infinite;
+    will-change: transform;
+    animation: argoShipSail 11s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
   }
 
   @keyframes argoShipSail {
-    0%, 100% { transform: translateY(0) rotate(-0.7deg); }
-    50%      { transform: translateY(-3px) rotate(0.7deg); }
+    0%   { transform: translateY(0)      rotate(-0.85deg); }
+    25%  { transform: translateY(-2.1px) rotate(0.15deg); }
+    50%  { transform: translateY(-3.4px) rotate(0.95deg); }
+    75%  { transform: translateY(-1.3px) rotate(0.1deg); }
+    100% { transform: translateY(0)      rotate(-0.85deg); }
   }
+
+  /* 2. Deriva lateral. Aplicada ao grupo inteiro (.const-sway), para que casco,
+     vela, remos e estrelas deslizem juntos e nada se descole do desenho. */
+  .const-ship .const-sway {
+    transform-box: fill-box;
+    animation: argoShipSway 17s ease-in-out infinite;
+  }
+
+  @keyframes argoShipSway {
+    0%, 100% { transform: translateX(-1.6px); }
+    50%      { transform: translateX(1.6px); }
+  }
+
+  /* 2b. A vela quadrada respira, como pano enfunado — o movimento parte da
+     verga (topo), que é onde o pano está preso. */
+  .const-ship .const-sail {
+    transform-box: fill-box;
+    transform-origin: 50% 12%;
+    animation: argoSailBillow 8.5s ease-in-out infinite;
+  }
+
+  @keyframes argoSailBillow {
+    0%, 100% { transform: scaleX(0.985) scaleY(1.004); }
+    50%      { transform: scaleX(1.018) scaleY(0.996); }
+  }
+
+  /* 2c. Os remos dão a remada devagar, girando junto à amurada. */
+  .const-ship .const-oars {
+    transform-box: fill-box;
+    transform-origin: 6% 4%;
+    animation: argoOarStroke 5.5s ease-in-out infinite;
+  }
+
+  @keyframes argoOarStroke {
+    0%, 100% { transform: rotate(-4deg); }
+    42%      { transform: rotate(3.5deg); }
+    64%      { transform: rotate(0.6deg); }
+  }
+
+  /* O olho pintado na proa: pisca de longe em longe. */
+  .argo-emblem .const-eye,
+  .login-story-emblem .const-eye {
+    fill: none;
+    stroke-width: 1;
+    stroke-opacity: 0.4;
+    stroke-dasharray: 3 4;
+    stroke-linecap: round;
+  }
+
+  .argo-emblem .const-eye { stroke: #FFD400; }
+  .login-story-emblem .const-eye { stroke: #FFD400; }
+
+  .const-eye-group {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: argoEyeBlink 13s ease-in-out infinite;
+  }
+
+  @keyframes argoEyeBlink {
+    0%, 92%, 100% { transform: scaleY(1); opacity: 1; }
+    95%           { transform: scaleY(0.12); opacity: 0.55; }
+  }
+
+  /* 4. Cintilação das estrelas: brilho + respiração de tamanho. */
+  .argo-emblem .const-star,
+  .login-story-emblem .const-star {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: heroStarTwinkle 4.6s ease-in-out infinite;
+  }
+
+  @keyframes heroStarTwinkle {
+    0%, 100% { opacity: 0.6;  transform: scale(0.9); }
+    45%      { opacity: 1;    transform: scale(1.1); }
+    62%      { opacity: 0.88; transform: scale(1.01); }
+  }
+
+  /* Duração e atraso próprios por estrela, para que nenhuma pisque junto da
+     vizinha. Vale para o céu e para as estrelas do navio, nos dois emblemas. */
+  .const-star:nth-child(1) { animation-duration: 4.1s;  animation-delay: -0.3s; }
+  .const-star:nth-child(2) { animation-duration: 5.7s;  animation-delay: -2.4s; }
+  .const-star:nth-child(3) { animation-duration: 3.4s;  animation-delay: -1.1s; }
+  .const-star:nth-child(4) { animation-duration: 6.3s;  animation-delay: -3.7s; }
+  .const-star:nth-child(5) { animation-duration: 4.8s;  animation-delay: -0.9s; }
+  .const-star:nth-child(6) { animation-duration: 7.1s;  animation-delay: -4.5s; }
+  .const-star:nth-child(7) { animation-duration: 3.9s;  animation-delay: -2.8s; }
+  .const-star:nth-child(8) { animation-duration: 5.2s;  animation-delay: -1.7s; }
+  .const-star:nth-child(9) { animation-duration: 6.6s;  animation-delay: -5.1s; }
+  .const-star:nth-child(10) { animation-duration: 4.4s; animation-delay: -3.2s; }
+  .const-star:nth-child(11) { animation-duration: 5.9s; animation-delay: -0.6s; }
+  .const-star:nth-child(12) { animation-duration: 3.6s; animation-delay: -2.1s; }
+  .const-star:nth-child(13) { animation-duration: 6.9s; animation-delay: -4.9s; }
+  .const-star:nth-child(14) { animation-duration: 4.2s; animation-delay: -1.4s; }
+  .const-star:nth-child(15) { animation-duration: 5.4s; animation-delay: -3.9s; }
+  .const-star:nth-child(16) { animation-duration: 3.8s; animation-delay: -0.2s; }
+  .const-star:nth-child(17) { animation-duration: 6.1s; animation-delay: -2.6s; }
+  .const-star:nth-child(18) { animation-duration: 4.9s; animation-delay: -1.9s; }
+  .const-star:nth-child(19) { animation-duration: 6.4s; animation-delay: -4.2s; }
+  .const-star:nth-child(20) { animation-duration: 3.7s; animation-delay: -0.8s; }
+  .const-star:nth-child(21) { animation-duration: 5.6s; animation-delay: -3.1s; }
+
+  /* Canopus, a estrela-guia da proa. O pulso agora acontece no lugar: sem
+     transform-box/transform-origin, o scale() de um <circle> gira em torno do
+     canto do SVG e a estrela escorregava na diagonal em vez de pulsar. */
+  .argo-emblem .guide-star,
+  .login-story-emblem .guide-star,
+  .argo-emblem .guide-star-glow,
+  .login-story-emblem .guide-star-glow,
+  .argo-emblem .guide-star-halo,
+  .login-story-emblem .guide-star-halo {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  /* Valores de base: sem eles, quando as animações estão desligadas
+     (prefers-reduced-motion), o brilho de Canopus apareceria como um disco
+     amarelo chapado — a opacidade dele vinha só dos keyframes. */
+  .argo-emblem .guide-star,
+  .login-story-emblem .guide-star {
+    opacity: 0.95;
+  }
+
+  .argo-emblem .guide-star-glow,
+  .login-story-emblem .guide-star-glow {
+    opacity: 0.22;
+  }
+
+  .argo-emblem .guide-star,
+  .login-story-emblem .guide-star {
+    animation: heroGuideStarPulse 5.5s ease-in-out infinite;
+  }
+
+  .argo-emblem .guide-star-glow,
+  .login-story-emblem .guide-star-glow {
+    animation: heroGuideStarGlow 5.5s ease-in-out infinite;
+  }
+
+  /* Halo do farol: um anel que nasce na estrela, se abre e se apaga. */
+  .argo-emblem .guide-star-halo,
+  .login-story-emblem .guide-star-halo {
+    fill: none;
+    stroke: #FEDD00;
+    stroke-width: 1.1;
+    opacity: 0;
+    animation: heroGuideStarHalo 5.5s ease-out infinite;
+  }
+
+  @keyframes heroGuideStarPulse {
+    0%, 100% { opacity: 0.9; transform: scale(0.96); }
+    46%      { opacity: 1;   transform: scale(1.16); }
+    70%      { opacity: 0.95; transform: scale(1.02); }
+  }
+
+  @keyframes heroGuideStarGlow {
+    0%, 100% { opacity: 0.16; transform: scale(0.95); }
+    46%      { opacity: 0.34; transform: scale(1.18); }
+    70%      { opacity: 0.22; transform: scale(1.03); }
+  }
+
+  @keyframes heroGuideStarHalo {
+    0%   { opacity: 0;    transform: scale(0.6); }
+    18%  { opacity: 0.32; }
+    70%  { opacity: 0;    transform: scale(2.6); }
+    100% { opacity: 0;    transform: scale(2.6); }
+  }
+
+  /* 5. As linhas acendem em sequência, da proa à popa. */
+  .const-ship .const-line {
+    transform-box: fill-box;
+    animation: argoLineGlow 7s ease-in-out infinite;
+  }
+
+  @keyframes argoLineGlow {
+    0%, 100%  { stroke-opacity: 0.42; stroke-width: 1.5; }
+    30%       { stroke-opacity: 0.85; stroke-width: 1.9; }
+    55%       { stroke-opacity: 0.55; stroke-width: 1.6; }
+  }
+
+  .const-ship .const-line:nth-child(1)  { animation-delay: 0s; }
+  .const-ship .const-line:nth-child(2)  { animation-delay: -0.35s; }
+  .const-ship .const-line:nth-child(3)  { animation-delay: -0.7s; }
+  .const-ship .const-line:nth-child(4)  { animation-delay: -1.05s; }
+  .const-ship .const-line:nth-child(5)  { animation-delay: -1.4s; }
+  .const-ship .const-line:nth-child(6)  { animation-delay: -1.75s; }
+  .const-ship .const-line:nth-child(7)  { animation-delay: -2.1s; }
+  .const-ship .const-line:nth-child(8)  { animation-delay: -2.45s; }
+  .const-ship .const-line:nth-child(9)  { animation-delay: -2.8s; }
+  .const-ship .const-line:nth-child(10) { animation-delay: -3.15s; }
+  .const-ship .const-line:nth-child(11) { animation-delay: -3.5s; }
+  .const-ship .const-line:nth-child(12) { animation-delay: -3.85s; }
+  .const-ship .const-line:nth-child(13) { animation-delay: -4.2s; }
+  .const-ship .const-line:nth-child(14) { animation-delay: -4.55s; }
+  .const-ship .const-line:nth-child(15) { animation-delay: -4.90s; }
+  .const-ship .const-line:nth-child(16) { animation-delay: -5.25s; }
+  .const-ship .const-line:nth-child(17) { animation-delay: -5.60s; }
+  .const-ship .const-line:nth-child(18) { animation-delay: -5.95s; }
+  .const-ship .const-line:nth-child(19) { animation-delay: -6.30s; }
+  .const-ship .const-line:nth-child(20) { animation-delay: -6.65s; }
+  .const-ship .const-line:nth-child(21) { animation-delay: -7.00s; }
+  .const-ship .const-line:nth-child(22) { animation-delay: -7.35s; }
 
   /* Cor com transparência embutida (e não a propriedade opacity), porque a
      animação de cintilação das estrelas controla o opacity e sobrescreveria
      qualquer valor declarado aqui. */
   .argo-emblem .const-sky .const-star,
   .login-story-emblem .const-sky .const-star {
-    fill: rgba(207, 227, 216, 0.6);
+    fill: rgba(203, 233, 219, 0.55);
   }
 
+  /* 3. O rio: verde, em três linhas de profundidade diferente. O traço é mais
+     longo e arredondado que o antigo pontilhado — lê como água corrente, não
+     como linha tracejada. O gradiente apaga as duas pontas, então a água
+     "entra e sai" do quadro em vez de terminar seca na borda. */
   .argo-emblem .const-wave,
   .login-story-emblem .const-wave {
     fill: none;
-    stroke: #29ABE2;
-    stroke-width: 1.2;
-    stroke-opacity: 0.4;
-    stroke-dasharray: 5 6;
+    stroke: #22C88A;               /* reserva, se o gradiente não carregar */
+    stroke: url(#argoRiverHero);
+    stroke-width: 2.4;
+    stroke-opacity: 0.6;
     stroke-linecap: round;
-    animation: argoWaveDrift 12s linear infinite;
+    stroke-linejoin: round;
+    transform-box: fill-box;
+    animation: argoWaveFlow 12s ease-in-out infinite,
+               argoWaveBob 6.5s ease-in-out infinite;
   }
 
+  .login-story-emblem .const-wave {
+    stroke: url(#argoRiverLogin);
+  }
+
+  /* Linha do meio: mais grossa (é a "onda" principal), em compasso contrário. */
   .argo-emblem .const-sea path:nth-child(2),
   .login-story-emblem .const-sea path:nth-child(2) {
-    stroke-opacity: 0.26;
-    animation-duration: 17s;
-    animation-direction: reverse;
+    stroke-opacity: 0.75;
+    stroke-width: 3;
+    animation-name: argoWaveFlowFar, argoWaveBob;
+    animation-duration: 17s, 9s;
+    animation-direction: reverse, alternate-reverse;
   }
 
-  @keyframes argoWaveDrift {
-    from { stroke-dashoffset: 0; }
-    to   { stroke-dashoffset: -44; }
+  /* Linha do fundo: quase um reflexo, fina e recuada. */
+  .argo-emblem .const-sea path:nth-child(3),
+  .login-story-emblem .const-sea path:nth-child(3) {
+    stroke-opacity: 0.32;
+    stroke-width: 1.5;
+    animation-name: argoWaveFlowFar, argoWaveBob;
+    animation-duration: 23s, 13s;
+    animation-delay: -4s, -2s;
+  }
+
+  /* Em vez do tracejado "correndo" (stroke-dashoffset), a linha inteira, já
+     sólida, desliza de leve para os lados — o rio flui sem parecer um trem
+     de traços se movendo. */
+  @keyframes argoWaveFlow {
+    0%, 100% { transform: translateX(-5px); }
+    50%      { transform: translateX(5px); }
+  }
+
+  @keyframes argoWaveFlowFar {
+    0%, 100% { transform: translateX(4px); }
+    50%      { transform: translateX(-4px); }
+  }
+
+  @keyframes argoWaveBob {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-1.6px); }
+  }
+
+  /* 6. Meteoro ocasional: aparece por ~1,5s a cada ciclo longo e some. */
+  .const-meteor-tail {
+    fill: none;
+    stroke: #F8FAFC;
+    stroke-width: 1.1;
+    stroke-opacity: 0.55;
+    stroke-linecap: round;
+  }
+
+  .const-meteor-head {
+    fill: #F8FAFC;
+  }
+
+  .argo-emblem .const-meteor {
+    opacity: 0;
+    animation: argoMeteor 19s linear infinite;
+  }
+
+  .login-story-emblem .const-meteor {
+    opacity: 0;
+    animation: argoMeteor 26s linear infinite;
+    animation-delay: -7s;
+  }
+
+  @keyframes argoMeteor {
+    0%   { opacity: 0;   transform: translate(248px, 12px) scale(0.85); }
+    1.5% { opacity: 0.75; }
+    6%   { opacity: 0.55; }
+    8%   { opacity: 0;   transform: translate(96px, 98px) scale(1.05); }
+    100% { opacity: 0;   transform: translate(96px, 98px) scale(1.05); }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .argo-emblem .const-ship,
     .login-story-emblem .const-ship,
+    .const-ship .const-sway,
+    .const-ship .const-sail,
+    .const-ship .const-oars,
+    .const-eye-group,
+    .const-ship .const-line,
+    .argo-emblem .const-star,
+    .login-story-emblem .const-star,
+    .argo-emblem .guide-star,
+    .login-story-emblem .guide-star,
+    .argo-emblem .guide-star-glow,
+    .login-story-emblem .guide-star-glow,
     .argo-emblem .const-wave,
     .login-story-emblem .const-wave {
       animation: none;
+    }
+
+    .argo-emblem .guide-star-halo,
+    .login-story-emblem .guide-star-halo,
+    .argo-emblem .const-meteor,
+    .login-story-emblem .const-meteor {
+      animation: none;
+      display: none;
     }
   }
 
@@ -3278,45 +3573,26 @@
     }
   }
 
-  /* Mesma constelação-navio do cabeçalho, agora no painel da tela de login. */
+  /* Mesma constelação-navio do cabeçalho, agora no painel da tela de login.
+     Só as cores mudam aqui — o movimento (arfagem, deriva, cintilação,
+     Canopus, ondas e meteoro) vem do bloco compartilhado lá de cima. */
   .login-story-emblem .const-line {
     fill: none;
-    stroke: #29ABE2;
-    stroke-width: 1.1;
-    stroke-opacity: 0.45;
-    stroke-dasharray: 3 4;
+    stroke: #FFD400;
+    stroke: url(#argoShipLogin);
+    stroke-width: 1.5;
+    stroke-opacity: 0.65;
     stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
   .login-story-emblem .const-star {
-    fill: #F8FAFC;
-    animation: heroStarTwinkle 4.5s ease-in-out infinite;
+    fill: #FFFBEA;
   }
 
-  .login-story-emblem .const-star:nth-child(odd) { animation-delay: -1.5s; }
-  .login-story-emblem .const-star:nth-child(3n) { animation-delay: -3s; }
-
-  .login-story-emblem .guide-star {
-    fill: #FEDD00;
-    animation: loginSunPulse 4s ease-in-out infinite;
-  }
-
+  .login-story-emblem .guide-star,
   .login-story-emblem .guide-star-glow {
     fill: #FEDD00;
-    animation: heroGuideStarGlow 4s ease-in-out infinite;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .login-story-emblem .const-star,
-    .login-story-emblem .guide-star,
-    .login-story-emblem .guide-star-glow {
-      animation: none;
-    }
-  }
-
-  @keyframes loginSunPulse {
-    0%, 100% { opacity: 0.95; transform: scale(1); }
-    50% { opacity: 1; transform: scale(1.14); }
   }
 
   .login-story-top {
