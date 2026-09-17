@@ -27,7 +27,9 @@
                     top: 0.0%;
                 }
                 .leaflet-container { font-size: 1rem; }
-            </style>
+            
+        .label-toggle-control + .label-toggle-control { margin-top: 6px; }
+    </style>
 
             <style>html, body {
                 width: 100%;
@@ -86,6 +88,25 @@
             
     <script src="https://cdn.jsdelivr.net/npm/leaflet-search@2.9.7/dist/leaflet-search.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-search@2.9.7/dist/leaflet-search.min.css"/>
+
+    <style>
+        .label-toggle-control {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 8px 10px;
+            border-radius: 5px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+            font: 13px/1.4 Arial, sans-serif;
+        }
+        .label-toggle-control label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 0;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .label-toggle-control input { margin: 0; }
+    </style>
 </head>
 <body>
     
@@ -155,7 +176,7 @@
   "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: #3399FF;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eUBS Bernardo Alem\u003c/div\u003e",
   "iconSize": [350, 30],
   "iconAnchor": [175, 30],
-  "className": "empty",
+  "className": "public-service-label",
 });
         
     
@@ -173,7 +194,7 @@
   "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 13pt;\n                color: #00FFFF;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eCAS - Vila Jardim\u003c/div\u003e",
   "iconSize": [350, 30],
   "iconAnchor": [175, 45],
-  "className": "empty",
+  "className": "public-service-label",
 });
         
     
@@ -191,7 +212,7 @@
   "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: red;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003e1\u00b0 Batalh\u00e3o da PM\u003c/div\u003e",
   "iconSize": [350, 30],
   "iconAnchor": [175, 30],
-  "className": "empty",
+  "className": "public-service-label",
 });
         
     
@@ -209,7 +230,7 @@
   "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: gold;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eEscola Mun. Vila Jardim\u003c/div\u003e",
   "iconSize": [350, 30],
   "iconAnchor": [175, 30],
-  "className": "empty",
+  "className": "public-service-label",
 });
         
     
@@ -227,7 +248,7 @@
   "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: #90EE90;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eCEM III - Maria Teresa\u003c/div\u003e",
   "iconSize": [350, 30],
   "iconAnchor": [175, 30],
-  "className": "empty",
+  "className": "public-service-label",
 });
         
     
@@ -245,7 +266,7 @@
   "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: yellow;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eIp\u00ea Amarelo\u003c/div\u003e",
   "iconSize": [350, 30],
   "iconAnchor": [175, 30],
-  "className": "empty",
+  "className": "condominium-label",
 });
         
     
@@ -263,7 +284,7 @@
   "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: green;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eSama\u00fama\u003c/div\u003e",
   "iconSize": [350, 30],
   "iconAnchor": [175, 30],
-  "className": "empty",
+  "className": "condominium-label",
 });
         
     
@@ -281,7 +302,7 @@
   "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: brown;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eAndiroba\u003c/div\u003e",
   "iconSize": [350, 30],
   "iconAnchor": [175, 30],
-  "className": "empty",
+  "className": "condominium-label",
 });
         
     
@@ -299,7 +320,7 @@
   "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: #FF7F7F;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eAra\u00e7\u00e1\u003c/div\u003e",
   "iconSize": [350, 30],
   "iconAnchor": [175, 30],
-  "className": "empty",
+  "className": "condominium-label",
 });
         
     
@@ -317,7 +338,7 @@
   "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: #CD853F;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eUrucum\u003c/div\u003e",
   "iconSize": [350, 30],
   "iconAnchor": [175, 30],
-  "className": "empty",
+  "className": "condominium-label",
 });
         
     
@@ -335,7 +356,7 @@
   "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: purple;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eBuriti\u003c/div\u003e",
   "iconSize": [350, 30],
   "iconAnchor": [175, 30],
-  "className": "empty",
+  "className": "condominium-label",
 });
         
     
@@ -353,7 +374,7 @@
   "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: brown;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eCedro\u003c/div\u003e",
   "iconSize": [350, 30],
   "iconAnchor": [175, 30],
-  "className": "empty",
+  "className": "condominium-label",
 });
         
     
@@ -371,7 +392,7 @@
   "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: #87CEEB;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eIng\u00e1\u003c/div\u003e",
   "iconSize": [350, 30],
   "iconAnchor": [175, 30],
-  "className": "empty",
+  "className": "condominium-label",
 });
         
     
@@ -389,7 +410,7 @@
   "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: gray;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eJatob\u00e1\u003c/div\u003e",
   "iconSize": [350, 30],
   "iconAnchor": [175, 30],
-  "className": "empty",
+  "className": "condominium-label",
 });
         
     
@@ -407,7 +428,7 @@
   "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: yellow;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eAngelim\u003c/div\u003e",
   "iconSize": [350, 30],
   "iconAnchor": [175, 30],
-  "className": "empty",
+  "className": "condominium-label",
 });
         
     
@@ -425,7 +446,7 @@
   "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: orange;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003ePupunha\u003c/div\u003e",
   "iconSize": [350, 30],
   "iconAnchor": [175, 30],
-  "className": "empty",
+  "className": "condominium-label",
 });
         
     
@@ -443,7 +464,7 @@
   "html": "\u003cdiv style=\"\n                font-family: \u0027Arial Black\u0027, sans-serif;\n                font-size: 9pt;\n                color: pink;\n                text-align: center;\n                filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 5px black);\n                background: transparent;\n                pointer-events: none;\n                z-index: 10000;\n                text-transform: uppercase;\n                \"\u003eA\u00e7a\u00ed\u003c/div\u003e",
   "iconSize": [350, 30],
   "iconAnchor": [175, 30],
-  "className": "empty",
+  "className": "condominium-label",
 });
         
     
@@ -593,5 +614,49 @@
             map_aa04617ec0752bb0f66f5d320080da00.addControl( geo_json_9a25dbec417cc7162fd07ad1b9302269searchControl );
 
         
+
+            // Controle para ocultar/mostrar os nomes dos condominios.
+            var condominiumLabelControl = L.Control.extend({
+                options: { position: 'topright' },
+                onAdd: function() {
+                    var container = L.DomUtil.create('div', 'label-toggle-control leaflet-bar');
+                    container.innerHTML = '<label title="Ocultar ou mostrar os nomes dos condominios">' +
+                        '<input type="checkbox" id="toggle-condominium-labels" checked>' +
+                        '<span>Mostrar nomes dos condominios</span></label>';
+                    L.DomEvent.disableClickPropagation(container);
+                    return container;
+                }
+            });
+
+            map_aa04617ec0752bb0f66f5d320080da00.addControl(new condominiumLabelControl());
+
+            document.getElementById('toggle-condominium-labels').addEventListener('change', function(event) {
+                document.querySelectorAll('.condominium-label').forEach(function(label) {
+                    label.style.display = event.target.checked ? '' : 'none';
+                });
+            });
+
+
+            // Controle para ocultar/mostrar UBS, CAS, escola e batalhao.
+            var publicServiceLabelControl = L.Control.extend({
+                options: { position: 'topright' },
+                onAdd: function() {
+                    var container = L.DomUtil.create('div', 'label-toggle-control leaflet-bar');
+                    container.innerHTML = '<label title="Ocultar ou mostrar UBS, CAS, escola e batalhao">' +
+                        '<input type="checkbox" id="toggle-public-service-labels" checked>' +
+                        '<span>Mostrar UBS, CAS, escola e batalhao</span></label>';
+                    L.DomEvent.disableClickPropagation(container);
+                    return container;
+                }
+            });
+
+            map_aa04617ec0752bb0f66f5d320080da00.addControl(new publicServiceLabelControl());
+
+            document.getElementById('toggle-public-service-labels').addEventListener('change', function(event) {
+                document.querySelectorAll('.public-service-label').forEach(function(label) {
+                    label.style.display = event.target.checked ? '' : 'none';
+                });
+            });
+
 </script>
 </html>
