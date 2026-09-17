@@ -3659,6 +3659,18 @@ const DATA = [
     desc: "Escola pública municipal localizada no bairro Cauamé."
   },
   {
+    id: "escola-glemiria-gonzaga-dias",
+    name: "E.M. Glemiria Gonzaga Dias",
+    fullName: "Escola Municipal Glemiria Gonzaga Dias",
+    cat: ["educacao"],
+    group: "Rede Municipal - Escolas",
+    address: "Endereço a confirmar - Boa Vista-RR",
+    hours: "N/A",
+    phones: [],
+    services: "Educação Municipal - Ensino Geral.",
+    desc: "Escola pública municipal de Boa Vista-RR (bairro a confirmar). Endereço e telefone ainda não confirmados - dados a atualizar."
+  },
+  {
     id: "escola-jael-silva-barradas",
     name: "E.M. Jael da Silva Barradas",
     fullName: "Escola Municipal Jael da Silva Barradas",
