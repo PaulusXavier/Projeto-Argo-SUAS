@@ -1,18 +1,20 @@
 // Troque este número toda vez que publicar uma alteração no app.
 // É essa mudança de versão que dispara a atualização automática.
-const CACHE_VERSION = 'v41';
+const CACHE_VERSION = 'v42';
 const CACHE_NAME = `rede-apoio-bv-${CACHE_VERSION}`;
 
 // Cache separado e SEM número de versão, para conteúdo pesado de fora do
 // domínio do app: bibliotecas de PDF (cdnjs, baixadas na 1ª vez que a aba
-// "Unificar / Converter PDF" é usada) e tiles do mapa (OpenStreetMap, usados
-// em vila-jardim.html). Antes, esses arquivos entravam no mesmo cache
-// versionado (CACHE_NAME) e eram apagados a cada publicação nova — mesmo
-// sem terem mudado — obrigando a baixar tudo de novo (e precisar de
-// internet) logo após qualquer atualização do app. Como esse cache não leva
-// o número da versão no nome, ele NÃO é apagado no "ATIVAÇÃO" abaixo e
-// sobrevive entre publicações; só cresce (fica com versões mais novas de
-// cada arquivo, sempre que a rede responde) e nunca é limpo automaticamente.
+// "Unificar / Converter PDF" é usada), tiles do mapa (OpenStreetMap, usados
+// em vila-jardim.html) e o SDK do Firebase (gstatic, baixado na 1ª vez que a
+// aba "Agenda Boa Vista 2026" configura uma sincronização). Antes, esses
+// arquivos entravam no mesmo cache versionado (CACHE_NAME) e eram apagados a
+// cada publicação nova — mesmo sem terem mudado — obrigando a baixar tudo de
+// novo (e precisar de internet) logo após qualquer atualização do app. Como
+// esse cache não leva o número da versão no nome, ele NÃO é apagado no
+// "ATIVAÇÃO" abaixo e sobrevive entre publicações; só cresce (fica com
+// versões mais novas de cada arquivo, sempre que a rede responde) e nunca é
+// limpo automaticamente.
 const RUNTIME_CACHE_NAME = 'rede-apoio-bv-runtime';
 
 const ASSETS = [
@@ -30,7 +32,7 @@ const ASSETS = [
   './icon-maskable-512.png',
   './argo-navis-historico.jpg',
   './argo-constellation-bg.svg',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;1,400&display=swap'
+  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;1,400&family=Caveat:wght@600;700&display=swap'
 ];
 
 // INSTALAÇÃO: baixa os arquivos novos e já assume o controle,
@@ -65,18 +67,19 @@ self.addEventListener('activate', event => {
 // A rede só decide sozinha a resposta quando o arquivo ainda não está em
 // cache (primeiro acesso) ou quando o dispositivo está offline e não há
 // nada salvo. Requisições que não sejam GET (ex.: chamadas às APIs de
-// tradução/geocodificação) seguem direto para a rede, sem passar pelo cache.
+// tradução/geocodificação/Firestore) seguem direto para a rede, sem passar
+// pelo cache.
 //
-// Pedidos de fora do domínio do app (cdnjs, tiles do OpenStreetMap etc.)
-// usam o RUNTIME_CACHE_NAME acima, que não é apagado a cada publicação;
-// pedidos do próprio app usam o cache versionado normal.
+// Pedidos de fora do domínio do app (cdnjs, tiles do OpenStreetMap, gstatic
+// do Firebase etc.) usam o RUNTIME_CACHE_NAME acima, que não é apagado a
+// cada publicação; pedidos do próprio app usam o cache versionado normal.
 // Endereços que NUNCA devem sair do cache primeiro: o feed de notícias do
 // gov.br e os repassadores usados para lê-lo. Sem isso, a aba "Notícias do
 // MDS" continuaria mostrando a lista antiga mesmo online e mesmo depois de
 // tocar em "Atualizar", porque o Service Worker responderia na hora com a
 // cópia salva. Aqui a rede vem primeiro e o cache só entra como reserva
 // quando não há internet.
-const NETWORK_FIRST_HOSTS = ['www.gov.br', 'api.allorigins.win', 'corsproxy.io'];
+const NETWORK_FIRST_HOSTS = ['www.gov.br', 'api.allorigins.win', 'corsproxy.io', 'firestore.googleapis.com'];
 
 // Resposta de reserva para quando NEM a rede NEM o cache têm o recurso
 // pedido (ex.: primeiro acesso, offline). Sem isso, respondWith() recebia
