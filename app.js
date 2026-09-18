@@ -3921,6 +3921,24 @@ async function printGuide(id) {
 
   const watermark = buildPrintWatermark();
 
+  // Rodapé (Local e Data + assinatura) em escala variável: como ele fica
+  // logo abaixo do grid onde está a caixa "Motivo do Encaminhamento" (que
+  // cresce via flex-grow dentro da mesma coluna), reduzir o rodapé quando
+  // a nota é longa libera altura extra para essa caixa crescer um pouco
+  // para baixo antes de fitPrintNote() precisar diminuir a fonte da nota
+  // ou cortá-la com reticências. Quanto maior a nota, menor o rodapé.
+  // O espaçamento (margens/altura da linha de assinatura) encolhe mais do
+  // que o tamanho das letras, para o rodapé continuar legível mesmo no
+  // menor tamanho — só o "ar" ao redor dele é que cede espaço à nota.
+  const noteLenForFooter = stripHtml(note).length;
+  const footerSpaceScale = noteLenForFooter > 500 ? 0.55
+    : noteLenForFooter > 320 ? 0.72
+    : noteLenForFooter > 180 ? 0.88
+    : 1;
+  const footerFontScale = Math.max(0.85, footerSpaceScale);
+  const fpx = (n) => Math.max(1, Math.round(n * footerSpaceScale));
+  const frem = (n) => (n * footerFontScale).toFixed(3) + 'rem';
+
   const firstPage = `
     <div class="print-page" style="padding:0; position:relative; font-family:'Inter', sans-serif; color:#0F172A; box-sizing:border-box; display:flex; flex-direction:column; background:white; border:2px solid #0F172A;">
       ${watermark}
@@ -4068,16 +4086,16 @@ async function printGuide(id) {
           </div>
         </div>
 
-        <div style="margin-top:8px; display:flex; justify-content:space-between; align-items:flex-end; flex-shrink:0;">
+        <div style="margin-top:${fpx(8)}px; display:flex; justify-content:space-between; align-items:flex-end; flex-shrink:0;">
           <div>
-            <span style="display:block; font-size:0.5rem; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:3px;">Local e Data</span>
-            <p style="margin:0; font-size:0.85rem; font-weight:700; font-style:italic; color:#0F172A; font-family:'Lora', serif;">Boa Vista, Roraima, ${dateLong}.</p>
+            <span style="display:block; font-size:${frem(0.5)}; font-weight:800; color:#94A3B8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:${fpx(3)}px;">Local e Data</span>
+            <p style="margin:0; font-size:${frem(0.85)}; font-weight:700; font-style:italic; color:#0F172A; font-family:'Lora', serif;">Boa Vista, Roraima, ${dateLong}.</p>
           </div>
           <div style="text-align:center; width:280px;">
-            <div style="height:22px;"></div>
-            <div style="border-top:2px solid #0F172A; margin-bottom:6px;"></div>
-            <p style="margin:0; font-size:0.72rem; font-weight:800; color:#0F172A;">Paulo Xavier</p>
-            <p style="margin:0; font-size:0.6rem; color:#475569; font-weight:700;">Psicólogo · CRP-20/09816</p>
+            <div style="height:${fpx(22)}px;"></div>
+            <div style="border-top:2px solid #0F172A; margin-bottom:${fpx(6)}px;"></div>
+            <p style="margin:0; font-size:${frem(0.72)}; font-weight:800; color:#0F172A;">Paulo Xavier</p>
+            <p style="margin:0; font-size:${frem(0.6)}; color:#475569; font-weight:700;">Psicólogo · CRP-20/09816</p>
           </div>
         </div>
       </div>
