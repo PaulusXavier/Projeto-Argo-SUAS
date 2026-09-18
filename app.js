@@ -3416,11 +3416,9 @@ async function renderMapaRedeMarkers() {
   // CRAS/CREAS (coordenadas exatas, sem precisar consultar nada).
   const nearbySource = [];
 
-  let locatedCount = 0;
   items.forEach(item => {
     const coords = cache[item.id];
     if (!coords) return;
-    locatedCount++;
     nearbySource.push({ name: item.name, lat: coords.lat, lon: coords.lon });
     bounds.push([coords.lat, coords.lon]);
     const marker = L.marker([coords.lat, coords.lon]);
@@ -3460,9 +3458,7 @@ async function renderMapaRedeMarkers() {
       });
   }
 
-  mapaRedeSetStatus(items.length
-    ? `Equipamentos com localização já salva neste aparelho: ${locatedCount} de ${items.length}.${locatedCount < items.length ? ' Para localizar mais, use "Ordenar por proximidade" na lista de equipamentos.' : ''}`
-    : '');
+  mapaRedeSetStatus('');
 
   if (proximityState.active) bounds.push([proximityState.lat, proximityState.lon]);
   if (bounds.length) {
