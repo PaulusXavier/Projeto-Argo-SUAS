@@ -3038,31 +3038,53 @@
     inset: 0;
     z-index: 5000;
     background-color: var(--brand-secondary);
-    /* Mesmo fundo de constelação de Argo Navis usado no restante do
-       aplicativo (body, argo-constellation-bg.svg) — antes esta tela usava
-       a FOTO do navio (argo-navis-historico.jpg) como fundo maior, o que
-       destoava do resto do app. */
-    background-image: url('argo-constellation-bg.svg');
-    background-repeat: no-repeat;
-    background-position: center center;
-    /* Antes era "cover", o que ampliava bastante o desenho (proporção
-       320x230) para preencher a tela toda, sobretudo em celulares na
-       vertical. Um tamanho fixo, entre esses dois extremos, deixa o
-       desenho visível sem esticar demais nem ficar pequeno demais,
-       com a cor sólida (--brand-secondary) preenchendo o restante. */
-    background-size: min(100%, 1000px) auto;
     display: flex;
     align-items: center;
     align-items: safe center;
     justify-content: center;
     padding: 1.5rem;
     overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* Constelação de Argo Navis (argo-constellation-bg.svg) preenchendo a tela
+     TODA (background-size: cover), num pseudo-elemento próprio por trás do
+     card — antes o desenho tinha um tamanho fixo (min(100%, 1000px) auto),
+     o que deixava boa parte da tela em cor sólida, sobretudo em celulares
+     na vertical, e escondia a maior parte das estrelas. Um leve brilho
+     (filter) e um glow radial azul realçam as estrelas nessa versão maior,
+     já que o desenho foi pensado para ser sutil quando usado como marca
+     d'água atrás de conteúdo (fundo do app, painel esquerdo do login). */
+  #loginScreen::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-image:
+      radial-gradient(130% 85% at 50% 28%, rgba(0, 145, 194, 0.22), transparent 60%),
+      url('argo-constellation-bg.svg');
+    background-repeat: no-repeat, no-repeat;
+    background-position: center center, center center;
+    background-size: cover, cover;
+    filter: brightness(1.4) saturate(1.2);
+    pointer-events: none;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    html:not([data-theme="light"]) #loginScreen::before {
+      filter: brightness(1.7) saturate(1.25);
+    }
+  }
+
+  html[data-theme="dark"] #loginScreen::before {
+    filter: brightness(1.7) saturate(1.25);
   }
 
   #loginScreen[hidden] { display: none; }
 
   .login-shell {
     position: relative;
+    z-index: 1;
     width: 100%;
     max-width: 900px;
     margin: auto;
