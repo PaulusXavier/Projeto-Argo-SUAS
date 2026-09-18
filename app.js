@@ -80,6 +80,7 @@ async function setAppPassword(newPassword) {
 }
 
 function unlockApp() {
+  _attachCache.clear();
   const appRoot = document.getElementById('appRoot');
   const loginScreen = document.getElementById('loginScreen');
   if (appRoot) appRoot.dataset.locked = 'false';
@@ -101,6 +102,7 @@ function lockApp() {
   // cifragem sai da memória — os dados sensíveis salvos ficam ilegíveis até
   // a senha correta ser digitada de novo.
   sessionEncKey = null;
+  _attachCache.clear();
   const appRoot = document.getElementById('appRoot');
   const loginScreen = document.getElementById('loginScreen');
   if (appRoot) appRoot.dataset.locked = 'true';
@@ -341,12 +343,17 @@ function toggleFavorite(id) {
 const GEOCODE_CACHE_KEY = 'argo_geocode_cache_v1';
 let proximityState = { active: false, lat: null, lon: null, loading: false };
 
+// Guardado em memória: renderDistanceBadge() chamava isto uma vez POR CARD
+// (JSON.parse do cache inteiro, ~400 vezes por render no modo proximidade).
+let _geocodeCacheMemo = null;
 function getGeocodeCache() {
+  if (_geocodeCacheMemo) return _geocodeCacheMemo;
   try {
-    return JSON.parse(localStorage.getItem(GEOCODE_CACHE_KEY) || '{}');
+    _geocodeCacheMemo = JSON.parse(localStorage.getItem(GEOCODE_CACHE_KEY) || '{}') || {};
   } catch (e) {
-    return {};
+    _geocodeCacheMemo = {};
   }
+  return _geocodeCacheMemo;
 }
 
 function setGeocodeCacheEntry(id, lat, lon) {
@@ -471,8 +478,12 @@ const MAX_ATTACH_BYTES = 3.5 * 1024 * 1024;
    do login — ver bloco de Autenticação, no topo do arquivo. */
 
 function bytesToBase64(bytes) {
+  // Em blocos: montar a string byte a byte era muito lento em anexos de MB.
   let bin = '';
-  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  const BLOCK = 0x8000;
+  for (let i = 0; i < bytes.length; i += BLOCK) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + BLOCK));
+  }
   return btoa(bin);
 }
 
@@ -516,9 +527,18 @@ function keystream(length, keyBytes, nonceBytes) {
   const combined = new Uint8Array(keyBytes.length + nonceBytes.length);
   combined.set(keyBytes, 0);
   combined.set(nonceBytes, keyBytes.length);
-  const rnd = mulberry32(seedFromBytes(combined));
+  // mulberry32 inline. Produz EXATAMENTE os mesmos bytes de antes
+  // (Math.floor(rnd() * 256) == os 8 bits mais altos de cada saída de 32
+  // bits), então os dados já salvos continuam decifrando normalmente — só
+  // que sem uma chamada de função + divisão de ponto flutuante por byte.
+  let a = seedFromBytes(combined) >>> 0;
   const out = new Uint8Array(length);
-  for (let i = 0; i < length; i++) out[i] = Math.floor(rnd() * 256);
+  for (let i = 0; i < length; i++) {
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    out[i] = (t ^ (t >>> 14)) >>> 24;
+  }
   return out;
 }
 
@@ -560,6 +580,17 @@ function decryptFromStorage(stored) {
   }
 }
 
+// Anexos (fotos/PDFs de até 3,5 MB) eram lidos e DECIFRADOS de novo, um por
+// um, a cada render() — ou seja, a cada tecla digitada na busca. Agora ficam
+// na memória (só enquanto o app está destrancado; lockApp/unlockApp limpam)
+// e são descartados sempre que safeStorage.set/remove mexe na chave deles.
+const _attachCache = new Map();
+function invalidateAttachCache(key) {
+  if (typeof key !== 'string') return;
+  if (key.startsWith('attach_')) _attachCache.delete(key.slice(7));
+  else if (key.startsWith('img_')) _attachCache.delete(key.slice(4));
+}
+
 const safeStorage = {
   get(key, fallback = null) {
     try {
@@ -585,6 +616,7 @@ const safeStorage = {
     try {
       const toStore = isSensitiveDataKey(key) ? encryptForStorage(value) : value;
       localStorage.setItem(key, toStore);
+      invalidateAttachCache(key);
       return true;
     } catch (e) {
       return false;
@@ -593,6 +625,7 @@ const safeStorage = {
   remove(key) {
     try {
       localStorage.removeItem(key);
+      invalidateAttachCache(key);
       return true;
     } catch (e) {
       return false;
@@ -1419,7 +1452,41 @@ function setMainSearchEnabled(enabled) {
   }
 }
 
+// --- Montagem da lista em lotes ("rolagem infinita") -----------------------
+// Antes, cada render() montava os ~430 cards de uma vez (HTML gigante +
+// milhares de campos). Agora só o primeiro lote entra na hora e os demais
+// vão sendo anexados conforme a pessoa rola a página (IntersectionObserver).
+const GRID_CHUNK_SIZE = 16;
+let _gridChunkToken = 0;
+let _gridChunkObserver = null;
+
+function cancelPendingGridChunks() {
+  _gridChunkToken++;
+  if (_gridChunkObserver) { _gridChunkObserver.disconnect(); _gridChunkObserver = null; }
+}
+
+function getGridSentinel(grid) {
+  let s = document.getElementById('gridSentinel');
+  if (!s) {
+    s = document.createElement('div');
+    s.id = 'gridSentinel';
+    s.setAttribute('aria-hidden', 'true');
+    s.style.cssText = 'height:1px;width:100%;pointer-events:none;';
+    grid.insertAdjacentElement('afterend', s);
+  }
+  return s;
+}
+
+function hydrateAttachImages(root) {
+  root.querySelectorAll('img[data-attach-src]:not([src])').forEach(img => {
+    const attachId = img.getAttribute('data-attach-src');
+    const savedAttach = getAttachment(attachId);
+    if (savedAttach && savedAttach.data) img.src = savedAttach.data;
+  });
+}
+
 function render() {
+  cancelPendingGridChunks();
   const query = document.getElementById('mainSearch').value.toLowerCase();
   const cat = document.querySelector('.filter-chip.active').dataset.cat;
   const grid = document.getElementById('grid');
@@ -1892,7 +1959,7 @@ function render() {
     return;
   }
 
-  grid.innerHTML = filtered.map((i, idx) => {
+  const buildCardHtml = (i, idx) => {
     const sectionDivider = (idx === socialDividerIndex) ? `
       <div class="social-section-divider" style="grid-column:1/-1; display:flex; align-items:center; gap:12px; margin:1.5rem 0 0.25rem;">
         <span style="display:inline-flex; align-items:center; gap:8px; font-size:0.75rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#B48506; background:rgba(180,133,6,0.1); padding:6px 14px; border-radius:999px;">
@@ -2057,18 +2124,53 @@ function render() {
       </div>
     </div>
   `;
-  }).join('');
+  };
 
-  // Anexos de imagem: em vez de embutir o base64 inteiro de cada foto direto
-  // no HTML acima (o que deixava a busca lenta/travando a cada tecla digitada,
-  // principalmente com vários anexos já salvos), os cards recebem só um
-  // placeholder (data-attach-src) e a imagem real é atribuída aqui embaixo,
-  // via DOM, apenas para os cards que realmente estão sendo exibidos agora.
-  grid.querySelectorAll('img[data-attach-src]').forEach(img => {
-    const attachId = img.getAttribute('data-attach-src');
-    const savedAttach = getAttachment(attachId);
-    if (savedAttach && savedAttach.data) img.src = savedAttach.data;
-  });
+  // Anexos de imagem: os cards recebem só um placeholder (data-attach-src) e
+  // a imagem real é atribuída via DOM (hydrateAttachImages), apenas para os
+  // cards que realmente entraram na tela — em vez de embutir o base64 de
+  // cada foto no HTML (o que travava a busca com vários anexos salvos).
+  const myToken = _gridChunkToken;
+  let nextIdx = 0;
+  const takeChunk = () => {
+    const end = Math.min(nextIdx + GRID_CHUNK_SIZE, filtered.length);
+    let html = '';
+    for (; nextIdx < end; nextIdx++) html += buildCardHtml(filtered[nextIdx], nextIdx);
+    return html;
+  };
+
+  grid.innerHTML = takeChunk();
+  hydrateAttachImages(grid);
+
+  if (nextIdx < filtered.length) {
+    const appendMore = () => {
+      if (myToken !== _gridChunkToken) return false;
+      grid.insertAdjacentHTML('beforeend', takeChunk());
+      hydrateAttachImages(grid);
+      return nextIdx < filtered.length;
+    };
+    if ('IntersectionObserver' in window) {
+      const sentinel = getGridSentinel(grid);
+      _gridChunkObserver = new IntersectionObserver(entries => {
+        if (myToken !== _gridChunkToken || !entries.some(e => e.isIntersecting)) return;
+        const hasMore = appendMore();
+        if (hasMore && _gridChunkObserver) {
+          // Reobserva para o navegador avaliar de novo se o sentinela ainda
+          // está perto da tela (telas grandes precisam de vários lotes).
+          _gridChunkObserver.unobserve(sentinel);
+          _gridChunkObserver.observe(sentinel);
+        } else if (_gridChunkObserver) {
+          _gridChunkObserver.disconnect();
+          _gridChunkObserver = null;
+        }
+      }, { rootMargin: '1500px 0px' });
+      _gridChunkObserver.observe(sentinel);
+    } else {
+      // Navegador antigo sem IntersectionObserver: completa a lista aos poucos.
+      const step = () => { if (appendMore()) setTimeout(step, 40); };
+      setTimeout(step, 40);
+    }
+  }
 }
 
 function showImageError(id, msg) {
@@ -2080,17 +2182,22 @@ function showImageError(id, msg) {
 }
 
 function getAttachment(id) {
+  if (_attachCache.has(id)) return _attachCache.get(id);
+  let result = null;
   const raw = safeStorage.get('attach_'+id);
   if (raw) {
     try {
       const parsed = JSON.parse(raw);
-      if (parsed && parsed.data) return parsed;
+      if (parsed && parsed.data) result = parsed;
     } catch (e) {
     }
   }
-  const legacyImg = safeStorage.get('img_'+id);
-  if (legacyImg) return { type: 'image', data: legacyImg, name: null };
-  return null;
+  if (!result) {
+    const legacyImg = safeStorage.get('img_'+id);
+    if (legacyImg) result = { type: 'image', data: legacyImg, name: null };
+  }
+  _attachCache.set(id, result);
+  return result;
 }
 
 function setAttachment(id, type, data, name) {
@@ -2292,16 +2399,48 @@ function setSecondUnit(id, secondId) {
   }
 }
 
+// Antes, TODO card trazia um <select> com as ~428 unidades: na aba "Todos"
+// eram ~183 mil <option> (~25 MB de HTML) a cada render — a principal causa
+// do travamento. Agora o card nasce só com "Nenhuma" (+ a unidade já
+// escolhida, se houver) e a lista completa é preenchida na primeira vez que
+// a pessoa toca/foca o campo (ver listeners logo abaixo).
+let _secondUnitOptionsHtml = null;
+function populateSecondUnitSelect(sel) {
+  if (!sel || sel.dataset.filled === '1') return;
+  sel.dataset.filled = '1';
+  const ownId = sel.getAttribute('data-own-id');
+  const current = sel.value;
+  if (_secondUnitOptionsHtml === null) {
+    _secondUnitOptionsHtml = getPrintableUnitsSorted()
+      .map(x => `<option value="${x.id}">${escapeHtml(x.name)} — ${escapeHtml(x.fullName)}</option>`)
+      .join('');
+  }
+  while (sel.options.length > 1) sel.remove(1); // mantém só "Nenhuma"
+  sel.insertAdjacentHTML('beforeend', _secondUnitOptionsHtml);
+  for (let k = 0; k < sel.options.length; k++) {
+    if (sel.options[k].value === ownId) { sel.remove(k); break; } // não oferece a própria unidade
+  }
+  sel.value = current;
+}
+['pointerdown', 'touchstart', 'focusin', 'keydown'].forEach(evt => {
+  document.addEventListener(evt, e => {
+    const t = e.target;
+    if (t && t.classList && t.classList.contains('second-unit-select')) populateSecondUnitSelect(t);
+  }, true);
+});
+
 function renderSecondUnitField(id, name) {
   const current = getSecondUnit(id);
-  const options = getPrintableUnitsSorted()
-    .filter(x => x.id !== id)
-    .map(x => `<option value="${x.id}"${x.id === current ? ' selected' : ''}>${escapeHtml(x.name)} — ${escapeHtml(x.fullName)}</option>`)
-    .join('');
+  let currentOption = '';
+  if (current) {
+    const cu = getPrintableUnitsSorted().find(x => x.id === current);
+    if (cu) currentOption = `<option value="${cu.id}" selected>${escapeHtml(cu.name)} — ${escapeHtml(cu.fullName)}</option>`;
+  }
+  const options = currentOption;
   return `
     <div class="second-unit-box">
       <label for="second-unit-${id}" class="label-tech">📄 Incluir 2ª unidade neste encaminhamento (opcional)</label>
-      <select id="second-unit-${id}" class="second-unit-select" onchange="setSecondUnit('${id}', this.value)">
+      <select id="second-unit-${id}" class="second-unit-select" data-own-id="${id}" onchange="setSecondUnit('${id}', this.value)">
         <option value="">Nenhuma — encaminhar só para ${escapeHtml(name)}</option>
         ${options}
       </select>
