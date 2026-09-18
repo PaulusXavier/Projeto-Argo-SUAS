@@ -3045,7 +3045,11 @@
     background-image: url('argo-constellation-bg.svg');
     background-repeat: no-repeat;
     background-position: center center;
-    background-size: cover;
+    /* Antes era "cover", o que ampliava bastante o desenho (proporção
+       320x230) para preencher a tela toda, sobretudo em celulares na
+       vertical. Um tamanho menor, fixo, deixa o desenho mais discreto,
+       com a cor sólida (--brand-secondary) preenchendo o restante. */
+    background-size: min(60%, 640px) auto;
     display: flex;
     align-items: center;
     align-items: safe center;
