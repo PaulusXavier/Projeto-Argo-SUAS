@@ -294,6 +294,7 @@ const ICONS = {
   translate: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h9"/><path d="M9.5 5.5v3.2c0 3.2-2 5.9-4.5 7.3"/><path d="M6.5 12c1.3 1.5 3.3 2.7 6 3.4"/><path d="M12.5 21l4-9 4 9"/><path d="M13.9 18h5.2"/></svg>',
   volume: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>',
   swap: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>',
+  whatsapp: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>',
   calendar: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'
 };
 
@@ -1173,6 +1174,9 @@ function renderCasCard(i, query) {
           </div>
         </div>
       </div>
+      <div class="card-actions" style="grid-template-columns: 1fr;">
+        ${renderWhatsappButton(i.id, i.name)}
+      </div>
     </div>
   `;
 }
@@ -1350,7 +1354,7 @@ function renderCrasCard(i, query) {
         </div>
       </div>
       <div class="card-actions" style="grid-template-columns: 1fr;">
-        <button class="btn-tech btn-secondary" onclick="share('${i.id}')">Compartilhar</button>
+        ${renderWhatsappButton(i.id, i.name)}
       </div>
     </div>
   `;
@@ -2067,7 +2071,7 @@ function render() {
           </div>
         </div>
         <div class="card-actions"${BPC_GUIDE_IDS.includes(i.id) ? ' style="grid-template-columns: 1fr 1fr 1fr;"' : ''}>
-          <button class="btn-tech btn-secondary" onclick="share('${i.id}')">Compartilhar</button>
+          ${renderWhatsappButton(i.id, i.name)}
           ${BPC_GUIDE_IDS.includes(i.id)
             ? `<button class="btn-tech btn-primary" onclick="printBpcGuide('${i.id}','pt')">📄 Guia do Benefício (PT)</button>
                <button class="btn-tech btn-primary" onclick="printBpcGuide('${i.id}','es')">📄 Guía del Beneficio (ES)</button>`
@@ -2115,7 +2119,7 @@ function render() {
       </div>
       <div class="card-actions" ${(i.website || BPC_GUIDE_IDS.includes(i.id)) ? 'style="grid-template-columns: 1fr 1fr 1fr;"' : ''}>
         ${i.website ? `<a class="btn-tech btn-secondary btn-link" href="${i.website}" target="_blank" rel="noopener noreferrer">Site Oficial</a>` : ''}
-        <button class="btn-tech btn-secondary" onclick="share('${i.id}')">Compartilhar</button>
+        ${renderWhatsappButton(i.id, i.name)}
         ${BPC_GUIDE_IDS.includes(i.id)
           ? `<button class="btn-tech btn-primary" onclick="printBpcGuide('${i.id}','pt')">📄 Guia do Benefício (PT)</button>
              <button class="btn-tech btn-primary" onclick="printBpcGuide('${i.id}','es')">📄 Guía del Beneficio (ES)</button>`
@@ -2450,9 +2454,16 @@ function renderSecondUnitField(id, name) {
 }
 
 
+// Botão "WhatsApp" reutilizado em todos os tipos de card (CAS, CRAS,
+// programas/informes e equipamentos), para ficar igual em toda a lista.
+function renderWhatsappButton(id, name) {
+  const safeName = escapeHtml(name || '');
+  return `<button type="button" class="btn-tech btn-whatsapp" onclick="share('${id}')" title="Enviar os dados desta unidade por WhatsApp" aria-label="Enviar os dados de ${safeName} por WhatsApp">${ICONS.whatsapp} WhatsApp</button>`;
+}
+
 function share(id) {
   const i = DATA.find(x => x.id === id);
-  const t = `*UNIDADE:* ${i.fullName || i.name}\n*ENDEREÇO:* ${stripHtml(i.address)}\n*HORÁRIO:* ${stripHtml(i.hours || 'Não informado')}\n*CONTATO:* ${stripHtml((i.phones || []).join(' / ') || 'Não informado')}`;
+  const t = `*UNIDADE:* ${i.fullName || i.name}\n*ENDEREÇO:* ${stripHtml(i.address)}\n*HORÁRIO:* ${stripHtml(i.hours || 'Não informado')}\n*CONTATO:* ${stripHtml((i.phones || []).join(' / ') || 'Não informado')}${i.website ? `\n*SITE:* ${i.website}` : ''}`;
   window.open(`https://wa.me/?text=${encodeURIComponent(t)}`, '_blank', 'noopener,noreferrer');
 }
 
@@ -3259,7 +3270,7 @@ function renderMapCard() {
       <div class="card-body">
         <div class="tradutor-privacy">
           ${ICONS.info}
-          <span>Os endereços são localizados por um serviço online gratuito de geocodificação (Nominatim/OpenStreetMap) e ficam guardados neste navegador para não repetir a consulta. A primeira exibição de cada categoria pode levar alguns segundos.</span>
+          <span>O mapa não procura endereços sozinho. Os pinos de equipamentos usam endereços que já foram localizados e ficam guardados neste navegador (o serviço gratuito Nominatim/OpenStreetMap só é consultado quando você usa "Ordenar por proximidade" na lista). As unidades de CRAS e CREAS de Boa Vista aparecem sempre, com coordenadas exatas.</span>
         </div>
 
         <div style="display:flex; flex-wrap:wrap; gap:0.6rem; align-items:center; margin:0.75rem 0;">
@@ -3389,12 +3400,12 @@ async function renderMapaRedeMarkers() {
     (cat === 'all' || i.cat.includes(cat))
   );
 
-  mapaRedeSetStatus(`Localizando ${items.length} equipamento(s)...`);
-  await ensureGeocodedFor(items, (done, total) => {
-    mapaRedeSetStatus(`Localizando endereços (${done}/${total})...`);
-  });
-  mapaRedeSetStatus('');
-
+  // O mapa NÃO busca mais endereços sozinho. Antes, ao abrir a aba (e a cada
+  // troca de categoria/checkbox), ele consultava o Nominatim um endereço por
+  // vez (~1,1 s cada, até ~430 endereços), regravando o cache no localStorage
+  // a cada resposta — isso travava o aplicativo e ainda atrasava o desenho do
+  // mapa até o fim da fila. Agora só entram os pinos cujas coordenadas JÁ
+  // estão no cache do aparelho (nenhuma requisição de rede é feita aqui).
   mapaRedeMarkersLayer.clearLayers();
   if (mapaRedeCrasCreasLayer) mapaRedeCrasCreasLayer.clearLayers();
   const cache = getGeocodeCache();
@@ -3405,9 +3416,11 @@ async function renderMapaRedeMarkers() {
   // CRAS/CREAS (coordenadas exatas, sem precisar consultar nada).
   const nearbySource = [];
 
+  let locatedCount = 0;
   items.forEach(item => {
     const coords = cache[item.id];
     if (!coords) return;
+    locatedCount++;
     nearbySource.push({ name: item.name, lat: coords.lat, lon: coords.lon });
     bounds.push([coords.lat, coords.lon]);
     const marker = L.marker([coords.lat, coords.lon]);
@@ -3446,6 +3459,10 @@ async function renderMapaRedeMarkers() {
         marker.addTo(mapaRedeCrasCreasLayer);
       });
   }
+
+  mapaRedeSetStatus(items.length
+    ? `Equipamentos com localização já salva neste aparelho: ${locatedCount} de ${items.length}.${locatedCount < items.length ? ' Para localizar mais, use "Ordenar por proximidade" na lista de equipamentos.' : ''}`
+    : '');
 
   if (proximityState.active) bounds.push([proximityState.lat, proximityState.lon]);
   if (bounds.length) {
@@ -3496,7 +3513,7 @@ function renderNotesCard() {
         </div>
       </div>
       <div class="card-actions">
-        <button class="btn-tech btn-secondary" onclick="shareGeneralNote()">Compartilhar</button>
+        <button type="button" class="btn-tech btn-whatsapp" onclick="shareGeneralNote()" title="Enviar esta anotação por WhatsApp" aria-label="Enviar a anotação de encaminhamento geral por WhatsApp">${ICONS.whatsapp} WhatsApp</button>
         <button class="btn-tech btn-primary" onclick="printGeneralNote()">Gerar Guia</button>
       </div>
     </div>
@@ -4926,14 +4943,22 @@ function renderAgendaCard() {
         .agenda-dot { width: 6px; height: 6px; border-radius: 50%; }
         .agenda-creator-info { text-align: right; font-size: 8px; font-weight: 700; color: var(--ink-muted); font-style: italic; }
         .agenda-creator-name { color: var(--cover); font-family: 'Times New Roman', Times, serif; font-style: italic; font-size: 10px; text-transform: none; }
+        /* Card da notificação de sincronização (resumo da semana). */
         .agenda-today-banner {
-          display: none; align-items: center; gap: 8px;
-          margin: 0 14px 8px; padding: 8px 12px;
+          display: none; flex-direction: column; align-items: stretch; gap: 6px;
+          margin: 0 14px 10px; padding: 10px 12px;
           background: rgba(184, 137, 79, 0.14); border: 1px solid var(--gold);
+          border-left-width: 4px;
           border-radius: 8px;
         }
+        .agenda-sync-card-head { display: flex; align-items: center; gap: 8px; }
         .agenda-today-icon { font-size: 14px; line-height: 1; }
-        .agenda-today-text { flex: 1; font-size: 12px; font-weight: 700; color: var(--ink); line-height: 1.35; }
+        .agenda-sync-card-title { flex: 1; font-size: 12px; font-weight: 800; color: var(--cover); text-transform: uppercase; letter-spacing: 0.4px; }
+        .agenda-sync-card-time { font-size: 10px; font-weight: 700; color: var(--ink-muted); white-space: nowrap; }
+        .agenda-today-text { font-size: 12px; font-weight: 600; color: var(--ink); line-height: 1.4; }
+        .agenda-sync-card-today { font-weight: 700; }
+        .agenda-sync-card-sub { margin-top: 4px; font-size: 10px; font-weight: 800; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+        .agenda-sync-card-row { padding-left: 2px; }
         .agenda-today-close {
           background: none; border: none; cursor: pointer; color: var(--ink-muted);
           font-size: 12px; line-height: 1; padding: 3px 5px; border-radius: 4px; font-family: inherit;
@@ -5001,10 +5026,14 @@ function renderAgendaCard() {
             </div>
           </div>
 
-          <div id="agendaTodayBanner" class="agenda-today-banner">
-            <span class="agenda-today-icon" aria-hidden="true">📌</span>
-            <span id="agendaTodayText" class="agenda-today-text"></span>
-            <button type="button" class="agenda-today-close" onclick="agendaDismissTodayBanner()" aria-label="Fechar aviso de hoje">✕</button>
+          <div id="agendaTodayBanner" class="agenda-today-banner" role="status" aria-live="polite">
+            <div class="agenda-sync-card-head">
+              <span class="agenda-today-icon" aria-hidden="true">🔔</span>
+              <span class="agenda-sync-card-title">Resumo da semana</span>
+              <span id="agendaSyncCardTime" class="agenda-sync-card-time"></span>
+              <button type="button" class="agenda-today-close" onclick="agendaDismissTodayBanner()" aria-label="Fechar o card de notificação">✕</button>
+            </div>
+            <div id="agendaTodayText" class="agenda-today-text"></div>
           </div>
 
           <div class="agenda-weekdays">
@@ -5230,8 +5259,9 @@ async function agendaConnectSync(code) {
       snapshot.forEach(doc => { agendaNotesCache[doc.id] = doc.data().text; });
       agendaUpdateSyncIndicator(true);
       agendaRenderCalendar();
-      agendaRenderTodayBanner();
-      agendaCheckTodayNotifications(false);
+      // A notificação da sincronização agora fica num card dentro da agenda
+      // (antes disparava uma notificação do sistema a cada sincronização).
+      agendaRenderTodayBanner(true);
       const display = document.getElementById('agendaSyncCodeDisplay');
       if (display) { display.style.display = 'block'; display.innerText = agendaSyncCode; }
       agendaSetSyncStatus('<span style="color:var(--green-ink,#3f7d55)">● Conectado</span>');
@@ -5311,10 +5341,11 @@ function agendaWeekDates(date) {
   return days;
 }
 
-function agendaCheckTodayNotifications(forceShow) {
-  if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  const now = new Date();
-  if (now.getFullYear() !== AGENDA_YEAR) return;
+// Resumo da semana (hoje + demais dias com algo marcado). Usado pelo card da
+// agenda e pela notificação do sistema (botão 🔔). Devolve null fora de
+// AGENDA_YEAR, pois não há dados.
+function agendaBuildWeekSummary(now) {
+  if (now.getFullYear() !== AGENDA_YEAR) return null;
 
   const todayKey = agendaKeyFor(now.getMonth(), now.getDate());
 
@@ -5340,25 +5371,34 @@ function agendaCheckTodayNotifications(forceShow) {
     })
     .filter(Boolean);
 
-  if (!weekEntries.length) {
-    if (forceShow) agendaShowTodayNotification('Agenda Boa Vista', 'Nada marcado para esta semana.');
-    return;
-  }
-
   // O dia de hoje vem primeiro e em destaque (📌 HOJE); o resto da semana
   // segue depois, em ordem cronológica, só com os dias que têm algo marcado.
-  const todayEntry = weekEntries.find(e => e.isToday);
+  const todayEntry = weekEntries.find(e => e.isToday) || null;
   const restEntries = weekEntries.filter(e => !e.isToday);
 
   const bodyLines = [`📌 HOJE: ${todayEntry ? todayEntry.text : 'sem anotações'}`];
   if (restEntries.length) {
     bodyLines.push('Resto da semana: ' + restEntries.map(e => `${e.label} — ${e.text}`).join(' · '));
   }
-  const body = bodyLines.join('\n');
+  return { todayKey, weekEntries, todayEntry, restEntries, body: bodyLines.join('\n') };
+}
 
-  const notifiedKey = 'argo_agenda_notified_' + todayKey;
-  // Sem corte no hash: o resumo agora pode ter vários dias (mais texto que
-  // um único dia), e cortar em poucos caracteres arriscava duas semanas
+// Notificação do sistema — só quando a pessoa toca em 🔔 (forceShow). Não
+// dispara mais sozinha ao sincronizar: isso agora é o card da agenda.
+function agendaCheckTodayNotifications(forceShow) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const summary = agendaBuildWeekSummary(new Date());
+  if (!summary) return;
+
+  if (!summary.weekEntries.length) {
+    if (forceShow) agendaShowTodayNotification('Agenda Boa Vista', 'Nada marcado para esta semana.');
+    return;
+  }
+
+  const body = summary.body;
+  const notifiedKey = 'argo_agenda_notified_' + summary.todayKey;
+  // Sem corte no hash: o resumo pode ter vários dias (mais texto que um
+  // único dia), e cortar em poucos caracteres arriscava duas semanas
   // diferentes caírem no mesmo prefixo e a notificação real deixar de
   // aparecer.
   const notifiedHash = btoa(unescape(encodeURIComponent(body)));
@@ -5368,26 +5408,51 @@ function agendaCheckTodayNotifications(forceShow) {
   localStorage.setItem(notifiedKey, notifiedHash);
 }
 
-// ======= Aviso de hoje dentro do app (além da notificação do sistema) =======
+// ======= Card de notificação dentro da agenda =======
+// Mostra o resumo da semana (hoje em destaque) num card no topo do calendário.
+// Aparece a cada sincronização (fromSync = true), com o horário dela; se a
+// pessoa fechar o card, ele só volta quando o conteúdo do resumo mudar numa
+// nova sincronização.
+let agendaLastSyncAt = null;
+let agendaLastCardSignature = '';
 
-function agendaRenderTodayBanner() {
+function agendaRenderTodayBanner(fromSync) {
   const banner = document.getElementById('agendaTodayBanner');
-  const textEl = document.getElementById('agendaTodayText');
-  if (!banner || !textEl) return;
+  const bodyEl = document.getElementById('agendaTodayText');
+  const timeEl = document.getElementById('agendaSyncCardTime');
+  if (!banner || !bodyEl) return;
+
+  const summary = agendaBuildWeekSummary(new Date());
+  if (!summary) { banner.style.display = 'none'; return; }
+
+  if (fromSync === true) agendaLastSyncAt = new Date();
+
+  const hasContent = summary.weekEntries.length > 0;
+  // Sem sincronização e sem nada marcado, não há o que avisar.
+  if (!hasContent && !agendaLastSyncAt) { banner.style.display = 'none'; return; }
+
+  if (summary.body !== agendaLastCardSignature) {
+    agendaLastCardSignature = summary.body;
+    if (fromSync === true) agendaTodayBannerDismissed = false;
+  }
   if (agendaTodayBannerDismissed) { banner.style.display = 'none'; return; }
 
-  const now = new Date();
-  if (now.getFullYear() !== AGENDA_YEAR) { banner.style.display = 'none'; return; }
+  if (hasContent) {
+    const rest = summary.restEntries
+      .map(e => `<div class="agenda-sync-card-row"><strong>${escapeHtml(e.label)}</strong> — ${escapeHtml(e.text)}</div>`)
+      .join('');
+    bodyEl.innerHTML =
+      `<div class="agenda-sync-card-today">📌 HOJE: ${escapeHtml(summary.todayEntry ? summary.todayEntry.text : 'sem anotações')}</div>` +
+      (rest ? `<div class="agenda-sync-card-sub">Resto da semana</div>${rest}` : '');
+  } else {
+    bodyEl.textContent = 'Nada marcado para esta semana.';
+  }
 
-  const key = agendaKeyFor(now.getMonth(), now.getDate());
-  const info = AGENDA_DATA_INFO[key];
-  const note = agendaNotesCache[key];
-  if (!info && !note) { banner.style.display = 'none'; return; }
-
-  const parts = [];
-  if (info) parts.push(info.label.replace(/\.$/, ''));
-  if (note) parts.push(note);
-  textEl.textContent = 'Hoje: ' + parts.join(' • ');
+  if (timeEl) {
+    timeEl.textContent = agendaLastSyncAt
+      ? 'Sincronizado às ' + String(agendaLastSyncAt.getHours()).padStart(2, '0') + ':' + String(agendaLastSyncAt.getMinutes()).padStart(2, '0')
+      : '';
+  }
   banner.style.display = 'flex';
 }
 
@@ -5418,7 +5483,6 @@ function initAgendaPanel() {
   agendaUpdateNotifyIndicator();
   agendaUpdateSyncIndicator(!!agendaUnsubscribe);
   agendaRenderTodayBanner();
-  agendaCheckTodayNotifications(false);
   // Reconecta silenciosamente se já havia um código salvo neste navegador
   // (sem abrir o modal — só pede o código na primeira vez que o usuário
   // tentar guardar uma anotação ou tocar em 🔄).
