@@ -3048,13 +3048,14 @@
   }
 
   /* Constelação de Argo Navis (argo-constellation-bg.svg) preenchendo a tela
-     TODA (background-size: cover), num pseudo-elemento próprio por trás do
-     card — antes o desenho tinha um tamanho fixo (min(100%, 1000px) auto),
-     o que deixava boa parte da tela em cor sólida, sobretudo em celulares
-     na vertical, e escondia a maior parte das estrelas. Um leve brilho
-     (filter) e um glow radial azul realçam as estrelas nessa versão maior,
-     já que o desenho foi pensado para ser sutil quando usado como marca
-     d'água atrás de conteúdo (fundo do app, painel esquerdo do login). */
+     TODA e ampliada além do "cover" (zoom extra, abaixo), num pseudo-elemento
+     próprio por trás do card — antes o desenho tinha um tamanho fixo
+     (min(100%, 1000px) auto), o que deixava boa parte da tela em cor sólida,
+     sobretudo em celulares na vertical, e escondia a maior parte das
+     estrelas. Um leve brilho (filter) e um glow radial azul realçam as
+     estrelas nessa versão maior, já que o desenho foi pensado para ser
+     sutil quando usado como marca d'água atrás de conteúdo (fundo do app,
+     painel esquerdo do login). */
   #loginScreen::before {
     content: "";
     position: fixed;
@@ -3065,7 +3066,11 @@
       url('argo-constellation-bg.svg');
     background-repeat: no-repeat, no-repeat;
     background-position: center center, center center;
-    background-size: cover, cover;
+    /* A camada do SVG (2º valor) é ampliada além do "cover" — 190% em vez
+       de 100% do menor lado que caberia sem cortar — para o navio e as
+       estrelas aparecerem bem maiores e mais próximos, preenchendo mais
+       da tela. A camada do glow (1º valor) continua em "cover" normal. */
+    background-size: cover, 190%;
     filter: brightness(1.4) saturate(1.2);
     pointer-events: none;
   }
