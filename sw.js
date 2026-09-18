@@ -1,6 +1,6 @@
 // Troque este número toda vez que publicar uma alteração no app.
 // É essa mudança de versão que dispara a atualização automática.
-const CACHE_VERSION = 'v38';
+const CACHE_VERSION = 'v41';
 const CACHE_NAME = `rede-apoio-bv-${CACHE_VERSION}`;
 
 // Cache separado e SEM número de versão, para conteúdo pesado de fora do
@@ -78,6 +78,17 @@ self.addEventListener('activate', event => {
 // quando não há internet.
 const NETWORK_FIRST_HOSTS = ['www.gov.br', 'api.allorigins.win', 'corsproxy.io'];
 
+// Resposta de reserva para quando NEM a rede NEM o cache têm o recurso
+// pedido (ex.: primeiro acesso, offline). Sem isso, respondWith() recebia
+// `undefined` nesse cenário e o navegador lançava um TypeError em vez de
+// simplesmente mostrar que o recurso está indisponível.
+function offlineFallback() {
+  return new Response(
+    'Sem conexão com a internet e nenhuma cópia salva deste conteúdo.',
+    { status: 503, statusText: 'Offline', headers: { 'Content-Type': 'text/plain; charset=utf-8' } }
+  );
+}
+
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
 
@@ -95,7 +106,7 @@ self.addEventListener('fetch', event => {
           }
           return response;
         })
-        .catch(() => caches.match(event.request))
+        .catch(() => caches.match(event.request).then(cached => cached || offlineFallback()))
     );
     return;
   }
@@ -113,7 +124,7 @@ self.addEventListener('fetch', event => {
           }
           return response;
         })
-        .catch(() => cached);
+        .catch(() => cached || offlineFallback());
 
       return cached || networkFetch;
     })
