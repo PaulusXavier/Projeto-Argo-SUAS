@@ -3174,7 +3174,19 @@
      Opacidade baixa e mix-blend-mode para não competir com o texto em primeiro plano. */
   .login-story-historic {
     position: absolute;
-    top: 0; right: 0; bottom: 0; left: 0;
+    /* Área um pouco menor que o painel (9% de folga em cima e embaixo):
+       com background-size: cover o barco fica ~18% menor do que quando a
+       imagem cobria o painel inteiro. A máscara esmaece as bordas dessa área
+       para não aparecer o retângulo da foto sobre o fundo do painel. */
+    top: 9%; right: 0; bottom: 9%; left: 0;
+    -webkit-mask-image:
+      linear-gradient(to bottom, transparent 0, #000 16%, #000 84%, transparent 100%),
+      linear-gradient(to right, transparent 0, #000 6%, #000 94%, transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(to bottom, transparent 0, #000 16%, #000 84%, transparent 100%),
+      linear-gradient(to right, transparent 0, #000 6%, #000 94%, transparent 100%);
+    mask-composite: intersect;
     background-image: url('argo-navis-historico.jpg');
     background-size: cover;
     background-position: center 38%;
@@ -3185,7 +3197,9 @@
   }
 
   @media (max-width: 760px) {
-    .login-story-historic { opacity: 0.16; }
+    /* No celular o painel é largo e baixo (o barco é dimensionado pela
+       largura), então a folga vem dos lados. */
+    .login-story-historic { opacity: 0.16; top: 0; bottom: 0; left: 9%; right: 9%; }
   }
 
   /* Emblema do navio no painel de login: a mesma foto usada em .hero-ship-photo
