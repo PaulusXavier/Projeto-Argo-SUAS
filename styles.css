@@ -421,7 +421,9 @@
     top: 0;
     z-index: 100;
     background: var(--bg-main);
-    backdrop-filter: blur(12px);
+    /* backdrop-filter: blur() removido — o fundo já é opaco, então o desfoque
+       não aparecia, mas o navegador o recalculava a cada quadro de rolagem
+       (barra fixa no topo), pesando principalmente em celulares. */
     border-bottom: 1px solid var(--border-ui);
     padding: 1rem 0;
     box-shadow: 0 4px 16px -8px rgba(15, 23, 42, 0.08);
@@ -1433,6 +1435,11 @@
   .btn-tech.btn-link {
     text-decoration: none;
   }
+
+  /* Botão de compartilhar por WhatsApp (verde escuro: mantém contraste com
+     o texto branco, o verde claro oficial #25D366 ficaria ilegível). */
+  .btn-whatsapp { background: #128C7E; color: #fff; border-color: #0E7A6D; }
+  .btn-whatsapp:hover { background: #0E7A6D; border-color: #0B6A5F; color: #fff; transform: translateY(-1px); }
 
   .info-banner {
     grid-column: 1 / -1;
