@@ -4571,6 +4571,14 @@ let agendaUnsubscribe = null;
 let agendaSyncCode = localStorage.getItem('argo_agenda_sync_code') || "";
 let agendaDb = null;
 let agendaFirebaseReady = false;
+let agendaTodayBannerDismissed = false;
+let agendaSyncStatusHtml = '';
+
+function agendaSetSyncStatus(html) {
+  agendaSyncStatusHtml = html;
+  const line = document.getElementById('agendaSyncStatusLine');
+  if (line) line.innerHTML = html;
+}
 
 function renderAgendaCard() {
   return `
@@ -4629,9 +4637,10 @@ function renderAgendaCard() {
         .agenda-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); padding: 4px 14px; text-align: center; border-bottom: 2px solid var(--gold); margin: 0 4px; }
         .agenda-weekdays div { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--ink-muted); padding-bottom: 6px; }
         .agenda-weekdays .agenda-dom { color: var(--red-ink); }
-        #agendaCalendarGrid { display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: minmax(64px, auto); gap: 1px; padding: 6px 10px 8px; }
-        .agenda-day-cell { border-radius: 4px; padding: 4px 5px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; border-bottom: 1px solid var(--rule-line); transition: transform 0.12s, background 0.12s; }
+        #agendaCalendarGrid { display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: minmax(var(--agenda-cell-min, 64px), auto); gap: 1px; padding: 6px 10px 8px; }
+        .agenda-day-cell { border-radius: 4px; padding: 4px 5px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; border-bottom: 1px solid var(--rule-line); transition: transform 0.12s, background 0.12s; min-width: 0; }
         .agenda-day-cell:hover { background: rgba(184, 137, 79, 0.10); transform: translateY(-1px); }
+        .agenda-day-cell:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
         .agenda-day-cell.agenda-bg-sunday { background-color: rgba(179, 65, 58, 0.06); }
         .agenda-day-cell.agenda-bg-saturday { background-color: rgba(44, 38, 32, 0.035); }
         .agenda-day-cell.agenda-is-today { background-color: rgba(184, 137, 79, 0.16); box-shadow: inset 0 0 0 1.5px var(--gold); }
@@ -4649,11 +4658,44 @@ function renderAgendaCard() {
         .agenda-dot { width: 6px; height: 6px; border-radius: 50%; }
         .agenda-creator-info { text-align: right; font-size: 8px; font-weight: 700; color: var(--ink-muted); font-style: italic; }
         .agenda-creator-name { color: var(--cover); font-family: 'Times New Roman', Times, serif; font-style: italic; font-size: 10px; text-transform: none; }
+        .agenda-today-banner {
+          display: none; align-items: center; gap: 8px;
+          margin: 0 14px 8px; padding: 8px 12px;
+          background: rgba(184, 137, 79, 0.14); border: 1px solid var(--gold);
+          border-radius: 8px;
+        }
+        .agenda-today-icon { font-size: 14px; line-height: 1; }
+        .agenda-today-text { flex: 1; font-size: 12px; font-weight: 700; color: var(--ink); line-height: 1.35; }
+        .agenda-today-close {
+          background: none; border: none; cursor: pointer; color: var(--ink-muted);
+          font-size: 12px; line-height: 1; padding: 3px 5px; border-radius: 4px; font-family: inherit;
+        }
+        .agenda-today-close:hover { background: var(--paper-alt); color: var(--cover); }
         @media (max-width: 600px) {
-          .agenda-book { padding-left: 22px; }
+          .agenda-book { padding-left: 22px; --agenda-cell-min: 54px; }
           .agenda-binding { width: 22px; }
-          .agenda-header-right { width: 100%; justify-content: space-between; }
+          .agenda-header { padding: 14px 12px 8px 14px; gap: 8px; }
+          .agenda-header-right { width: 100%; justify-content: space-between; gap: 6px; }
           .agenda-nav-controls { flex: 1; justify-content: center; }
+          .agenda-weekdays { padding: 4px 8px; margin: 0 2px; }
+          .agenda-weekdays div { font-size: 8px; }
+          #agendaCalendarGrid { padding: 4px 6px 6px; gap: 2px; }
+          .agenda-note-preview { font-size: 12px; }
+          .agenda-badge-status { font-size: 6px; }
+          .agenda-footer { padding: 10px 12px 12px 14px; }
+        }
+
+        @media (max-width: 380px) {
+          .agenda-book { padding-left: 18px; --agenda-cell-min: 46px; }
+          .agenda-binding { width: 18px; }
+          .agenda-header-right { gap: 4px; }
+          .agenda-sync-btn { padding: 6px 7px; font-size: 11px; }
+          .agenda-nav-btn { padding: 5px 6px; font-size: 11px; }
+          .agenda-month-display { min-width: 68px; font-size: 12px; }
+          .agenda-day-num { font-size: 10px; }
+          .agenda-note-preview { font-size: 11px; }
+          .agenda-footer { flex-direction: column; align-items: flex-start; }
+          .agenda-creator-info { text-align: left; }
         }
       </style>
       <div class="card-top">
@@ -4689,6 +4731,12 @@ function renderAgendaCard() {
                 <button type="button" class="agenda-nav-btn" onclick="agendaChangeMonth(1)">▶</button>
               </div>
             </div>
+          </div>
+
+          <div id="agendaTodayBanner" class="agenda-today-banner">
+            <span class="agenda-today-icon" aria-hidden="true">📌</span>
+            <span id="agendaTodayText" class="agenda-today-text"></span>
+            <button type="button" class="agenda-today-close" onclick="agendaDismissTodayBanner()" aria-label="Fechar aviso de hoje">✕</button>
           </div>
 
           <div class="agenda-weekdays">
@@ -4759,7 +4807,16 @@ function agendaRenderCalendar() {
       }
 
       cell.innerHTML = html;
+      cell.setAttribute('role', 'button');
+      cell.setAttribute('tabindex', '0');
+      let ariaLabel = d + ' de ' + AGENDA_MONTH_NAMES[agendaCurrentMonth];
+      if (info) ariaLabel += ', ' + info.label.replace(/\.$/, '');
+      if (note) ariaLabel += ', com anotação';
+      cell.setAttribute('aria-label', ariaLabel);
       cell.onclick = () => agendaOpenNoteModal(key, d);
+      cell.onkeydown = (ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); agendaOpenNoteModal(key, d); }
+      };
     } else {
       cell.style.opacity = '0.05';
       cell.style.cursor = 'default';
@@ -4840,21 +4897,32 @@ function agendaCloseNoteModal() {
   const m = document.getElementById('agendaNoteModal');
   if (m) m.style.display = 'none';
 }
-function agendaSaveNote() {
+async function agendaSaveNote() {
   if (!agendaSyncCode) { agendaOpenSyncModal(); return; }
+  if (!agendaDb) { alert('Ainda conectando à nuvem — aguarde alguns segundos e tente novamente.'); return; }
   const txt = document.getElementById('agendaNoteInput').value.trim();
   const ref = agendaDb.collection('agendas').doc(agendaSyncCode).collection('notes').doc(agendaSelectedKey);
-  if (txt) {
-    ref.set({ text: txt, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-  } else {
-    ref.delete();
+  try {
+    if (txt) {
+      await ref.set({ text: txt, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    } else {
+      await ref.delete();
+    }
+    agendaCloseNoteModal();
+  } catch (e) {
+    console.error(e);
+    alert('Não foi possível salvar a anotação na nuvem. Verifique sua internet e tente novamente.');
   }
-  agendaCloseNoteModal();
 }
-function agendaDeleteNote() {
-  if (!agendaSyncCode || !agendaDb) { agendaCloseNoteModal(); return; }
-  agendaDb.collection('agendas').doc(agendaSyncCode).collection('notes').doc(agendaSelectedKey).delete();
-  agendaCloseNoteModal();
+async function agendaDeleteNote() {
+  if (!agendaSyncCode || !agendaDb) { alert('Ainda conectando à nuvem — aguarde alguns segundos e tente novamente.'); return; }
+  try {
+    await agendaDb.collection('agendas').doc(agendaSyncCode).collection('notes').doc(agendaSelectedKey).delete();
+    agendaCloseNoteModal();
+  } catch (e) {
+    console.error(e);
+    alert('Não foi possível apagar a anotação na nuvem. Verifique sua internet e tente novamente.');
+  }
 }
 
 // ======= Sincronização =======
@@ -4869,8 +4937,7 @@ async function agendaConnectSync(code) {
   if (!agendaSyncCode) return;
   localStorage.setItem('argo_agenda_sync_code', agendaSyncCode);
 
-  const statusLine = document.getElementById('agendaSyncStatusLine');
-  if (statusLine) statusLine.innerHTML = '<span style="color:#8a7f6a">● Conectando…</span>';
+  agendaSetSyncStatus('<span style="color:#8a7f6a">● Conectando…</span>');
 
   let firebaseLib;
   try {
@@ -4883,7 +4950,7 @@ async function agendaConnectSync(code) {
   } catch (e) {
     console.error(e);
     agendaUpdateSyncIndicator(false);
-    if (statusLine) statusLine.innerHTML = '<span style="color:var(--red-ink,#b3413a)">● Não foi possível carregar a sincronização (verifique a internet)</span>';
+    agendaSetSyncStatus('<span style="color:var(--red-ink,#b3413a)">● Não foi possível carregar a sincronização (verifique a internet)</span>');
     return;
   }
 
@@ -4895,16 +4962,15 @@ async function agendaConnectSync(code) {
       snapshot.forEach(doc => { agendaNotesCache[doc.id] = doc.data().text; });
       agendaUpdateSyncIndicator(true);
       agendaRenderCalendar();
+      agendaRenderTodayBanner();
       agendaCheckTodayNotifications(false);
       const display = document.getElementById('agendaSyncCodeDisplay');
-      const line = document.getElementById('agendaSyncStatusLine');
       if (display) { display.style.display = 'block'; display.innerText = agendaSyncCode; }
-      if (line) line.innerHTML = '<span style="color:var(--green-ink,#3f7d55)">● Conectado</span>';
+      agendaSetSyncStatus('<span style="color:var(--green-ink,#3f7d55)">● Conectado</span>');
     }, err => {
       console.error(err);
       agendaUpdateSyncIndicator(false);
-      const line = document.getElementById('agendaSyncStatusLine');
-      if (line) line.innerHTML = '<span style="color:var(--red-ink,#b3413a)">● Erro de conexão</span>';
+      agendaSetSyncStatus('<span style="color:var(--red-ink,#b3413a)">● Erro de conexão</span>');
     });
 }
 
@@ -4916,9 +4982,7 @@ function agendaOpenSyncModal() {
   if (agendaSyncCode) {
     display.style.display = 'block';
     display.innerText = agendaSyncCode;
-    statusLine.innerHTML = agendaFirebaseReady
-      ? '<span style="color:var(--green-ink,#3f7d55)">● Conectado</span>'
-      : '<span style="color:#8a7f6a">● Conectando…</span>';
+    statusLine.innerHTML = agendaSyncStatusHtml || '<span style="color:#8a7f6a">● Conectando…</span>';
   } else {
     display.style.display = 'none';
     statusLine.innerHTML = '<span style="color:#8a7f6a">● Nenhum código definido ainda</span>';
@@ -4986,6 +5050,35 @@ function agendaCheckTodayNotifications(forceShow) {
   localStorage.setItem(notifiedKey, notifiedHash);
 }
 
+// ======= Aviso de hoje dentro do app (além da notificação do sistema) =======
+
+function agendaRenderTodayBanner() {
+  const banner = document.getElementById('agendaTodayBanner');
+  const textEl = document.getElementById('agendaTodayText');
+  if (!banner || !textEl) return;
+  if (agendaTodayBannerDismissed) { banner.style.display = 'none'; return; }
+
+  const now = new Date();
+  if (now.getFullYear() !== AGENDA_YEAR) { banner.style.display = 'none'; return; }
+
+  const key = agendaKeyFor(now.getMonth(), now.getDate());
+  const info = AGENDA_DATA_INFO[key];
+  const note = agendaNotesCache[key];
+  if (!info && !note) { banner.style.display = 'none'; return; }
+
+  const parts = [];
+  if (info) parts.push(info.label.replace(/\.$/, ''));
+  if (note) parts.push(note);
+  textEl.textContent = 'Hoje: ' + parts.join(' • ');
+  banner.style.display = 'flex';
+}
+
+function agendaDismissTodayBanner() {
+  agendaTodayBannerDismissed = true;
+  const banner = document.getElementById('agendaTodayBanner');
+  if (banner) banner.style.display = 'none';
+}
+
 async function agendaToggleNotify() {
   if (!('Notification' in window)) { alert('Este navegador não suporta notificações.'); return; }
   if (Notification.permission === 'denied') {
@@ -5006,6 +5099,7 @@ function initAgendaPanel() {
   agendaRenderCalendar();
   agendaUpdateNotifyIndicator();
   agendaUpdateSyncIndicator(!!agendaUnsubscribe);
+  agendaRenderTodayBanner();
   agendaCheckTodayNotifications(false);
   // Reconecta silenciosamente se já havia um código salvo neste navegador
   // (sem abrir o modal — só pede o código na primeira vez que o usuário
