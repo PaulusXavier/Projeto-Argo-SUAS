@@ -3066,11 +3066,12 @@
       url('argo-constellation-bg.svg');
     background-repeat: no-repeat, no-repeat;
     background-position: center center, center center;
-    /* A camada do SVG (2º valor) é ampliada além do "cover" — 190% em vez
-       de 100% do menor lado que caberia sem cortar — para o navio e as
-       estrelas aparecerem bem maiores e mais próximos, preenchendo mais
-       da tela. A camada do glow (1º valor) continua em "cover" normal. */
-    background-size: cover, 190%;
+    /* A camada do SVG (2º valor) fica num meio-termo: nem no tamanho
+       "cover" original (pequeno demais, sumia em telas altas) nem no
+       zoom de 190% (grande demais, cortava a constelação). 140% dá um
+       tamanho médio, com o navio e as estrelas bem visíveis mas ainda
+       enquadrados. A camada do glow (1º valor) continua em "cover" normal. */
+    background-size: cover, 140%;
     filter: brightness(1.4) saturate(1.2);
     pointer-events: none;
   }
