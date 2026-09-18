@@ -1316,6 +1316,9 @@ function renderCrasCard(i, query) {
           </div>
         </div>
       </div>
+      <div class="card-actions" style="grid-template-columns: 1fr;">
+        <button class="btn-tech btn-secondary" onclick="share('${i.id}')">Compartilhar</button>
+      </div>
     </div>
   `;
 }
@@ -2310,7 +2313,7 @@ function renderSecondUnitField(id, name) {
 
 function share(id) {
   const i = DATA.find(x => x.id === id);
-  const t = `*UNIDADE:* ${i.fullName}\n*ENDEREÇO:* ${stripHtml(i.address)}\n*HORÁRIO:* ${stripHtml(i.hours || 'Não informado')}\n*CONTATO:* ${stripHtml(i.phones.join(' / '))}`;
+  const t = `*UNIDADE:* ${i.fullName || i.name}\n*ENDEREÇO:* ${stripHtml(i.address)}\n*HORÁRIO:* ${stripHtml(i.hours || 'Não informado')}\n*CONTATO:* ${stripHtml((i.phones || []).join(' / ') || 'Não informado')}`;
   window.open(`https://wa.me/?text=${encodeURIComponent(t)}`, '_blank', 'noopener,noreferrer');
 }
 
@@ -2745,6 +2748,67 @@ let mapaRedeMap = null;
 let mapaRedeMarkersLayer = null;
 let mapaRedeUserMarker = null;
 
+/* ------------------------------------------------------------------------
+   UNIDADES DE CRAS E CREAS DE BOA VISTA — coordenadas exatas
+   ------------------------------------------------------------------------
+   Fonte: projeto irmão "Rede SUAS Boa Vista" (data.js, objeto UNITS), que
+   mantém as 11 unidades da rede socioassistencial de Boa Vista já com
+   latitude/longitude conferidas manualmente. Diferente dos demais itens do
+   Mapa da Rede — que dependem de geocodificação automática do endereço via
+   Nominatim/OpenStreetMap, podendo levar alguns segundos e ocasionalmente
+   errar —, essas coordenadas aparecem no mapa imediatamente, sem consulta
+   de rede.
+   As entradas de categoria "cras"/"cas" do DATA principal (equipe-cras-
+   cristiana.js) são cartões de acesso a ferramentas internas do CRAS
+   Cristiana Vicente Nunes (RMA, equipe técnica etc.), não uma lista de
+   unidades — por isso continuam fora do mapa e esta lista completa a rede.
+   Para atualizar uma unidade (endereço, telefone, bairros, coordenada),
+   edite apenas o array abaixo. */
+const UNITS_CRAS_CREAS = {
+  cras: [
+    { name: "CRAS Cristiana Vicente Nunes", lat: 2.794228, lng: -60.715304, color: "red", address: "Rua Santo Agostinho, 193 - Centenário", phone: "(95) 98402-6617", bairros: "13 de Setembro, Asa Branca, Buritis, Caimbé, Cambará, Centenário, Cinturão Verde, Jóquei Clube, Liberdade, Marechal Rondon, Nova Canaã, Olímpico, Pricumã, Professora Araceli Souto Maior, Tancredo Neves" },
+    { name: "CRAS Pintolândia", lat: 2.8105851871073004, lng: -60.74498923145661, color: "blue", address: "R. Sólon Rodrigues Pessoa, 615 - Nova Canaã (Sede do FQA)", phone: "(95) 98407-3680", bairros: "Dr. Silvio Botelho, Jardim Tropical, Pintolândia, Santa Luzia, Senador Hélio Campos" },
+    { name: "CRAS Nova Cidade", lat: 2.763968, lng: -60.730548, color: "green", address: "Rua Curitiba, 336 - Nova Cidade", phone: "(95) 98403-0174", bairros: "Bela Vista, Dr. Airton Rocha, Conjunto Pérola, Ajuricaba, Governador Aquilino Mota Duarte, Jardim Copaíbas, Distrito Industrial, Nova Cidade, Operário, Raiar do Sol, São Bento" },
+    { name: "CRAS Dr. Silvio Leite", lat: 2.824589, lng: -60.744222, color: "purple", address: "R. Marieta de Mello Marquês, 869 - Dr. Silvio Leite", phone: "(95) 98403-1682", bairros: "Alvorada, Dr. Silvio Leite, Equatorial, Nova Esperança, Conjunto Cruviana, Jardim Primavera, Laura Moreira, Conjunto Cidadão, Conjunto Manaíra" },
+    { name: "CRAS União", lat: 2.844086, lng: -60.727368, color: "orange", address: "R. Hilda Sobral Guedes, 81 - Bairro União", phone: "(95) 98405-9001", bairros: "Cidade Satélite, Conjunto Universitário, Vila Jardim, João de Barro, Murilo Teixeira, Piscicultura, Santa Tereza, Jardim Caranã, União" },
+    { name: "CRAS Cauamé", lat: 2.828707, lng: -60.699579, color: "darkred", address: "Av. Carlos Pereira de Melo, 207 - Jardim Floresta", phone: "(95) 98410-1337", bairros: "Aeroporto, Monte das Oliveiras, Cauamé, Caranã, Jardim Floresta, Said Salomão, Pedra Pintada" },
+    { name: "CRAS São Francisco", lat: 2.817229, lng: -60.666111, color: "darkblue", address: "R. Floriano Peixoto, 140 - Centro", phone: "(95) 98410-4092", bairros: "31 de Março, Caçari, Calungá, Canarinho, Centro, Dos Estados, Mecejana, Nossa Senhora de Aparecida, Paraviana, São Francisco, São Pedro, São Vicente" },
+    { name: "CRAS Itinerante", lat: 2.829942, lng: -60.678552, color: "cadetblue", address: "R. Maj. Manoel Corrêa, 620 - São Francisco", phone: "N/A", bairros: "Comunidades Indígenas e Zona Rural de Boa Vista" }
+  ],
+  creas: [
+    { name: "CREAS Centenário", lat: 2.7973795, lng: -60.718835, color: "blue", address: "R. Turin, 282 - Centenário", phone: "(95) 98412-1829", bairros: "Alvorada, Cambará, Centenário, Cinturão Verde, Cruviana, Dr. Airton Rocha, Dr. Sílvio Botelho, Dr. Sílvio Leite, Equatorial, Governador Aquilo da Mota Duarte, Jardim Bela Vista, Jardim das Copaíbas, Jóquei Clube, Nova Canaã, Olímpico, Araceli, Jardim Primavera, Tropical, Laura Moreira, Rondon, Manaíra, Murilo Teixeira, Operário, Pintolândia, Piscicultura, Raiar do Sol, São Bento, Santa Luzia, Hélio Campos" },
+    { name: "CREAS Centro", lat: 2.8217647, lng: -60.678314, color: "darkblue", address: "Av. Mário Homem de Melo, 514 - Centro", phone: "(95) 98404-5621", bairros: "13 de Setembro, 31 de Março, Aeroporto, Aparecida, Área Rural e Indígena, Asa Branca, Buritis, Caçari, Caetano Filho, Caimbé, Calungá, Canarinho, Caranã, Cauamé, Centro, Cidade Satélite, Estados, Jardim Caranã, Jardim Floresta, João de Barro, Liberdade, Mecejana, Monte das Oliveiras, Paraviana, Pedra Pintada, Pricumã, Salomão, São Francisco, São Pedro, São Vicente, Tancredo Neves, União" },
+    { name: "Abrigo Infantil Pedra Pintada", lat: 2.7961607, lng: -60.703623, color: "green", address: "R. Interna, 182 - Centenário", phone: "Atendimento Direto", bairros: "Crianças de até 12 anos incompleto em situação de vulnerabilidade social" }
+  ]
+};
+
+// Cores nomeadas (mesmo padrão do projeto Rede SUAS Boa Vista) convertidas
+// para hexadecimal, usadas no pino colorido de cada unidade no mapa.
+const MAPA_REDE_COLOR_HEX = {
+  red: '#d63e2a', blue: '#38aadd', green: '#72b026', purple: '#d252b9',
+  orange: '#f69730', darkred: '#a23336', darkblue: '#0067a3', cadetblue: '#436978'
+};
+
+// Pino em formato de gota, colorido por unidade — mesma ideia visual do
+// marcador padrão do Leaflet, mas sem depender de imagens externas (o pino
+// é desenhado em SVG, então funciona mesmo offline, diferente dos ícones
+// padrão do Leaflet que vêm de arquivos de imagem).
+function mapaRedeCrasCreasIcon(colorHex) {
+  return L.divIcon({
+    className: 'mapa-rede-crascreas-icon',
+    html: `
+      <svg width="30" height="42" viewBox="0 0 30 42" xmlns="http://www.w3.org/2000/svg">
+        <path d="M15 0C6.7 0 0 6.7 0 15c0 11 15 27 15 27s15-16 15-27C30 6.7 23.3 0 15 0z" fill="${colorHex}" stroke="#fff" stroke-width="2"/>
+        <circle cx="15" cy="15" r="6" fill="#fff"/>
+      </svg>`,
+    iconSize: [30, 42],
+    iconAnchor: [15, 40],
+    popupAnchor: [0, -36]
+  });
+}
+
+let mapaRedeCrasCreasLayer = null;
+
 /* ==========================================================================
    ABA "NOTÍCIAS DO MDS"
    --------------------------------------------------------------------------
@@ -3035,6 +3099,16 @@ function renderMapCard() {
     .join('');
 
   return `
+    <style>
+      /* O Leaflet aplica fundo branco + borda cinza por padrão em todo
+         L.divIcon (classe .leaflet-div-icon). Nossos ícones (pino colorido
+         de CRAS/CREAS e o marcador azul de "você está aqui") já desenham o
+         próprio contorno em SVG, então essa caixa padrão só aparece atrás
+         deles como um quadrado branco indesejado — por isso é removida
+         aqui, com seletor mais específico para vencer o CSS do Leaflet. */
+      .leaflet-div-icon.mapa-rede-crascreas-icon,
+      .leaflet-div-icon.mapa-rede-user-icon { background: transparent; border: none; }
+    </style>
     <div class="tech-card mapa-rede-card">
       <div class="card-top">
         <div style="display:flex; align-items:center; gap:0.55rem;">
@@ -3057,6 +3131,11 @@ function renderMapCard() {
             ${ICONS.map} Minha localização
           </button>
         </div>
+
+        <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.85rem; margin:0 0 0.6rem;">
+          <input type="checkbox" id="mapaRedeShowCrasCreas" checked onchange="renderMapaRedeMarkers()">
+          Mostrar unidades de CRAS e CREAS de Boa Vista (${UNITS_CRAS_CREAS.cras.length + UNITS_CRAS_CREAS.creas.length} unidades, coordenadas exatas)
+        </label>
 
         <div id="mapaRedeStatus" style="font-size:0.85rem; color:var(--text-muted, #64748b); margin-bottom:0.5rem;"></div>
 
@@ -3103,6 +3182,7 @@ async function initMapPanel() {
   }).addTo(mapaRedeMap);
 
   mapaRedeMarkersLayer = L.layerGroup().addTo(mapaRedeMap);
+  mapaRedeCrasCreasLayer = L.layerGroup().addTo(mapaRedeMap);
 
   if (proximityState.active) {
     mapaRedeShowUserMarker(L, proximityState.lat, proximityState.lon);
@@ -3177,14 +3257,19 @@ async function renderMapaRedeMarkers() {
   mapaRedeSetStatus('');
 
   mapaRedeMarkersLayer.clearLayers();
+  if (mapaRedeCrasCreasLayer) mapaRedeCrasCreasLayer.clearLayers();
   const cache = getGeocodeCache();
   const bounds = [];
-  const withCoords = [];
+  // Lista unificada usada tanto para o cálculo de "mais próximos" quanto
+  // para o enquadramento do mapa (fitBounds) — mistura equipamentos do
+  // diretório principal (coordenadas por geocodificação) com as unidades de
+  // CRAS/CREAS (coordenadas exatas, sem precisar consultar nada).
+  const nearbySource = [];
 
   items.forEach(item => {
     const coords = cache[item.id];
     if (!coords) return;
-    withCoords.push({ item, coords });
+    nearbySource.push({ name: item.name, lat: coords.lat, lon: coords.lon });
     bounds.push([coords.lat, coords.lon]);
     const marker = L.marker([coords.lat, coords.lon]);
     const distanceLabel = proximityState.active
@@ -3197,6 +3282,32 @@ async function renderMapaRedeMarkers() {
     marker.addTo(mapaRedeMarkersLayer);
   });
 
+  // Unidades de CRAS e CREAS de Boa Vista (checkbox "Mostrar unidades de
+  // CRAS e CREAS"), com coordenadas exatas — não passam pela geocodificação.
+  const showCrasCreas = document.getElementById('mapaRedeShowCrasCreas');
+  if (mapaRedeCrasCreasLayer && (!showCrasCreas || showCrasCreas.checked)) {
+    [...UNITS_CRAS_CREAS.cras.map(u => ({ ...u, tipo: 'CRAS' })), ...UNITS_CRAS_CREAS.creas.map(u => ({ ...u, tipo: 'CREAS' }))]
+      .forEach(unit => {
+        nearbySource.push({ name: unit.name, lat: unit.lat, lon: unit.lng });
+        bounds.push([unit.lat, unit.lng]);
+        const marker = L.marker([unit.lat, unit.lng], { icon: mapaRedeCrasCreasIcon(MAPA_REDE_COLOR_HEX[unit.color] || '#0067a3') });
+        const distanceLabel = proximityState.active
+          ? (() => {
+              const km = haversineKm(proximityState.lat, proximityState.lon, unit.lat, unit.lng);
+              return `<br><strong>${km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(1) + ' km'}</strong> daqui`;
+            })()
+          : '';
+        marker.bindPopup(`
+          <strong>${escapeHtml(unit.name)}</strong> <span style="font-size:0.75em; color:#64748b;">(${unit.tipo})</span><br>
+          ${escapeHtml(unit.address)}<br>
+          ${unit.phone && unit.phone !== 'N/A' ? `📞 ${escapeHtml(unit.phone)}<br>` : ''}
+          <span style="font-size:0.85em; color:#64748b;">Bairros: ${escapeHtml(unit.bairros)}</span>
+          ${distanceLabel}
+        `);
+        marker.addTo(mapaRedeCrasCreasLayer);
+      });
+  }
+
   if (proximityState.active) bounds.push([proximityState.lat, proximityState.lon]);
   if (bounds.length) {
     mapaRedeMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
@@ -3205,18 +3316,18 @@ async function renderMapaRedeMarkers() {
   const nearbyList = document.getElementById('mapaRedeNearbyList');
   if (nearbyList) {
     if (!proximityState.active) {
-      nearbyList.innerHTML = withCoords.length
-        ? `<p style="font-size:0.85rem; color:var(--text-muted, #64748b);">${withCoords.length} equipamento(s) no mapa. Toque em "Minha localização" para ver os mais próximos.</p>`
+      nearbyList.innerHTML = nearbySource.length
+        ? `<p style="font-size:0.85rem; color:var(--text-muted, #64748b);">${nearbySource.length} ponto(s) no mapa. Toque em "Minha localização" para ver os mais próximos.</p>`
         : '';
     } else {
-      const sorted = withCoords
-        .map(({ item, coords }) => ({ item, km: haversineKm(proximityState.lat, proximityState.lon, coords.lat, coords.lon) }))
+      const sorted = nearbySource
+        .map(({ name, lat, lon }) => ({ name, km: haversineKm(proximityState.lat, proximityState.lon, lat, lon) }))
         .sort((a, b) => a.km - b.km)
         .slice(0, 5);
       nearbyList.innerHTML = sorted.length
-        ? `<h3 style="margin:0.5rem 0;">Mais próximos</h3><div class="tradutor-phrase-list">${sorted.map(({ item, km }) => `
+        ? `<h3 style="margin:0.5rem 0;">Mais próximos</h3><div class="tradutor-phrase-list">${sorted.map(({ name, km }) => `
             <div class="tradutor-phrase-item">
-              <span>${escapeHtml(item.name || '')} — ${km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(1) + ' km'}</span>
+              <span>${escapeHtml(name || '')} — ${km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(1) + ' km'}</span>
             </div>
           `).join('')}</div>`
         : '';
@@ -4737,7 +4848,7 @@ function renderAgendaCard() {
               <p>Agenda Oficial &middot; 2026</p>
             </div>
             <div class="agenda-header-right">
-              <button type="button" class="agenda-sync-btn" title="Notificar sobre o dia de hoje" onclick="agendaToggleNotify()">
+              <button type="button" class="agenda-sync-btn" title="Notificar sobre a semana (hoje em destaque)" onclick="agendaToggleNotify()">
                 🔔<span id="agendaNotifyDot" class="agenda-sync-dot agenda-sync-off"></span>
               </button>
               <button type="button" class="agenda-sync-btn" title="Sincronização entre aparelhos" onclick="agendaOpenSyncModal()">
@@ -5043,28 +5154,78 @@ async function agendaShowTodayNotification(title, body) {
   new Notification(title, { body, icon: './icon-192.png' });
 }
 
+const AGENDA_WEEKDAY_ABBR = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+// Datas da semana (domingo a sábado) que contém a data informada — mesma
+// convenção de início de semana já usada na grade do calendário
+// (agendaRenderCalendar, onde wd===0 é domingo).
+function agendaWeekDates(date) {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - start.getDay());
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    days.push(d);
+  }
+  return days;
+}
+
 function agendaCheckTodayNotifications(forceShow) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   const now = new Date();
   if (now.getFullYear() !== AGENDA_YEAR) return;
-  const key = agendaKeyFor(now.getMonth(), now.getDate());
-  const note = agendaNotesCache[key];
-  const info = AGENDA_DATA_INFO[key];
 
-  if (!note && !info) {
-    if (forceShow) agendaShowTodayNotification('Agenda Boa Vista', 'Você não tem anotações para hoje.');
+  const todayKey = agendaKeyFor(now.getMonth(), now.getDate());
+
+  // Um item por dia da semana (feriado/pagamento marcado em AGENDA_DATA_INFO
+  // e/ou anotação própria em agendaNotesCache), pulando apenas os dias sem
+  // nada marcado. Dias da semana que caem fora de AGENDA_YEAR (virada do
+  // ano) não têm dados e ficam de fora do resumo.
+  const weekEntries = agendaWeekDates(now)
+    .filter(d => d.getFullYear() === AGENDA_YEAR)
+    .map(d => {
+      const key = agendaKeyFor(d.getMonth(), d.getDate());
+      const info = AGENDA_DATA_INFO[key];
+      const note = agendaNotesCache[key];
+      if (!info && !note) return null;
+      const parts = [];
+      if (info) parts.push(info.label.replace(/\.$/, ''));
+      if (note) parts.push(note);
+      return {
+        isToday: key === todayKey,
+        label: AGENDA_WEEKDAY_ABBR[d.getDay()] + ' ' + String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0'),
+        text: parts.join(' • ')
+      };
+    })
+    .filter(Boolean);
+
+  if (!weekEntries.length) {
+    if (forceShow) agendaShowTodayNotification('Agenda Boa Vista', 'Nada marcado para esta semana.');
     return;
   }
-  const parts = [];
-  if (info) parts.push(info.label.replace(/\.$/, ''));
-  if (note) parts.push(note);
-  const body = parts.join(' • ');
 
-  const notifiedKey = 'argo_agenda_notified_' + key;
-  const notifiedHash = btoa(unescape(encodeURIComponent(body))).slice(0, 60);
+  // O dia de hoje vem primeiro e em destaque (📌 HOJE); o resto da semana
+  // segue depois, em ordem cronológica, só com os dias que têm algo marcado.
+  const todayEntry = weekEntries.find(e => e.isToday);
+  const restEntries = weekEntries.filter(e => !e.isToday);
+
+  const bodyLines = [`📌 HOJE: ${todayEntry ? todayEntry.text : 'sem anotações'}`];
+  if (restEntries.length) {
+    bodyLines.push('Resto da semana: ' + restEntries.map(e => `${e.label} — ${e.text}`).join(' · '));
+  }
+  const body = bodyLines.join('\n');
+
+  const notifiedKey = 'argo_agenda_notified_' + todayKey;
+  // Sem corte no hash: o resumo agora pode ter vários dias (mais texto que
+  // um único dia), e cortar em poucos caracteres arriscava duas semanas
+  // diferentes caírem no mesmo prefixo e a notificação real deixar de
+  // aparecer.
+  const notifiedHash = btoa(unescape(encodeURIComponent(body)));
   if (!forceShow && localStorage.getItem(notifiedKey) === notifiedHash) return;
 
-  agendaShowTodayNotification('Agenda Boa Vista — Hoje', body);
+  agendaShowTodayNotification('Agenda Boa Vista — Semana', body);
   localStorage.setItem(notifiedKey, notifiedHash);
 }
 
