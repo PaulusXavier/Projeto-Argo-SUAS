@@ -3047,9 +3047,10 @@
     background-position: center center;
     /* Antes era "cover", o que ampliava bastante o desenho (proporção
        320x230) para preencher a tela toda, sobretudo em celulares na
-       vertical. Um tamanho menor, fixo, deixa o desenho mais discreto,
+       vertical. Um tamanho fixo, entre esses dois extremos, deixa o
+       desenho visível sem esticar demais nem ficar pequeno demais,
        com a cor sólida (--brand-secondary) preenchendo o restante. */
-    background-size: min(60%, 640px) auto;
+    background-size: min(100%, 1000px) auto;
     display: flex;
     align-items: center;
     align-items: safe center;
