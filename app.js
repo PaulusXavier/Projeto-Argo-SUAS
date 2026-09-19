@@ -2862,7 +2862,10 @@ function initTranslatorPanel() {
    ============================================================ */
 const MAPA_REDE_CDN = {
   leafletJs: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
-  leafletCss: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'
+  leafletCss: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css',
+  clusterJs: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js',
+  clusterCss: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css',
+  clusterCssDefault: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css'
 };
 
 const mapaRedeScriptPromises = {};
@@ -2886,7 +2889,10 @@ function mapaRedeLoadCss(url) {
 }
 async function ensureLeaflet() {
   mapaRedeLoadCss(MAPA_REDE_CDN.leafletCss);
+  mapaRedeLoadCss(MAPA_REDE_CDN.clusterCss);
+  mapaRedeLoadCss(MAPA_REDE_CDN.clusterCssDefault);
   if (!window.L) await mapaRedeLoadScript(MAPA_REDE_CDN.leafletJs);
+  if (!window.L.markerClusterGroup) await mapaRedeLoadScript(MAPA_REDE_CDN.clusterJs);
   return window.L;
 }
 
@@ -2957,7 +2963,83 @@ function mapaRedeCrasCreasIcon(colorHex) {
   });
 }
 
+// Cor "dominante" de um cluster: conta a cor de cada marcador agrupado nele
+// (guardada em marker.options.categoryColor, ver abaixo) e usa a mais
+// frequente. Sem isso, o círculo do cluster ficava sempre cinza/verde/laranja
+// genérico (estilo padrão do plugin), sem nenhuma relação com a cor da
+// categoria — a cor por categoria só aparecia quando o pino estava sozinho,
+// sem se agrupar, o que é raro na maioria dos zooms.
+function mapaRedeClusterIcon(cluster) {
+  const counts = {};
+  cluster.getAllChildMarkers().forEach(m => {
+    const c = (m.options && m.options.categoryColor) || MAP_CATEGORY_FALLBACK_COLOR;
+    counts[c] = (counts[c] || 0) + 1;
+  });
+  const dominant = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+  return L.divIcon({
+    className: 'mapa-rede-cluster',
+    html: `<div style="background:${dominant};">${cluster.getChildCount()}</div>`,
+    iconSize: [38, 38]
+  });
+}
+
 let mapaRedeCrasCreasLayer = null;
+
+// Uma cor por categoria (mesma lista usada no filtro do Mapa da Rede,
+// CATEGORY_LABELS_PRINT sem "cas"/"cras"/"interior"), para os pinos dos
+// equipamentos do diretório principal — que até aqui usavam todos o mesmo
+// marcador azul padrão do Leaflet, dificultando identificar de longe o tipo
+// de equipamento quando várias categorias aparecem juntas no mapa (opção
+// "Todas as categorias").
+const MAP_CATEGORY_COLORS = {
+  hospitalar:        '#e63946', // Rede Hospitalar e Atenção Básica
+  saude:              '#9b5de5', // Rede de Atenção Psicossocial (RAPS)
+  tea:                '#118ab2', // Rede de Atenção à Pessoa com Deficiência e TEA
+  social:             '#2a9d8f', // Proteção Social Básica e Especial (SUAS)
+  educacao:           '#f4a261', // Educação Básica
+  juridico:           '#264653', // Poder Judiciário
+  conselho:           '#e76f51', // Conselho Tutelar
+  delegacias:         '#023e8a', // Segurança Pública
+  bancos:             '#40916c', // Rede Bancária e Correspondentes
+  previdencia:        '#7209b7', // Previdência Social (INSS)
+  trabalho:           '#bc6c25', // Trabalho, Emprego e Renda
+  habitacao:          '#6a4c93', // Habitação e Moradia
+  mobilidade:         '#457b9d', // Mobilidade Urbana
+  informes:           '#ffb703', // Programas, Projetos e Serviços
+  documentacao:       '#8338ec', // Documentação Civil e Fiscal
+  idoso:              '#ff6b6b', // Pessoa Idosa
+  migracao:           '#06a77d', // Serviço de Migração
+  alimentar:          '#f77f00', // Segurança Alimentar e Nutricional
+  mulher:             '#d90429', // Enfrentamento à Violência contra a Mulher
+  cultura:            '#c9184a', // Cultura, Esporte e Lazer
+  defesacivil:        '#fb8500', // Defesa Civil e Situações de Emergência
+  conselhosdireitos:  '#583d72'  // Conselhos Municipais de Direitos
+};
+const MAP_CATEGORY_FALLBACK_COLOR = '#4363d8';
+
+// Cor de um item: pega a primeira categoria dele que já tem cor definida
+// (um item pode ter mais de uma categoria); se nenhuma tiver, usa o azul
+// padrão acima.
+function mapaRedeItemColor(item) {
+  const cat = (item.cat || []).find(c => MAP_CATEGORY_COLORS[c]);
+  return cat ? MAP_CATEGORY_COLORS[cat] : MAP_CATEGORY_FALLBACK_COLOR;
+}
+
+// Mesmo desenho de pino em gota usado para CRAS/CREAS, reaproveitado para os
+// equipamentos do diretório principal, cada um na cor da sua categoria.
+function mapaRedeCategoryIcon(colorHex) {
+  return L.divIcon({
+    className: 'mapa-rede-item-icon',
+    html: `
+      <svg width="26" height="36" viewBox="0 0 30 42" xmlns="http://www.w3.org/2000/svg">
+        <path d="M15 0C6.7 0 0 6.7 0 15c0 11 15 27 15 27s15-16 15-27C30 6.7 23.3 0 15 0z" fill="${colorHex}" stroke="#fff" stroke-width="2"/>
+        <circle cx="15" cy="15" r="5.5" fill="#fff"/>
+      </svg>`,
+    iconSize: [26, 36],
+    iconAnchor: [13, 34],
+    popupAnchor: [0, -30]
+  });
+}
 
 /* ==========================================================================
    ABA "NOTÍCIAS DO MDS"
@@ -3257,7 +3339,15 @@ function renderMapCard() {
          deles como um quadrado branco indesejado — por isso é removida
          aqui, com seletor mais específico para vencer o CSS do Leaflet. */
       .leaflet-div-icon.mapa-rede-crascreas-icon,
+      .leaflet-div-icon.mapa-rede-item-icon,
+      .leaflet-div-icon.mapa-rede-cluster,
       .leaflet-div-icon.mapa-rede-user-icon { background: transparent; border: none; }
+      .mapa-rede-cluster div {
+        width: 38px; height: 38px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-weight: 800; font-size: 0.82rem;
+        border: 2px solid #fff; box-shadow: 0 1px 5px rgba(0,0,0,0.35);
+      }
     </style>
     <div class="tech-card mapa-rede-card">
       <div class="card-top">
@@ -3270,7 +3360,7 @@ function renderMapCard() {
       <div class="card-body">
         <div class="tradutor-privacy">
           ${ICONS.info}
-          <span>O mapa não procura endereços sozinho. Os pinos de equipamentos usam endereços que já foram localizados e ficam guardados neste navegador (o serviço gratuito Nominatim/OpenStreetMap só é consultado quando você usa "Ordenar por proximidade" na lista). As unidades de CRAS e CREAS de Boa Vista aparecem sempre, com coordenadas exatas.</span>
+          <span>O mapa não procura endereços sozinho. Os pinos de equipamentos usam endereços que já foram localizados e ficam guardados neste navegador (o serviço gratuito Nominatim/OpenStreetMap só é consultado quando você usa "Ordenar por proximidade" na lista). As unidades de CRAS e CREAS de Boa Vista aparecem sempre, com coordenadas exatas. Cada categoria tem uma cor própria, e pinos próximos se agrupam em um número — toque no número para abrir o grupo.</span>
         </div>
 
         <div style="display:flex; flex-wrap:wrap; gap:0.6rem; align-items:center; margin:0.75rem 0;">
@@ -3290,6 +3380,8 @@ function renderMapCard() {
         <div id="mapaRedeStatus" style="font-size:0.85rem; color:var(--text-muted, #64748b); margin-bottom:0.5rem;"></div>
 
         <div id="mapaRedeMapContainer" style="height:480px; border-radius:12px; overflow:hidden; border:1px solid #dbe3ea; background:#eef2f5;"></div>
+
+        <div id="mapaRedeLegend" style="display:flex; flex-wrap:wrap; gap:0.5rem 0.9rem; margin-top:0.7rem; font-size:0.78rem; color:#475569;"></div>
 
         <div id="mapaRedeNearbyList" style="margin-top:0.85rem;"></div>
       </div>
@@ -3331,8 +3423,18 @@ async function initMapPanel() {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">colaboradores do OpenStreetMap</a>'
   }).addTo(mapaRedeMap);
 
-  mapaRedeMarkersLayer = L.layerGroup().addTo(mapaRedeMap);
-  mapaRedeCrasCreasLayer = L.layerGroup().addTo(mapaRedeMap);
+  mapaRedeMarkersLayer = L.markerClusterGroup({
+    maxClusterRadius: 55,
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false,
+    iconCreateFunction: mapaRedeClusterIcon
+  }).addTo(mapaRedeMap);
+  mapaRedeCrasCreasLayer = L.markerClusterGroup({
+    maxClusterRadius: 55,
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false,
+    iconCreateFunction: mapaRedeClusterIcon
+  }).addTo(mapaRedeMap);
 
   if (proximityState.active) {
     mapaRedeShowUserMarker(L, proximityState.lat, proximityState.lon);
@@ -3415,13 +3517,17 @@ async function renderMapaRedeMarkers() {
   // diretório principal (coordenadas por geocodificação) com as unidades de
   // CRAS/CREAS (coordenadas exatas, sem precisar consultar nada).
   const nearbySource = [];
+  const legendCatsSeen = new Set();
 
   items.forEach(item => {
     const coords = cache[item.id];
     if (!coords) return;
     nearbySource.push({ name: item.name, lat: coords.lat, lon: coords.lon });
     bounds.push([coords.lat, coords.lon]);
-    const marker = L.marker([coords.lat, coords.lon]);
+    const itemCat = (item.cat || []).find(c => MAP_CATEGORY_COLORS[c]);
+    if (itemCat) legendCatsSeen.add(itemCat);
+    const itemColor = mapaRedeItemColor(item);
+    const marker = L.marker([coords.lat, coords.lon], { icon: mapaRedeCategoryIcon(itemColor), categoryColor: itemColor });
     const distanceLabel = proximityState.active
       ? (() => {
           const km = haversineKm(proximityState.lat, proximityState.lon, coords.lat, coords.lon);
@@ -3440,7 +3546,8 @@ async function renderMapaRedeMarkers() {
       .forEach(unit => {
         nearbySource.push({ name: unit.name, lat: unit.lat, lon: unit.lng });
         bounds.push([unit.lat, unit.lng]);
-        const marker = L.marker([unit.lat, unit.lng], { icon: mapaRedeCrasCreasIcon(MAPA_REDE_COLOR_HEX[unit.color] || '#0067a3') });
+        const unitColor = MAPA_REDE_COLOR_HEX[unit.color] || '#0067a3';
+        const marker = L.marker([unit.lat, unit.lng], { icon: mapaRedeCrasCreasIcon(unitColor), categoryColor: unitColor });
         const distanceLabel = proximityState.active
           ? (() => {
               const km = haversineKm(proximityState.lat, proximityState.lon, unit.lat, unit.lng);
@@ -3459,6 +3566,29 @@ async function renderMapaRedeMarkers() {
   }
 
   mapaRedeSetStatus('');
+
+  const legendEl = document.getElementById('mapaRedeLegend');
+  if (legendEl) {
+    const swatch = (colorHex, label) => `
+      <span style="display:inline-flex; align-items:center; gap:0.3rem;">
+        <span style="width:0.8rem; height:0.8rem; border-radius:50%; background:${colorHex}; border:1px solid rgba(0,0,0,0.15); display:inline-block;"></span>
+        ${escapeHtml(label)}
+      </span>`;
+    const multiSwatch = (colorsHex, label) => `
+      <span style="display:inline-flex; align-items:center; gap:0.25rem;">
+        <span style="display:inline-flex; gap:1px;">
+          ${colorsHex.map(c => `<span style="width:0.5rem; height:0.8rem; border-radius:2px; background:${c}; border:1px solid rgba(0,0,0,0.15); display:inline-block;"></span>`).join('')}
+        </span>
+        ${escapeHtml(label)}
+      </span>`;
+    const chips = [...legendCatsSeen]
+      .sort((a, b) => (CATEGORY_LABELS_PRINT[a] || a).localeCompare(CATEGORY_LABELS_PRINT[b] || b, 'pt-BR'))
+      .map(c => swatch(MAP_CATEGORY_COLORS[c], CATEGORY_LABELS_PRINT[c] || c));
+    if (mapaRedeCrasCreasLayer && (!showCrasCreas || showCrasCreas.checked) && (UNITS_CRAS_CREAS.cras.length + UNITS_CRAS_CREAS.creas.length)) {
+      chips.push(multiSwatch(['#d63e2a', '#38aadd', '#72b026'], 'CRAS/CREAS (cor varia por unidade)'));
+    }
+    legendEl.innerHTML = chips.join('');
+  }
 
   if (proximityState.active) bounds.push([proximityState.lat, proximityState.lon]);
   if (bounds.length) {
