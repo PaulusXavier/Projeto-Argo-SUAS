@@ -3054,38 +3054,39 @@
     overflow-x: hidden;
   }
 
-  /* Uma única constelação no lado esquerdo. O pseudo-elemento termina antes
-     da área reservada ao barco do canto direito, portanto as duas imagens não
-     se sobrepõem. */
+  /* Uma única constelação no canto inferior esquerdo. A área fica separada
+     do barco, que ocupa o canto superior direito. */
   #loginScreen::before {
     content: "";
     position: fixed;
-    inset: 0 58% 0 0;
+    inset: 48% 58% 0 0;
     z-index: 0;
     background-image:
-      radial-gradient(130% 85% at 50% 28%, rgba(0, 145, 194, 0.22), transparent 60%),
+      radial-gradient(130% 85% at 50% 60%, rgba(0, 174, 232, 0.34), transparent 60%),
       url('argo-constellation-bg.svg');
     background-repeat: no-repeat, no-repeat;
-    background-position: center center, left center;
+    background-position: center center, left bottom;
     background-size: cover, min(900px, 100%) auto;
-    filter: brightness(1.4) saturate(1.2);
+    filter: brightness(2.05) contrast(1.22) saturate(1.55) drop-shadow(0 0 2px rgba(190, 244, 255, 0.95)) drop-shadow(0 0 6px rgba(0, 174, 232, 0.7));
     pointer-events: none;
   }
 
   @media (prefers-color-scheme: dark) {
     html:not([data-theme="light"]) #loginScreen::before {
-      filter: brightness(1.7) saturate(1.25);
+      filter: brightness(2.45) contrast(1.28) saturate(1.7) drop-shadow(0 0 3px rgba(210, 248, 255, 1)) drop-shadow(0 0 9px rgba(41, 171, 226, 0.8));
     }
   }
 
   html[data-theme="dark"] #loginScreen::before {
-    filter: brightness(1.7) saturate(1.25);
+    filter: brightness(2.45) contrast(1.28) saturate(1.7) drop-shadow(0 0 3px rgba(210, 248, 255, 1)) drop-shadow(0 0 9px rgba(41, 171, 226, 0.8));
   }
 
-  /* No celular o barco usa quase toda a largura; removemos a constelação para
-     garantir que ela nunca fique sobre a imagem. */
   @media (max-width: 760px) {
-    #loginScreen::before { display: none; }
+    /* Mantém os elementos em cantos opostos também em telas estreitas. */
+    #loginScreen::before {
+      inset: 62% 42% 0 0;
+      background-size: cover, min(520px, 100%) auto;
+    }
   }
 
   #loginScreen[hidden] { display: none; }
@@ -3533,8 +3534,8 @@
   #loginScreen::after {
     content: "";
     position: fixed;
+    top: -2vh;
     right: -2vw;
-    bottom: -2vh;
     width: min(56vw, 700px);
     aspect-ratio: 900 / 714;
     background: url('argo-navis-historico.jpg') no-repeat center / contain;
@@ -3579,7 +3580,7 @@
 
   /* Celular: navio um pouco maior em relação à tela e mais discreto */
   @media (max-width: 760px) {
-    #loginScreen::after { width: min(120vw, 520px); right: -14vw; bottom: 0; opacity: 0.6; }
+    #loginScreen::after { width: min(78vw, 360px); top: -3vh; right: -10vw; opacity: 0.6; }
     body::after { width: min(120vw, 520px); right: -14vw; bottom: 0; opacity: 0.16; }
     @media (prefers-color-scheme: dark) {
       html:not([data-theme="light"]) body::after { opacity: 0.4; }
