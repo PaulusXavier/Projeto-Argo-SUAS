@@ -467,7 +467,7 @@ const DATA = [
     hours: "Almoço gratuito, segunda a sexta-feira, das 11h às 13h30 (encerra quando as refeições do dia se esgotam)",
     phones: ["(95) 3627-7995 (SETRABES - cadastro e informações)"],
     services: "Almoço gratuito para famílias previamente cadastradas na SETRABES, em situação de vulnerabilidade social.",
-    desc: "Sexta e última unidade, com 500 refeições diárias, atendendo famílias cadastradas dos bairros Centro, Calungá, 13 de Setembro, Marechal Rondon, Centenário, Cinturão Verde, Pricumã, São Vicente, Liberdade, Mecejana, São Pedro, São Francisco, Bairro dos Estados, Aparecida, Caçari, Paraviana, 31 de Março e Canarinho.<br>Desde a implantação do programa (2024) até julho de 2025, as seis unidades já haviam servido cerca de 495 mil refeições, atendendo até 3.500 pessoas por dia em Boa Vista.<br>Fonte: SETRABES/Governo de Roraima e Folha BV (2024-2025).",
+    desc: "Sexta e última unidade, com 500 refeições diárias, atendendo famílias cadastradas dos bairros Centro, Calungá, 13 de Setembro, Marechal Rondon, Centenário, Cinturão Verde, Pricumã, São Vicente, Liberdade, Mecejana, São Pedro, São Francisco, Bairro dos Estados, Aparecida, Caçari, Paraviana, 31 de Março e Canarinho.<br>Em julho de 2025, as seis unidades já haviam servido cerca de 495 mil refeições, atendendo até 3.500 pessoas por dia; em julho de 2026, o Governo de Roraima informou que o programa já atende mais de 20 mil pessoas ao todo nas seis unidades.<br>Fonte: SETRABES/Governo de Roraima e Folha BV (2024-2025); Governo de Roraima (jul/2026).",
     website: "https://setrabes.rr.gov.br/"
   },
   {
