@@ -158,6 +158,12 @@ function initAuth() {
         errorEl.classList.remove('visible');
         sessionEncKey = await deriveSessionKey(value);
         unlockApp();
+        // Saudação de abertura do Argo (bom dia/boa tarde/boa noite) +
+        // pergunta se a pessoa quer ver as notificações da agenda da
+        // semana (ver bloco "Saudação de Abertura" mais abaixo). Um
+        // pequeno atraso deixa a entrada do app respirar antes do
+        // cartão de saudação aparecer por cima.
+        setTimeout(() => { if (typeof argoShowGreeting === 'function') argoShowGreeting(); }, 450);
         // Monta a lista de 374 fichas (render()) só DEPOIS que o navegador
         // já pintou a tela desbloqueada (ver comentário em unlockApp) —
         // antes, esse processamento pesado rodava competindo com o próprio
@@ -206,6 +212,128 @@ function initAuth() {
 
 function logout() {
   lockApp();
+}
+
+/* ===================== Saudação de Abertura (Argo) =====================
+   Ao desbloquear o app com sucesso, o Argo se apresenta com uma saudação
+   que muda conforme o horário do aparelho (bom dia / boa tarde / boa
+   noite) e pergunta se a pessoa quer ver as notificações da agenda desta
+   semana. Se a resposta for "sim", as notificações aparecem num banner
+   fixo logo abaixo do cabeçalho.
+
+   As notificações reaproveitam a MESMA fonte de dados já usada pelo card
+   "Agenda Boa Vista 2026" (agendaBuildWeekSummary, definida mais abaixo
+   neste arquivo): feriados/pagamentos fixos do ano (AGENDA_DATA_INFO) e
+   anotações próprias sincronizadas (agendaNotesCache) — por isso o banner
+   já funciona mesmo sem o usuário nunca ter aberto a aba "Agenda 2026". */
+
+function argoGreetingWord() {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'Bom dia';
+  if (hour >= 12 && hour < 18) return 'Boa tarde';
+  return 'Boa noite';
+}
+
+function argoEnsureGreetingUI() {
+  if (document.getElementById('argoGreetingModal')) return;
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <div id="argoGreetingModal" class="argo-greeting-overlay" role="dialog" aria-modal="true" aria-labelledby="argoGreetingTitle" onclick="if(event.target==this) argoAnswerGreeting(false)">
+      <div class="argo-greeting-box">
+        <div class="argo-greeting-ship" aria-hidden="true">⛵</div>
+        <h3 id="argoGreetingTitle">Olá!</h3>
+        <p>Quer ver as notificações da agenda desta semana?</p>
+        <div class="argo-greeting-btns">
+          <button type="button" class="argo-greeting-yes" onclick="argoAnswerGreeting(true)">Sim, ver notificações</button>
+          <button type="button" class="argo-greeting-no" onclick="argoAnswerGreeting(false)">Agora não</button>
+        </div>
+      </div>
+    </div>
+    <div id="argoNotifBanner" class="argo-notif-banner" role="status" aria-live="polite" hidden>
+      <div class="argo-notif-head">
+        <span class="argo-notif-icon" aria-hidden="true">🔔</span>
+        <strong>Argo — Notificações da agenda</strong>
+        <button type="button" class="argo-notif-close" onclick="argoCloseNotifBanner()" aria-label="Fechar notificações">✕</button>
+      </div>
+      <div id="argoNotifBody" class="argo-notif-body"></div>
+    </div>
+    <style>
+      .argo-greeting-overlay { display:none; position:fixed; inset:0; background:rgba(15,23,42,0.55); z-index:1200; align-items:center; justify-content:center; padding:20px; }
+      .argo-greeting-overlay.visible { display:flex; }
+      .argo-greeting-box { background:var(--bg-card, #fff); color:var(--text-main,#1a1c1e); width:100%; max-width:360px; border-radius:16px; padding:26px 24px; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,0.32); border-top:5px solid var(--brand-primary, #0056a3); animation:argoGreetingPop .25s ease; }
+      @keyframes argoGreetingPop { from { transform:translateY(10px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+      .argo-greeting-ship { font-size:34px; margin-bottom:6px; }
+      .argo-greeting-box h3 { margin:0 0 8px 0; font-size:20px; }
+      .argo-greeting-box p { margin:0 0 20px 0; font-size:14px; color:var(--text-muted,#64748b); line-height:1.5; }
+      .argo-greeting-btns { display:flex; flex-direction:column; gap:10px; }
+      .argo-greeting-yes { background:var(--brand-primary,#0056a3); color:#fff; border:none; padding:12px; border-radius:10px; font-weight:700; cursor:pointer; font-size:14px; }
+      .argo-greeting-yes:hover { filter:brightness(1.08); }
+      .argo-greeting-no { background:transparent; color:var(--text-muted,#64748b); border:1px solid var(--border-ui,#e2e8f0); padding:12px; border-radius:10px; font-weight:600; cursor:pointer; font-size:14px; }
+      .argo-notif-banner { position:relative; z-index:5; margin:14px auto 0 auto; max-width:1160px; padding:0 20px; animation:argoGreetingPop .25s ease; }
+      .argo-notif-banner .argo-notif-head { display:flex; align-items:center; gap:8px; background:var(--brand-primary,#0056a3); color:#fff; padding:10px 16px; border-radius:12px 12px 0 0; font-size:13px; }
+      .argo-notif-icon { font-size:15px; }
+      .argo-notif-close { margin-left:auto; background:rgba(255,255,255,0.18); border:none; color:#fff; width:22px; height:22px; border-radius:50%; cursor:pointer; line-height:1; }
+      .argo-notif-close:hover { background:rgba(255,255,255,0.3); }
+      .argo-notif-body { background:var(--bg-card,#fff); border:1px solid var(--border-ui,#e2e8f0); border-top:none; border-radius:0 0 12px 12px; padding:14px 16px; font-size:13px; color:var(--text-main,#1a1c1e); line-height:1.6; box-shadow:var(--shadow,0 4px 20px rgba(0,0,0,0.06)); }
+      .argo-notif-today { font-weight:700; margin-bottom:6px; }
+      .argo-notif-rest-label { font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted,#64748b); margin:10px 0 4px 0; }
+      .argo-notif-row { padding:4px 0; border-top:1px solid var(--border-ui,#f1f5f9); }
+      .argo-notif-row:first-child { border-top:none; }
+      @media (max-width: 600px) { .argo-greeting-box { padding:22px 18px; } }
+    </style>
+  `;
+  document.body.appendChild(wrap);
+}
+
+// Mostra o cartão de saudação. Chamada uma vez a cada desbloqueio bem-
+// sucedido (ver submit do loginForm, em initAuth). O Argo se identifica
+// pelo próprio nome ao se apresentar.
+function argoShowGreeting() {
+  argoEnsureGreetingUI();
+  const modal = document.getElementById('argoGreetingModal');
+  const title = document.getElementById('argoGreetingTitle');
+  if (!modal || !title) return;
+  title.textContent = argoGreetingWord() + '! Eu sou o Argo 🧭';
+  modal.classList.add('visible');
+}
+
+function argoAnswerGreeting(wantsNotifications) {
+  const modal = document.getElementById('argoGreetingModal');
+  if (modal) modal.classList.remove('visible');
+  if (wantsNotifications) argoShowNotifBanner();
+}
+
+// Monta o banner de notificações da agenda a partir de agendaBuildWeekSummary
+// (mesma função usada pelo card "Agenda Boa Vista 2026"): feriados/
+// pagamentos fixos do ano + anotações próprias já sincronizadas, com o dia
+// de hoje em destaque e o resto da semana logo abaixo.
+function argoShowNotifBanner() {
+  argoEnsureGreetingUI();
+  const banner = document.getElementById('argoNotifBanner');
+  const body = document.getElementById('argoNotifBody');
+  if (!banner || !body) return;
+
+  const summary = (typeof agendaBuildWeekSummary === 'function') ? agendaBuildWeekSummary(new Date()) : null;
+
+  if (!summary) {
+    body.innerHTML = '<div class="argo-notif-row">Não há dados de agenda cadastrados para o ano atual.</div>';
+  } else if (!summary.weekEntries.length) {
+    body.innerHTML = '<div class="argo-notif-row">Nada marcado para esta semana na agenda.</div>';
+  } else {
+    const rest = summary.restEntries
+      .map(e => `<div class="argo-notif-row"><strong>${escapeHtml(e.label)}</strong> — ${escapeHtml(e.text)}</div>`)
+      .join('');
+    body.innerHTML =
+      `<div class="argo-notif-today">📌 Hoje: ${escapeHtml(summary.todayEntry ? summary.todayEntry.text : 'sem anotações')}</div>` +
+      (rest ? `<div class="argo-notif-rest-label">Resto da semana</div>${rest}` : '');
+  }
+
+  banner.hidden = false;
+}
+
+function argoCloseNotifBanner() {
+  const banner = document.getElementById('argoNotifBanner');
+  if (banner) banner.hidden = true;
 }
 
 // Lista única de onde ficam os dados pessoais de usuários atendidos
