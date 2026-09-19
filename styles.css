@@ -3054,38 +3054,20 @@
     overflow-x: hidden;
   }
 
-  /* Constelação de Argo Navis (argo-constellation-bg.svg) preenchendo a tela
-     TODA e ampliada além do "cover" (zoom extra, abaixo), num pseudo-elemento
-     próprio por trás do card — antes o desenho tinha um tamanho fixo
-     (min(100%, 1000px) auto), o que deixava boa parte da tela em cor sólida,
-     sobretudo em celulares na vertical, e escondia a maior parte das
-     estrelas. Um leve brilho (filter) e um glow radial azul realçam as
-     estrelas nessa versão maior, já que o desenho foi pensado para ser
-     sutil quando usado como marca d'água atrás de conteúdo (fundo do app,
-     painel esquerdo do login). */
-  /* Constelação de Argo Navis (argo-constellation-bg.svg) repetida em mosaico
-     pela tela TODA, num pseudo-elemento próprio por trás do card — antes
-     era uma única cópia grande (quase "cover"), concentrando o desenho no
-     meio da tela e deixando o resto em cor sólida; agora as estrelas ficam
-     espalhadas por toda a tela de login, do mesmo jeito que no fundo do
-     app. Um leve brilho (filter) e um glow radial azul realçam as estrelas
-     nessa versão, já que o desenho foi pensado para ser sutil quando usado
-     como marca d'água atrás de conteúdo (fundo do app, painel esquerdo do
-     login). */
+  /* Uma única constelação no lado esquerdo. O pseudo-elemento termina antes
+     da área reservada ao barco do canto direito, portanto as duas imagens não
+     se sobrepõem. */
   #loginScreen::before {
     content: "";
     position: fixed;
-    inset: 0;
+    inset: 0 58% 0 0;
     z-index: 0;
     background-image:
       radial-gradient(130% 85% at 50% 28%, rgba(0, 145, 194, 0.22), transparent 60%),
       url('argo-constellation-bg.svg');
-    background-repeat: no-repeat, repeat;
-    background-position: center center, top left;
-    /* A camada do glow (1º valor) continua em "cover" normal; a camada do
-       SVG (2º valor) repete em blocos pequenos, para espalhar a constelação
-       pela tela inteira em vez de mostrar uma só cópia grande no centro. */
-    background-size: cover, 300px 216px;
+    background-repeat: no-repeat, no-repeat;
+    background-position: center center, left center;
+    background-size: cover, min(900px, 100%) auto;
     filter: brightness(1.4) saturate(1.2);
     pointer-events: none;
   }
@@ -3098,6 +3080,12 @@
 
   html[data-theme="dark"] #loginScreen::before {
     filter: brightness(1.7) saturate(1.25);
+  }
+
+  /* No celular o barco usa quase toda a largura; removemos a constelação para
+     garantir que ela nunca fique sobre a imagem. */
+  @media (max-width: 760px) {
+    #loginScreen::before { display: none; }
   }
 
   #loginScreen[hidden] { display: none; }
