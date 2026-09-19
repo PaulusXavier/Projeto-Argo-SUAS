@@ -3524,3 +3524,72 @@
   #appRoot[data-locked="true"] {
     display: none;
   }
+
+
+  /* ===================== Navio Argo no canto direito do plano de fundo =====================
+     A ilustração do navio (argo-navis-historico.jpg) fica ancorada no canto
+     inferior direito, atrás do conteúdo, tanto na tela de login quanto no
+     aplicativo. Uma máscara radial esmaece as bordas da imagem, para que o
+     retângulo da foto não apareça sobre o fundo. */
+
+  /* --- Tela de login (fundo escuro): o navio fica atrás do card --- */
+  #loginScreen::after {
+    content: "";
+    position: fixed;
+    right: -2vw;
+    bottom: -2vh;
+    width: min(56vw, 700px);
+    aspect-ratio: 900 / 714;
+    background: url('argo-navis-historico.jpg') no-repeat center / contain;
+    -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 52%, transparent 100%);
+    mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 52%, transparent 100%);
+    opacity: 0.85;
+    mix-blend-mode: screen;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* --- Aplicativo: camada fixa atrás de todo o conteúdo (z-index negativo) --- */
+  body::after {
+    content: "";
+    position: fixed;
+    right: -2vw;
+    bottom: -2vh;
+    width: min(56vw, 680px);
+    aspect-ratio: 900 / 714;
+    background: url('argo-navis-historico.jpg') no-repeat center / contain;
+    -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 52%, transparent 100%);
+    mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 52%, transparent 100%);
+    /* Tema claro: "multiply" faz o azul-marinho da imagem virar uma marca
+       d'água suave sobre o fundo claro. */
+    opacity: 0.2;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    html:not([data-theme="light"]) body::after {
+      opacity: 0.55;
+      mix-blend-mode: screen;
+    }
+  }
+
+  html[data-theme="dark"] body::after {
+    opacity: 0.55;
+    mix-blend-mode: screen;
+  }
+
+  /* Celular: navio um pouco maior em relação à tela e mais discreto */
+  @media (max-width: 760px) {
+    #loginScreen::after { width: min(120vw, 520px); right: -14vw; bottom: 0; opacity: 0.6; }
+    body::after { width: min(120vw, 520px); right: -14vw; bottom: 0; opacity: 0.16; }
+    @media (prefers-color-scheme: dark) {
+      html:not([data-theme="light"]) body::after { opacity: 0.4; }
+    }
+    html[data-theme="dark"] body::after { opacity: 0.4; }
+  }
+
+  @media print {
+    #loginScreen::after, body::after { display: none; }
+  }
