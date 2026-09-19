@@ -109,7 +109,7 @@
     background-color: var(--bg-main);
     background-image:
       radial-gradient(120% 60% at 50% 0%, rgba(15, 74, 65, 0.07) 0%, rgba(15, 74, 65, 0) 62%),
-      url('argo-constellation-bg.svg'),
+      url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20480%2096%22%20width%3D%22480%22%20height%3D%2296%22%3E%0A%3Cpath%20d%3D%22M0%2062%20C30%2042%2030%2082%2060%2062%20C90%2042%2090%2082%20120%2062%20C150%2042%20150%2082%20180%2062%20C210%2042%20210%2082%20240%2062%20C270%2042%20270%2082%20300%2062%20C330%2042%20330%2082%20360%2062%20C390%2042%20390%2082%20420%2062%20C450%2042%20450%2082%20480%2062%22%20fill%3D%22none%22%20stroke%3D%22%230091C2%22%20stroke-width%3D%222.2%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.24%22%2F%3E%0A%3Cpath%20d%3D%22M0%2038%20C30%2022%2030%2054%2060%2038%20C90%2022%2090%2054%20120%2038%20C150%2022%20150%2054%20180%2038%20C210%2022%20210%2054%20240%2038%20C270%2022%20270%2054%20300%2038%20C330%2022%20330%2054%20360%2038%20C390%2022%20390%2054%20420%2038%20C450%2022%20450%2054%20480%2038%22%20fill%3D%22none%22%20stroke%3D%22%23E8AC3D%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.18%22%2F%3E%0A%3C%2Fsvg%3E"),
       url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgNDgiIHdpZHRoPSIyNDAiIGhlaWdodD0iNDgiPgo8cGF0aCBkPSJNMCwzMCBDMTUsMjEgMTUsMzkgMzAsMzAgQzQ1LDM5IDQ1LDIxIDYwLDMwIEM3NSwyMSA3NSwzOSA5MCwzMCBDMTA1LDM5IDEwNSwyMSAxMjAsMzAgQzEzNSwyMSAxMzUsMzkgMTUwLDMwIEMxNjUsMzkgMTY1LDIxIDE4MCwzMCBDMTk1LDIxIDE5NSwzOSAyMTAsMzAgQzIyNSwzOSAyMjUsMjEgMjQwLDMwIiBmaWxsPSJub25lIiBzdHJva2U9IiMwMDkxQzIiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuMDkiLz4KPHBhdGggZD0iTTAsMTQgQzE1LDggMTUsMjAgMzAsMTQgQzQ1LDIwIDQ1LDggNjAsMTQgQzc1LDggNzUsMjAgOTAsMTQgQzEwNSwyMCAxMDUsOCAxMjAsMTQgQzEzNSw4IDEzNSwyMCAxNTAsMTQgQzE2NSwyMCAxNjUsOCAxODAsMTQgQzE5NSw4IDE5NSwyMCAyMTAsMTQgQzIyNSwyMCAyMjUsOCAyNDAsMTQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0U4QUMzRCIgc3Ryb2tlLXdpZHRoPSIxLjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4xMCIvPgo8L3N2Zz4=');
     background-repeat: no-repeat, repeat, repeat;
     background-position: top center, top left, top left;
@@ -3054,41 +3054,34 @@
     overflow-x: hidden;
   }
 
-  /* Uma única constelação no canto inferior esquerdo. A área fica separada
-     do barco, que ocupa o canto superior direito. */
+  /* Apenas ondas suaves, maiores, no canto inferior esquerdo. */
   #loginScreen::before {
     content: "";
     position: fixed;
     inset: 48% 58% 0 0;
     z-index: 0;
-    background-image:
-      radial-gradient(130% 85% at 50% 60%, rgba(0, 145, 194, 0.08), transparent 60%),
-      url('argo-constellation-bg.svg');
-    background-repeat: no-repeat, no-repeat;
-    background-position: center center, left bottom;
-    background-size: cover, min(900px, 100%) auto;
-    filter: brightness(1.08) contrast(1.18) saturate(1.04);
-    opacity: 0.62;
+    background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20480%2096%22%20width%3D%22480%22%20height%3D%2296%22%3E%3Cpath%20d%3D%22M0%2062%20C30%2042%2030%2082%2060%2062%20C90%2042%2090%2082%20120%2062%20C150%2042%20150%2082%20180%2062%20C210%2042%20210%2082%20240%2062%20C270%2042%20270%2082%20300%2062%20C330%2042%20330%2082%20360%2062%20C390%2042%20390%2082%20420%2062%20C450%2042%20450%2082%20480%2062%22%20fill%3D%22none%22%20stroke%3D%22%230091C2%22%20stroke-width%3D%222.2%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.24%22%2F%3E%3Cpath%20d%3D%22M0%2038%20C30%2022%2030%2054%2060%2038%20C90%2022%2090%2054%20120%2038%20C150%2022%20150%2054%20180%2038%20C210%2022%20210%2054%20240%2038%20C270%2022%20270%2054%20300%2038%20C330%2022%20330%2054%20360%2038%20C390%2022%20390%2054%20420%2038%20C450%2022%20450%2054%20480%2038%22%20fill%3D%22none%22%20stroke%3D%22%23E8AC3D%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.18%22%2F%3E%3C%2Fsvg%3E");
+    background-repeat: no-repeat;
+    background-position: left bottom;
+    background-size: 620px 124px;
+    opacity: 1;
     pointer-events: none;
   }
 
   @media (prefers-color-scheme: dark) {
     html:not([data-theme="light"]) #loginScreen::before {
-      filter: brightness(1.18) contrast(1.2) saturate(1.08);
-      opacity: 0.7;
+      filter: brightness(1.08) saturate(1.05);
     }
   }
 
   html[data-theme="dark"] #loginScreen::before {
-    filter: brightness(1.18) contrast(1.2) saturate(1.08);
-    opacity: 0.7;
+    filter: brightness(1.08) saturate(1.05);
   }
 
   @media (max-width: 760px) {
-    /* Mantém os elementos em cantos opostos também em telas estreitas. */
     #loginScreen::before {
       inset: 62% 42% 0 0;
-      background-size: cover, min(520px, 100%) auto;
+      background-size: min(520px, 100%) auto;
     }
   }
 
