@@ -96,14 +96,17 @@
     top: 1rem;
   }
 
-  /* Plano de fundo temático: a constelação de Argo Navis (argo-constellation-bg.svg,
-     mesmas estrelas reais usadas no cabeçalho e na tela de login) repetida em
-     mosaico (background-repeat: repeat) por todo o plano de fundo do
-     aplicativo, em vez de uma única cópia grande esticada (cover) — assim as
-     estrelas ficam espalhadas pela página inteira, não concentradas no meio.
-     O emblema do navio fica no rodapé (footer.site-footer), onde tem fundo
-     escuro contínuo e fica sempre visível — em vez de depender das margens
-     ao redor do container, que somem na maior parte das larguras de tela. */
+  /* Plano de fundo temático: uma trilha de ondas (duas camadas, tons
+     azul/dourado da marca) repetida em mosaico (background-repeat: repeat)
+     por todo o plano de fundo do aplicativo, em vez de uma única cópia
+     grande esticada (cover) — assim as ondas ficam espalhadas pela página
+     inteira, não concentradas no meio. O mesmo traçado de onda mais largo
+     usado aqui no modo escuro (ver bloco "dark" abaixo) é o mesmo usado como
+     detalhe na tela de login (#loginScreen::before, mais abaixo) — por isso
+     os dois fundos combinam. O emblema do navio fica no rodapé
+     (footer.site-footer), onde tem fundo escuro contínuo e fica sempre
+     visível — em vez de depender das margens ao redor do container, que
+     somem na maior parte das larguras de tela. */
   body {
     margin: 0;
     background-color: var(--bg-main);
@@ -130,27 +133,35 @@
     body { background-attachment: fixed, fixed, fixed; }
   }
 
+  /* Modo escuro: a onda larga aqui (viewBox 720x150, 3 traçados) é o MESMO
+     arquivo usado em #loginScreen::before — usar o mesmo traçado nos dois
+     lugares é o que faz o fundo do app (escuro) e o da tela de login
+     parecerem a mesma peça, só que um espalhado em mosaico e o outro como
+     detalhe único no canto. Antes desta camada era a constelação de estrelas
+     (argo-constellation-bg.svg); trocada por onda para manter só o motivo de
+     ondas em todo o app, sem estrelas. */
   @media (prefers-color-scheme: dark) {
     html:not([data-theme="light"]) body {
       background-image:
         radial-gradient(120% 55% at 50% 0%, rgba(232, 172, 61, 0.09) 0%, rgba(232, 172, 61, 0) 60%),
-        url('argo-constellation-bg.svg'),
+        url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20720%20150%22%20width%3D%22720%22%20height%3D%22150%22%3E%3Cpath%20d%3D%22M0%20102%20C45%2072%2045%20132%2090%20102%20C135%2072%20135%20132%20180%20102%20C225%2072%20225%20132%20270%20102%20C315%2072%20315%20132%20360%20102%20C405%2072%20405%20132%20450%20102%20C495%2072%20495%20132%20540%20102%20C585%2072%20585%20132%20630%20102%20C675%2072%20675%20132%20720%20102%22%20fill%3D%22none%22%20stroke%3D%22%2329ABE2%22%20stroke-width%3D%222.4%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.25%22%2F%3E%3Cpath%20d%3D%22M0%2070%20C45%2042%2045%2096%2090%2070%20C135%2042%20135%2096%20180%2070%20C225%2042%20225%2096%20270%2070%20C315%2042%20315%2096%20360%2070%20C405%2042%20405%2096%20450%2070%20C495%2042%20495%2096%20540%2070%20C585%2042%20585%2096%20630%2070%20C675%2042%20675%2096%20720%2070%22%20fill%3D%22none%22%20stroke%3D%22%230091C2%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.18%22%2F%3E%3Cpath%20d%3D%22M0%20126%20C45%20108%2045%20142%2090%20126%20C135%20108%20135%20142%20180%20126%20C225%20108%20225%20142%20270%20126%20C315%20108%20315%20142%20360%20126%20C405%20108%20405%20142%20450%20126%20C495%20108%20495%20142%20540%20126%20C585%20108%20585%20142%20630%20126%20C675%20108%20675%20142%20720%20126%22%20fill%3D%22none%22%20stroke%3D%22%23E8AC3D%22%20stroke-width%3D%221.3%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.1%22%2F%3E%3C%2Fsvg%3E"),
         url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgNDgiIHdpZHRoPSIyNDAiIGhlaWdodD0iNDgiPgo8cGF0aCBkPSJNMCwzMCBDMTUsMjEgMTUsMzkgMzAsMzAgQzQ1LDM5IDQ1LDIxIDYwLDMwIEM3NSwyMSA3NSwzOSA5MCwzMCBDMTA1LDM5IDEwNSwyMSAxMjAsMzAgQzEzNSwyMSAxMzUsMzkgMTUwLDMwIEMxNjUsMzkgMTY1LDIxIDE4MCwzMCBDMTk1LDIxIDE5NSwzOSAyMTAsMzAgQzIyNSwzOSAyMjUsMjEgMjQwLDMwIiBmaWxsPSJub25lIiBzdHJva2U9IiMyOUFCRTIiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuMTQiLz4KPHBhdGggZD0iTTAsMTQgQzE1LDggMTUsMjAgMzAsMTQgQzQ1LDIwIDQ1LDggNjAsMTQgQzc1LDggNzUsMjAgOTAsMTQgQzEwNSwyMCAxMDUsOCAxMjAsMTQgQzEzNSw4IDEzNSwyMCAxNTAsMTQgQzE2NSwyMCAxNjUsOCAxODAsMTQgQzE5NSw4IDE5NSwyMCAyMTAsMTQgQzIyNSwyMCAyMjUsOCAyNDAsMTQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0U4QUMzRCIgc3Ryb2tlLXdpZHRoPSIxLjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4xMiIvPgo8L3N2Zz4=');
       background-repeat: no-repeat, repeat, repeat;
       background-position: top center, top left, top left;
-      background-size: 100% 560px, 340px 244px, 240px 48px;
+      background-size: 100% 560px, 480px 100px, 240px 48px;
     }
   }
 
   html[data-theme="dark"] body {
     background-image:
       radial-gradient(120% 55% at 50% 0%, rgba(232, 172, 61, 0.09) 0%, rgba(232, 172, 61, 0) 60%),
-      url('argo-constellation-bg.svg'),
+      url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20720%20150%22%20width%3D%22720%22%20height%3D%22150%22%3E%3Cpath%20d%3D%22M0%20102%20C45%2072%2045%20132%2090%20102%20C135%2072%20135%20132%20180%20102%20C225%2072%20225%20132%20270%20102%20C315%2072%20315%20132%20360%20102%20C405%2072%20405%20132%20450%20102%20C495%2072%20495%20132%20540%20102%20C585%2072%20585%20132%20630%20102%20C675%2072%20675%20132%20720%20102%22%20fill%3D%22none%22%20stroke%3D%22%2329ABE2%22%20stroke-width%3D%222.4%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.25%22%2F%3E%3Cpath%20d%3D%22M0%2070%20C45%2042%2045%2096%2090%2070%20C135%2042%20135%2096%20180%2070%20C225%2042%20225%2096%20270%2070%20C315%2042%20315%2096%20360%2070%20C405%2042%20405%2096%20450%2070%20C495%2042%20495%2096%20540%2070%20C585%2042%20585%2096%20630%2070%20C675%2042%20675%2096%20720%2070%22%20fill%3D%22none%22%20stroke%3D%22%230091C2%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.18%22%2F%3E%3Cpath%20d%3D%22M0%20126%20C45%20108%2045%20142%2090%20126%20C135%20108%20135%20142%20180%20126%20C225%20108%20225%20142%20270%20126%20C315%20108%20315%20142%20360%20126%20C405%20108%20405%20142%20450%20126%20C495%20108%20495%20142%20540%20126%20C585%20108%20585%20142%20630%20126%20C675%20108%20675%20142%20720%20126%22%20fill%3D%22none%22%20stroke%3D%22%23E8AC3D%22%20stroke-width%3D%221.3%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.1%22%2F%3E%3C%2Fsvg%3E"),
       url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgNDgiIHdpZHRoPSIyNDAiIGhlaWdodD0iNDgiPgo8cGF0aCBkPSJNMCwzMCBDMTUsMjEgMTUsMzkgMzAsMzAgQzQ1LDM5IDQ1LDIxIDYwLDMwIEM3NSwyMSA3NSwzOSA5MCwzMCBDMTA1LDM5IDEwNSwyMSAxMjAsMzAgQzEzNSwyMSAxMzUsMzkgMTUwLDMwIEMxNjUsMzkgMTY1LDIxIDE4MCwzMCBDMTk1LDIxIDE5NSwzOSAyMTAsMzAgQzIyNSwzOSAyMjUsMjEgMjQwLDMwIiBmaWxsPSJub25lIiBzdHJva2U9IiMyOUFCRTIiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuMTQiLz4KPHBhdGggZD0iTTAsMTQgQzE1LDggMTUsMjAgMzAsMTQgQzQ1LDIwIDQ1LDggNjAsMTQgQzc1LDggNzUsMjAgOTAsMTQgQzEwNSwyMCAxMDUsOCAxMjAsMTQgQzEzNSw4IDEzNSwyMCAxNTAsMTQgQzE2NSwyMCAxNjUsOCAxODAsMTQgQzE5NSw4IDE5NSwyMCAyMTAsMTQgQzIyNSwyMCAyMjUsOCAyNDAsMTQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0U4QUMzRCIgc3Ryb2tlLXdpZHRoPSIxLjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4xMiIvPgo8L3N2Zz4=');
     background-repeat: no-repeat, repeat, repeat;
     background-position: top center, top left, top left;
-    background-size: 100% 560px, 340px 244px, 240px 48px;
+    background-size: 100% 560px, 480px 100px, 240px 48px;
   }
+
 
 
   .tech-card {
@@ -3054,7 +3065,10 @@
     overflow-x: hidden;
   }
 
-  /* Ondas amplas e discretas no canto inferior esquerdo; sem estrelas. */
+  /* Ondas amplas e discretas no canto inferior esquerdo. O mesmo traçado
+     (viewBox 720x150) é reaproveitado, em mosaico, no fundo do app no modo
+     escuro (ver "body" no topo deste arquivo) — por isso as duas telas usam
+     o mesmo motivo de ondas, sem estrelas. */
   #loginScreen::before {
     content: "";
     position: fixed;
@@ -3162,9 +3176,9 @@
     pointer-events: none;
   }
 
-  /* Constelação real de Argo Navis (estrelas de Carina, Vela, Puppis e Pyxis em
-     posições astronômicas verdadeiras) usada como marca d'água de fundo do painel
-     de login, remetendo ao nome do app.
+  /* Foto do navio Argo (argo-navis-historico.jpg) usada como marca d'água de
+     fundo do painel de login, remetendo ao nome do app (não é um desenho
+     vetorial da constelação — é a foto mesmo, em baixa opacidade).
      Opacidade baixa e mix-blend-mode para não competir com o texto em primeiro plano. */
   .login-story-historic {
     position: absolute;
