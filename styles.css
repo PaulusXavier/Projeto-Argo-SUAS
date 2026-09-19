@@ -97,10 +97,10 @@
   }
 
   /* Plano de fundo temático: a constelação de Argo Navis (argo-constellation-bg.svg,
-     mesmas estrelas reais usadas no cabeçalho e na tela de login) cobrindo
-     todo o plano de fundo do aplicativo (background-size: cover), em opacidade
-     alta — como a foto do navio na tela de login — reforçando a identidade
-     náutica do "Argo SUAS" sem depender de uma foto do navio.
+     mesmas estrelas reais usadas no cabeçalho e na tela de login) repetida em
+     mosaico (background-repeat: repeat) por todo o plano de fundo do
+     aplicativo, em vez de uma única cópia grande esticada (cover) — assim as
+     estrelas ficam espalhadas pela página inteira, não concentradas no meio.
      O emblema do navio fica no rodapé (footer.site-footer), onde tem fundo
      escuro contínuo e fica sempre visível — em vez de depender das margens
      ao redor do container, que somem na maior parte das larguras de tela. */
@@ -111,9 +111,9 @@
       radial-gradient(120% 60% at 50% 0%, rgba(15, 74, 65, 0.07) 0%, rgba(15, 74, 65, 0) 62%),
       url('argo-constellation-bg.svg'),
       url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgNDgiIHdpZHRoPSIyNDAiIGhlaWdodD0iNDgiPgo8cGF0aCBkPSJNMCwzMCBDMTUsMjEgMTUsMzkgMzAsMzAgQzQ1LDM5IDQ1LDIxIDYwLDMwIEM3NSwyMSA3NSwzOSA5MCwzMCBDMTA1LDM5IDEwNSwyMSAxMjAsMzAgQzEzNSwyMSAxMzUsMzkgMTUwLDMwIEMxNjUsMzkgMTY1LDIxIDE4MCwzMCBDMTk1LDIxIDE5NSwzOSAyMTAsMzAgQzIyNSwzOSAyMjUsMjEgMjQwLDMwIiBmaWxsPSJub25lIiBzdHJva2U9IiMwMDkxQzIiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuMDkiLz4KPHBhdGggZD0iTTAsMTQgQzE1LDggMTUsMjAgMzAsMTQgQzQ1LDIwIDQ1LDggNjAsMTQgQzc1LDggNzUsMjAgOTAsMTQgQzEwNSwyMCAxMDUsOCAxMjAsMTQgQzEzNSw4IDEzNSwyMCAxNTAsMTQgQzE2NSwyMCAxNjUsOCAxODAsMTQgQzE5NSw4IDE5NSwyMCAyMTAsMTQgQzIyNSwyMCAyMjUsOCAyNDAsMTQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0U4QUMzRCIgc3Ryb2tlLXdpZHRoPSIxLjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4xMCIvPgo8L3N2Zz4=');
-    background-repeat: no-repeat, no-repeat, repeat;
-    background-position: top center, center center, top left;
-    background-size: 100% 480px, cover, 240px 48px;
+    background-repeat: no-repeat, repeat, repeat;
+    background-position: top center, top left, top left;
+    background-size: 100% 480px, 340px 244px, 240px 48px;
     background-attachment: scroll, scroll, scroll;
     color: var(--text-main);
     font-family: var(--font-sans);
@@ -136,9 +136,9 @@
         radial-gradient(120% 55% at 50% 0%, rgba(232, 172, 61, 0.09) 0%, rgba(232, 172, 61, 0) 60%),
         url('argo-constellation-bg.svg'),
         url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgNDgiIHdpZHRoPSIyNDAiIGhlaWdodD0iNDgiPgo8cGF0aCBkPSJNMCwzMCBDMTUsMjEgMTUsMzkgMzAsMzAgQzQ1LDM5IDQ1LDIxIDYwLDMwIEM3NSwyMSA3NSwzOSA5MCwzMCBDMTA1LDM5IDEwNSwyMSAxMjAsMzAgQzEzNSwyMSAxMzUsMzkgMTUwLDMwIEMxNjUsMzkgMTY1LDIxIDE4MCwzMCBDMTk1LDIxIDE5NSwzOSAyMTAsMzAgQzIyNSwzOSAyMjUsMjEgMjQwLDMwIiBmaWxsPSJub25lIiBzdHJva2U9IiMyOUFCRTIiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuMTQiLz4KPHBhdGggZD0iTTAsMTQgQzE1LDggMTUsMjAgMzAsMTQgQzQ1LDIwIDQ1LDggNjAsMTQgQzc1LDggNzUsMjAgOTAsMTQgQzEwNSwyMCAxMDUsOCAxMjAsMTQgQzEzNSw4IDEzNSwyMCAxNTAsMTQgQzE2NSwyMCAxNjUsOCAxODAsMTQgQzE5NSw4IDE5NSwyMCAyMTAsMTQgQzIyNSwyMCAyMjUsOCAyNDAsMTQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0U4QUMzRCIgc3Ryb2tlLXdpZHRoPSIxLjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4xMiIvPgo8L3N2Zz4=');
-      background-repeat: no-repeat, no-repeat, repeat;
-      background-position: top center, center center, top left;
-      background-size: 100% 560px, cover, 240px 48px;
+      background-repeat: no-repeat, repeat, repeat;
+      background-position: top center, top left, top left;
+      background-size: 100% 560px, 340px 244px, 240px 48px;
     }
   }
 
@@ -147,9 +147,9 @@
       radial-gradient(120% 55% at 50% 0%, rgba(232, 172, 61, 0.09) 0%, rgba(232, 172, 61, 0) 60%),
       url('argo-constellation-bg.svg'),
       url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgNDgiIHdpZHRoPSIyNDAiIGhlaWdodD0iNDgiPgo8cGF0aCBkPSJNMCwzMCBDMTUsMjEgMTUsMzkgMzAsMzAgQzQ1LDM5IDQ1LDIxIDYwLDMwIEM3NSwyMSA3NSwzOSA5MCwzMCBDMTA1LDM5IDEwNSwyMSAxMjAsMzAgQzEzNSwyMSAxMzUsMzkgMTUwLDMwIEMxNjUsMzkgMTY1LDIxIDE4MCwzMCBDMTk1LDIxIDE5NSwzOSAyMTAsMzAgQzIyNSwzOSAyMjUsMjEgMjQwLDMwIiBmaWxsPSJub25lIiBzdHJva2U9IiMyOUFCRTIiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuMTQiLz4KPHBhdGggZD0iTTAsMTQgQzE1LDggMTUsMjAgMzAsMTQgQzQ1LDIwIDQ1LDggNjAsMTQgQzc1LDggNzUsMjAgOTAsMTQgQzEwNSwyMCAxMDUsOCAxMjAsMTQgQzEzNSw4IDEzNSwyMCAxNTAsMTQgQzE2NSwyMCAxNjUsOCAxODAsMTQgQzE5NSw4IDE5NSwyMCAyMTAsMTQgQzIyNSwyMCAyMjUsOCAyNDAsMTQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0U4QUMzRCIgc3Ryb2tlLXdpZHRoPSIxLjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4xMiIvPgo8L3N2Zz4=');
-    background-repeat: no-repeat, no-repeat, repeat;
-    background-position: top center, center center, top left;
-    background-size: 100% 560px, cover, 240px 48px;
+    background-repeat: no-repeat, repeat, repeat;
+    background-position: top center, top left, top left;
+    background-size: 100% 560px, 340px 244px, 240px 48px;
   }
 
 
@@ -3063,6 +3063,15 @@
      estrelas nessa versão maior, já que o desenho foi pensado para ser
      sutil quando usado como marca d'água atrás de conteúdo (fundo do app,
      painel esquerdo do login). */
+  /* Constelação de Argo Navis (argo-constellation-bg.svg) repetida em mosaico
+     pela tela TODA, num pseudo-elemento próprio por trás do card — antes
+     era uma única cópia grande (quase "cover"), concentrando o desenho no
+     meio da tela e deixando o resto em cor sólida; agora as estrelas ficam
+     espalhadas por toda a tela de login, do mesmo jeito que no fundo do
+     app. Um leve brilho (filter) e um glow radial azul realçam as estrelas
+     nessa versão, já que o desenho foi pensado para ser sutil quando usado
+     como marca d'água atrás de conteúdo (fundo do app, painel esquerdo do
+     login). */
   #loginScreen::before {
     content: "";
     position: fixed;
@@ -3071,12 +3080,12 @@
     background-image:
       radial-gradient(130% 85% at 50% 28%, rgba(0, 145, 194, 0.22), transparent 60%),
       url('argo-constellation-bg.svg');
-    background-repeat: no-repeat, no-repeat;
-    background-position: center center, center center;
-    /* A camada do SVG (2º valor) fica em 80% — um pouco menor que o
-       tamanho original, para a constelação parecer mais distante/discreta.
-       A camada do glow (1º valor) continua em "cover" normal. */
-    background-size: cover, 80%;
+    background-repeat: no-repeat, repeat;
+    background-position: center center, top left;
+    /* A camada do glow (1º valor) continua em "cover" normal; a camada do
+       SVG (2º valor) repete em blocos pequenos, para espalhar a constelação
+       pela tela inteira em vez de mostrar uma só cópia grande no centro. */
+    background-size: cover, 300px 216px;
     filter: brightness(1.4) saturate(1.2);
     pointer-events: none;
   }
