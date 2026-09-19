@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Esta página é 100% local: a política abaixo PROÍBE qualquer conexão de rede. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta name="robots" content="noindex, nofollow">
+<title>Gerador da versão protegida · Argo SUAS</title>
+<style>
+  :root { --brand:#0F4A41; --brand-2:#1b6b5e; --bg:#f4f7f6; --card:#fff; --ink:#15211f; --muted:#5b6b68; --line:#dbe4e1; --ok:#127a4b; --warn:#a16207; --bad:#b42318; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background:var(--bg); color:var(--ink); line-height:1.5; }
+  header { background:var(--brand); color:#fff; padding:22px 20px; }
+  header h1 { margin:0; font-size:1.25rem; }
+  header p { margin:4px 0 0; opacity:.85; font-size:.92rem; }
+  main { max-width:760px; margin:0 auto; padding:18px 16px 60px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px; margin:14px 0; }
+  .card h2 { margin:0 0 4px; font-size:1.02rem; display:flex; align-items:center; gap:10px; }
+  .n { display:inline-grid; place-items:center; width:26px; height:26px; border-radius:50%; background:var(--brand); color:#fff; font-size:.85rem; flex:none; }
+  .hint { color:var(--muted); font-size:.88rem; margin:2px 0 12px; }
+  .pill { display:inline-block; background:#e6f3ef; color:var(--brand); border-radius:999px; padding:3px 10px; font-size:.8rem; font-weight:600; }
+  input[type=file] { display:block; width:100%; padding:14px; border:2px dashed var(--line); border-radius:12px; background:#fafcfb; }
+  ul.files { list-style:none; padding:0; margin:12px 0 0; }
+  ul.files li { display:flex; justify-content:space-between; gap:10px; padding:8px 10px; border-radius:8px; font-size:.92rem; }
+  ul.files li:nth-child(odd) { background:#f6f9f8; }
+  .st-ok { color:var(--ok); font-weight:600; } .st-no { color:var(--bad); font-weight:600; }
+  label { display:block; font-weight:600; font-size:.92rem; margin:12px 0 4px; }
+  .row { display:flex; gap:8px; }
+  input[type=password], input[type=text], input[type=number] { flex:1; width:100%; padding:11px 12px; border:1px solid #b9c7c3; border-radius:10px; font-size:1rem; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  input:focus { outline:3px solid #b8dfd5; border-color:var(--brand-2); }
+  button { font:inherit; cursor:pointer; border-radius:10px; border:1px solid #b9c7c3; background:#fff; padding:10px 14px; }
+  button:hover { background:#f2f7f5; }
+  button.primary { background:var(--brand); color:#fff; border-color:var(--brand); font-weight:700; padding:13px 18px; width:100%; font-size:1.02rem; }
+  button.primary:hover { background:var(--brand-2); }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .msgs { margin:8px 0 0; padding:0; list-style:none; font-size:.88rem; }
+  .msgs li { margin:2px 0; } .m-bad { color:var(--bad); } .m-warn { color:var(--warn); } .m-ok { color:var(--ok); }
+  .meter { height:8px; border-radius:6px; background:#e4ece9; margin-top:10px; overflow:hidden; }
+  .meter i { display:block; height:100%; width:0; background:var(--bad); transition:width .2s, background .2s; }
+  details { margin-top:12px; } summary { cursor:pointer; font-weight:600; color:var(--brand); }
+  .opts { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:8px; }
+  .alert { border-radius:12px; padding:12px 14px; font-size:.92rem; margin:12px 0 0; }
+  .alert.info { background:#eef6ff; border:1px solid #c7defa; }
+  .alert.warn { background:#fff7e6; border:1px solid #f1d59a; }
+  .alert.done { background:#eaf7ef; border:1px solid #b5e0c6; }
+  .alert.err { background:#fdecea; border:1px solid #f3b6b0; color:#7a1a12; }
+  #result { display:none; } ol { padding-left:20px; } li { margin:4px 0; }
+  code { background:#eef3f1; padding:1px 6px; border-radius:5px; font-size:.86em; }
+  .center { text-align:center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🔐 Gerador da versão protegida — Argo SUAS</h1>
+  <p>Cifra o aplicativo inteiro com a sua senha. Sem a senha, o que fica publicado é só texto ilegível.</p>
+</header>
+<main>
+  <div class="alert info"><span class="pill">100% local</span>&nbsp; Nada sai deste computador: os arquivos e a senha ficam só nesta página, que não tem permissão de acessar a internet.</div>
+
+  <section class="card">
+    <h2><span class="n">1</span> Escolha os arquivos ORIGINAIS do app</h2>
+    <p class="hint">Selecione de uma vez: <code>index.html</code>, <code>app.js</code>, <code>data.js</code> e <code>equipe-cras-cristiana.js</code> (os de antes da proteção, em texto aberto).</p>
+    <input type="file" id="files" multiple accept=".html,.js">
+    <ul class="files" id="fileList"></ul>
+    <div id="fileErr" class="alert err" style="display:none"></div>
+  </section>
+
+  <section class="card">
+    <h2><span class="n">2</span> Defina a senha de acesso</h2>
+    <p class="hint">É a senha que a equipe vai digitar para abrir o app. <b>Não existe “esqueci minha senha”</b>: se ela se perder, é preciso gerar tudo de novo a partir dos originais.</p>
+    <label for="pw">Senha (mínimo 12 caracteres)</label>
+    <div class="row">
+      <input type="password" id="pw" autocomplete="new-password" spellcheck="false">
+      <button type="button" id="show" title="Mostrar/ocultar">👁</button>
+    </div>
+    <label for="pw2">Repita a senha</label>
+    <input type="password" id="pw2" autocomplete="new-password" spellcheck="false">
+    <div class="meter"><i id="bar"></i></div>
+    <ul class="msgs" id="pwMsgs"></ul>
+    <div style="margin-top:10px"><button type="button" id="gen">🎲 Sugerir uma senha forte</button></div>
+    <p class="hint" style="margin-top:8px">Dica: uma frase com 5 palavras sem relação entre si (ex.: <i>cavalo lanterna quintal vidro nuvem</i>) é forte e fácil de digitar. Guarde a senha em um gerenciador de senhas ou em local seguro.</p>
+
+    <details>
+      <summary>Opções avançadas</summary>
+      <div class="opts">
+        <div><label for="idle">Trancar após (min sem uso)</label><input type="number" id="idle" value="15" min="1" max="240"></div>
+        <div><label for="hid">Trancar se ficar em segundo plano (min)</label><input type="number" id="hid" value="5" min="1" max="240"></div>
+      </div>
+    </details>
+  </section>
+
+  <section class="card">
+    <h2><span class="n">3</span> Gerar</h2>
+    <button class="primary" id="go" disabled>Gerar versão protegida</button>
+    <div id="status" class="hint center" style="margin-top:10px"></div>
+    <div id="err" class="alert err" style="display:none"></div>
+  </section>
+
+  <section class="card" id="result">
+    <h2>✅ Pronto!</h2>
+    <div class="alert done" id="summary"></div>
+    <p><button class="primary" id="dl">⬇ Baixar o ZIP novamente</button></p>
+    <h3 style="margin:14px 0 4px">Agora, no site (GitHub Pages)</h3>
+    <ol>
+      <li>Descompacte o ZIP.</li>
+      <li><b>Substitua</b> no site: <code>index.html</code>, <code>gate.js</code>, <code>argo.enc</code>, <code>sw.js</code>.</li>
+      <li><b>Apague</b> do site: <code>app.js</code>, <code>data.js</code>, <code>equipe-cras-cristiana.js</code>.</li>
+      <li>Mantenha o resto (<code>styles.css</code>, <code>manifest.json</code>, ícones e imagens).</li>
+    </ol>
+    <div class="alert warn"><b>Atenção ao histórico do GitHub:</b> apagar um arquivo não apaga as versões antigas — se o repositório é público, o <code>data.js</code> e o <code>app.js</code> antigos continuam legíveis no histórico. Para valer, publique em um <b>repositório novo</b> só com a versão protegida e apague (ou torne privado) o antigo. Guarde os originais em texto aberto apenas no seu computador ou em repositório <b>privado</b>.</div>
+  </section>
+</main>
+
+<script>/* =====================================================================
+   core.js — núcleo do gerador de proteção do Argo SUAS.
+   Roda igual no navegador (gerar-protecao.html) e no Node (testes).
+   Nada aqui envia dados a lugar nenhum: tudo é calculado localmente.
+   ===================================================================== */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.ArgoBuilder = factory();
+})(typeof self !== 'undefined' ? self : globalThis, function () {
+  'use strict';
+
+  // ---- Formato do arquivo argo.enc ---------------------------------
+  //  0..3   "ARGO"
+  //  4      versão do formato (1)
+  //  5..8   iterações do PBKDF2 (uint32, big-endian)
+  //  9..24  salt (16 bytes aleatórios)
+  //  25..36 IV do AES-GCM (12 bytes aleatórios)
+  //  37..   texto cifrado + etiqueta de autenticação (16 bytes)
+  // Os 37 primeiros bytes também entram como "dados autenticados" (AAD):
+  // se alguém alterar qualquer byte do cabeçalho, a decifragem falha.
+  const MAGIC = [0x41, 0x52, 0x47, 0x4f];
+  const FORMAT_VERSION = 1;
+  const HEADER_LEN = 37;
+  const DEFAULT_ITERATIONS = 600000; // recomendação OWASP para PBKDF2-HMAC-SHA256
+  const PAYLOAD_FILE = 'argo.enc';
+
+  const te = new TextEncoder();
+  const td = new TextDecoder();
+
+  function getCrypto() {
+    const c = typeof globalThis !== 'undefined' ? globalThis.crypto : null;
+    if (!c || !c.subtle) {
+      throw new Error('Este navegador não oferece criptografia segura (WebCrypto). Use um navegador atualizado, em uma página https:// ou aberta como arquivo local.');
+    }
+    return c;
+  }
+
+  // Mesma normalização usada no login (gate.js): sem espaços nas pontas e
+  // acentos em forma canônica, para a senha valer igual em qualquer aparelho.
+  function normalizePassword(pw) {
+    return String(pw == null ? '' : pw).trim().normalize('NFC');
+  }
+
+  async function deriveAesKey(password, salt, iterations, usage) {
+    const c = getCrypto();
+    const base = await c.subtle.importKey('raw', te.encode(normalizePassword(password)), 'PBKDF2', false, ['deriveKey']);
+    return c.subtle.deriveKey(
+      { name: 'PBKDF2', salt: salt, iterations: iterations, hash: 'SHA-256' },
+      base, { name: 'AES-GCM', length: 256 }, false, [usage]
+    );
+  }
+
+  async function encryptPayload(text, password, iterations) {
+    const c = getCrypto();
+    const salt = c.getRandomValues(new Uint8Array(16));
+    const iv = c.getRandomValues(new Uint8Array(12));
+    const header = new Uint8Array(HEADER_LEN);
+    header.set(MAGIC, 0);
+    header[4] = FORMAT_VERSION;
+    new DataView(header.buffer).setUint32(5, iterations, false);
+    header.set(salt, 9);
+    header.set(iv, 25);
+    const key = await deriveAesKey(password, salt, iterations, 'encrypt');
+    const ct = new Uint8Array(await c.subtle.encrypt(
+      { name: 'AES-GCM', iv: iv, additionalData: header, tagLength: 128 }, key, te.encode(text)
+    ));
+    const out = new Uint8Array(HEADER_LEN + ct.length);
+    out.set(header, 0);
+    out.set(ct, HEADER_LEN);
+    return out;
+  }
+
+  // Usada só para conferir o arquivo recém-gerado e nos testes. O login real
+  // usa a cópia equivalente que está dentro de gate.js.
+  async function decryptPayload(bytes, password) {
+    const c = getCrypto();
+    for (let i = 0; i < 4; i++) if (bytes[i] !== MAGIC[i]) throw codeErr('format');
+    if (bytes[4] !== FORMAT_VERSION) throw codeErr('format');
+    const iterations = new DataView(bytes.buffer, bytes.byteOffset + 5, 4).getUint32(0, false);
+    const salt = bytes.slice(9, 25);
+    const iv = bytes.slice(25, 37);
+    const aad = bytes.slice(0, HEADER_LEN);
+    const ct = bytes.slice(HEADER_LEN);
+    const key = await deriveAesKey(password, salt, iterations, 'decrypt');
+    let plain;
+    try {
+      plain = await c.subtle.decrypt({ name: 'AES-GCM', iv: iv, additionalData: aad, tagLength: 128 }, key, ct);
+    } catch (e) {
+      throw codeErr('wrong');
+    }
+    return JSON.parse(td.decode(plain));
+  }
+
+  function codeErr(code) { const e = new Error(code); e.code = code; return e; }
+
+  // ---- Leitura do index.html original --------------------------------
+  function splitIndexHtml(html) {
+    const marks = {
+      body: html.indexOf('<body>'),
+      login: html.indexOf('<div id="loginScreen"'),
+      app: html.indexOf('<div id="appRoot"'),
+      print: html.indexOf('<div id="print-area"></div>')
+    };
+    if (marks.app < 0 || marks.print < 0) {
+      throw new Error('Este index.html não parece ser o ORIGINAL do Argo SUAS (não achei o bloco do aplicativo). Se ele já é a versão protegida, use o index.html de antes da proteção.');
+    }
+    if (marks.body < 0 || marks.login < 0 || !(marks.body < marks.login && marks.login < marks.app && marks.app < marks.print)) {
+      throw new Error('A estrutura do index.html mudou (tela de login, <body> ou área de impressão fora da ordem esperada). O gerador precisa ser ajustado.');
+    }
+    const printLen = '<div id="print-area"></div>'.length;
+    const tail = html.slice(marks.print + printLen);
+    const head = html.slice(0, marks.body + '<body>'.length);
+
+    const scriptRe = /<script\s+[^>]*\bsrc="([^"]+)"[^>]*>\s*<\/script>/g;
+    const scripts = [];
+    let m;
+    while ((m = scriptRe.exec(tail)) !== null) scripts.push(m[1].split('/').pop());
+    const leftover = tail.replace(scriptRe, '').replace(/<\/body>|<\/html>/g, '').trim();
+    if (leftover) {
+      throw new Error('Há conteúdo no final do index.html que o gerador não reconhece (ex.: <script> inline). Ele seria descartado; abortei para não quebrar o app.');
+    }
+    if (/<script[^>]+src="(?:\.\/)?(?:app|data|equipe-cras-cristiana)\.js"/.test(head)) {
+      throw new Error('Os scripts do app estão no <head>; estrutura diferente da esperada.');
+    }
+    return {
+      head: head,
+      login: html.slice(marks.login, marks.app).trimEnd(),
+      app: html.slice(marks.app, marks.print + printLen),
+      scriptNames: scripts
+    };
+  }
+
+  function fill(template, map) {
+    let out = template;
+    Object.keys(map).forEach(function (k) { out = out.split('__' + k + '__').join(String(map[k])); });
+    const left = out.match(/__[A-Z_]{4,}__/);
+    if (left) throw new Error('Modelo com marcador não preenchido: ' + left[0]);
+    return out;
+  }
+
+  function stamp(d) {
+    const p = function (n) { return String(n).padStart(2, '0'); };
+    return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes());
+  }
+
+  // ---- Montagem -------------------------------------------------------
+  // sources: { 'index.html': texto, 'app.js': texto, 'data.js': texto, 'equipe-cras-cristiana.js': texto }
+  // templates: { gate, sw, overrides } (textos)
+  async function buildProtectedSite(opts) {
+    const sources = opts.sources, templates = opts.templates;
+    const iterations = opts.iterations || DEFAULT_ITERATIONS;
+    const idleMinutes = opts.idleMinutes || 15;
+    const hiddenMinutes = opts.hiddenMinutes || 5;
+    const now = opts.now || new Date();
+
+    const pw = normalizePassword(opts.password);
+    const pwCheck = checkPassword(pw);
+    if (!pwCheck.ok && !opts.allowWeakPassword) {
+      throw new Error('Senha fraca demais: ' + pwCheck.problems.join(' '));
+    }
+    if (typeof sources['index.html'] !== 'string') throw new Error('Falta o arquivo index.html.');
+
+    const parts = splitIndexHtml(sources['index.html']);
+    if (parts.scriptNames.indexOf('app.js') < 0) throw new Error('O index.html original não carrega app.js.');
+    const scripts = parts.scriptNames.map(function (name) {
+      if (typeof sources[name] !== 'string') throw new Error('Falta o arquivo ' + name + ' (o index.html usa esse arquivo).');
+      let code = sources[name];
+      if (name === 'app.js') code = code + '\n\n' + templates.overrides;
+      return { name: name, code: code };
+    });
+
+    const payload = JSON.stringify({ v: 1, html: parts.app, scripts: scripts });
+    const enc = await encryptPayload(payload, pw, iterations);
+
+    // Confere o arquivo gerado, com a mesma senha, antes de entregá-lo.
+    const check = await decryptPayload(enc, pw);
+    if (check.scripts.length !== scripts.length || check.html !== parts.app) {
+      throw new Error('Falha na autoverificação do arquivo cifrado.');
+    }
+
+    // index.html público: só o cabeçalho, a tela de login e o gate.js.
+    if (parts.head.indexOf('</head>') < 0) throw new Error('index.html sem </head>.');
+    const head = parts.head.replace('</head>', '<meta name="robots" content="noindex, nofollow">\n</head>');
+    const shell = head + '\n\n' + parts.login + '\n\n<script src="gate.js"><\/script>\n</body>\n</html>\n';
+
+    const gate = fill(templates.gate, {
+      PAYLOAD_URL: PAYLOAD_FILE,
+      IDLE_MS: idleMinutes * 60000,
+      HIDDEN_MS: hiddenMinutes * 60000
+    });
+    const version = 'p' + stamp(now);
+    const sw = fill(templates.sw, { CACHE_VERSION: version });
+
+    const files = {
+      'index.html': te.encode(shell),
+      'gate.js': te.encode(gate),
+      'argo.enc': enc,
+      'sw.js': te.encode(sw)
+    };
+    const report = {
+      iterations: iterations,
+      idleMinutes: idleMinutes,
+      hiddenMinutes: hiddenMinutes,
+      version: version,
+      encBytes: enc.length,
+      scripts: scripts.map(function (s) { return s.name; }),
+      passwordLevel: pwCheck.level
+    };
+    files['LEIA-ME.txt'] = te.encode(buildReadme(report, now));
+    return { files: files, report: report };
+  }
+
+  function buildReadme(r, now) {
+    return [
+      'ARGO SUAS — VERSÃO PROTEGIDA (gerada em ' + now.toLocaleString('pt-BR') + ')',
+      '==========================================================',
+      '',
+      'O QUE FAZER COM ESTES ARQUIVOS',
+      '  1. Suba para o site (GitHub Pages), SUBSTITUINDO os antigos:',
+      '       index.html   gate.js   argo.enc   sw.js',
+      '  2. APAGUE do site estes arquivos (eles são o app em texto aberto):',
+      '       app.js   data.js   equipe-cras-cristiana.js',
+      '  3. Mantenha os demais como estão (styles.css, manifest.json, ícones,',
+      '     imagens). Este ZIP não contém a senha.',
+      '',
+      'MUITO IMPORTANTE — HISTÓRICO DO GITHUB',
+      '  Apagar um arquivo do repositório NÃO apaga as versões antigas: o GitHub',
+      '  guarda todo o histórico, e se o repositório for público, app.js e data.js',
+      '  antigos continuam legíveis lá. Para a proteção valer, publique estes',
+      '  arquivos em um repositório NOVO (só com a versão protegida) e apague ou',
+      '  torne privado o repositório antigo. Guarde o app original (em texto',
+      '  aberto) só no seu computador ou em repositório PRIVADO.',
+      '',
+      'TROCA DE SENHA / ATUALIZAÇÃO DO CONTEÚDO',
+      '  Sempre que mudar a senha ou editar data.js/app.js, abra o gerador de',
+      '  novo com os arquivos ORIGINAIS e publique o novo resultado.',
+      '',
+      'DADOS SALVOS NOS APARELHOS',
+      '  Anotações e fichas ficam cifradas com a senha. Ao trocar a senha,',
+      '  faça ANTES o "Backup de anotações" no app antigo. Depois de entrar com',
+      '  a senha nova, use "Restaurar backup": o app pedirá a senha antiga só',
+      '  para abrir aquele arquivo.',
+      '',
+      'DETALHES TÉCNICOS',
+      '  Cifra: AES-256-GCM. Chave: PBKDF2-HMAC-SHA256, ' + r.iterations.toLocaleString('pt-BR') + ' iterações.',
+      '  Tranca sozinho após ' + r.idleMinutes + ' min sem uso, ou ' + r.hiddenMinutes + ' min com o app em segundo plano.',
+      '  A força da proteção é a força da senha: quem tiver o arquivo argo.enc',
+      '  pode tentar adivinhar a senha no próprio computador, sem limite de',
+      '  tentativas. Por isso, use uma senha longa e aleatória.',
+      ''
+    ].join('\n');
+  }
+
+  // ---- Qualidade da senha ---------------------------------------------
+  const OBVIOUS = ['senha', 'password', 'argo', 'suas', 'cras', 'creas', 'boavista', 'boa vista', 'roraima',
+    'semads', 'prefeitura', 'equipe', 'admin', 'brasil', 'qwerty', 'abc', '123', '2024', '2025', '2026', '2027'];
+
+  function checkPassword(raw) {
+    const pw = normalizePassword(raw);
+    const problems = [], warnings = [];
+    if (pw.length < 12) problems.push('Use pelo menos 12 caracteres.');
+    if (/^\d+$/.test(pw)) problems.push('Não use só números.');
+    if (new Set(pw.split('')).size < 6) problems.push('Muitos caracteres repetidos.');
+    let rest = pw.toLowerCase();
+    OBVIOUS.forEach(function (w) { rest = rest.split(w).join(''); });
+    rest = rest.replace(/[\d\s\W_]/g, '');
+    if (pw.length >= 12 && rest.length < 6) problems.push('Parece só palavras óbvias (nome do app, cidade, ano…). Misture palavras sem relação entre si.');
+    if (/(.)\1{3,}/.test(pw)) warnings.push('Há uma sequência de caracteres repetidos.');
+    let level = 'fraca';
+    if (!problems.length) level = pw.length >= 16 ? 'forte' : 'razoável';
+    if (level === 'razoável') warnings.push('Com 16+ caracteres fica bem mais segura.');
+    return { ok: problems.length === 0, level: level, problems: problems, warnings: warnings, length: pw.length };
+  }
+
+  // 20 caracteres de um alfabeto de 32 símbolos (sem I/O/0/1) = 100 bits.
+  function generatePassword() {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const bytes = getCrypto().getRandomValues(new Uint8Array(20));
+    let s = '';
+    for (let i = 0; i < 20; i++) {
+      s += alphabet[bytes[i] & 31];
+      if (i % 4 === 3 && i < 19) s += '-';
+    }
+    return s;
+  }
+
+  // ---- ZIP (sem compressão) ---------------------------------------------
+  let crcTable = null;
+  function crc32(bytes) {
+    if (!crcTable) {
+      crcTable = new Uint32Array(256);
+      for (let n = 0; n < 256; n++) {
+        let c = n;
+        for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+        crcTable[n] = c >>> 0;
+      }
+    }
+    let crc = 0xffffffff;
+    for (let i = 0; i < bytes.length; i++) crc = crcTable[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+    return (crc ^ 0xffffffff) >>> 0;
+  }
+
+  function makeZip(files, date) {
+    const d = date || new Date();
+    const dosTime = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+    const dosDate = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+    const chunks = [], central = [];
+    let offset = 0;
+    Object.keys(files).forEach(function (name) {
+      const data = files[name], nameBytes = te.encode(name), crc = crc32(data);
+      const lh = new Uint8Array(30 + nameBytes.length), lv = new DataView(lh.buffer);
+      lv.setUint32(0, 0x04034b50, true); lv.setUint16(4, 20, true); lv.setUint16(6, 0x0800, true);
+      lv.setUint16(8, 0, true); lv.setUint16(10, dosTime, true); lv.setUint16(12, dosDate, true);
+      lv.setUint32(14, crc, true); lv.setUint32(18, data.length, true); lv.setUint32(22, data.length, true);
+      lv.setUint16(26, nameBytes.length, true); lv.setUint16(28, 0, true);
+      lh.set(nameBytes, 30);
+      chunks.push(lh, data);
+      const ch = new Uint8Array(46 + nameBytes.length), cv = new DataView(ch.buffer);
+      cv.setUint32(0, 0x02014b50, true); cv.setUint16(4, 20, true); cv.setUint16(6, 20, true);
+      cv.setUint16(8, 0x0800, true); cv.setUint16(10, 0, true); cv.setUint16(12, dosTime, true);
+      cv.setUint16(14, dosDate, true); cv.setUint32(16, crc, true); cv.setUint32(20, data.length, true);
+      cv.setUint32(24, data.length, true); cv.setUint16(28, nameBytes.length, true);
+      cv.setUint32(42, offset, true);
+      ch.set(nameBytes, 46);
+      central.push(ch);
+      offset += lh.length + data.length;
+    });
+    const cdSize = central.reduce(function (n, c) { return n + c.length; }, 0);
+    const end = new Uint8Array(22), ev = new DataView(end.buffer);
+    ev.setUint32(0, 0x06054b50, true);
+    ev.setUint16(8, central.length, true); ev.setUint16(10, central.length, true);
+    ev.setUint32(12, cdSize, true); ev.setUint32(16, offset, true);
+    const all = chunks.concat(central, [end]);
+    const out = new Uint8Array(all.reduce(function (n, c) { return n + c.length; }, 0));
+    let p = 0;
+    all.forEach(function (c) { out.set(c, p); p += c.length; });
+    return out;
+  }
+
+  return {
+    DEFAULT_ITERATIONS: DEFAULT_ITERATIONS,
+    normalizePassword: normalizePassword,
+    encryptPayload: encryptPayload,
+    decryptPayload: decryptPayload,
+    splitIndexHtml: splitIndexHtml,
+    buildProtectedSite: buildProtectedSite,
+    checkPassword: checkPassword,
+    generatePassword: generatePassword,
+    makeZip: makeZip
+  };
+});
+</script>
+<script>
+const TEMPLATES = {"gate":"/* =====================================================================\n   gate.js — portão de acesso do Argo SUAS (arquivo público).\n\n   O que está publicado no site é apenas: esta tela de login + o arquivo\n   argo.enc, que contém o aplicativo INTEIRO (telas, fichas dos\n   equipamentos, código) cifrado com AES-256-GCM. A chave é derivada da\n   senha com PBKDF2 (centenas de milhares de iterações) no próprio\n   aparelho. Sem a senha, não há como ler o aplicativo — nem abrindo\n   /data.js, nem pelo console, nem olhando o código-fonte.\n\n   Depois do login, o app é decifrado só na memória da aba. Ao trancar\n   (botão Sair, inatividade, ou app em segundo plano por muito tempo) a\n   página é recarregada e tudo some da memória.\n   ===================================================================== */\n(function () {\n  'use strict';\n\n  var PAYLOAD_URL = '__PAYLOAD_URL__';\n  var IDLE_MS = __IDLE_MS__;       // tranca após tanto tempo sem usar\n  var HIDDEN_MS = __HIDDEN_MS__;   // tranca se ficou tanto tempo em segundo plano\n  var MAX_ATTEMPTS = 5;            // depois disso, espera LOCKOUT_MS (só desestimula uso casual)\n  var LOCKOUT_MS = 30000;\n\n  var MAGIC = [0x41, 0x52, 0x47, 0x4f];\n  var FORMAT_VERSION = 1;\n  var HEADER_LEN = 37;\n\n  var unlocked = false;\n  var failedAttempts = 0;\n  var lockedUntil = 0;\n  var payloadPromise = null;\n\n  function byId(id) { return document.getElementById(id); }\n  function codeErr(code) { var e = new Error(code); e.code = code; return e; }\n\n  // ---------- Service Worker (cache offline; só guarda arquivos públicos e o argo.enc cifrado)\n  if ('serviceWorker' in navigator) {\n    window.addEventListener('load', function () {\n      navigator.serviceWorker.register('./sw.js').then(function (reg) {\n        if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });\n        reg.addEventListener('updatefound', function () {\n          var w = reg.installing;\n          if (!w) return;\n          w.addEventListener('statechange', function () {\n            if (w.state === 'installed' && navigator.serviceWorker.controller) {\n              w.postMessage({ type: 'SKIP_WAITING' });\n            }\n          });\n        });\n        document.addEventListener('visibilitychange', function () {\n          if (document.visibilityState === 'visible') reg.update().catch(function () {});\n        });\n        setInterval(function () {\n          if (document.visibilityState === 'visible') reg.update().catch(function () {});\n        }, 30 * 60 * 1000);\n      }).catch(function () {});\n      var reloaded = false;\n      navigator.serviceWorker.addEventListener('controllerchange', function () {\n        if (reloaded) return;\n        reloaded = true;\n        window.location.reload();\n      });\n    });\n  }\n\n  // ---------- Decifragem\n  async function decryptBundle(buffer, password) {\n    if (!window.crypto || !window.crypto.subtle) throw codeErr('nocrypto');\n    var bytes = new Uint8Array(buffer);\n    if (bytes.length < HEADER_LEN + 16) throw codeErr('format');\n    for (var i = 0; i < 4; i++) if (bytes[i] !== MAGIC[i]) throw codeErr('format');\n    if (bytes[4] !== FORMAT_VERSION) throw codeErr('format');\n    var iterations = new DataView(bytes.buffer, bytes.byteOffset + 5, 4).getUint32(0, false);\n    if (iterations < 100000 || iterations > 5000000) throw codeErr('format');\n    var salt = bytes.slice(9, 25);\n    var iv = bytes.slice(25, 37);\n    var aad = bytes.slice(0, HEADER_LEN);\n    var ct = bytes.slice(HEADER_LEN);\n    var subtle = window.crypto.subtle;\n    var base = await subtle.importKey('raw', new TextEncoder().encode(password.normalize('NFC')), 'PBKDF2', false, ['deriveKey']);\n    var key = await subtle.deriveKey(\n      { name: 'PBKDF2', salt: salt, iterations: iterations, hash: 'SHA-256' },\n      base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']\n    );\n    var plain;\n    try {\n      plain = await subtle.decrypt({ name: 'AES-GCM', iv: iv, additionalData: aad, tagLength: 128 }, key, ct);\n    } catch (e) {\n      throw codeErr('wrong'); // etiqueta GCM não confere = senha errada (ou arquivo adulterado)\n    }\n    return JSON.parse(new TextDecoder().decode(plain));\n  }\n\n  function loadPayload() {\n    if (!payloadPromise) {\n      payloadPromise = fetch(PAYLOAD_URL, { credentials: 'same-origin' }).then(function (r) {\n        if (!r.ok) throw codeErr('network');\n        return r.arrayBuffer();\n      }).catch(function () {\n        payloadPromise = null;\n        throw codeErr('network');\n      });\n    }\n    return payloadPromise;\n  }\n\n  // ---------- Entrada do app decifrado\n  async function boot(bundle, password) {\n    document.body.insertAdjacentHTML('beforeend', bundle.html);\n    for (var i = 0; i < bundle.scripts.length; i++) {\n      var el = document.createElement('script');\n      el.textContent = bundle.scripts[i].code; // script inline: executa na hora, na ordem\n      document.body.appendChild(el);\n    }\n    if (typeof window.__argoUnlock !== 'function') throw codeErr('boot');\n    await window.__argoUnlock(password);\n  }\n\n  // ---------- Trava automática\n  function armAutoLock() {\n    var lastActivity = Date.now();\n    var hiddenAt = 0;\n    var timer = null;\n    function lock() { window.location.reload(); }\n    function schedule() {\n      clearTimeout(timer);\n      timer = setTimeout(function () {\n        if (Date.now() - lastActivity >= IDLE_MS) lock(); else schedule();\n      }, Math.max(1000, IDLE_MS - (Date.now() - lastActivity)));\n    }\n    function touch() { lastActivity = Date.now(); }\n    ['pointerdown', 'keydown', 'wheel', 'touchstart', 'input'].forEach(function (ev) {\n      document.addEventListener(ev, touch, { passive: true, capture: true });\n    });\n    document.addEventListener('scroll', touch, { passive: true, capture: true });\n    document.addEventListener('visibilitychange', function () {\n      if (document.visibilityState === 'hidden') {\n        hiddenAt = Date.now();\n      } else {\n        if ((hiddenAt && Date.now() - hiddenAt >= HIDDEN_MS) || Date.now() - lastActivity >= IDLE_MS) lock();\n        hiddenAt = 0;\n      }\n    });\n    // Volta do cache de navegação (botão Voltar): nunca reexibe um app já decifrado.\n    window.addEventListener('pageshow', function (e) { if (e.persisted) lock(); });\n    schedule();\n  }\n\n  // ---------- Tela de login\n  function init() {\n    var form = byId('loginForm');\n    var pwField = byId('loginPassword');\n    var errorEl = byId('loginError');\n    var errorTextEl = byId('loginErrorText');\n    var toggleBtn = byId('loginToggleVisibility');\n    var submitBtn = form ? form.querySelector('button[type=\"submit\"]') : null;\n    if (!form || !pwField) return;\n\n    document.body.style.overflow = 'hidden';\n    setTimeout(function () { pwField.focus(); }, 50);\n    loadPayload().catch(function () {}); // já vai baixando o app cifrado enquanto a pessoa digita\n\n    function showError(msg) {\n      if (errorTextEl && msg) errorTextEl.textContent = msg;\n      errorEl.classList.add('visible');\n      errorEl.classList.remove('shake');\n      void errorEl.offsetWidth;\n      errorEl.classList.add('shake');\n    }\n    function setBusy(busy) {\n      if (!submitBtn) return;\n      submitBtn.disabled = busy;\n      submitBtn.setAttribute('aria-busy', busy ? 'true' : 'false');\n      var label = submitBtn.lastChild;\n      if (label && label.nodeType === 3) label.nodeValue = busy ? '\\n          Verificando…\\n        ' : '\\n          Entrar\\n        ';\n    }\n\n    form.addEventListener('submit', async function (e) {\n      e.preventDefault();\n      if (unlocked) return;\n      var now = Date.now();\n      if (now < lockedUntil) {\n        showError('Muitas tentativas erradas. Aguarde ' + Math.ceil((lockedUntil - now) / 1000) + 's.');\n        return;\n      }\n      var typed = (pwField.value || '').trim();\n      if (!typed) return;\n\n      setBusy(true);\n      var bundle = null;\n      try {\n        var buf = await loadPayload();\n        bundle = await decryptBundle(buf, typed);\n      } catch (err) {\n        setBusy(false);\n        var code = err && err.code;\n        if (code === 'wrong') {\n          failedAttempts++;\n          if (failedAttempts >= MAX_ATTEMPTS) {\n            lockedUntil = Date.now() + LOCKOUT_MS;\n            failedAttempts = 0;\n            showError('Muitas tentativas erradas. Aguarde ' + Math.round(LOCKOUT_MS / 1000) + 's.');\n          } else {\n            showError('Senha incorreta. Tente novamente.');\n          }\n          pwField.value = '';\n          pwField.focus();\n        } else if (code === 'network') {\n          showError('Não foi possível carregar o aplicativo. Verifique a conexão e tente de novo.');\n        } else if (code === 'nocrypto') {\n          showError('Este navegador ou endereço não permite criptografia segura. Abra pelo link https:// do app.');\n        } else {\n          showError('Arquivo do aplicativo inválido ou desatualizado. Recarregue a página.');\n        }\n        return;\n      }\n\n      failedAttempts = 0;\n      errorEl.classList.remove('visible');\n      try {\n        await boot(bundle, typed);\n      } catch (err2) {\n        setBusy(false);\n        showError('Erro ao iniciar o aplicativo. Recarregue a página e tente de novo.');\n        return;\n      } finally {\n        bundle = null;\n        typed = null;\n        pwField.value = '';\n      }\n      unlocked = true;\n      armAutoLock();\n    });\n\n    if (toggleBtn) {\n      var eyeIcon = toggleBtn.querySelector('.icon-eye');\n      var eyeOffIcon = toggleBtn.querySelector('.icon-eye-off');\n      toggleBtn.addEventListener('click', function () {\n        var isPassword = pwField.type === 'password';\n        pwField.type = isPassword ? 'text' : 'password';\n        toggleBtn.setAttribute('aria-label', isPassword ? 'Ocultar senha' : 'Mostrar senha');\n        toggleBtn.setAttribute('aria-pressed', String(isPassword));\n        if (eyeIcon && eyeOffIcon) { eyeIcon.hidden = isPassword; eyeOffIcon.hidden = !isPassword; }\n        pwField.focus();\n      });\n    }\n  }\n\n  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);\n  else init();\n})();\n","sw":"// VERSÃO PROTEGIDA (gerada automaticamente). O app (código, telas e dados) fica\n// SÓ dentro de argo.enc, cifrado; aqui só há arquivos públicos + esse arquivo\n// cifrado. Não edite a versão abaixo à mão: ela muda a cada geração.\n// Troque este número toda vez que publicar uma alteração no app.\n// É essa mudança de versão que dispara a atualização automática.\nconst CACHE_VERSION = '__CACHE_VERSION__';\nconst CACHE_NAME = `rede-apoio-bv-${CACHE_VERSION}`;\n\n// Cache separado e SEM número de versão, para conteúdo pesado de fora do\n// domínio do app: bibliotecas de PDF (cdnjs, baixadas na 1ª vez que a aba\n// \"Unificar / Converter PDF\" é usada), tiles do mapa (OpenStreetMap, usados\n// em vila-jardim.html) e o SDK do Firebase (gstatic, baixado na 1ª vez que a\n// aba \"Agenda Boa Vista 2026\" configura uma sincronização). Antes, esses\n// arquivos entravam no mesmo cache versionado (CACHE_NAME) e eram apagados a\n// cada publicação nova — mesmo sem terem mudado — obrigando a baixar tudo de\n// novo (e precisar de internet) logo após qualquer atualização do app. Como\n// esse cache não leva o número da versão no nome, ele NÃO é apagado no\n// \"ATIVAÇÃO\" abaixo e sobrevive entre publicações; só cresce (fica com\n// versões mais novas de cada arquivo, sempre que a rede responde) e nunca é\n// limpo automaticamente.\nconst RUNTIME_CACHE_NAME = 'rede-apoio-bv-runtime';\n\nconst ASSETS = [\n  './',\n  './index.html',\n  './styles.css',\n  './gate.js',\n  './argo.enc',\n  './manifest.json',\n  './favicon.ico',\n  './apple-touch-icon.png',\n  './icon-192.png',\n  './icon-512.png',\n  './icon-maskable-512.png',\n  './argo-navis-historico.jpg',\n  './argo-constellation-bg.svg',\n  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;1,400&family=Caveat:wght@600;700&display=swap'\n];\n\n// INSTALAÇÃO: baixa os arquivos novos e já assume o controle,\n// sem esperar todas as abas antigas fecharem.\nself.addEventListener('install', event => {\n  event.waitUntil(\n    caches.open(CACHE_NAME).then(cache => Promise.all(ASSETS.map(url =>\n      fetch(new Request(url, { cache: 'reload' })).then(res => {\n        if (!res.ok) throw new Error('Falha ao baixar ' + url + ' (' + res.status + ')');\n        return cache.put(url, res);\n      })\n    )))\n  );\n  self.skipWaiting();\n});\n\n// ATIVAÇÃO: apaga qualquer cache de versão antiga do APP (mantendo o cache\n// de runtime, que não tem número de versão) e assume controle imediato de\n// todas as abas abertas.\nself.addEventListener('activate', event => {\n  event.waitUntil(\n    caches.keys().then(keys =>\n      Promise.all(\n        keys.filter(key => key !== CACHE_NAME && key !== RUNTIME_CACHE_NAME).map(key => caches.delete(key))\n      )\n    ).then(() => self.clients.claim())\n  );\n});\n\n// FETCH: responde IMEDIATAMENTE com o que já estiver em cache (o app abre\n// na hora, sem esperar a rede) e, em paralelo, busca a versão mais nova no\n// servidor para atualizar o cache silenciosamente — a próxima abertura já\n// usa o conteúdo atualizado. Antes o app esperava a resposta da rede antes\n// de mostrar qualquer coisa, mesmo com tudo já salvo em cache; isso deixava\n// a abertura lenta em conexão ruim (3G/4G fraco), já que cada carregamento\n// dependia de uma ida e volta ao servidor mesmo sem nada novo para buscar.\n// A rede só decide sozinha a resposta quando o arquivo ainda não está em\n// cache (primeiro acesso) ou quando o dispositivo está offline e não há\n// nada salvo. Requisições que não sejam GET (ex.: chamadas às APIs de\n// tradução/geocodificação/Firestore) seguem direto para a rede, sem passar\n// pelo cache.\n//\n// Pedidos de fora do domínio do app (cdnjs, tiles do OpenStreetMap, gstatic\n// do Firebase etc.) usam o RUNTIME_CACHE_NAME acima, que não é apagado a\n// cada publicação; pedidos do próprio app usam o cache versionado normal.\n// Endereços que NUNCA devem sair do cache primeiro: o feed de notícias do\n// gov.br e os repassadores usados para lê-lo. Sem isso, a aba \"Notícias do\n// MDS\" continuaria mostrando a lista antiga mesmo online e mesmo depois de\n// tocar em \"Atualizar\", porque o Service Worker responderia na hora com a\n// cópia salva. Aqui a rede vem primeiro e o cache só entra como reserva\n// quando não há internet.\nconst NETWORK_FIRST_HOSTS = ['www.gov.br', 'api.allorigins.win', 'corsproxy.io', 'firestore.googleapis.com'];\n\n// Resposta de reserva para quando NEM a rede NEM o cache têm o recurso\n// pedido (ex.: primeiro acesso, offline). Sem isso, respondWith() recebia\n// `undefined` nesse cenário e o navegador lançava um TypeError em vez de\n// simplesmente mostrar que o recurso está indisponível.\nfunction offlineFallback() {\n  return new Response(\n    'Sem conexão com a internet e nenhuma cópia salva deste conteúdo.',\n    { status: 503, statusText: 'Offline', headers: { 'Content-Type': 'text/plain; charset=utf-8' } }\n  );\n}\n\nself.addEventListener('fetch', event => {\n  if (event.request.method !== 'GET') return;\n\n  const isSameOrigin = event.request.url.startsWith(self.location.origin);\n  const targetCacheName = isSameOrigin ? CACHE_NAME : RUNTIME_CACHE_NAME;\n  const isNetworkFirst = NETWORK_FIRST_HOSTS.some(host => event.request.url.includes('://' + host + '/'));\n\n  if (isNetworkFirst) {\n    event.respondWith(\n      fetch(event.request)\n        .then(response => {\n          if (response && response.ok) {\n            const clone = response.clone();\n            caches.open(RUNTIME_CACHE_NAME).then(cache => cache.put(event.request, clone));\n          }\n          return response;\n        })\n        .catch(() => caches.match(event.request).then(cached => cached || offlineFallback()))\n    );\n    return;\n  }\n\n  event.respondWith(\n    caches.match(event.request).then(cached => {\n      const networkFetch = fetch(event.request)\n        .then(response => {\n          // Só guarda respostas boas. Antes, um 404 ou um erro do servidor\n          // também era gravado no cache e depois servido como se fosse o\n          // arquivo certo.\n          if (response && (response.ok || response.type === 'opaque')) {\n            const clone = response.clone();\n            caches.open(targetCacheName).then(cache => cache.put(event.request, clone));\n          }\n          return response;\n        })\n        .catch(() => cached || offlineFallback());\n\n      return cached || networkFetch;\n    })\n  );\n});\n","overrides":"/* =====================================================================\n   PORTÃO DE ACESSO — trecho acrescentado automaticamente pelo gerador.\n   Vem DEPOIS de todo o código original, então estas declarações têm\n   prioridade sobre as de mesmo nome definidas acima.\n   ===================================================================== */\n\n// O login agora é feito por gate.js ANTES deste código existir na página.\n// A chamada initAuth() do final do arquivo original passa a não fazer nada.\nfunction initAuth() {}\n\n// Sair = recarregar a página: apaga da memória a chave, as fichas e o app.\nfunction logout() { window.location.reload(); }\n\n// Chamado por gate.js depois que a senha decifrou o app.\nwindow.__argoUnlock = async function (password) {\n  sessionEncKey = await deriveSessionKey(password);\n  unlockApp();\n  requestAnimationFrame(function () {\n    requestAnimationFrame(function () {\n      if (typeof render === 'function') render();\n      if (typeof syncCategoryToggleLabel === 'function') syncCategoryToggleLabel();\n    });\n  });\n};\n\n// Restaurar backup. Igual ao original, com uma correção: se o backup foi\n// gerado com OUTRA senha (caso típico: antes de trocar a senha do app), pede\n// a senha antiga só para abrir aquele arquivo e regrava tudo com a atual.\nfunction importData(fileInput) {\n  const file = fileInput.files && fileInput.files[0];\n  if (!file) return;\n  const reader = new FileReader();\n  reader.onload = async function (e) {\n    try {\n      const payload = JSON.parse(e.target.result);\n      let dados = null;\n      if (payload && payload.cifrado && typeof payload.dadosCifrados === 'string') {\n        if (!sessionEncKey) throw new Error('app trancado');\n        const tentar = function () {\n          try {\n            const j = decryptFromStorage(payload.dadosCifrados);\n            return j ? JSON.parse(j) : null;\n          } catch (_) { return null; }\n        };\n        dados = tentar();\n        if (!dados) {\n          const senhaAntiga = window.prompt('Este backup não abre com a senha atual.\\n\\nSe ele foi gerado com a senha ANTIGA do app, digite-a aqui (ela é usada só para abrir este arquivo). Para cancelar, deixe em branco.');\n          if (senhaAntiga && senhaAntiga.trim()) {\n            const atual = sessionEncKey;\n            try {\n              sessionEncKey = await deriveSessionKey(senhaAntiga.trim());\n              dados = tentar();\n            } finally {\n              sessionEncKey = atual;\n            }\n          }\n        }\n        if (!dados || typeof dados !== 'object') throw new Error('não foi possível decifrar');\n      } else if (payload && typeof payload.dados === 'object' && payload.dados) {\n        dados = payload.dados; // backup antigo, em texto puro\n      }\n      if (!dados) throw new Error('formato inválido');\n      const keys = Object.keys(dados).filter(isSensitiveDataKey);\n      if (keys.length === 0) throw new Error('nenhum dado reconhecido');\n      const ok = confirm(`Este arquivo contém ${keys.length} item(ns) de backup (anotações, dados de encaminhamento e/ou anexos).\\n\\nImportar agora vai SOBRESCREVER, neste navegador, qualquer dado já salvo com o mesmo identificador. Deseja continuar?`);\n      if (!ok) return;\n      keys.forEach(k => safeStorage.set(k, dados[k]));\n      alert(`Backup importado com sucesso: ${keys.length} item(ns) restaurado(s).`);\n      if (typeof render === 'function') render();\n    } catch (err) {\n      alert('Não foi possível importar este arquivo. Verifique se é um backup gerado pelo próprio Argo SUAS (botão \"Backup de anotações\") e se a senha (atual ou antiga) é a que foi usada quando o backup foi feito.');\n    } finally {\n      fileInput.value = '';\n    }\n  };\n  reader.readAsText(file);\n}\n"};
+const NEEDED = ['index.html', 'app.js', 'data.js', 'equipe-cras-cristiana.js'];
+const $ = id => document.getElementById(id);
+let sources = {}, zipBytes = null, zipName = '';
+
+function esc(s) { return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+const kb = n => (n / 1024).toFixed(0) + ' KB';
+
+async function loadFiles() {
+  sources = {};
+  const list = Array.from($('files').files);
+  for (const f of list) {
+    const name = f.name.toLowerCase();
+    if (NEEDED.includes(name)) sources[name] = await f.text();
+  }
+  $('fileList').innerHTML = NEEDED.map(n => sources[n] !== undefined
+    ? `<li><span>${n}</span><span class="st-ok">✔ ${kb(sources[n].length)}</span></li>`
+    : `<li><span>${n}</span><span class="st-no">faltando</span></li>`).join('');
+  $('fileErr').style.display = 'none';
+  if (sources['index.html'] !== undefined) {
+    try { ArgoBuilder.splitIndexHtml(sources['index.html']); }
+    catch (e) { $('fileErr').textContent = e.message; $('fileErr').style.display = 'block'; delete sources['index.html']; }
+  }
+  refresh();
+}
+
+function refresh() {
+  const pw = $('pw').value, pw2 = $('pw2').value;
+  const c = ArgoBuilder.checkPassword(pw);
+  const msgs = [];
+  if (pw) {
+    c.problems.forEach(m => msgs.push(`<li class="m-bad">✖ ${esc(m)}</li>`));
+    c.warnings.forEach(m => msgs.push(`<li class="m-warn">• ${esc(m)}</li>`));
+    if (c.ok) msgs.push(`<li class="m-ok">✔ Senha ${c.level}.</li>`);
+    if (pw2 && pw !== pw2) msgs.push('<li class="m-bad">✖ As duas senhas não são iguais.</li>');
+    else if (pw2 && pw === pw2) msgs.push('<li class="m-ok">✔ As senhas conferem.</li>');
+  }
+  $('pwMsgs').innerHTML = msgs.join('');
+  const pct = !pw ? 0 : !c.ok ? Math.min(35, c.length * 3) : c.level === 'forte' ? 100 : 65;
+  $('bar').style.width = pct + '%';
+  $('bar').style.background = !c.ok ? 'var(--bad)' : c.level === 'forte' ? 'var(--ok)' : 'var(--warn)';
+  const filesOk = NEEDED.every(n => sources[n] !== undefined);
+  $('go').disabled = !(filesOk && c.ok && pw === pw2);
+}
+
+$('files').addEventListener('change', loadFiles);
+$('pw').addEventListener('input', refresh);
+$('pw2').addEventListener('input', refresh);
+$('show').addEventListener('click', () => {
+  const t = $('pw').type === 'password' ? 'text' : 'password';
+  $('pw').type = t; $('pw2').type = t;
+});
+$('gen').addEventListener('click', () => {
+  const p = ArgoBuilder.generatePassword();
+  $('pw').value = p; $('pw2').value = p; $('pw').type = 'text'; $('pw2').type = 'text';
+  refresh();
+  $('status').textContent = 'Senha sugerida preenchida. ANOTE-A antes de gerar.';
+});
+
+function download() {
+  if (!zipBytes) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([zipBytes], { type: 'application/zip' }));
+  a.download = zipName;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+$('dl').addEventListener('click', download);
+
+$('go').addEventListener('click', async () => {
+  $('err').style.display = 'none'; $('result').style.display = 'none';
+  $('go').disabled = true; $('status').textContent = 'Cifrando… (alguns segundos)';
+  try {
+    const now = new Date();
+    const { files, report } = await ArgoBuilder.buildProtectedSite({
+      sources, templates: TEMPLATES, password: $('pw').value,
+      idleMinutes: Math.max(1, parseInt($('idle').value, 10) || 15),
+      hiddenMinutes: Math.max(1, parseInt($('hid').value, 10) || 5),
+      now
+    });
+    zipBytes = ArgoBuilder.makeZip(files, now);
+    zipName = 'argo-suas-protegido-' + report.version.slice(1) + '.zip';
+    $('summary').innerHTML = `Arquivo cifrado conferido com a senha digitada ✔<br>
+      <small>AES-256-GCM · PBKDF2 ${report.iterations.toLocaleString('pt-BR')} iterações · tranca após ${report.idleMinutes} min sem uso ·
+      ${kb(report.encBytes)} · ${esc(zipName)}</small>`;
+    $('result').style.display = 'block';
+    $('status').textContent = '';
+    download();
+    $('result').scrollIntoView({ behavior: 'smooth' });
+  } catch (e) {
+    $('err').textContent = 'Não foi possível gerar: ' + (e && e.message ? e.message : e);
+    $('err').style.display = 'block'; $('status').textContent = '';
+  } finally { refresh(); }
+});
+refresh();
+</script>
+</body>
+</html>
