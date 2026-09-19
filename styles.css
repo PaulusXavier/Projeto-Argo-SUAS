@@ -3054,34 +3054,34 @@
     overflow-x: hidden;
   }
 
-  /* Apenas ondas suaves, maiores, no canto inferior esquerdo. */
+  /* Ondas amplas e discretas no canto inferior esquerdo; sem estrelas. */
   #loginScreen::before {
     content: "";
     position: fixed;
     inset: 48% 58% 0 0;
     z-index: 0;
-    background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20480%2096%22%20width%3D%22480%22%20height%3D%2296%22%3E%3Cpath%20d%3D%22M0%2062%20C30%2042%2030%2082%2060%2062%20C90%2042%2090%2082%20120%2062%20C150%2042%20150%2082%20180%2062%20C210%2042%20210%2082%20240%2062%20C270%2042%20270%2082%20300%2062%20C330%2042%20330%2082%20360%2062%20C390%2042%20390%2082%20420%2062%20C450%2042%20450%2082%20480%2062%22%20fill%3D%22none%22%20stroke%3D%22%230091C2%22%20stroke-width%3D%222.2%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.24%22%2F%3E%3Cpath%20d%3D%22M0%2038%20C30%2022%2030%2054%2060%2038%20C90%2022%2090%2054%20120%2038%20C150%2022%20150%2054%20180%2038%20C210%2022%20210%2054%20240%2038%20C270%2022%20270%2054%20300%2038%20C330%2022%20330%2054%20360%2038%20C390%2022%20390%2054%20420%2038%20C450%2022%20450%2054%20480%2038%22%20fill%3D%22none%22%20stroke%3D%22%23E8AC3D%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.18%22%2F%3E%3C%2Fsvg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20720%20150%22%20width%3D%22720%22%20height%3D%22150%22%3E%3Cpath%20d%3D%22M0%20102%20C45%2072%2045%20132%2090%20102%20C135%2072%20135%20132%20180%20102%20C225%2072%20225%20132%20270%20102%20C315%2072%20315%20132%20360%20102%20C405%2072%20405%20132%20450%20102%20C495%2072%20495%20132%20540%20102%20C585%2072%20585%20132%20630%20102%20C675%2072%20675%20132%20720%20102%22%20fill%3D%22none%22%20stroke%3D%22%2329ABE2%22%20stroke-width%3D%222.4%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.25%22%2F%3E%3Cpath%20d%3D%22M0%2070%20C45%2042%2045%2096%2090%2070%20C135%2042%20135%2096%20180%2070%20C225%2042%20225%2096%20270%2070%20C315%2042%20315%2096%20360%2070%20C405%2042%20405%2096%20450%2070%20C495%2042%20495%2096%20540%2070%20C585%2042%20585%2096%20630%2070%20C675%2042%20675%2096%20720%2070%22%20fill%3D%22none%22%20stroke%3D%22%230091C2%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.18%22%2F%3E%3Cpath%20d%3D%22M0%20126%20C45%20108%2045%20142%2090%20126%20C135%20108%20135%20142%20180%20126%20C225%20108%20225%20142%20270%20126%20C315%20108%20315%20142%20360%20126%20C405%20108%20405%20142%20450%20126%20C495%20108%20495%20142%20540%20126%20C585%20108%20585%20142%20630%20126%20C675%20108%20675%20142%20720%20126%22%20fill%3D%22none%22%20stroke%3D%22%23E8AC3D%22%20stroke-width%3D%221.3%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.1%22%2F%3E%3C%2Fsvg%3E");
     background-repeat: no-repeat;
     background-position: left bottom;
-    background-size: 620px 124px;
+    background-size: 760px 158px;
     opacity: 1;
     pointer-events: none;
   }
 
   @media (prefers-color-scheme: dark) {
     html:not([data-theme="light"]) #loginScreen::before {
-      filter: brightness(1.08) saturate(1.05);
+      filter: brightness(1.06) saturate(1.04);
     }
   }
 
   html[data-theme="dark"] #loginScreen::before {
-    filter: brightness(1.08) saturate(1.05);
+    filter: brightness(1.06) saturate(1.04);
   }
 
   @media (max-width: 760px) {
     #loginScreen::before {
       inset: 62% 42% 0 0;
-      background-size: min(520px, 100%) auto;
+      background-size: min(560px, 100%) auto;
     }
   }
 
