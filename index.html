@@ -210,6 +210,50 @@
     </div>
     <div class="filter-bar-wrapper">
       <div class="filter-bar" id="filterBar" role="tablist" aria-label="Filtrar por categoria de equipamento">
+        <!-- Seção: Agenda 2026 -->
+        <div class="filter-group">
+          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Agenda 2026<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
+          <div class="filter-group-chips">
+            <button class="filter-chip filter-chip-panel" data-cat="agenda" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+              <span>Agenda Boa Vista 2026</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Seção: Mapa da Rede -->
+        <div class="filter-group">
+          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Mapa da Rede<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
+          <div class="filter-group-chips">
+            <button class="filter-chip filter-chip-panel" data-cat="mapa" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></span>
+              <span>Mapa dos Equipamentos</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Seção: Tradutor -->
+        <div class="filter-group">
+          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Atendimento a Estrangeiros<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
+          <div class="filter-group-chips">
+            <button class="filter-chip filter-chip-panel" data-cat="tradutor" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h9"/><path d="M9.5 5.5v3.2c0 3.2-2 5.9-4.5 7.3"/><path d="M6.5 12c1.3 1.5 3.3 2.7 6 3.4"/><path d="M12.5 21l4-9 4 9"/><path d="M13.9 18h5.2"/></svg></span>
+              <span>Tradutor (Es / En / Fr)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Seção: Ferramentas de Arquivo -->
+        <div class="filter-group">
+          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Ferramentas de Arquivo<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
+          <div class="filter-group-chips">
+            <button class="filter-chip filter-chip-panel" data-cat="pdftools" role="tab" aria-selected="false">
+              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg></span>
+              <span>Unificar / Converter PDF</span>
+            </button>
+          </div>
+        </div>
+
         <button class="filter-chip active" data-cat="all" role="tab" aria-selected="true">
           <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
           <span>Rede Intersetorial de Serviços</span>
@@ -446,17 +490,6 @@
           </div>
         </div>
 
-        <!-- Seção: Ferramentas de Arquivo -->
-        <div class="filter-group">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Ferramentas de Arquivo<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
-          <div class="filter-group-chips">
-            <button class="filter-chip filter-chip-panel" data-cat="pdftools" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg></span>
-              <span>Unificar / Converter PDF</span>
-            </button>
-          </div>
-        </div>
-
         <!-- Seção: Notícias Oficiais -->
         <div class="filter-group">
           <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Notícias Oficiais<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
@@ -468,38 +501,6 @@
           </div>
         </div>
 
-        <!-- Seção: Tradutor -->
-        <div class="filter-group">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Atendimento a Estrangeiros<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
-          <div class="filter-group-chips">
-            <button class="filter-chip filter-chip-panel" data-cat="tradutor" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h9"/><path d="M9.5 5.5v3.2c0 3.2-2 5.9-4.5 7.3"/><path d="M6.5 12c1.3 1.5 3.3 2.7 6 3.4"/><path d="M12.5 21l4-9 4 9"/><path d="M13.9 18h5.2"/></svg></span>
-              <span>Tradutor (Es / En / Fr)</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Seção: Mapa da Rede -->
-        <div class="filter-group">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Mapa da Rede<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
-          <div class="filter-group-chips">
-            <button class="filter-chip filter-chip-panel" data-cat="mapa" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></span>
-              <span>Mapa dos Equipamentos</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Seção: Agenda 2026 -->
-        <div class="filter-group">
-          <span class="filter-group-label" role="button" tabindex="0" aria-expanded="true">Agenda 2026<span class="group-toggle-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></span>
-          <div class="filter-group-chips">
-            <button class="filter-chip filter-chip-panel" data-cat="agenda" role="tab" aria-selected="false">
-              <span class="chip-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
-              <span>Agenda Boa Vista 2026</span>
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   </aside>
