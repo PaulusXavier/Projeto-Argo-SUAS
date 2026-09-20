@@ -1876,10 +1876,37 @@
     align-items: center;
     gap: 0.5rem;
     background: var(--bg-card);
-    border: 1px solid var(--border-ui);
+    border: 1.5px solid var(--border-ui);
     border-radius: 8px;
-    padding: 0.4rem 0.5rem 0.4rem 0.7rem;
+    padding: 0.4rem 0.5rem 0.4rem 0.4rem;
     font-size: 0.76rem;
+    transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease), opacity 0.15s var(--ease);
+  }
+
+  /* Alça de arrastar (⋮⋮): só indica visualmente que o item é arrastável
+     (draggable="true" no <li>) — arrastar funciona no item inteiro, não só
+     nesses pontinhos, mas o ícone ajuda a "descobrir" a função no desktop. */
+  .pdftools-drag-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 16px;
+    color: var(--text-muted);
+    opacity: 0.55;
+    cursor: grab;
+  }
+
+  .pdftools-fileitem[draggable="true"] { cursor: grab; }
+  .pdftools-fileitem:active { cursor: grabbing; }
+
+  .pdftools-fileitem.dragging {
+    opacity: 0.45;
+  }
+
+  .pdftools-fileitem.drag-over {
+    border-color: var(--brand-pdftools-light);
+    box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.18) inset;
   }
 
   .pdftools-fileitem-name {
@@ -1921,6 +1948,74 @@
   .pdftools-icon-btn:hover { background: var(--bg-main); color: var(--brand-pdftools); }
   .pdftools-icon-btn.pdftools-remove:hover { color: #DC2626; }
 
+  /* Barra de capacidade do "Unificar PDF": mostra visualmente o quanto já
+     foi usado do limite de 50 MB (ver .pdftools-tool-limit), ficando âmbar
+     perto do limite e vermelha ao ultrapassá-lo. Some quando a lista está
+     vazia (visibility, não display, para não saltar o layout ao aparecer). */
+  .pdftools-capacity {
+    height: 6px;
+    border-radius: 4px;
+    background: var(--border-ui);
+    overflow: hidden;
+    margin: 0.7rem 0 0;
+    visibility: hidden;
+  }
+
+  .pdftools-capacity-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--brand-pdftools-light), var(--brand-pdftools));
+    transition: width 0.25s ease, background 0.25s ease;
+  }
+
+  .pdftools-capacity.is-warn .pdftools-capacity-fill { background: linear-gradient(90deg, #F59E0B, #D97706); }
+  .pdftools-capacity.is-error .pdftools-capacity-fill { background: linear-gradient(90deg, #F87171, #DC2626); }
+
+  /* Campo para o técnico escolher o nome do arquivo final do "Unificar
+     PDF" (em vez de sempre baixar como "pdf-unificado.pdf"). */
+  .pdftools-filename-field {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin: 0.85rem 0 0;
+  }
+
+  .pdftools-filename-field label {
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .pdftools-filename-field input {
+    flex: 1;
+    min-width: 140px;
+    padding: 0.5rem 0.7rem;
+    border-radius: 8px;
+    border: 1.5px solid var(--border-ui);
+    background: var(--bg-main);
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 0.85rem;
+  }
+
+  .pdftools-filename-field input:focus {
+    outline: none;
+    border-color: var(--brand-pdftools-light);
+    box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.14);
+  }
+
+  .pdftools-filename-field .pdftools-filename-suffix {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
   .pdftools-actions {
     margin-top: 0.9rem;
     display: flex;
@@ -1948,6 +2043,27 @@
 
   .pdftools-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 16px -3px rgba(29, 78, 216, 0.6); }
   .pdftools-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+
+  /* Botão secundário "Limpar lista" — mesmo padrão visual do
+     .tradutor-btn-ghost, mas no acento azul das Ferramentas de Arquivo. */
+  .pdftools-btn-ghost {
+    appearance: none;
+    border: 1.5px solid var(--border-ui);
+    border-radius: 9px;
+    padding: 0.55rem 1rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--bg-card);
+    color: var(--text-muted);
+    transition: 0.15s var(--ease);
+  }
+
+  .pdftools-btn-ghost:hover:not(:disabled) { border-color: var(--brand-pdftools-light); color: var(--brand-pdftools); }
+  .pdftools-btn-ghost:disabled { opacity: 0.45; cursor: not-allowed; }
 
   .pdftools-status {
     margin-top: 0.65rem;
@@ -2304,6 +2420,235 @@
     font-size: 0.72rem;
     font-weight: 800;
     flex-shrink: 0;
+  }
+
+  /* Cartão do "Mapa da Rede": igual às demais abas-ferramenta (tradutor,
+     notas, CAS, CRAS...), ocupa a largura toda do grid em vez de ficar
+     espremido numa única coluna de ~420px — necessário para o mapa e a
+     caixa de detalhes (.mapa-rede-layout, logo abaixo) caberem lado a
+     lado confortavelmente. */
+  .mapa-rede-card {
+    border-top: none;
+    grid-column: 1 / -1;
+  }
+
+  /* Mapa + caixa de detalhes lado a lado. A caixa fica à direita em telas
+     largas (onde há espaço de sobra) e passa para baixo do mapa em telas
+     estreitas, mantendo a mesma altura de mapa (420px) nos dois casos. */
+  .mapa-rede-layout {
+    display: flex;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .mapa-rede-layout #mapaRedeMapContainer {
+    flex: 1 1 62%;
+    min-width: 0;
+    height: 420px;
+  }
+
+  .mapa-rede-detail-panel {
+    flex: 1 1 300px;
+    max-width: 340px;
+    min-width: 260px;
+    height: 420px;
+    overflow-y: auto;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-ui);
+    border-radius: 12px;
+    padding: 1.1rem 1.1rem 1.25rem;
+  }
+
+  @media (max-width: 860px) {
+    .mapa-rede-layout {
+      flex-direction: column;
+    }
+
+    .mapa-rede-layout #mapaRedeMapContainer {
+      height: 380px;
+    }
+
+    .mapa-rede-detail-panel {
+      max-width: none;
+      min-width: 0;
+      height: auto;
+      max-height: 340px;
+    }
+  }
+
+  /* Estado vazio: nenhum pino selecionado ainda. */
+  .mapa-rede-detail-empty {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 0.6rem;
+    color: var(--text-muted);
+    padding: 1rem 0.5rem;
+  }
+
+  .mapa-rede-detail-empty-icon {
+    display: inline-flex;
+    color: var(--brand-primary-light);
+    opacity: 0.7;
+  }
+
+  .mapa-rede-detail-empty p {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  /* Estado preenchido: detalhes do equipamento/unidade tocado no mapa. */
+  .mapa-rede-detail-panel.has-selection {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mapa-rede-detail-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.6rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .mapa-rede-detail-cats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .mapa-rede-detail-badge {
+    display: inline-block;
+    padding: 0.22rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.66rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+
+  .mapa-rede-detail-close {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1px solid var(--border-ui);
+    background: var(--bg-main);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    line-height: 1;
+    transition: 0.15s;
+  }
+
+  .mapa-rede-detail-close:hover {
+    background: var(--border-ui);
+    color: var(--text-main);
+  }
+
+  .mapa-rede-detail-title {
+    margin: 0 0 0.5rem;
+    font-size: 1.02rem;
+    font-weight: 800;
+    color: var(--text-main);
+    line-height: 1.3;
+  }
+
+  .mapa-rede-detail-distance {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--brand-primary);
+    background: rgba(0, 145, 194, 0.08);
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    margin-bottom: 0.7rem;
+  }
+
+  .mapa-rede-detail-distance svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+  .mapa-rede-detail-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    font-size: 0.83rem;
+    color: var(--text-main);
+    line-height: 1.45;
+    margin-bottom: 0.55rem;
+  }
+
+  .mapa-rede-detail-row svg {
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+    width: 16px;
+    height: 16px;
+    color: var(--brand-primary);
+  }
+
+  .mapa-rede-detail-phones {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .mapa-rede-detail-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.83rem;
+    font-weight: 700;
+    color: var(--brand-primary);
+    text-decoration: none;
+  }
+
+  .mapa-rede-detail-link:hover { text-decoration: underline; }
+
+  .mapa-rede-detail-link svg { flex-shrink: 0; width: 16px; height: 16px; }
+
+  .mapa-rede-detail-block {
+    margin: 0 0 0.65rem;
+    padding-top: 0.55rem;
+    border-top: 1px solid var(--border-ui);
+  }
+
+  .mapa-rede-detail-block strong {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+    margin-bottom: 0.3rem;
+  }
+
+  .mapa-rede-detail-block p {
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--text-main);
+  }
+
+  .mapa-rede-detail-desc p {
+    color: var(--text-muted);
+  }
+
+  .mapa-rede-detail-actions {
+    margin-top: 0.4rem;
+  }
+
+  .mapa-rede-detail-actions .btn-tech {
+    width: 100%;
   }
 
   .cas-groups {
