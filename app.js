@@ -162,7 +162,10 @@ function initAuth() {
         // da semana da agenda + estado da sincronização; ver bloco
         // "Notificação de Abertura" mais abaixo). Um pequeno atraso deixa
         // a entrada do app respirar antes do cartão aparecer por cima.
-        setTimeout(() => { if (typeof argoShowGreeting === 'function') argoShowGreeting(); }, 450);
+        setTimeout(() => {
+          const alreadyMutedToday = (typeof argoGreetingMutedToday === 'function') && argoGreetingMutedToday();
+          if (!alreadyMutedToday && typeof argoShowGreeting === 'function') argoShowGreeting();
+        }, 450);
         // Monta a lista de 374 fichas (render()) só DEPOIS que o navegador
         // já pintou a tela desbloqueada (ver comentário em unlockApp) —
         // antes, esse processamento pesado rodava competindo com o próprio
@@ -348,9 +351,10 @@ function argoEnsureGreetingUI() {
           <div class="argo-week" id="argoGreetingWeek"></div>
 
           <div class="argo-sync-row" id="argoGreetingSync" data-state="none" role="status" aria-live="polite">
-            <span class="argo-sync-dot" aria-hidden="true"></span>
-            <span class="argo-sync-text"></span>
-          </div>
+          <span class="argo-sync-dot" aria-hidden="true"></span>
+          <span class="argo-sync-text"></span>
+          <button type="button" class="argo-sync-retry" id="argoGreetingSyncRetry" onclick="argoGreetingSyncRetry()">Tentar de novo</button>
+        </div>
 
           <div class="argo-greeting-btns">
             <button type="button" id="argoGreetingYes" class="argo-greeting-yes" onclick="argoOpenAgendaFromGreeting()">
@@ -359,6 +363,11 @@ function argoEnsureGreetingUI() {
             </button>
             <button type="button" class="argo-greeting-no" onclick="argoDismissGreeting()">Agora não</button>
           </div>
+
+          <label class="argo-greeting-mute">
+            <input type="checkbox" id="argoGreetingMuteToday">
+            <span>Não mostrar de novo hoje</span>
+          </label>
         </div>
       </div>
     </div>
@@ -405,13 +414,22 @@ function argoEnsureGreetingUI() {
       .argo-week-more { color:var(--text-muted,#475569); font-style:italic; }
       .argo-week-empty { margin-top:6px; color:var(--text-muted,#475569); }
 
-      .argo-sync-row { display:flex; align-items:center; gap:9px; margin:12px 2px 0 2px; font-size:12.5px; color:var(--text-muted,#475569); line-height:1.4; }
+      .argo-sync-row { display:flex; align-items:center; flex-wrap:wrap; gap:9px; margin:12px 2px 0 2px; font-size:12.5px; color:var(--text-muted,#475569); line-height:1.4; }
+      .argo-sync-text { flex:1 1 auto; }
       .argo-sync-dot { flex-shrink:0; width:9px; height:9px; border-radius:50%; background:#94a3b8; }
       .argo-sync-row[data-state="ok"] .argo-sync-dot { background:#3f9d6b; box-shadow:0 0 0 3px rgba(63,157,107,0.2); }
       .argo-sync-row[data-state="connecting"] .argo-sync-dot { background:#d99a2b; animation:argoPulse 1.1s ease-in-out infinite; }
       .argo-sync-row[data-state="slow"] .argo-sync-dot { background:#d99a2b; }
       .argo-sync-row[data-state="error"] .argo-sync-dot { background:#c0463d; }
       @keyframes argoPulse { 0%,100% { box-shadow:0 0 0 0 rgba(217,154,43,0.55); } 50% { box-shadow:0 0 0 6px rgba(217,154,43,0); } }
+
+      .argo-sync-retry { display:none; flex-shrink:0; align-items:center; padding:4px 11px; border-radius:999px; border:1px solid rgba(192,70,61,0.35); background:rgba(192,70,61,0.08); color:#c0463d; font-size:11px; font-weight:800; letter-spacing:.01em; cursor:pointer; font-family:inherit; }
+      .argo-sync-row[data-state="error"] .argo-sync-retry, .argo-sync-row[data-state="slow"] .argo-sync-retry { display:inline-flex; }
+      .argo-sync-retry:hover:not(:disabled) { background:rgba(192,70,61,0.16); }
+      .argo-sync-retry:disabled { opacity:.55; cursor:not-allowed; }
+
+      .argo-greeting-mute { display:flex; align-items:center; gap:7px; margin-top:14px; font-size:12px; color:var(--text-muted,#475569); cursor:pointer; user-select:none; }
+      .argo-greeting-mute input { accent-color:var(--brand-primary,#0091C2); cursor:pointer; flex-shrink:0; }
 
       .argo-greeting-btns { display:flex; flex-direction:column; gap:9px; margin-top:18px; }
       .argo-greeting-yes { display:flex; align-items:center; justify-content:center; gap:8px; background:linear-gradient(135deg, var(--brand-primary-light,#29ABE2), var(--brand-primary,#0091C2)); color:#fff; border:none; padding:13px; border-radius:12px; font-weight:700; cursor:pointer; font-size:14px; font-family:inherit; box-shadow:0 8px 18px -8px rgba(0,145,194,0.8); transition:transform .15s ease, filter .15s ease; }
@@ -484,6 +502,24 @@ function argoGreetingSyncState() {
   return { key: 'connecting', text: 'Sincronizando anotações…' };
 }
 
+// Botão "Tentar de novo" do cartão — só aparece quando a sincronização
+// falhou ou está demorando (ver CSS .argo-sync-retry). Reconecta ao mesmo
+// código de sincronização já salvo neste aparelho e reinicia a janela de
+// espera de 8s antes de voltar a marcar como "demorando".
+function argoGreetingSyncRetry() {
+  if (!agendaSyncCode || typeof agendaConnectSync !== 'function') return;
+  const btn = document.getElementById('argoGreetingSyncRetry');
+  if (btn) { btn.disabled = true; btn.textContent = 'Tentando…'; }
+  argoGreetingShownAt = Date.now();
+  agendaConnectSync(agendaSyncCode);
+  argoRefreshGreeting();
+  clearTimeout(argoGreetingSlowTimer);
+  argoGreetingSlowTimer = setTimeout(argoRefreshGreeting, 8100);
+  setTimeout(() => {
+    if (btn) { btn.disabled = false; btn.textContent = 'Tentar de novo'; }
+  }, 2500);
+}
+
 // Redesenha o conteúdo do cartão (se estiver aberto). Chamada ao abrir, a
 // cada mudança de status da sincronização (agendaSetSyncStatus) e 8s depois
 // de abrir, para trocar "Sincronizando…" por um aviso se nada respondeu.
@@ -506,6 +542,30 @@ function argoRefreshGreeting() {
   if (label) label.textContent = agendaSyncCode ? 'Ver agenda e sincronização' : 'Configurar sincronização';
 }
 
+// "Não mostrar de novo hoje" — quando marcado, some com o cartão nas
+// próximas vezes que o app for desbloqueado no mesmo dia (guardado só
+// como uma data em texto simples, sem dado sensível). Reaparece sozinho
+// no dia seguinte. O checkbox some desmarcado toda vez que o cartão abre.
+function argoGreetingMutedToday() {
+  try {
+    return localStorage.getItem('argo_greeting_muted_date') === new Date().toDateString();
+  } catch (e) {
+    return false;
+  }
+}
+
+function argoGreetingPersistMuteChoice() {
+  const chk = document.getElementById('argoGreetingMuteToday');
+  if (!chk) return;
+  try {
+    if (chk.checked) {
+      localStorage.setItem('argo_greeting_muted_date', new Date().toDateString());
+    } else {
+      localStorage.removeItem('argo_greeting_muted_date');
+    }
+  } catch (e) { /* localStorage indisponível — ignora silenciosamente */ }
+}
+
 // Mostra o cartão. Chamada uma vez a cada desbloqueio bem-sucedido (ver
 // submit do loginForm, em initAuth).
 function argoShowGreeting() {
@@ -520,6 +580,8 @@ function argoShowGreeting() {
     const d = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
     dateEl.textContent = d.charAt(0).toUpperCase() + d.slice(1);
   }
+  const muteChk = document.getElementById('argoGreetingMuteToday');
+  if (muteChk) muteChk.checked = false;
 
   argoGreetingShownAt = Date.now();
   modal.classList.add('visible');
@@ -539,6 +601,7 @@ function argoShowGreeting() {
 }
 
 function argoDismissGreeting() {
+  argoGreetingPersistMuteChoice();
   clearTimeout(argoGreetingSlowTimer);
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   const modal = document.getElementById('argoGreetingModal');
@@ -654,7 +717,10 @@ const ICONS = {
   volume: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>',
   swap: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>',
   whatsapp: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>',
-  calendar: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'
+  calendar: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  mic: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>',
+  copy: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+  check: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>'
 };
 
 // ---------------------------------------------------------------------
@@ -3021,7 +3087,13 @@ const TRADUTOR_PHRASES = [
    venezuelanos. A tradução de texto usa a API pública e gratuita do
    MyMemory (api.mymemory.translated.net); a voz usa a síntese de fala
    nativa do navegador (Web Speech API), que não envia áudio a
-   servidor algum. */
+   servidor algum. O microfone (entrada de voz) usa o reconhecimento
+   de fala nativo do navegador (Web Speech API), processado no próprio
+   aparelho ou pelo serviço de voz do navegador — não é gravado nem
+   fica salvo em lugar nenhum. */
+let tradutorRecognition = null;
+let tradutorListening = false;
+
 function renderTranslatorCard() {
   const langOptions = (selected) => Object.entries(TRADUTOR_LANGS).map(([code, l]) =>
     `<option value="${code}" ${code === selected ? 'selected' : ''}>${l.flag} ${l.label}</option>`
@@ -3039,7 +3111,7 @@ function renderTranslatorCard() {
       <div class="card-body">
         <div class="tradutor-privacy">
           ${ICONS.info}
-          <span>Digite o texto, toque em "Traduzir" e depois no alto-falante para ouvir em voz alta — útil para se comunicar com pessoas que não falam português, principalmente venezuelanos e outros estrangeiros em atendimento. A tradução do texto usa um serviço online gratuito (precisa de internet); a voz é gerada pelo próprio aparelho. <strong>Evite digitar nome, endereço, NIS ou outro dado que identifique a pessoa atendida</strong> — o texto traduzido é enviado a esse serviço externo. Prefira frases genéricas ou use as frases prontas abaixo.</span>
+          <span>Digite ou fale o texto, toque em "Traduzir" e depois no alto-falante para ouvir em voz alta — útil para se comunicar com pessoas que não falam português, principalmente venezuelanos e outros estrangeiros em atendimento. A tradução do texto usa um serviço online gratuito (precisa de internet); a voz e o microfone são processados pelo próprio aparelho. <strong>Evite digitar ou falar nome, endereço, NIS ou outro dado que identifique a pessoa atendida</strong> — o texto traduzido é enviado a esse serviço externo. Prefira frases genéricas ou use as frases prontas abaixo.</span>
         </div>
 
         <div class="tradutor-langbar">
@@ -3056,26 +3128,43 @@ function renderTranslatorCard() {
           <div class="tradutor-pane">
             <div class="tradutor-pane-head">
               <span id="tradutorFromLabel">Português</span>
-              <button type="button" class="tradutor-speak-btn" id="tradutorSpeakFrom" onclick="tradutorSpeak('from')">${ICONS.volume} Ouvir</button>
+              <div class="tradutor-pane-tools">
+                <button type="button" class="tradutor-icon-btn" id="tradutorMicBtn" onclick="tradutorToggleMic()" title="Falar para digitar" aria-label="Falar para digitar">${ICONS.mic}</button>
+                <button type="button" class="tradutor-icon-btn" id="tradutorCopyFrom" onclick="tradutorCopy('from')" title="Copiar texto" aria-label="Copiar texto">${ICONS.copy}</button>
+                <button type="button" class="tradutor-speak-btn" id="tradutorSpeakFrom" onclick="tradutorSpeak('from')">${ICONS.volume} Ouvir</button>
+              </div>
             </div>
-            <textarea id="tradutorInput" placeholder="Digite aqui o texto em português..." oninput="tradutorClearStatus()"></textarea>
+            <textarea id="tradutorInput" placeholder="Digite ou fale aqui o texto em português..." oninput="tradutorClearStatus()" onkeydown="tradutorHandleInputKey(event)"></textarea>
           </div>
           <div class="tradutor-pane">
             <div class="tradutor-pane-head">
               <span id="tradutorToLabel">Espanhol</span>
-              <button type="button" class="tradutor-speak-btn" id="tradutorSpeakTo" onclick="tradutorSpeak('to')" disabled>${ICONS.volume} Ouvir</button>
+              <div class="tradutor-pane-tools">
+                <button type="button" class="tradutor-icon-btn" id="tradutorCopyTo" onclick="tradutorCopy('to')" title="Copiar tradução" aria-label="Copiar tradução">${ICONS.copy}</button>
+                <button type="button" class="tradutor-speak-btn" id="tradutorSpeakTo" onclick="tradutorSpeak('to')" disabled>${ICONS.volume} Ouvir</button>
+              </div>
             </div>
             <textarea id="tradutorOutput" placeholder="A tradução aparece aqui..." readonly></textarea>
           </div>
         </div>
 
         <div class="tradutor-actions">
-          <button type="button" class="tradutor-btn" id="tradutorGoBtn" onclick="tradutorTranslate()">${ICONS.translate} Traduzir</button>
+          <div class="tradutor-actions-left">
+            <button type="button" class="tradutor-btn" id="tradutorGoBtn" onclick="tradutorTranslate()">${ICONS.translate} Traduzir</button>
+            <button type="button" class="tradutor-btn-ghost" onclick="tradutorClear()">Limpar</button>
+          </div>
+          <label class="tradutor-rate-toggle" title="A voz fala mais devagar, para ajudar quem tem dificuldade de entender">
+            <input type="checkbox" id="tradutorSlowSpeech">
+            <span>Falar devagar</span>
+          </label>
           <span class="tradutor-status" id="tradutorStatus"></span>
         </div>
 
         <div class="tradutor-phrases">
-          <h3>Frases rápidas de atendimento</h3>
+          <div class="tradutor-phrases-head">
+            <h3>Frases rápidas de atendimento</h3>
+            <input type="text" class="tradutor-phrase-search" id="tradutorPhraseSearch" placeholder="Filtrar frases..." oninput="tradutorFilterPhrases(this.value)" aria-label="Filtrar frases rápidas">
+          </div>
           <div class="tradutor-phrase-list" id="tradutorPhraseList"></div>
         </div>
       </div>
@@ -3087,6 +3176,7 @@ function tradutorSyncSpeakLabels() {
   const fromSel = document.getElementById('tradutorFrom');
   const toSel = document.getElementById('tradutorTo');
   if (!fromSel || !toSel) return;
+  if (tradutorListening && tradutorRecognition) tradutorRecognition.stop();
   const from = fromSel.value;
   const to = toSel.value;
   const fromLabelEl = document.getElementById('tradutorFromLabel');
@@ -3094,7 +3184,30 @@ function tradutorSyncSpeakLabels() {
   if (fromLabelEl) fromLabelEl.textContent = TRADUTOR_LANGS[from].label;
   if (toLabelEl) toLabelEl.textContent = TRADUTOR_LANGS[to].label;
   const inputEl = document.getElementById('tradutorInput');
-  if (inputEl) inputEl.placeholder = `Digite aqui o texto em ${TRADUTOR_LANGS[from].label.toLowerCase()}...`;
+  if (inputEl) inputEl.placeholder = `Digite ou fale aqui o texto em ${TRADUTOR_LANGS[from].label.toLowerCase()}...`;
+  tradutorSaveLangPref();
+}
+
+function tradutorSaveLangPref() {
+  const fromSel = document.getElementById('tradutorFrom');
+  const toSel = document.getElementById('tradutorTo');
+  if (!fromSel || !toSel) return;
+  try {
+    localStorage.setItem('argo_tradutor_langs', JSON.stringify({ from: fromSel.value, to: toSel.value }));
+  } catch (e) { /* localStorage indisponível — ignora silenciosamente */ }
+}
+
+function tradutorLoadLangPref() {
+  const fromSel = document.getElementById('tradutorFrom');
+  const toSel = document.getElementById('tradutorTo');
+  if (!fromSel || !toSel) return;
+  try {
+    const saved = JSON.parse(localStorage.getItem('argo_tradutor_langs') || 'null');
+    if (saved && TRADUTOR_LANGS[saved.from] && TRADUTOR_LANGS[saved.to]) {
+      fromSel.value = saved.from;
+      toSel.value = saved.to;
+    }
+  } catch (e) { /* preferência ausente ou corrompida — usa o padrão */ }
 }
 
 function tradutorSwapLangs() {
@@ -3127,6 +3240,24 @@ function tradutorSetStatus(msg, kind) {
 
 function tradutorClearStatus() {
   tradutorSetStatus('', '');
+}
+
+function tradutorHandleInputKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    tradutorTranslate();
+  }
+}
+
+function tradutorClear() {
+  const inputEl = document.getElementById('tradutorInput');
+  const outputEl = document.getElementById('tradutorOutput');
+  const speakTo = document.getElementById('tradutorSpeakTo');
+  if (tradutorListening && tradutorRecognition) tradutorRecognition.stop();
+  if (inputEl) { inputEl.value = ''; inputEl.focus(); }
+  if (outputEl) outputEl.value = '';
+  if (speakTo) speakTo.disabled = true;
+  tradutorClearStatus();
 }
 
 async function tradutorTranslate() {
@@ -3177,21 +3308,123 @@ function tradutorSpeak(which) {
   const langCode = which === 'from' ? document.getElementById('tradutorFrom').value : document.getElementById('tradutorTo').value;
   const text = which === 'from' ? document.getElementById('tradutorInput').value : document.getElementById('tradutorOutput').value;
   if (!text || !text.trim()) return;
+  const slow = document.getElementById('tradutorSlowSpeech');
   window.speechSynthesis.cancel();
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = TRADUTOR_LANGS[langCode].voice;
+  utter.rate = (slow && slow.checked) ? 0.7 : 1;
   window.speechSynthesis.speak(utter);
 }
 
-function tradutorRenderPhrases() {
+/* Entrada de voz: transcreve a fala direto no campo de origem, no
+   idioma selecionado em "tradutorFrom". Some com o botão (fica
+   desabilitado) em navegadores sem suporte, como Firefox desktop. */
+function tradutorToggleMic() {
+  const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognitionCtor) {
+    tradutorSetStatus('Este navegador não tem suporte a reconhecimento de voz.', 'error');
+    return;
+  }
+  const micBtn = document.getElementById('tradutorMicBtn');
+
+  if (tradutorListening) {
+    if (tradutorRecognition) tradutorRecognition.stop();
+    return;
+  }
+
+  const fromSel = document.getElementById('tradutorFrom');
+  const inputEl = document.getElementById('tradutorInput');
+  if (!fromSel || !inputEl) return;
+
+  const baseText = inputEl.value.trim() ? inputEl.value.trim() + ' ' : '';
+  tradutorRecognition = new SpeechRecognitionCtor();
+  tradutorRecognition.lang = TRADUTOR_LANGS[fromSel.value].voice;
+  tradutorRecognition.interimResults = true;
+  tradutorRecognition.continuous = true;
+
+  tradutorRecognition.onstart = () => {
+    tradutorListening = true;
+    if (micBtn) micBtn.classList.add('is-listening');
+    tradutorSetStatus('Ouvindo... fale agora.', '');
+  };
+
+  tradutorRecognition.onresult = (event) => {
+    let finalChunk = '';
+    let interimChunk = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
+      if (event.results[i].isFinal) finalChunk += transcript + ' ';
+      else interimChunk += transcript;
+    }
+    inputEl.value = baseText + finalChunk + interimChunk;
+  };
+
+  tradutorRecognition.onerror = () => {
+    tradutorSetStatus('Não foi possível captar o áudio. Tente novamente.', 'error');
+  };
+
+  tradutorRecognition.onend = () => {
+    tradutorListening = false;
+    if (micBtn) micBtn.classList.remove('is-listening');
+    tradutorClearStatus();
+  };
+
+  try {
+    tradutorRecognition.start();
+  } catch (e) {
+    tradutorSetStatus('Não foi possível ativar o microfone.', 'error');
+  }
+}
+
+function tradutorCopy(which) {
+  const el = which === 'from' ? document.getElementById('tradutorInput') : document.getElementById('tradutorOutput');
+  const btn = which === 'from' ? document.getElementById('tradutorCopyFrom') : document.getElementById('tradutorCopyTo');
+  if (!el || !el.value.trim()) return;
+
+  const showCopied = () => {
+    if (!btn) return;
+    const original = btn.innerHTML;
+    btn.innerHTML = ICONS.check;
+    btn.disabled = true;
+    setTimeout(() => { btn.innerHTML = original; btn.disabled = false; }, 1400);
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(el.value).then(showCopied).catch(() => {
+      el.select();
+      document.execCommand('copy');
+      showCopied();
+    });
+  } else {
+    el.select();
+    document.execCommand('copy');
+    showCopied();
+  }
+}
+
+function tradutorRenderPhrases(filter) {
   const list = document.getElementById('tradutorPhraseList');
   if (!list) return;
-  list.innerHTML = TRADUTOR_PHRASES.map((p, i) => `
+  const term = (filter || '').trim().toLowerCase();
+  const items = TRADUTOR_PHRASES
+    .map((p, i) => ({ p, i }))
+    .filter(({ p }) => !term || p.toLowerCase().includes(term));
+
+  if (!items.length) {
+    list.innerHTML = '<div class="tradutor-phrase-empty">Nenhuma frase encontrada.</div>';
+    return;
+  }
+
+  list.innerHTML = items.map(({ p, i }) => `
     <div class="tradutor-phrase-item">
       <span>${p}</span>
       <button type="button" onclick="tradutorUsePhrase(${i})">${ICONS.translate} Traduzir</button>
     </div>
   `).join('');
+}
+
+function tradutorFilterPhrases(term) {
+  tradutorRenderPhrases(term);
 }
 
 function tradutorUsePhrase(idx) {
@@ -3206,8 +3439,14 @@ function tradutorUsePhrase(idx) {
 }
 
 function initTranslatorPanel() {
+  tradutorLoadLangPref();
   tradutorSyncSpeakLabels();
   tradutorRenderPhrases();
+  const micBtn = document.getElementById('tradutorMicBtn');
+  if (micBtn && !(window.SpeechRecognition || window.webkitSpeechRecognition)) {
+    micBtn.disabled = true;
+    micBtn.title = 'Reconhecimento de voz não disponível neste navegador';
+  }
 }
 
 /* ============================================================
