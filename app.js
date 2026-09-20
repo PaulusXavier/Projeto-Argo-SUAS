@@ -2962,7 +2962,7 @@ function renderPdfToolsCard() {
               <div class="pdftools-tool-limit">Até 10 arquivos · total de 50 MB</div>
             </div>
           </div>
-          <p class="pdftools-tool-desc">Junte vários arquivos PDF em um único documento, na ordem que você escolher (use as setas para reordenar).</p>
+          <p class="pdftools-tool-desc">Junte vários arquivos PDF em um único documento, na ordem que você escolher (arraste os itens da lista para reordenar ou use as setas).</p>
 
           <label class="pdftools-dropzone" for="pdftoolsMergeInput" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="pdftoolsHandleDrop(event, 'merge')">
             <input type="file" id="pdftoolsMergeInput" accept=".pdf,application/pdf" multiple onchange="pdftoolsAddMergeFiles(this.files)">
@@ -2973,9 +2973,24 @@ function renderPdfToolsCard() {
 
           <ul class="pdftools-filelist" id="pdftoolsMergeList"></ul>
 
+          <div class="pdftools-capacity" id="pdftoolsMergeCapacity" role="img" aria-label="Espaço usado do limite de 50 MB">
+            <div class="pdftools-capacity-fill" id="pdftoolsMergeCapacityFill"></div>
+          </div>
+
+          <div class="pdftools-filename-field">
+            <label for="pdftoolsMergeFilename">Nome do arquivo final</label>
+            <input type="text" id="pdftoolsMergeFilename" placeholder="pdf-unificado" maxlength="80" aria-describedby="pdftoolsMergeFilenameSuffix">
+            <span class="pdftools-filename-suffix" id="pdftoolsMergeFilenameSuffix">.pdf</span>
+          </div>
+
           <div class="pdftools-actions">
             <button type="button" class="pdftools-btn" id="pdftoolsMergeBtn" disabled onclick="pdftoolsMergePdfs()">${ICONS.layers} Unificar e baixar</button>
+            <button type="button" class="pdftools-btn-ghost" id="pdftoolsMergeClearBtn" disabled onclick="pdftoolsClearMergeFiles()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              Limpar lista
+            </button>
           </div>
+          <div class="pdftools-progress" id="pdftoolsMergeProgress"><div class="pdftools-progress-fill" id="pdftoolsMergeProgressFill"></div></div>
           <div class="pdftools-status is-info" id="pdftoolsMergeStatus"></div>
         </div>
 
@@ -3958,7 +3973,7 @@ function renderMapCard() {
       <div class="card-body">
         <div class="tradutor-privacy">
           ${ICONS.info}
-          <span>O mapa não procura endereços sozinho. Os pinos de equipamentos usam endereços que já foram localizados e ficam guardados neste navegador (o serviço gratuito Nominatim/OpenStreetMap só é consultado quando você usa "Ordenar por proximidade" na lista). As unidades de CRAS e CREAS de Boa Vista aparecem sempre, com coordenadas exatas. Cada categoria tem uma cor própria, e pinos próximos se agrupam em um número — toque no número para abrir o grupo.</span>
+          <span>O mapa não procura endereços sozinho. Os pinos de equipamentos usam endereços que já foram localizados e ficam guardados neste navegador (o serviço gratuito Nominatim/OpenStreetMap só é consultado quando você usa "Ordenar por proximidade" na lista). As unidades de CRAS e CREAS de Boa Vista aparecem sempre, com coordenadas exatas. Cada categoria tem uma cor própria, e pinos próximos se agrupam em um número — toque no número para abrir o grupo. Toque em um pino para ver os detalhes do equipamento no painel ao lado.</span>
         </div>
 
         <div style="display:flex; flex-wrap:wrap; gap:0.6rem; align-items:center; margin:0.75rem 0;">
@@ -3977,7 +3992,13 @@ function renderMapCard() {
 
         <div id="mapaRedeStatus" style="font-size:0.85rem; color:var(--text-muted, #64748b); margin-bottom:0.5rem;"></div>
 
-        <div id="mapaRedeMapContainer" style="height:480px; border-radius:12px; overflow:hidden; border:1px solid #dbe3ea; background:#eef2f5;"></div>
+        <div class="mapa-rede-layout">
+          <div id="mapaRedeMapContainer" style="border-radius:12px; overflow:hidden; border:1px solid #dbe3ea; background:#eef2f5;"></div>
+
+          <aside id="mapaRedeDetailPanel" class="mapa-rede-detail-panel" aria-live="polite">
+            ${mapaRedeDetailPlaceholder()}
+          </aside>
+        </div>
 
         <div id="mapaRedeLegend" style="display:flex; flex-wrap:wrap; gap:0.5rem 0.9rem; margin-top:0.7rem; font-size:0.78rem; color:#475569;"></div>
 
@@ -3985,6 +4006,108 @@ function renderMapCard() {
       </div>
     </div>
   `;
+}
+
+// ------------------------------------------------------------------------
+// Painel de detalhes (caixa lateral) do Mapa da Rede: mostra as informações
+// completas do equipamento ou da unidade de CRAS/CREAS assim que o técnico
+// toca em um pino no mapa. Em telas largas fica ao lado do mapa; em telas
+// estreitas passa a aparecer abaixo dele (ver .mapa-rede-layout no CSS).
+// ------------------------------------------------------------------------
+function mapaRedeDetailPlaceholder() {
+  return `
+    <div class="mapa-rede-detail-empty">
+      <span class="mapa-rede-detail-empty-icon">${ICONS.map}</span>
+      <p>Toque em um pino no mapa para ver aqui o endereço, telefone e demais informações do equipamento.</p>
+    </div>
+  `;
+}
+
+function mapaRedeClearDetail() {
+  const panel = document.getElementById('mapaRedeDetailPanel');
+  if (!panel) return;
+  panel.classList.remove('has-selection');
+  panel.innerHTML = mapaRedeDetailPlaceholder();
+}
+
+// Distância formatada (m/km) a partir da localização atual do usuário, ou
+// string vazia se "Minha localização" ainda não foi usada.
+function mapaRedeDetailDistanceHtml(lat, lon) {
+  if (!proximityState.active || lat == null || lon == null) return '';
+  const km = haversineKm(proximityState.lat, proximityState.lon, lat, lon);
+  const label = km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(1) + ' km';
+  return `<div class="mapa-rede-detail-distance">${ICONS.map} <strong>${label}</strong> da sua localização atual</div>`;
+}
+
+// Mostra, na caixa lateral, os detalhes de um equipamento do diretório
+// principal (objeto DATA). `coords` são as coordenadas já geocodificadas
+// usadas para colocar o pino no mapa (necessárias para o link de rota e
+// para o cálculo de distância).
+function mapaRedeShowItemDetail(item, coords) {
+  const panel = document.getElementById('mapaRedeDetailPanel');
+  if (!panel) return;
+
+  const catLabels = (item.cat || [])
+    .map(c => CATEGORY_LABELS_PRINT[c] || null)
+    .filter(Boolean);
+  const catColor = mapaRedeItemColor(item);
+
+  const phonesHtml = (item.phones || [])
+    .filter(p => p && p.trim() && p.trim().toUpperCase() !== 'N/A')
+    .map(p => `<a class="mapa-rede-detail-link" href="tel:${escapeHtml(p.replace(/[^\d+]/g, ''))}">${ICONS.phone}<span>${escapeHtml(p)}</span></a>`)
+    .join('');
+
+  const routeHref = coords
+    ? `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lon}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.address || item.name || '')}`;
+
+  panel.innerHTML = `
+    <div class="mapa-rede-detail-head">
+      <div class="mapa-rede-detail-cats">
+        ${catLabels.map(l => `<span class="mapa-rede-detail-badge" style="background:${catColor}1a; color:${catColor};">${escapeHtml(l)}</span>`).join('')}
+      </div>
+      <button type="button" class="mapa-rede-detail-close" onclick="mapaRedeClearDetail()" aria-label="Fechar detalhes">✕</button>
+    </div>
+    <h3 class="mapa-rede-detail-title">${escapeHtml(item.fullName || item.name || '')}</h3>
+    ${mapaRedeDetailDistanceHtml(coords ? coords.lat : null, coords ? coords.lon : null)}
+    <div class="mapa-rede-detail-row">${ICONS.map}<span>${escapeHtml(item.address || 'Endereço não informado')}</span></div>
+    ${item.hours ? `<div class="mapa-rede-detail-row">${ICONS.clock}<span>${escapeHtml(item.hours)}</span></div>` : ''}
+    ${phonesHtml ? `<div class="mapa-rede-detail-phones">${phonesHtml}</div>` : ''}
+    ${item.services ? `<div class="mapa-rede-detail-block"><strong>Serviços</strong><p>${escapeHtml(item.services)}</p></div>` : ''}
+    ${item.desc ? `<div class="mapa-rede-detail-block mapa-rede-detail-desc"><p>${escapeHtml(item.desc)}</p></div>` : ''}
+    <div class="mapa-rede-detail-actions">
+      <a class="btn-tech btn-secondary btn-link" href="${routeHref}" target="_blank" rel="noopener noreferrer">${ICONS.map} Traçar rota</a>
+    </div>
+  `;
+  panel.classList.add('has-selection');
+}
+
+// Mesma ideia acima, mas para as unidades de CRAS/CREAS (coordenadas
+// exatas, ver UNITS_CRAS_CREAS), que têm campos próprios (tipo, bairros).
+function mapaRedeShowUnitDetail(unit) {
+  const panel = document.getElementById('mapaRedeDetailPanel');
+  if (!panel) return;
+
+  const unitColor = MAPA_REDE_COLOR_HEX[unit.color] || '#0067a3';
+  const routeHref = `https://www.google.com/maps/dir/?api=1&destination=${unit.lat},${unit.lng}`;
+
+  panel.innerHTML = `
+    <div class="mapa-rede-detail-head">
+      <div class="mapa-rede-detail-cats">
+        <span class="mapa-rede-detail-badge" style="background:${unitColor}1a; color:${unitColor};">${escapeHtml(unit.tipo)}</span>
+      </div>
+      <button type="button" class="mapa-rede-detail-close" onclick="mapaRedeClearDetail()" aria-label="Fechar detalhes">✕</button>
+    </div>
+    <h3 class="mapa-rede-detail-title">${escapeHtml(unit.name)}</h3>
+    ${mapaRedeDetailDistanceHtml(unit.lat, unit.lng)}
+    <div class="mapa-rede-detail-row">${ICONS.map}<span>${escapeHtml(unit.address)}</span></div>
+    ${unit.phone && unit.phone.trim().toUpperCase() !== 'N/A' ? `<div class="mapa-rede-detail-phones"><a class="mapa-rede-detail-link" href="tel:${escapeHtml(unit.phone.replace(/[^\d+]/g, ''))}">${ICONS.phone}<span>${escapeHtml(unit.phone)}</span></a></div>` : ''}
+    <div class="mapa-rede-detail-block"><strong>Bairros de referência</strong><p>${escapeHtml(unit.bairros)}</p></div>
+    <div class="mapa-rede-detail-actions">
+      <a class="btn-tech btn-secondary btn-link" href="${routeHref}" target="_blank" rel="noopener noreferrer">${ICONS.map} Traçar rota</a>
+    </div>
+  `;
+  panel.classList.add('has-selection');
 }
 
 function mapaRedeSetStatus(msg) {
@@ -4094,6 +4217,11 @@ async function renderMapaRedeMarkers() {
   const catSelect = document.getElementById('mapaRedeCatSelect');
   const cat = catSelect ? catSelect.value : 'all';
 
+  // Ao trocar a categoria ou mostrar/esconder CRAS/CREAS os pinos são
+  // refeitos do zero, então o item que estava selecionado na caixa lateral
+  // pode nem existir mais no mapa — evita mostrar um detalhe "órfão".
+  mapaRedeClearDetail();
+
   const items = DATA.filter(i =>
     i.address &&
     !i.cat.includes('cas') && !i.cat.includes('cras') &&
@@ -4126,13 +4254,11 @@ async function renderMapaRedeMarkers() {
     if (itemCat) legendCatsSeen.add(itemCat);
     const itemColor = mapaRedeItemColor(item);
     const marker = L.marker([coords.lat, coords.lon], { icon: mapaRedeCategoryIcon(itemColor), categoryColor: itemColor });
-    const distanceLabel = proximityState.active
-      ? (() => {
-          const km = haversineKm(proximityState.lat, proximityState.lon, coords.lat, coords.lon);
-          return `<br><strong>${km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(1) + ' km'}</strong> daqui`;
-        })()
-      : '';
-    marker.bindPopup(`<strong>${escapeHtml(item.name || '')}</strong><br>${escapeHtml(item.address || '')}${distanceLabel}`);
+    // Ao tocar no pino, as informações completas abrem na caixa lateral
+    // (#mapaRedeDetailPanel) em vez de um popup — cabe mais informação
+    // (telefone, horário, serviços, descrição) e fica mais fácil de ler,
+    // principalmente no celular.
+    marker.on('click', () => mapaRedeShowItemDetail(item, coords));
     marker.addTo(mapaRedeMarkersLayer);
   });
 
@@ -4146,19 +4272,10 @@ async function renderMapaRedeMarkers() {
         bounds.push([unit.lat, unit.lng]);
         const unitColor = MAPA_REDE_COLOR_HEX[unit.color] || '#0067a3';
         const marker = L.marker([unit.lat, unit.lng], { icon: mapaRedeCrasCreasIcon(unitColor), categoryColor: unitColor });
-        const distanceLabel = proximityState.active
-          ? (() => {
-              const km = haversineKm(proximityState.lat, proximityState.lon, unit.lat, unit.lng);
-              return `<br><strong>${km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(1) + ' km'}</strong> daqui`;
-            })()
-          : '';
-        marker.bindPopup(`
-          <strong>${escapeHtml(unit.name)}</strong> <span style="font-size:0.75em; color:#64748b;">(${unit.tipo})</span><br>
-          ${escapeHtml(unit.address)}<br>
-          ${unit.phone && unit.phone !== 'N/A' ? `📞 ${escapeHtml(unit.phone)}<br>` : ''}
-          <span style="font-size:0.85em; color:#64748b;">Bairros: ${escapeHtml(unit.bairros)}</span>
-          ${distanceLabel}
-        `);
+        // Mesma ideia dos pinos de equipamentos: os detalhes completos
+        // (endereço, telefone, bairros de referência) abrem na caixa
+        // lateral ao tocar no pino, em vez de um popup.
+        marker.on('click', () => mapaRedeShowUnitDetail(unit));
         marker.addTo(mapaRedeCrasCreasLayer);
       });
   }
@@ -6357,6 +6474,13 @@ async function pdftoolsAddMergeFiles(fileList) {
       pdftoolsSetStatus('pdftoolsMergeStatus', `"${file.name}" não é um PDF.`, 'error');
       continue;
     }
+    // Evita adicionar duas vezes o mesmo arquivo por engano (mesmo nome e
+    // tamanho) — fácil de acontecer ao arrastar da mesma pasta duas vezes.
+    const isDuplicate = pdftoolsMergeState.files.some(f => f.name === file.name && f.size === file.size);
+    if (isDuplicate) {
+      pdftoolsSetStatus('pdftoolsMergeStatus', `"${file.name}" já está na lista.`, 'warn');
+      continue;
+    }
     try {
       const bytes = await file.arrayBuffer();
       const doc = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
@@ -6379,11 +6503,20 @@ async function pdftoolsAddMergeFiles(fileList) {
 function pdftoolsRenderMergeList() {
   const list = document.getElementById('pdftoolsMergeList');
   const btn = document.getElementById('pdftoolsMergeBtn');
+  const clearBtn = document.getElementById('pdftoolsMergeClearBtn');
   if (!list) return;
   const totalPages = pdftoolsMergeState.files.reduce((s, f) => s + f.pages, 0);
   const totalBytes = pdftoolsMergeState.files.reduce((s, f) => s + (f.size || 0), 0);
   list.innerHTML = pdftoolsMergeState.files.map((f, idx) => `
-    <li class="pdftools-fileitem">
+    <li class="pdftools-fileitem" draggable="true" data-id="${f.id}"
+        ondragstart="pdftoolsMergeDragStart(event, '${f.id}')"
+        ondragover="pdftoolsMergeDragOver(event, '${f.id}')"
+        ondragleave="pdftoolsMergeDragLeave(event)"
+        ondrop="pdftoolsMergeDrop(event, '${f.id}')"
+        ondragend="pdftoolsMergeDragEnd(event)">
+      <span class="pdftools-drag-handle" title="Arraste para reordenar" aria-hidden="true">
+        <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor"><circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/><circle cx="2" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="2" cy="14" r="1.5"/><circle cx="8" cy="14" r="1.5"/></svg>
+      </span>
       <span class="pdftools-fileitem-name">${idx + 1}. ${escapeHtml(f.name)}</span>
       <span class="pdftools-fileitem-meta">${f.pages} pág. · ${pdftoolsFormatBytes(f.size || 0)}</span>
       <span class="pdftools-fileitem-btns">
@@ -6400,12 +6533,28 @@ function pdftoolsRenderMergeList() {
     </li>
   `).join('');
 
+  // Barra de capacidade: mostra visualmente o quanto já foi usado dos 50 MB
+  // permitidos, ficando âmbar perto do limite e vermelha ao ultrapassá-lo —
+  // mais fácil de perceber de relance do que só o texto do status abaixo.
+  const gauge = document.getElementById('pdftoolsMergeCapacity');
+  const gaugeFill = document.getElementById('pdftoolsMergeCapacityFill');
+  if (gauge && gaugeFill) {
+    const pct = Math.min(100, (totalBytes / PDFTOOLS_MERGE_MAX_BYTES) * 100);
+    gaugeFill.style.width = pct + '%';
+    gauge.classList.toggle('is-warn', totalBytes <= PDFTOOLS_MERGE_MAX_BYTES && pct >= 80);
+    gauge.classList.toggle('is-error', totalBytes > PDFTOOLS_MERGE_MAX_BYTES);
+    gauge.style.visibility = pdftoolsMergeState.files.length ? 'visible' : 'hidden';
+  }
+
   if (btn) btn.disabled = pdftoolsMergeState.files.length < 2 || totalBytes > PDFTOOLS_MERGE_MAX_BYTES;
+  if (clearBtn) clearBtn.disabled = pdftoolsMergeState.files.length === 0;
 
   if (pdftoolsMergeState.files.length === 0) {
     pdftoolsSetStatus('pdftoolsMergeStatus', '', 'info');
   } else if (totalBytes > PDFTOOLS_MERGE_MAX_BYTES) {
     pdftoolsSetStatus('pdftoolsMergeStatus', `Total de ${pdftoolsFormatBytes(totalBytes)} — o limite é 50 MB. Remova algum arquivo.`, 'error');
+  } else if (pdftoolsMergeState.files.length === 1) {
+    pdftoolsSetStatus('pdftoolsMergeStatus', `1 arquivo · ${totalPages} pág. · ${pdftoolsFormatBytes(totalBytes)}. Adicione mais um PDF para poder unificar.`, 'info');
   } else {
     pdftoolsSetStatus('pdftoolsMergeStatus', `${pdftoolsMergeState.files.length} de ${PDFTOOLS_MERGE_MAX_FILES} arquivo(s) · ${totalPages} pág. · ${pdftoolsFormatBytes(totalBytes)} de 50 MB.`, 'info');
   }
@@ -6425,22 +6574,83 @@ function pdftoolsRemoveMergeFile(id) {
   pdftoolsRenderMergeList();
 }
 
+// Esvazia a lista de uma vez (botão "Limpar lista"), em vez de precisar
+// remover arquivo por arquivo quando o técnico quer recomeçar a seleção.
+function pdftoolsClearMergeFiles() {
+  if (!pdftoolsMergeState.files.length) return;
+  pdftoolsMergeState.files = [];
+  pdftoolsRenderMergeList();
+}
+
+// ---- Reordenar a lista arrastando com o mouse (além das setas acima,
+// que continuam funcionando e são o único jeito de reordenar no celular,
+// já que arrastar-e-soltar nativo do HTML5 não funciona em telas de toque).
+let pdftoolsMergeDragId = null;
+
+function pdftoolsMergeDragStart(event, id) {
+  pdftoolsMergeDragId = id;
+  event.currentTarget.classList.add('dragging');
+  event.dataTransfer.effectAllowed = 'move';
+  try { event.dataTransfer.setData('text/plain', id); } catch (e) { /* Firefox exige setData */ }
+}
+
+function pdftoolsMergeDragOver(event, id) {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+  if (id !== pdftoolsMergeDragId) event.currentTarget.classList.add('drag-over');
+}
+
+function pdftoolsMergeDragLeave(event) {
+  event.currentTarget.classList.remove('drag-over');
+}
+
+function pdftoolsMergeDrop(event, targetId) {
+  event.preventDefault();
+  event.currentTarget.classList.remove('drag-over');
+  const draggedId = pdftoolsMergeDragId;
+  if (!draggedId || draggedId === targetId) return;
+  const fromIdx = pdftoolsMergeState.files.findIndex(f => f.id === draggedId);
+  const toIdx = pdftoolsMergeState.files.findIndex(f => f.id === targetId);
+  if (fromIdx < 0 || toIdx < 0) return;
+  const [item] = pdftoolsMergeState.files.splice(fromIdx, 1);
+  pdftoolsMergeState.files.splice(toIdx, 0, item);
+  pdftoolsRenderMergeList();
+}
+
+function pdftoolsMergeDragEnd(event) {
+  event.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('#pdftoolsMergeList .pdftools-fileitem.drag-over').forEach(el => el.classList.remove('drag-over'));
+  pdftoolsMergeDragId = null;
+}
+
 async function pdftoolsMergePdfs() {
   const totalBytes = pdftoolsMergeState.files.reduce((s, f) => s + (f.size || 0), 0);
   if (pdftoolsMergeState.files.length < 2 || totalBytes > PDFTOOLS_MERGE_MAX_BYTES) return;
   const btn = document.getElementById('pdftoolsMergeBtn');
+  const clearBtn = document.getElementById('pdftoolsMergeClearBtn');
   if (btn) btn.disabled = true;
+  if (clearBtn) clearBtn.disabled = true;
   pdftoolsSetStatus('pdftoolsMergeStatus', 'Unificando PDFs...', 'info');
+  pdftoolsSetProgress('Merge', 0, pdftoolsMergeState.files.length);
   try {
     const PDFLib = await ensurePdfLib();
     const merged = await PDFLib.PDFDocument.create();
+    let done = 0;
     for (const f of pdftoolsMergeState.files) {
       const src = await PDFLib.PDFDocument.load(f.bytes, { ignoreEncryption: true });
       const copied = await merged.copyPages(src, src.getPageIndices());
       copied.forEach(p => merged.addPage(p));
+      done++;
+      pdftoolsSetProgress('Merge', done, pdftoolsMergeState.files.length);
     }
     const bytes = await merged.save();
-    pdftoolsDownloadBlob(new Blob([bytes], { type: 'application/pdf' }), 'pdf-unificado.pdf');
+    // Nome do arquivo final: usa o que o técnico digitou (se digitou algo),
+    // limpo de caracteres inválidos em nome de arquivo; senão o padrão de
+    // sempre ("pdf-unificado.pdf").
+    const filenameInput = document.getElementById('pdftoolsMergeFilename');
+    const typed = filenameInput ? filenameInput.value.trim() : '';
+    const base = (typed || 'pdf-unificado').replace(/[\\/:*?"<>|]+/g, '').replace(/\.pdf$/i, '').trim() || 'pdf-unificado';
+    pdftoolsDownloadBlob(new Blob([bytes], { type: 'application/pdf' }), `${base}.pdf`);
     pdftoolsSetStatus('pdftoolsMergeStatus', 'PDF unificado gerado com sucesso!', 'success');
   } catch (e) {
     pdftoolsSetStatus('pdftoolsMergeStatus', 'Erro ao unificar os PDFs. Tente novamente.', 'error');
