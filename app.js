@@ -158,11 +158,10 @@ function initAuth() {
         errorEl.classList.remove('visible');
         sessionEncKey = await deriveSessionKey(value);
         unlockApp();
-        // Saudação de abertura do Argo (bom dia/boa tarde/boa noite) +
-        // pergunta se a pessoa quer ver as notificações da agenda da
-        // semana (ver bloco "Saudação de Abertura" mais abaixo). Um
-        // pequeno atraso deixa a entrada do app respirar antes do
-        // cartão de saudação aparecer por cima.
+        // Notificação de abertura do Argo (saudação do horário + resumo
+        // da semana da agenda + estado da sincronização; ver bloco
+        // "Notificação de Abertura" mais abaixo). Um pequeno atraso deixa
+        // a entrada do app respirar antes do cartão aparecer por cima.
         setTimeout(() => { if (typeof argoShowGreeting === 'function') argoShowGreeting(); }, 450);
         // Monta a lista de 374 fichas (render()) só DEPOIS que o navegador
         // já pintou a tela desbloqueada (ver comentário em unlockApp) —
@@ -214,18 +213,24 @@ function logout() {
   lockApp();
 }
 
-/* ===================== Saudação de Abertura (Argo) =====================
-   Ao desbloquear o app com sucesso, o Argo se apresenta com uma saudação
-   que muda conforme o horário do aparelho (bom dia / boa tarde / boa
-   noite) e pergunta se a pessoa quer ver as notificações da agenda desta
-   semana. Se a resposta for "sim", as notificações aparecem num banner
-   fixo logo abaixo do cabeçalho.
+/* ===================== Notificação de Abertura (Argo) =====================
+   Ao desbloquear o app, o Argo aparece num cartão de boas-vindas com:
+     • a saudação do horário (bom dia / boa tarde / boa noite) e a data;
+     • o resumo da semana da agenda (hoje em destaque + próximos dias) —
+       já visível na própria notificação, sem precisar de um "sim" antes;
+     • o estado da sincronização entre aparelhos (Firebase), que é iniciada
+       em segundo plano assim que o cartão abre e se atualiza sozinha:
+       sincronizando → sincronizado às HH:MM (ou erro / não configurada);
+     • um botão que LEVA direto à aba "Agenda Boa Vista 2026" (onde fica o
+       card de sincronização) — ou, se ainda não há código de sincronização
+       neste aparelho, abre a tela de configuração dele.
 
-   As notificações reaproveitam a MESMA fonte de dados já usada pelo card
-   "Agenda Boa Vista 2026" (agendaBuildWeekSummary, definida mais abaixo
-   neste arquivo): feriados/pagamentos fixos do ano (AGENDA_DATA_INFO) e
-   anotações próprias sincronizadas (agendaNotesCache) — por isso o banner
-   já funciona mesmo sem o usuário nunca ter aberto a aba "Agenda 2026". */
+   Os dados vêm da MESMA fonte do card da agenda: agendaBuildWeekSummary
+   (feriados/pagamentos fixos de AGENDA_DATA_INFO + anotações sincronizadas
+   em agendaNotesCache), definida mais abaixo neste arquivo. */
+
+let argoGreetingShownAt = 0;
+let argoGreetingSlowTimer = null;
 
 function argoGreetingWord() {
   const hour = new Date().getHours();
@@ -234,106 +239,332 @@ function argoGreetingWord() {
   return 'Boa noite';
 }
 
+// Ilustração do Argo Navis: céu noturno com constelação, o navio (proa em
+// dragão, vela, escudos) balançando e três camadas de ondas em movimento.
+// SVG inline (sem imagem externa), então funciona offline e nos dois temas.
+// As animações são em CSS e desligam com "reduzir movimento" do sistema.
+function argoSceneSvg() {
+  const wave = (cls, y, amp, fill, op) =>
+    `<path class="argo-wave ${cls}" fill="${fill}" fill-opacity="${op}" d="M0 ${y} q30 -${amp} 60 0` + ' t60 0'.repeat(11) + ' V172 H0Z"/>';
+  const star = (x, y, s, d) =>
+    `<g transform="translate(${x} ${y})"><g class="argo-twinkle" style="animation-delay:${d}s"><use href="#argoStar" fill="#f3d58a" transform="scale(${s})"/></g></g>`;
+  return `
+  <svg class="argo-scene-svg" viewBox="0 -20 360 192" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="argoSky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#050f22"/><stop offset=".55" stop-color="#0c2946"/><stop offset="1" stop-color="#14496d"/>
+      </linearGradient>
+      <linearGradient id="argoSail" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#9fcbcc"/><stop offset=".45" stop-color="#efe8cf"/><stop offset="1" stop-color="#fdf2d4"/>
+      </linearGradient>
+      <linearGradient id="argoHull" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#21606f"/><stop offset="1" stop-color="#0a2233"/>
+      </linearGradient>
+      <linearGradient id="argoGold" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#f6dc95"/><stop offset="1" stop-color="#b8894f"/>
+      </linearGradient>
+      <radialGradient id="argoGlow" cx=".5" cy=".55" r=".55">
+        <stop offset="0" stop-color="#f3d58a" stop-opacity=".30"/><stop offset="1" stop-color="#f3d58a" stop-opacity="0"/>
+      </radialGradient>
+      <path id="argoStar" d="M0-5L1.3-1.3L5 0L1.3 1.3L0 5L-1.3 1.3L-5 0L-1.3-1.3Z"/>
+    </defs>
+
+    <rect y="-20" width="360" height="192" fill="url(#argoSky)"/>
+    <circle cx="180" cy="100" r="92" fill="url(#argoGlow)"/>
+    <circle cx="180" cy="100" r="84" fill="none" stroke="#f3d58a" stroke-opacity=".38" stroke-width=".8" stroke-dasharray="1.5 4.5" stroke-linecap="round"/>
+    <circle cx="180" cy="100" r="70" fill="none" stroke="#f3d58a" stroke-opacity=".16" stroke-width=".6"/>
+
+    <g stroke="#f3d58a" stroke-opacity=".45" stroke-width=".7" fill="none">
+      <path d="M52 44 L86 26 L112 34 L128 18"/>
+      <path d="M246 30 L278 20 L300 40 L326 30 L338 52"/>
+    </g>
+    <g fill="#f3d58a" fill-opacity=".85">
+      <circle cx="52" cy="44" r="1.5"/><circle cx="86" cy="26" r="1.7"/><circle cx="112" cy="34" r="1.4"/><circle cx="128" cy="18" r="1.6"/>
+      <circle cx="246" cy="30" r="1.5"/><circle cx="278" cy="20" r="1.7"/><circle cx="300" cy="40" r="1.4"/><circle cx="326" cy="30" r="1.6"/><circle cx="338" cy="52" r="1.3"/>
+    </g>
+    ${star(214, 6, 1.9, 0)}${star(30, 78, 1.1, .8)}${star(334, 96, 1.2, 1.5)}${star(64, 118, .8, 2.1)}${star(152, 26, .8, 1.1)}${star(292, 70, .9, .4)}${star(22, 22, .9, 1.9)}${star(150, -6, 1, .6)}${star(96, -10, .8, 1.7)}${star(330, 8, 1.3, 1.2)}
+
+    <g transform="translate(180 104) scale(1.12) translate(-180 -104)"><g class="argo-ship">
+      <g stroke="#f3d58a" stroke-opacity=".55" stroke-width=".7" fill="none">
+        <path d="M178 27 L94 82"/><path d="M178 27 L266 83"/>
+      </g>
+      <path d="M130 45.5 C129 66 141 83 157 92 Q183 102 210 90 C224 77 231 56 231.5 35 Z" fill="url(#argoSail)"/>
+      <g fill="none" stroke="#a89566" stroke-opacity=".38" stroke-width=".9" stroke-linecap="round">
+        <path d="M150 47 C150 68 160 84 172 94"/><path d="M176 43 C177 66 185 83 191 96"/><path d="M204 39 C207 61 209 78 205 92"/>
+      </g>
+      <line x1="126" y1="46.8" x2="236" y2="34.6" stroke="#5a4630" stroke-width="2.4" stroke-linecap="round"/>
+      <circle cx="126" cy="46.8" r="1.8" fill="url(#argoGold)"/><circle cx="236" cy="34.6" r="1.8" fill="url(#argoGold)"/>
+      <line x1="178" y1="27" x2="178" y2="104" stroke="#4a3a28" stroke-width="2.6"/>
+      <circle cx="178" cy="25.5" r="2.5" fill="url(#argoGold)"/>
+
+      <path d="M95 89 C83 81 80 68 87 58" fill="none" stroke="url(#argoGold)" stroke-width="7.6" stroke-linecap="round"/>
+      <path d="M95 89 C83 81 80 68 87 58" fill="none" stroke="#164556" stroke-width="4.8" stroke-linecap="round"/>
+      <path d="M91 55 C88 50 79 51 72 58 C76 60 80 59 83 61 C87 62 90 60 91 55Z" fill="#164556" stroke="url(#argoGold)" stroke-width="1.3" stroke-linejoin="round"/>
+      <path transform="translate(-3 7)" d="M92 54 C85 46 92 38 101 41 C95 43 95 47 97 51 C99 47 104 46 106 48 C100 49 98 52 97 56Z" fill="url(#argoGold)"/>
+      <circle cx="84.5" cy="55.5" r="1.1" fill="#f6dc95"/>
+
+      <path d="M263 88 C273 80 277 68 272 61" fill="none" stroke="url(#argoGold)" stroke-width="7" stroke-linecap="round"/>
+      <path d="M263 88 C273 80 277 68 272 61" fill="none" stroke="#164556" stroke-width="4.2" stroke-linecap="round"/>
+      <path d="M272 61 C270 55 263 58 266 63 C267 66 271 65 270 62" fill="none" stroke="url(#argoGold)" stroke-width="2.2" stroke-linecap="round"/>
+
+      <path d="M92 86 C110 128 250 128 268 84 Q180 106 92 86 Z" fill="url(#argoHull)"/>
+      <path d="M92 86 Q180 106 268 84" fill="none" stroke="url(#argoGold)" stroke-width="1.8" stroke-linecap="round"/>
+      <path d="M101 98 Q180 119 259 96" fill="none" stroke="url(#argoGold)" stroke-opacity=".7" stroke-width=".9" stroke-linecap="round"/>
+      <g stroke="url(#argoGold)" stroke-width="1">
+        <circle cx="118" cy="97" r="5.2" fill="#2d6f5e"/><circle cx="145" cy="100" r="5.2" fill="#2d6f5e"/>
+        <circle cx="171" cy="101.5" r="5.2" fill="#2d6f5e"/><circle cx="198" cy="101" r="5.2" fill="#2d6f5e"/>
+        <circle cx="224" cy="98.5" r="5.2" fill="#2d6f5e"/><circle cx="250" cy="94" r="5.2" fill="#2d6f5e"/>
+      </g>
+      <g fill="url(#argoGold)">
+        <circle cx="118" cy="97" r="1.6"/><circle cx="145" cy="100" r="1.6"/><circle cx="171" cy="101.5" r="1.6"/>
+        <circle cx="198" cy="101" r="1.6"/><circle cx="224" cy="98.5" r="1.6"/><circle cx="250" cy="94" r="1.6"/>
+      </g>
+    </g></g>
+
+    ${wave('argo-wave-a', 116, 7, '#1d6b6e', .9)}
+    ${wave('argo-wave-b', 126, 8, '#15575f', 1)}
+    <g class="argo-glint" fill="#f6dc95">
+      <rect x="112" y="139" width="16" height="1.4" rx=".7"/><rect x="196" y="145" width="22" height="1.4" rx=".7"/><rect x="250" y="136" width="12" height="1.4" rx=".7"/>
+    </g>
+    ${wave('argo-wave-c', 140, 9, '#0a3345', 1)}
+  </svg>`;
+}
+
 function argoEnsureGreetingUI() {
   if (document.getElementById('argoGreetingModal')) return;
   const wrap = document.createElement('div');
   wrap.innerHTML = `
-    <div id="argoGreetingModal" class="argo-greeting-overlay" role="dialog" aria-modal="true" aria-labelledby="argoGreetingTitle" onclick="if(event.target==this) argoAnswerGreeting(false)">
+    <div id="argoGreetingModal" class="argo-greeting-overlay" role="dialog" aria-modal="true" aria-labelledby="argoGreetingTitle" onclick="if(event.target==this) argoDismissGreeting()">
       <div class="argo-greeting-box">
-        <div class="argo-greeting-ship" aria-hidden="true">⛵</div>
-        <h3 id="argoGreetingTitle">Olá!</h3>
-        <p>Quer ver as notificações da agenda desta semana?</p>
-        <div class="argo-greeting-btns">
-          <button type="button" class="argo-greeting-yes" onclick="argoAnswerGreeting(true)">Sim, ver notificações</button>
-          <button type="button" class="argo-greeting-no" onclick="argoAnswerGreeting(false)">Agora não</button>
+        <div class="argo-scene">
+          ${argoSceneSvg()}
+          <span class="argo-scene-pill"><span aria-hidden="true">🔔</span> Notificação</span>
+          <button type="button" class="argo-greeting-x" onclick="argoDismissGreeting()" aria-label="Fechar notificação">✕</button>
+        </div>
+        <div class="argo-greeting-content">
+          <p class="argo-greeting-date" id="argoGreetingDate"></p>
+          <h3 id="argoGreetingTitle">Olá! Eu sou o Argo</h3>
+
+          <div class="argo-week" id="argoGreetingWeek"></div>
+
+          <div class="argo-sync-row" id="argoGreetingSync" data-state="none" role="status" aria-live="polite">
+            <span class="argo-sync-dot" aria-hidden="true"></span>
+            <span class="argo-sync-text"></span>
+          </div>
+
+          <div class="argo-greeting-btns">
+            <button type="button" id="argoGreetingYes" class="argo-greeting-yes" onclick="argoOpenAgendaFromGreeting()">
+              <span class="argo-yes-label">Ver agenda e sincronização</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </button>
+            <button type="button" class="argo-greeting-no" onclick="argoDismissGreeting()">Agora não</button>
+          </div>
         </div>
       </div>
     </div>
-    <div id="argoNotifBanner" class="argo-notif-banner" role="status" aria-live="polite" hidden>
-      <div class="argo-notif-head">
-        <span class="argo-notif-icon" aria-hidden="true">🔔</span>
-        <strong>Argo — Notificações da agenda</strong>
-        <button type="button" class="argo-notif-close" onclick="argoCloseNotifBanner()" aria-label="Fechar notificações">✕</button>
-      </div>
-      <div id="argoNotifBody" class="argo-notif-body"></div>
-    </div>
     <style>
-      .argo-greeting-overlay { display:none; position:fixed; inset:0; background:rgba(15,23,42,0.55); z-index:1200; align-items:center; justify-content:center; padding:20px; }
+      .argo-greeting-overlay { display:none; position:fixed; inset:0; background:rgba(4,10,22,0.62); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); z-index:1200; align-items:center; justify-content:center; padding:18px; }
       .argo-greeting-overlay.visible { display:flex; }
-      .argo-greeting-box { background:var(--bg-card, #fff); color:var(--text-main,#1a1c1e); width:100%; max-width:360px; border-radius:16px; padding:26px 24px; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,0.32); border-top:5px solid var(--brand-primary, #0056a3); animation:argoGreetingPop .25s ease; }
-      @keyframes argoGreetingPop { from { transform:translateY(10px); opacity:0; } to { transform:translateY(0); opacity:1; } }
-      .argo-greeting-ship { font-size:34px; margin-bottom:6px; }
-      .argo-greeting-box h3 { margin:0 0 8px 0; font-size:20px; }
-      .argo-greeting-box p { margin:0 0 20px 0; font-size:14px; color:var(--text-muted,#64748b); line-height:1.5; }
-      .argo-greeting-btns { display:flex; flex-direction:column; gap:10px; }
-      .argo-greeting-yes { background:var(--brand-primary,#0056a3); color:#fff; border:none; padding:12px; border-radius:10px; font-weight:700; cursor:pointer; font-size:14px; }
-      .argo-greeting-yes:hover { filter:brightness(1.08); }
-      .argo-greeting-no { background:transparent; color:var(--text-muted,#64748b); border:1px solid var(--border-ui,#e2e8f0); padding:12px; border-radius:10px; font-weight:600; cursor:pointer; font-size:14px; }
-      .argo-notif-banner { position:relative; z-index:5; margin:14px auto 0 auto; max-width:1160px; padding:0 20px; animation:argoGreetingPop .25s ease; }
-      .argo-notif-banner .argo-notif-head { display:flex; align-items:center; gap:8px; background:var(--brand-primary,#0056a3); color:#fff; padding:10px 16px; border-radius:12px 12px 0 0; font-size:13px; }
-      .argo-notif-icon { font-size:15px; }
-      .argo-notif-close { margin-left:auto; background:rgba(255,255,255,0.18); border:none; color:#fff; width:22px; height:22px; border-radius:50%; cursor:pointer; line-height:1; }
-      .argo-notif-close:hover { background:rgba(255,255,255,0.3); }
-      .argo-notif-body { background:var(--bg-card,#fff); border:1px solid var(--border-ui,#e2e8f0); border-top:none; border-radius:0 0 12px 12px; padding:14px 16px; font-size:13px; color:var(--text-main,#1a1c1e); line-height:1.6; box-shadow:var(--shadow,0 4px 20px rgba(0,0,0,0.06)); }
-      .argo-notif-today { font-weight:700; margin-bottom:6px; }
-      .argo-notif-rest-label { font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted,#64748b); margin:10px 0 4px 0; }
-      .argo-notif-row { padding:4px 0; border-top:1px solid var(--border-ui,#f1f5f9); }
-      .argo-notif-row:first-child { border-top:none; }
-      @media (max-width: 600px) { .argo-greeting-box { padding:22px 18px; } }
+      .argo-greeting-box { position:relative; background:var(--bg-card,#fff); color:var(--text-main,#1e293b); width:100%; max-width:392px; max-height:calc(100vh - 36px); max-height:calc(100dvh - 36px); overflow-y:auto; border-radius:20px; box-shadow:0 30px 64px -12px rgba(0,0,0,0.6), 0 0 0 1px rgba(184,137,79,0.4); animation:argoGreetingPop .4s cubic-bezier(.2,.8,.2,1); }
+      @keyframes argoGreetingPop { from { transform:translateY(16px) scale(.96); opacity:0; } to { transform:none; opacity:1; } }
+
+      .argo-scene { position:relative; height:188px; background:#050f22; overflow:hidden; }
+      .argo-scene-svg { display:block; width:100%; height:100%; }
+      .argo-scene::after { content:''; position:absolute; left:0; right:0; bottom:0; height:2px; background:linear-gradient(90deg, transparent, #f3d58a, transparent); opacity:.7; }
+      .argo-scene-pill { position:absolute; top:12px; left:12px; display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.04em; color:#f6e7bd; background:rgba(5,15,34,0.55); border:1px solid rgba(243,213,138,0.4); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); }
+      .argo-greeting-x { position:absolute; top:10px; right:10px; width:28px; height:28px; border-radius:50%; border:1px solid rgba(243,213,138,0.35); background:rgba(5,15,34,0.55); color:#f6e7bd; font-size:12px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+      .argo-greeting-x:hover { background:rgba(5,15,34,0.85); }
+
+      .argo-ship { transform-origin:180px 114px; animation:argoBob 5s ease-in-out infinite; }
+      @keyframes argoBob { 0%,100% { transform:translateY(0) rotate(-1.3deg); } 50% { transform:translateY(-3.5px) rotate(1.3deg); } }
+      .argo-wave { will-change:transform; }
+      .argo-wave-a { animation:argoWaveL 11s linear infinite; }
+      .argo-wave-b { animation:argoWaveR 8s linear infinite; }
+      .argo-wave-c { animation:argoWaveL 6s linear infinite; }
+      @keyframes argoWaveL { from { transform:translateX(0); } to { transform:translateX(-120px); } }
+      @keyframes argoWaveR { from { transform:translateX(-120px); } to { transform:translateX(0); } }
+      .argo-twinkle { transform-box:fill-box; transform-origin:center; animation:argoTwinkle 3.2s ease-in-out infinite; }
+      @keyframes argoTwinkle { 0%,100% { opacity:.35; transform:scale(.7); } 50% { opacity:1; transform:scale(1.15); } }
+      .argo-glint { animation:argoGlint 4s ease-in-out infinite; }
+      @keyframes argoGlint { 0%,100% { opacity:.15; } 50% { opacity:.7; } }
+
+      .argo-greeting-content { padding:18px 22px 22px; }
+      .argo-greeting-date { margin:0 0 4px 0; font-size:11px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:#b8894f; }
+      .argo-greeting-box h3 { margin:0 0 14px 0; font-family:var(--font-serif,'Lora',Georgia,serif); font-size:23px; font-weight:500; line-height:1.2; color:var(--text-main,#1e293b); }
+
+      .argo-week { background:rgba(0,145,194,0.07); border:1px solid var(--border-ui,#e2e8f0); border-radius:14px; padding:12px 14px; font-size:13px; line-height:1.5; }
+      .argo-week-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted,#475569); }
+      .argo-week-count { background:var(--brand-primary,#0091C2); color:#fff; border-radius:999px; padding:2px 9px; font-size:10.5px; letter-spacing:.02em; }
+      .argo-week-today { display:flex; align-items:flex-start; gap:8px; font-weight:600; }
+      .argo-week-tag { flex-shrink:0; background:#b8894f; color:#fff; border-radius:6px; padding:1px 8px; font-size:10.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; margin-top:2px; }
+      .argo-week-label { margin:10px 0 3px 0; font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted,#475569); }
+      .argo-week-list { list-style:none; margin:0; padding:0; }
+      .argo-week-list li { display:flex; gap:8px; padding:4px 0; border-top:1px solid var(--border-ui,#e2e8f0); }
+      .argo-week-list li:first-child { border-top:none; }
+      .argo-week-day { flex-shrink:0; min-width:64px; font-weight:700; color:var(--text-main,#1e293b); }
+      .argo-week-more { color:var(--text-muted,#475569); font-style:italic; }
+      .argo-week-empty { margin-top:6px; color:var(--text-muted,#475569); }
+
+      .argo-sync-row { display:flex; align-items:center; gap:9px; margin:12px 2px 0 2px; font-size:12.5px; color:var(--text-muted,#475569); line-height:1.4; }
+      .argo-sync-dot { flex-shrink:0; width:9px; height:9px; border-radius:50%; background:#94a3b8; }
+      .argo-sync-row[data-state="ok"] .argo-sync-dot { background:#3f9d6b; box-shadow:0 0 0 3px rgba(63,157,107,0.2); }
+      .argo-sync-row[data-state="connecting"] .argo-sync-dot { background:#d99a2b; animation:argoPulse 1.1s ease-in-out infinite; }
+      .argo-sync-row[data-state="slow"] .argo-sync-dot { background:#d99a2b; }
+      .argo-sync-row[data-state="error"] .argo-sync-dot { background:#c0463d; }
+      @keyframes argoPulse { 0%,100% { box-shadow:0 0 0 0 rgba(217,154,43,0.55); } 50% { box-shadow:0 0 0 6px rgba(217,154,43,0); } }
+
+      .argo-greeting-btns { display:flex; flex-direction:column; gap:9px; margin-top:18px; }
+      .argo-greeting-yes { display:flex; align-items:center; justify-content:center; gap:8px; background:linear-gradient(135deg, var(--brand-primary-light,#29ABE2), var(--brand-primary,#0091C2)); color:#fff; border:none; padding:13px; border-radius:12px; font-weight:700; cursor:pointer; font-size:14px; font-family:inherit; box-shadow:0 8px 18px -8px rgba(0,145,194,0.8); transition:transform .15s ease, filter .15s ease; }
+      .argo-greeting-yes:hover { filter:brightness(1.07); transform:translateY(-1px); }
+      .argo-greeting-no { background:transparent; color:var(--text-muted,#475569); border:1px solid var(--border-ui,#e2e8f0); padding:11px; border-radius:12px; font-weight:600; cursor:pointer; font-size:13.5px; font-family:inherit; }
+      .argo-greeting-no:hover { background:rgba(148,163,184,0.12); }
+      .argo-greeting-yes:focus-visible, .argo-greeting-no:focus-visible, .argo-greeting-x:focus-visible { outline:3px solid var(--brand-primary-light,#29ABE2); outline-offset:2px; }
+
+      @media (max-width: 420px) { .argo-greeting-content { padding:16px 18px 20px; } .argo-scene { height:172px; } }
+      @media (prefers-reduced-motion: reduce) {
+        .argo-greeting-box, .argo-ship, .argo-wave, .argo-twinkle, .argo-glint, .argo-sync-row .argo-sync-dot { animation:none !important; }
+      }
     </style>
   `;
   document.body.appendChild(wrap);
+  document.addEventListener('keydown', function (e) {
+    const modal = document.getElementById('argoGreetingModal');
+    if (!modal || !modal.classList.contains('visible')) return;
+    if (e.key === 'Escape') { argoDismissGreeting(); return; }
+    if (e.key === 'Tab') {
+      const items = Array.from(modal.querySelectorAll('button')).filter(b => b.offsetParent !== null);
+      if (!items.length) return;
+      const first = items[0], last = items[items.length - 1];
+      if (!modal.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+      else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
 }
 
-// Mostra o cartão de saudação. Chamada uma vez a cada desbloqueio bem-
-// sucedido (ver submit do loginForm, em initAuth). O Argo se identifica
-// pelo próprio nome ao se apresentar.
+// Resumo da semana (mesma fonte do card da agenda). Hoje sempre aparece;
+// os próximos dias com algo marcado vêm em lista curta (máx. 3).
+function argoGreetingWeekHtml() {
+  const summary = (typeof agendaBuildWeekSummary === 'function') ? agendaBuildWeekSummary(new Date()) : null;
+  if (!summary) {
+    return `<div class="argo-week-empty" style="margin-top:0;">A agenda cobre apenas ${AGENDA_YEAR} — não há datas cadastradas para este ano.</div>`;
+  }
+  const total = summary.weekEntries.length;
+  const rest = summary.restEntries;
+  let html = `<div class="argo-week-head"><span>Resumo da semana</span><span class="argo-week-count">${total} ${total === 1 ? 'item' : 'itens'}</span></div>`;
+  html += `<div class="argo-week-today"><span class="argo-week-tag">Hoje</span><span>${summary.todayEntry ? escapeHtml(summary.todayEntry.text) : 'nada marcado'}</span></div>`;
+  if (rest.length) {
+    const rows = rest.slice(0, 3)
+      .map(e => `<li><span class="argo-week-day">${escapeHtml(e.label)}</span><span>${escapeHtml(e.text)}</span></li>`)
+      .join('');
+    const more = rest.length > 3 ? `<li class="argo-week-more">+ ${rest.length - 3} na agenda</li>` : '';
+    html += `<div class="argo-week-label">Próximos dias</div><ul class="argo-week-list">${rows}${more}</ul>`;
+  } else if (!total) {
+    html += `<div class="argo-week-empty">Nada marcado para esta semana.</div>`;
+  }
+  return html;
+}
+
+// Estado da sincronização entre aparelhos, a partir das variáveis da agenda.
+function argoGreetingSyncState() {
+  if (!agendaSyncCode) {
+    return { key: 'none', text: 'Sincronização ainda não configurada neste aparelho.' };
+  }
+  if (agendaSyncState === 'error') {
+    return { key: 'error', text: 'Sem conexão com a sincronização. Confira a internet.' };
+  }
+  if (agendaSyncState === 'ok' && agendaLastSyncAt) {
+    const hh = String(agendaLastSyncAt.getHours()).padStart(2, '0');
+    const mm = String(agendaLastSyncAt.getMinutes()).padStart(2, '0');
+    return { key: 'ok', text: 'Sincronizado às ' + hh + ':' + mm + ' · anotações em dia' };
+  }
+  if (Date.now() - argoGreetingShownAt > 8000) {
+    return { key: 'slow', text: 'A sincronização está demorando — verifique a internet.' };
+  }
+  return { key: 'connecting', text: 'Sincronizando anotações…' };
+}
+
+// Redesenha o conteúdo do cartão (se estiver aberto). Chamada ao abrir, a
+// cada mudança de status da sincronização (agendaSetSyncStatus) e 8s depois
+// de abrir, para trocar "Sincronizando…" por um aviso se nada respondeu.
+function argoRefreshGreeting() {
+  const modal = document.getElementById('argoGreetingModal');
+  if (!modal || !modal.classList.contains('visible')) return;
+
+  const week = document.getElementById('argoGreetingWeek');
+  if (week) week.innerHTML = argoGreetingWeekHtml();
+
+  const st = argoGreetingSyncState();
+  const row = document.getElementById('argoGreetingSync');
+  if (row) {
+    row.dataset.state = st.key;
+    const txt = row.querySelector('.argo-sync-text');
+    if (txt) txt.textContent = st.text;
+  }
+
+  const label = document.querySelector('#argoGreetingYes .argo-yes-label');
+  if (label) label.textContent = agendaSyncCode ? 'Ver agenda e sincronização' : 'Configurar sincronização';
+}
+
+// Mostra o cartão. Chamada uma vez a cada desbloqueio bem-sucedido (ver
+// submit do loginForm, em initAuth).
 function argoShowGreeting() {
   argoEnsureGreetingUI();
   const modal = document.getElementById('argoGreetingModal');
   const title = document.getElementById('argoGreetingTitle');
+  const dateEl = document.getElementById('argoGreetingDate');
   if (!modal || !title) return;
-  title.textContent = argoGreetingWord() + '! Eu sou o Argo 🧭';
-  modal.classList.add('visible');
-}
 
-function argoAnswerGreeting(wantsNotifications) {
-  const modal = document.getElementById('argoGreetingModal');
-  if (modal) modal.classList.remove('visible');
-  if (wantsNotifications) argoShowNotifBanner();
-}
-
-// Monta o banner de notificações da agenda a partir de agendaBuildWeekSummary
-// (mesma função usada pelo card "Agenda Boa Vista 2026"): feriados/
-// pagamentos fixos do ano + anotações próprias já sincronizadas, com o dia
-// de hoje em destaque e o resto da semana logo abaixo.
-function argoShowNotifBanner() {
-  argoEnsureGreetingUI();
-  const banner = document.getElementById('argoNotifBanner');
-  const body = document.getElementById('argoNotifBody');
-  if (!banner || !body) return;
-
-  const summary = (typeof agendaBuildWeekSummary === 'function') ? agendaBuildWeekSummary(new Date()) : null;
-
-  if (!summary) {
-    body.innerHTML = '<div class="argo-notif-row">Não há dados de agenda cadastrados para o ano atual.</div>';
-  } else if (!summary.weekEntries.length) {
-    body.innerHTML = '<div class="argo-notif-row">Nada marcado para esta semana na agenda.</div>';
-  } else {
-    const rest = summary.restEntries
-      .map(e => `<div class="argo-notif-row"><strong>${escapeHtml(e.label)}</strong> — ${escapeHtml(e.text)}</div>`)
-      .join('');
-    body.innerHTML =
-      `<div class="argo-notif-today">📌 Hoje: ${escapeHtml(summary.todayEntry ? summary.todayEntry.text : 'sem anotações')}</div>` +
-      (rest ? `<div class="argo-notif-rest-label">Resto da semana</div>${rest}` : '');
+  title.textContent = argoGreetingWord() + '! Eu sou o Argo';
+  if (dateEl) {
+    const d = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+    dateEl.textContent = d.charAt(0).toUpperCase() + d.slice(1);
   }
 
-  banner.hidden = false;
+  argoGreetingShownAt = Date.now();
+  modal.classList.add('visible');
+  argoRefreshGreeting();
+
+  // Já existe um código salvo neste aparelho: conecta a sincronização agora,
+  // em segundo plano, para o resumo já sair com as anotações dos outros
+  // aparelhos (antes só conectava depois de abrir a aba da agenda).
+  if (agendaSyncCode && !agendaUnsubscribe && typeof agendaConnectSync === 'function') {
+    agendaConnectSync(agendaSyncCode);
+  }
+  clearTimeout(argoGreetingSlowTimer);
+  argoGreetingSlowTimer = setTimeout(argoRefreshGreeting, 8100);
+
+  const yes = document.getElementById('argoGreetingYes');
+  if (yes) setTimeout(() => yes.focus(), 60);
 }
 
-function argoCloseNotifBanner() {
-  const banner = document.getElementById('argoNotifBanner');
-  if (banner) banner.hidden = true;
+function argoDismissGreeting() {
+  clearTimeout(argoGreetingSlowTimer);
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  const modal = document.getElementById('argoGreetingModal');
+  if (modal) modal.classList.remove('visible');
+}
+
+// Botão principal: leva à aba "Agenda Boa Vista 2026" (onde está o card de
+// sincronização). Sem código de sincronização, já abre a tela para defini-lo.
+function argoOpenAgendaFromGreeting() {
+  argoDismissGreeting();
+  const chip = document.querySelector('.filter-chip[data-cat="agenda"]');
+  if (chip && !chip.classList.contains('active')) chip.click();
+  requestAnimationFrame(() => {
+    const book = document.getElementById('agendaBook') || document.getElementById('agendaCalendarGrid');
+    if (book) {
+      // A barra de busca/controles fica fixa no topo; sem essa margem ela
+      // cobriria o início do calendário e o card de sincronização.
+      const ctrl = document.querySelector('.controls');
+      const stuck = ctrl && getComputedStyle(ctrl).position === 'sticky';
+      book.style.scrollMarginTop = (stuck ? Math.ceil(ctrl.getBoundingClientRect().height) + 12 : 12) + 'px';
+      book.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    if (!agendaSyncCode && typeof agendaOpenSyncModal === 'function') {
+      setTimeout(agendaOpenSyncModal, 350);
+    }
+  });
 }
 
 // Lista única de onde ficam os dados pessoais de usuários atendidos
@@ -5112,11 +5343,18 @@ let agendaDb = null;
 let agendaFirebaseReady = false;
 let agendaTodayBannerDismissed = false;
 let agendaSyncStatusHtml = '';
+// 'connecting' | 'ok' | 'error' ('' = ainda não tentou). Lido pela notificação
+// de abertura (argoGreetingSyncState), que mostra o mesmo status sem precisar
+// do modal de sincronização aberto.
+let agendaSyncState = '';
 
-function agendaSetSyncStatus(html) {
+function agendaSetSyncStatus(html, state) {
   agendaSyncStatusHtml = html;
+  if (state) agendaSyncState = state;
   const line = document.getElementById('agendaSyncStatusLine');
   if (line) line.innerHTML = html;
+  // Atualiza a notificação de abertura, se ela ainda estiver na tela.
+  if (typeof argoRefreshGreeting === 'function') argoRefreshGreeting();
 }
 
 function renderAgendaCard() {
@@ -5483,12 +5721,20 @@ function agendaUpdateSyncIndicator(connected) {
   if (dot) dot.className = 'agenda-sync-dot ' + (connected ? 'agenda-sync-ok' : 'agenda-sync-off');
 }
 
+let agendaConnectingCode = '';
+
 async function agendaConnectSync(code) {
-  agendaSyncCode = code.trim().toLowerCase().replace(/\s+/g, '-');
-  if (!agendaSyncCode) return;
+  const newCode = code.trim().toLowerCase().replace(/\s+/g, '-');
+  if (!newCode) return;
+  // Já há uma conexão em andamento (ou ativa) com este mesmo código: não
+  // abre uma segunda escuta. A notificação de abertura e a aba da agenda
+  // podem chamar esta função quase ao mesmo tempo.
+  if (newCode === agendaConnectingCode && (agendaUnsubscribe || agendaSyncState === 'connecting')) return;
+  agendaConnectingCode = newCode;
+  agendaSyncCode = newCode;
   localStorage.setItem('argo_agenda_sync_code', agendaSyncCode);
 
-  agendaSetSyncStatus('<span style="color:#8a7f6a">● Conectando…</span>');
+  agendaSetSyncStatus('<span style="color:#8a7f6a">● Conectando…</span>', 'connecting');
 
   let firebaseLib;
   try {
@@ -5501,7 +5747,8 @@ async function agendaConnectSync(code) {
   } catch (e) {
     console.error(e);
     agendaUpdateSyncIndicator(false);
-    agendaSetSyncStatus('<span style="color:var(--red-ink,#b3413a)">● Não foi possível carregar a sincronização (verifique a internet)</span>');
+    agendaSetSyncStatus('<span style="color:var(--red-ink,#b3413a)">● Não foi possível carregar a sincronização (verifique a internet)</span>', 'error');
+    agendaConnectingCode = '';
     return;
   }
 
@@ -5512,17 +5759,25 @@ async function agendaConnectSync(code) {
       agendaNotesCache = {};
       snapshot.forEach(doc => { agendaNotesCache[doc.id] = doc.data().text; });
       agendaUpdateSyncIndicator(true);
+      // Registra o horário aqui (e não só em agendaRenderTodayBanner), pois a
+      // sincronização agora pode conectar antes de a aba da agenda existir.
+      agendaLastSyncAt = new Date();
       agendaRenderCalendar();
       // A notificação da sincronização agora fica num card dentro da agenda
       // (antes disparava uma notificação do sistema a cada sincronização).
       agendaRenderTodayBanner(true);
       const display = document.getElementById('agendaSyncCodeDisplay');
       if (display) { display.style.display = 'block'; display.innerText = agendaSyncCode; }
-      agendaSetSyncStatus('<span style="color:var(--green-ink,#3f7d55)">● Conectado</span>');
+      agendaSetSyncStatus('<span style="color:var(--green-ink,#3f7d55)">● Conectado</span>', 'ok');
     }, err => {
       console.error(err);
+      // O Firestore encerra a escuta quando dá erro; sem limpar aqui, a
+      // agenda achava que ainda estava conectada e nunca tentava de novo.
+      try { if (agendaUnsubscribe) agendaUnsubscribe(); } catch (e) { /* já encerrada */ }
+      agendaUnsubscribe = null;
+      agendaConnectingCode = '';
       agendaUpdateSyncIndicator(false);
-      agendaSetSyncStatus('<span style="color:var(--red-ink,#b3413a)">● Erro de conexão</span>');
+      agendaSetSyncStatus('<span style="color:var(--red-ink,#b3413a)">● Erro de conexão</span>', 'error');
     });
 }
 
