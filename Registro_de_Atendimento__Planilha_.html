@@ -174,7 +174,7 @@
     // Restringe os campos de quantidade digitáveis a dígitos apenas
     // (o traço "-" usado na impressão é inserido só pelo próprio script)
     document.addEventListener('input', function(e) {
-        if (e.target.matches('input.qtd-input:not(.qtd-soma)')) {
+        if (e.target instanceof Element && e.target.matches('input.qtd-input:not(.qtd-soma)')) {
             e.target.value = e.target.value.replace(/[^0-9]/g, '');
         }
     });
