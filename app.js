@@ -4869,6 +4869,9 @@ async function printBpcGuide(id, lang) {
   // gov.br/Meu INSS ampliado, com a legenda explicando o que fazer naquela
   // tela. Substitui a versão pequena que antes ficava embutida na página 1.
   const stepByStepTitle = lang === 'es' ? 'Paso a paso ilustrado' : 'Passo a passo ilustrado';
+  // gpx/grem locais (escala 1): os de buildGuidePageHtml não existem aqui fora.
+  const gpx = (n) => Math.round(n) + 'px';
+  const grem = (n) => n.toFixed(3) + 'rem';
   const illustrationPage = content.illustration ? `
     <div class="print-page" style="position:relative; padding:0; box-sizing:border-box; display:flex; flex-direction:column; background:white; border:2px solid #0F172A; width:100%; min-height:27.7cm; height:auto; overflow:visible;">
       ${watermark}
@@ -5844,26 +5847,121 @@ function agendaSetSyncStatus(html, state) {
   if (typeof argoRefreshGreeting === 'function') argoRefreshGreeting();
 }
 
+// ======= Helpers de data e de nomes =======
+
+// Nome por extenso de uma data marcada. "FAC." vira "Ponto facultativo"; as
+// demais siglas vêm de ARGO_AGENDA_LABEL_NAMES (definido no topo do arquivo).
+function agendaFullName(info) {
+  if (!info) return '';
+  return ARGO_AGENDA_LABEL_NAMES[info.label] || String(info.label).replace(/\.$/, '');
+}
+
+function agendaDateFromKey(key) {
+  const p = key.split('-').map(Number);
+  return new Date(p[0], p[1] - 1, p[2]);
+}
+
+// Chave AAAA-MM-DD a partir de um Date qualquer (agendaKeyFor sempre usa
+// AGENDA_YEAR, então não serve para dias vizinhos na virada do ano).
+function agendaIsoKey(date) {
+  return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+}
+
+// Título do dia. Ponto facultativo colado num feriado ganha a explicação
+// ("antes de Tiradentes", "depois de Corpus Christi"), deduzida das próprias
+// datas cadastradas em AGENDA_DATA_INFO — nada é inventado.
+function agendaDayTitle(key) {
+  const info = AGENDA_DATA_INFO[key];
+  if (!info) return '';
+  const name = agendaFullName(info);
+  if (info.label !== 'FAC.') return name;
+  const date = agendaDateFromKey(key);
+  const prev = new Date(date); prev.setDate(date.getDate() - 1);
+  const next = new Date(date); next.setDate(date.getDate() + 1);
+  const nInfo = AGENDA_DATA_INFO[agendaIsoKey(next)];
+  const pInfo = AGENDA_DATA_INFO[agendaIsoKey(prev)];
+  if (nInfo && argoAgendaKind(nInfo) === 'feriado') return name + ' (antes de ' + agendaFullName(nInfo) + ')';
+  if (pInfo && argoAgendaKind(pInfo) === 'feriado') return name + ' (depois de ' + agendaFullName(pInfo) + ')';
+  return name;
+}
+
+function agendaLongDate(date) {
+  return date.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+// "hoje", "amanhã", "em 10 dias", "há 3 dias" — só para datas até 60 dias de
+// distância; além disso o rótulo seria ruído.
+function agendaRelativeLabel(key) {
+  const now = new Date();
+  const t0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const days = Math.round((agendaDateFromKey(key) - t0) / 86400000);
+  if (days === 0) return 'hoje';
+  if (days === 1) return 'amanhã';
+  if (days === -1) return 'ontem';
+  if (days > 1 && days <= 60) return 'em ' + days + ' dias';
+  if (days < -1 && days >= -60) return 'há ' + (-days) + ' dias';
+  return '';
+}
+
+function agendaJoinPt(parts) {
+  if (parts.length <= 1) return parts[0] || '';
+  return parts.slice(0, -1).join(', ') + ' e ' + parts[parts.length - 1];
+}
+
+// ======= Avisos rápidos (substituem os alert() da agenda) =======
+
+let agendaToastTimer = null;
+function agendaToast(msg, kind) {
+  agendaEnsureModals();
+  let el = document.getElementById('agendaToast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'agendaToast';
+    el.className = 'agenda-toast';
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.dataset.kind = kind || 'info';
+  el.classList.add('visible');
+  clearTimeout(agendaToastTimer);
+  agendaToastTimer = setTimeout(() => el.classList.remove('visible'), kind === 'error' ? 6500 : 4200);
+}
+
+// ======= Card da agenda =======
+
 function renderAgendaCard() {
   return `
     <div class="tech-card agenda-card">
       <style>
-        .agenda-card { grid-column: 1 / -1; }
-        .agenda-card .card-top h2 { color: var(--brand-agenda, #1f3d33); }
-        .agenda-badge { color: #1f3d33; background: rgba(31, 61, 51, 0.1); }
+        .agenda-card { grid-column: 1 / -1; --agenda-accent: #1f3d33; --agenda-accent-bg: rgba(31, 61, 51, 0.1); }
+        /* Tema escuro: o verde do caderno some sobre o fundo azul-marinho do app. */
+        @media (prefers-color-scheme: dark) {
+          :root:not([data-theme="light"]) .agenda-card { --agenda-accent: #8fd0b4; --agenda-accent-bg: rgba(143, 208, 180, 0.14); }
+        }
+        :root[data-theme="dark"] .agenda-card { --agenda-accent: #8fd0b4; --agenda-accent-bg: rgba(143, 208, 180, 0.14); }
+        .agenda-card .card-top h2 { color: var(--agenda-accent); }
+        .agenda-badge { color: var(--agenda-accent); background: var(--agenda-accent-bg); }
+
         .agenda-privacy {
-          display: flex; align-items: flex-start; gap: 0.6rem; font-size: 0.8rem;
-          color: var(--text-muted); background: rgba(31, 61, 51, 0.05);
-          border: 1px dashed #b8894f; border-radius: 8px; padding: 0.7rem 0.9rem;
+          font-size: 0.8rem; color: var(--text-muted); background: var(--agenda-accent-bg);
+          border: 1px dashed #b8894f; border-radius: 8px; padding: 0.6rem 0.9rem;
           margin-bottom: 1.1rem; line-height: 1.5;
         }
-        .agenda-privacy svg { color: #1f3d33; flex-shrink: 0; margin-top: 0.1rem; }
+        .agenda-privacy summary { display: flex; align-items: center; gap: 0.55rem; cursor: pointer; font-weight: 700; list-style: none; }
+        .agenda-privacy summary::-webkit-details-marker { display: none; }
+        .agenda-privacy summary svg { color: var(--agenda-accent); flex-shrink: 0; }
+        .agenda-privacy summary:focus-visible { outline: 2px solid var(--agenda-accent); outline-offset: 3px; border-radius: 4px; }
+        .agenda-privacy p { margin: 0.5rem 0 0; }
+
         .agenda-book {
           --paper: #f8f2e4; --paper-alt: #efe4cb; --rule-line: #e0d3ac;
           --cover: #1f3d33; --cover-dark: #14261f; --gold: #b8894f; --ink: #2c2620;
-          --ink-muted: #8a7f6a; --red-ink: #b3413a; --blue-ink: #2f5d8a;
+          --ink-muted: #6f6551; --red-ink: #b3413a; --blue-ink: #2f5d8a;
           --amber-ink: #a9762a; --amber-bg: #f0d78a; --green-ink: #3f7d55;
           position: relative;
+          container-type: inline-size; container-name: agendabook;
           background: var(--paper);
           background-image: repeating-linear-gradient(to bottom, transparent 0px, transparent 27px, var(--rule-line) 27px, var(--rule-line) 28px);
           border-radius: 6px 18px 18px 6px;
@@ -5873,6 +5971,8 @@ function renderAgendaCard() {
           font-family: 'Times New Roman', Times, serif;
           color: var(--ink);
         }
+        .agenda-book button { font-family: inherit; }
+        .agenda-book button:focus-visible { outline: 2px solid var(--cover); outline-offset: 2px; }
         .agenda-binding {
           position: absolute; left: 0; top: 0; bottom: 0; width: 30px;
           background: linear-gradient(to right, var(--cover-dark), var(--cover) 60%, var(--cover) 100%);
@@ -5884,90 +5984,144 @@ function renderAgendaCard() {
           background-image: radial-gradient(circle, var(--paper) 3.4px, transparent 4px);
           background-size: 100% 26px; background-repeat: repeat-y;
         }
-        .agenda-header { padding: 16px 18px 10px 20px; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; }
-        .agenda-brand h3 { margin: 0; font-family: 'Times New Roman', Times, serif; font-style: italic; font-weight: 800; font-size: 1.4rem; color: var(--ink); }
-        .agenda-brand p { margin: 2px 0 0 1px; font-size: 9px; font-weight: 700; color: var(--gold); text-transform: uppercase; letter-spacing: 2px; }
-        .agenda-header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .agenda-nav-controls { display: flex; align-items: center; gap: 6px; background: var(--paper-alt); padding: 5px; border-radius: 20px; border: 1px solid var(--rule-line); }
-        .agenda-nav-btn { background: none; border: none; padding: 6px 9px; cursor: pointer; color: var(--ink-muted); border-radius: 50%; font-size: 12px; font-family: inherit; }
-        .agenda-nav-btn:hover { background: var(--paper); color: var(--cover); }
-        .agenda-sync-btn { background: var(--paper-alt); border: 1px solid var(--rule-line); padding: 7px 9px; cursor: pointer; color: var(--ink-muted); border-radius: 50%; font-size: 13px; position: relative; }
+
+        .agenda-header { padding: 16px 18px 10px 20px; display: flex; align-items: center; flex-wrap: wrap; gap: 10px 18px; }
+        .agenda-brand { flex: 1 1 auto; }
+        .agenda-brand h3 { margin: 0; font-style: italic; font-weight: 800; font-size: 1.5rem; color: var(--ink); }
+        .agenda-brand p { margin: 2px 0 0 1px; font-size: 13px; font-style: italic; color: #86652f; letter-spacing: 0.3px; }
+        .agenda-tools { display: flex; gap: 8px; }
+        .agenda-sync-btn { position: relative; width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; padding: 0; background: var(--paper-alt); border: 1px solid var(--rule-line); cursor: pointer; color: var(--ink-muted); border-radius: 50%; font-size: 15px; }
         .agenda-sync-btn:hover { background: var(--paper); color: var(--cover); }
-        .agenda-sync-dot { width: 7px; height: 7px; border-radius: 50%; position: absolute; top: 3px; right: 3px; border: 1.5px solid var(--paper-alt); }
+        .agenda-sync-dot { width: 8px; height: 8px; border-radius: 50%; position: absolute; top: 3px; right: 3px; border: 1.5px solid var(--paper-alt); }
         .agenda-sync-ok { background: var(--green-ink); }
         .agenda-sync-off { background: var(--red-ink); }
         .agenda-sync-neutral { background: #b3a98e; }
-        .agenda-month-display { font-family: 'Times New Roman', Times, serif; font-style: italic; font-weight: 700; font-size: 13px; min-width: 88px; text-align: center; color: var(--ink); }
-        .agenda-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); padding: 4px 14px; text-align: center; border-bottom: 2px solid var(--gold); margin: 0 4px; }
-        .agenda-weekdays div { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--ink-muted); padding-bottom: 6px; }
-        .agenda-weekdays .agenda-dom { color: var(--red-ink); }
-        #agendaCalendarGrid { display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: minmax(var(--agenda-cell-min, 64px), auto); gap: 1px; padding: 6px 10px 8px; }
-        .agenda-day-cell { border-radius: 4px; padding: 4px 5px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; border-bottom: 1px solid var(--rule-line); transition: transform 0.12s, background 0.12s; min-width: 0; }
-        .agenda-day-cell:hover { background: rgba(184, 137, 79, 0.10); transform: translateY(-1px); }
-        .agenda-day-cell:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
-        .agenda-day-cell.agenda-bg-sunday { background-color: rgba(179, 65, 58, 0.06); }
-        .agenda-day-cell.agenda-bg-saturday { background-color: rgba(44, 38, 32, 0.035); }
-        .agenda-day-cell.agenda-is-today { background-color: rgba(184, 137, 79, 0.16); box-shadow: inset 0 0 0 1.5px var(--gold); }
-        .agenda-day-cell.agenda-is-today .agenda-day-num { display: inline-flex; align-items: center; justify-content: center; background: var(--cover); color: var(--paper) !important; width: 16px; height: 16px; border-radius: 50%; font-size: 10px; }
-        .agenda-day-num { font-size: 11px; font-weight: 700; }
-        .agenda-badge-status { font-size: 6.6px; padding: 2px 1px; border-radius: 2px; font-weight: 800; text-align: center; color: white; text-transform: uppercase; box-shadow: 0 1px 2px rgba(0,0,0,0.18); }
-        .agenda-badge-feriado { background-color: var(--red-ink); }
-        .agenda-badge-facultativo { background-color: var(--amber-bg); color: #6b4a12; }
-        .agenda-badge-pagamento { background-color: var(--green-ink); }
-        .agenda-badge-extra { background-color: var(--blue-ink); }
-        .agenda-note-preview { font-family: 'Caveat', cursive; font-size: 14px; line-height: 1; font-weight: 700; color: var(--blue-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; transform: rotate(-2deg); transform-origin: left center; }
-        .agenda-footer { padding: 10px 18px 14px 20px; border-top: 1px dashed var(--rule-line); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
-        .agenda-legend { display: flex; gap: 12px; flex-wrap: wrap; }
-        .agenda-legend-item { display: flex; align-items: center; gap: 4px; font-size: 8px; font-weight: 700; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-        .agenda-dot { width: 6px; height: 6px; border-radius: 50%; }
-        .agenda-creator-info { text-align: right; font-size: 8px; font-weight: 700; color: var(--ink-muted); font-style: italic; }
-        .agenda-creator-name { color: var(--cover); font-family: 'Times New Roman', Times, serif; font-style: italic; font-size: 10px; text-transform: none; }
-        /* Card da notificação de sincronização (resumo da semana). */
+
+        .agenda-monthbar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .agenda-nav-controls { display: flex; align-items: center; gap: 2px; background: var(--paper-alt); padding: 3px; border-radius: 24px; border: 1px solid var(--rule-line); }
+        .agenda-nav-btn { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; background: none; border: none; padding: 0; cursor: pointer; color: var(--ink-muted); border-radius: 50%; font-size: 13px; }
+        .agenda-nav-btn:hover { background: var(--paper); color: var(--cover); }
+        .agenda-month-display { font-style: italic; font-weight: 700; font-size: 19px; min-width: 118px; text-align: center; color: var(--ink); }
+        .agenda-today-btn { background: transparent; border: 1px solid var(--gold); color: var(--cover); border-radius: 20px; padding: 8px 14px; font-size: 14px; font-weight: 700; cursor: pointer; }
+        .agenda-today-btn:hover { background: rgba(184, 137, 79, 0.14); }
+        .agenda-today-btn[hidden] { display: none; }
+
+        /* Card do resumo da semana (aparece depois de sincronizar). */
         .agenda-today-banner {
           display: none; flex-direction: column; align-items: stretch; gap: 6px;
           margin: 0 14px 10px; padding: 10px 12px;
           background: rgba(184, 137, 79, 0.14); border: 1px solid var(--gold);
-          border-left-width: 4px;
-          border-radius: 8px;
+          border-left-width: 4px; border-radius: 8px;
         }
         .agenda-sync-card-head { display: flex; align-items: center; gap: 8px; }
         .agenda-today-icon { font-size: 14px; line-height: 1; }
-        .agenda-sync-card-title { flex: 1; font-size: 12px; font-weight: 800; color: var(--cover); text-transform: uppercase; letter-spacing: 0.4px; }
-        .agenda-sync-card-time { font-size: 10px; font-weight: 700; color: var(--ink-muted); white-space: nowrap; }
-        .agenda-today-text { font-size: 12px; font-weight: 600; color: var(--ink); line-height: 1.4; }
+        .agenda-sync-card-title { flex: 1; font-size: 13px; font-weight: 800; color: var(--cover); }
+        .agenda-sync-card-time { font-size: 11px; font-weight: 700; color: var(--ink-muted); white-space: nowrap; }
+        .agenda-today-text { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.45; }
         .agenda-sync-card-today { font-weight: 700; }
-        .agenda-sync-card-sub { margin-top: 4px; font-size: 10px; font-weight: 800; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+        .agenda-sync-card-sub { margin-top: 4px; font-size: 11px; font-weight: 800; color: var(--ink-muted); }
         .agenda-sync-card-row { padding-left: 2px; }
-        .agenda-today-close {
-          background: none; border: none; cursor: pointer; color: var(--ink-muted);
-          font-size: 12px; line-height: 1; padding: 3px 5px; border-radius: 4px; font-family: inherit;
-        }
+        .agenda-today-close { background: none; border: none; cursor: pointer; color: var(--ink-muted); font-size: 13px; line-height: 1; padding: 6px 8px; border-radius: 4px; }
         .agenda-today-close:hover { background: var(--paper-alt); color: var(--cover); }
-        @media (max-width: 600px) {
-          .agenda-book { padding-left: 22px; --agenda-cell-min: 54px; }
-          .agenda-binding { width: 22px; }
-          .agenda-header { padding: 14px 12px 8px 14px; gap: 8px; }
-          .agenda-header-right { width: 100%; justify-content: space-between; gap: 6px; }
-          .agenda-nav-controls { flex: 1; justify-content: center; }
-          .agenda-weekdays { padding: 4px 8px; margin: 0 2px; }
-          .agenda-weekdays div { font-size: 8px; }
-          #agendaCalendarGrid { padding: 4px 6px 6px; gap: 2px; }
-          .agenda-note-preview { font-size: 12px; }
-          .agenda-badge-status { font-size: 6px; }
-          .agenda-footer { padding: 10px 12px 12px 14px; }
+
+        /* Calendário + página ao lado (lista do mês). */
+        .agenda-spread { display: grid; grid-template-columns: minmax(0, 1fr); }
+        .agenda-cal { display: flex; flex-direction: column; min-width: 0; }
+        .agenda-cal #agendaCalendarGrid { flex: 1 1 auto; }
+        .agenda-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); padding: 4px 14px; text-align: center; border-bottom: 2px solid var(--gold); margin: 0 4px; }
+        .agenda-weekdays div { font-size: 11px; font-weight: 800; letter-spacing: 0.3px; color: var(--ink-muted); padding-bottom: 6px; }
+        .agenda-weekdays .agenda-dom { color: var(--red-ink); }
+        #agendaCalendarGrid { container-type: inline-size; display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: minmax(var(--agenda-cell-min, 76px), 1fr); gap: 1px; padding: 6px 10px 8px; }
+        .agenda-day-cell { border-radius: 4px; padding: 4px 5px; display: flex; flex-direction: column; justify-content: space-between; gap: 2px; cursor: pointer; border-bottom: 1px solid var(--rule-line); transition: transform 0.12s, background 0.12s; min-width: 0; }
+        .agenda-day-cell:hover { background: rgba(184, 137, 79, 0.10); transform: translateY(-1px); }
+        .agenda-day-cell:focus-visible { outline: 2px solid var(--cover); outline-offset: -2px; }
+        .agenda-day-cell.agenda-day-empty { visibility: hidden; cursor: default; border-bottom-color: transparent; }
+        .agenda-day-cell.agenda-bg-sunday { background-color: rgba(179, 65, 58, 0.06); }
+        .agenda-day-cell.agenda-bg-saturday { background-color: rgba(44, 38, 32, 0.035); }
+        .agenda-day-cell.agenda-is-today { background-color: rgba(184, 137, 79, 0.16); box-shadow: inset 0 0 0 1.5px var(--gold); }
+        .agenda-day-cell.agenda-is-today .agenda-day-num { display: inline-flex; align-items: center; justify-content: center; background: var(--cover); color: var(--paper) !important; width: 20px; height: 20px; border-radius: 50%; font-size: 12px; }
+        .agenda-day-num { font-size: 13px; font-weight: 700; }
+        .agenda-badge-status { font-size: 9px; padding: 2px 3px; border-radius: 3px; font-weight: 800; text-align: center; color: white; text-transform: uppercase; line-height: 1.2; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 1px 2px rgba(0,0,0,0.18); }
+        .agenda-badge-status .lbl-full { display: none; }
+        .agenda-badge-feriado { background-color: var(--red-ink); }
+        .agenda-badge-facultativo { background-color: var(--amber-bg); color: #5c3f0d; }
+        .agenda-badge-pagamento { background-color: var(--green-ink); }
+        .agenda-badge-extra { background-color: var(--blue-ink); }
+        .agenda-note-preview { font-family: 'Caveat', cursive; font-size: 15px; line-height: 1; font-weight: 700; color: var(--blue-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; transform: rotate(-1.5deg); transform-origin: left center; }
+        /* Grade média: sigla um pouco maior. Grade larga: nome por extenso. */
+        @container (min-width: 470px) {
+          .agenda-badge-status { font-size: 10px; padding: 2px 4px; }
+        }
+        @container (min-width: 620px) {
+          .agenda-badge-status { font-size: 10.5px; padding: 3px 5px; text-transform: none; font-weight: 700; letter-spacing: 0; }
+          .agenda-badge-status .lbl-short { display: none; }
+          .agenda-badge-status .lbl-full { display: inline; }
         }
 
+        .agenda-side { background: var(--paper); padding: 6px 14px 14px 16px; min-width: 0; border-top: 1px dashed var(--rule-line); }
+        .agenda-side-title { margin: 8px 0 0; font-size: 18px; font-style: italic; font-weight: 800; color: var(--ink); }
+        .agenda-side-sub { margin: 2px 0 8px; font-size: 13px; color: var(--ink-muted); line-height: 1.4; }
+        .agenda-list { display: flex; flex-direction: column; }
+        .agenda-item { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px; align-items: start; width: 100%; text-align: left; background: transparent; border: 0; border-bottom: 1px solid var(--rule-line); border-radius: 4px; padding: 9px 6px; cursor: pointer; color: var(--ink); font-size: 15px; }
+        .agenda-item:hover { background: rgba(184, 137, 79, 0.10); }
+        .agenda-item.is-today { background: rgba(184, 137, 79, 0.16); box-shadow: inset 3px 0 0 var(--gold); }
+        .agenda-item-date { text-align: center; line-height: 1; }
+        .agenda-item-date b { display: block; font-size: 22px; font-style: italic; font-weight: 700; }
+        .agenda-item-date small { display: block; margin-top: 3px; font-size: 12px; color: var(--ink-muted); }
+        .agenda-item-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .agenda-item-title { display: flex; align-items: baseline; gap: 7px; font-weight: 700; line-height: 1.25; }
+        .agenda-item-dot { flex-shrink: 0; width: 9px; height: 9px; border-radius: 50%; background: var(--ink-muted); transform: translateY(0.5px); }
+        .agenda-item-feriado .agenda-item-dot { background: var(--red-ink); }
+        .agenda-item-facultativo .agenda-item-dot { background: var(--amber-ink); }
+        .agenda-item-pagamento .agenda-item-dot { background: var(--green-ink); }
+        .agenda-item-extra .agenda-item-dot { background: var(--blue-ink); }
+        .agenda-item-note { font-family: 'Caveat', cursive; font-size: 19px; font-weight: 700; line-height: 1.1; color: var(--blue-ink); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line; }
+        .agenda-item-when { font-size: 12px; color: var(--ink-muted); white-space: nowrap; padding-top: 3px; }
+        .agenda-item.is-past .agenda-item-title { font-weight: 600; color: var(--ink-muted); }
+        .agenda-list-empty { margin: 6px 0 4px; font-style: italic; color: var(--ink-muted); line-height: 1.5; }
+
+        .agenda-footer { padding: 10px 18px 14px 20px; border-top: 1px dashed var(--rule-line); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .agenda-legend { display: flex; gap: 14px; flex-wrap: wrap; }
+        .agenda-legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: var(--ink-muted); }
+        .agenda-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .agenda-creator-info { text-align: right; font-size: 10px; font-weight: 700; color: var(--ink-muted); font-style: italic; }
+        .agenda-creator-name { color: var(--cover); font-style: italic; font-size: 12px; }
+
+        @container agendabook (min-width: 860px) {
+          .agenda-spread { grid-template-columns: minmax(0, 1fr) 310px; }
+          .agenda-side { border-top: 0; border-left: 1px dashed var(--gold); box-shadow: inset 8px 0 10px -10px rgba(20,20,10,0.35); padding-top: 12px; }
+        }
+        @media (max-width: 600px) {
+          .agenda-card .card-top, .agenda-card .card-body { padding-left: 14px; padding-right: 14px; }
+          .agenda-book { padding-left: 22px; --agenda-cell-min: 56px; }
+          .agenda-binding { width: 22px; }
+          .agenda-header { padding: 14px 12px 10px 14px; }
+          .agenda-monthbar { order: 3; flex: 1 1 100%; }
+          .agenda-nav-controls { flex: 1; justify-content: space-between; }
+          .agenda-month-display { min-width: 0; flex: 1; }
+          .agenda-weekdays { padding: 4px 8px; margin: 0 2px; }
+          .agenda-weekdays div { font-size: 10px; }
+          #agendaCalendarGrid { padding: 4px 6px 6px; gap: 2px; }
+          .agenda-day-cell { padding: 3px 3px; }
+          .agenda-badge-status { font-size: 8px; padding: 2px 1px; letter-spacing: 0; }
+          .agenda-note-preview { font-size: 13px; }
+          .agenda-footer { padding: 10px 12px 12px 14px; }
+          .agenda-side { padding: 6px 10px 12px 12px; }
+        }
         @media (max-width: 380px) {
-          .agenda-book { padding-left: 18px; --agenda-cell-min: 46px; }
+          .agenda-book { padding-left: 18px; --agenda-cell-min: 50px; }
           .agenda-binding { width: 18px; }
-          .agenda-header-right { gap: 4px; }
-          .agenda-sync-btn { padding: 6px 7px; font-size: 11px; }
-          .agenda-nav-btn { padding: 5px 6px; font-size: 11px; }
-          .agenda-month-display { min-width: 68px; font-size: 12px; }
-          .agenda-day-num { font-size: 10px; }
-          .agenda-note-preview { font-size: 11px; }
+          .agenda-day-num { font-size: 12px; }
+          .agenda-day-cell { padding: 3px 2px; }
+          .agenda-badge-status { font-size: 7.5px; }
           .agenda-footer { flex-direction: column; align-items: flex-start; }
           .agenda-creator-info { text-align: left; }
+          .agenda-item { grid-template-columns: 34px minmax(0, 1fr); }
+          .agenda-item-when { grid-column: 2; padding-top: 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .agenda-day-cell { transition: none; }
+          .agenda-day-cell:hover { transform: none; }
         }
       </style>
       <div class="card-top">
@@ -5975,33 +6129,36 @@ function renderAgendaCard() {
           <span class="tradutor-badge agenda-badge">${ICONS.calendar}</span>
           <h2 style="margin:0;">Agenda Boa Vista 2026</h2>
         </div>
-        <span class="subtitle">📅 Feriados, pontos facultativos e datas de pagamento — com anotações pessoais sincronizadas entre aparelhos</span>
+        <span class="subtitle">📅 Feriados, pontos facultativos e pagamentos, com anotações que acompanham você entre aparelhos</span>
       </div>
       <div class="card-body">
-        <div class="agenda-privacy">
-          ${ICONS.info}
-          <span>O calendário (feriados e pagamentos) funciona sem configuração alguma. Para guardar anotações e vê-las em outros aparelhos, toque em 🔄 e defina um código de sincronização — ele funciona como uma senha compartilhada só entre os seus dispositivos. As anotações ficam salvas em um banco de dados (Firebase/Google), não neste navegador.</span>
-        </div>
+        <details class="agenda-privacy"${agendaSyncCode ? '' : ' open'}>
+          <summary>${ICONS.info}<span>Como funcionam as anotações</span></summary>
+          <p>Feriados e pagamentos aparecem sem nenhuma configuração. Para guardar anotações e vê-las em outros aparelhos, toque em 🔄 e defina um código de sincronização: ele funciona como uma senha compartilhada só entre os seus dispositivos. As anotações ficam em um banco de dados online (Firebase/Google), não neste navegador.</p>
+        </details>
 
         <div class="agenda-book" id="agendaBook">
           <div class="agenda-binding"></div>
           <div class="agenda-header">
             <div class="agenda-brand">
               <h3>Boa Vista</h3>
-              <p>Agenda Oficial &middot; 2026</p>
+              <p>Agenda oficial 2026</p>
             </div>
-            <div class="agenda-header-right">
-              <button type="button" class="agenda-sync-btn" title="Notificar sobre a semana (hoje em destaque)" onclick="agendaToggleNotify()">
+            <div class="agenda-monthbar">
+              <div class="agenda-nav-controls">
+                <button type="button" class="agenda-nav-btn" onclick="agendaChangeMonth(-1)" aria-label="Mês anterior">◀</button>
+                <span id="agendaMonthDisplay" class="agenda-month-display" aria-live="polite">Janeiro</span>
+                <button type="button" class="agenda-nav-btn" onclick="agendaChangeMonth(1)" aria-label="Próximo mês">▶</button>
+              </div>
+              <button type="button" id="agendaTodayBtn" class="agenda-today-btn" onclick="agendaGoToday()" hidden>Ir para hoje</button>
+            </div>
+            <div class="agenda-tools">
+              <button type="button" id="agendaNotifyBtn" class="agenda-sync-btn" title="Notificar sobre a semana" aria-label="Notificar sobre a semana" onclick="agendaToggleNotify()">
                 🔔<span id="agendaNotifyDot" class="agenda-sync-dot agenda-sync-off"></span>
               </button>
-              <button type="button" class="agenda-sync-btn" title="Sincronização entre aparelhos" onclick="agendaOpenSyncModal()">
+              <button type="button" id="agendaSyncBtn" class="agenda-sync-btn" title="Sincronização entre aparelhos" aria-label="Sincronização entre aparelhos" onclick="agendaOpenSyncModal()">
                 🔄<span id="agendaSyncDot" class="agenda-sync-dot agenda-sync-off"></span>
               </button>
-              <div class="agenda-nav-controls">
-                <button type="button" class="agenda-nav-btn" onclick="agendaChangeMonth(-1)">◀</button>
-                <span id="agendaMonthDisplay" class="agenda-month-display">Janeiro</span>
-                <button type="button" class="agenda-nav-btn" onclick="agendaChangeMonth(1)">▶</button>
-              </div>
             </div>
           </div>
 
@@ -6010,26 +6167,34 @@ function renderAgendaCard() {
               <span class="agenda-today-icon" aria-hidden="true">🔔</span>
               <span class="agenda-sync-card-title">Resumo da semana</span>
               <span id="agendaSyncCardTime" class="agenda-sync-card-time"></span>
-              <button type="button" class="agenda-today-close" onclick="agendaDismissTodayBanner()" aria-label="Fechar o card de notificação">✕</button>
+              <button type="button" class="agenda-today-close" onclick="agendaDismissTodayBanner()" aria-label="Fechar o resumo da semana">✕</button>
             </div>
             <div id="agendaTodayText" class="agenda-today-text"></div>
           </div>
 
-          <div class="agenda-weekdays">
-            <div class="agenda-dom">Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+          <div class="agenda-spread">
+            <div class="agenda-cal">
+              <div class="agenda-weekdays" aria-hidden="true">
+                <div class="agenda-dom">Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+              </div>
+              <div id="agendaCalendarGrid"></div>
+            </div>
+            <aside class="agenda-side" aria-labelledby="agendaSideTitle">
+              <h4 class="agenda-side-title" id="agendaSideTitle">Neste mês</h4>
+              <p class="agenda-side-sub" id="agendaMonthSummary"></p>
+              <div class="agenda-list" id="agendaMonthList"></div>
+            </aside>
           </div>
-
-          <div id="agendaCalendarGrid"></div>
 
           <div class="agenda-footer">
             <div class="agenda-legend">
-              <div class="agenda-legend-item"><div class="agenda-dot" style="background:var(--red-ink)"></div>Fer.</div>
-              <div class="agenda-legend-item"><div class="agenda-dot" style="background:var(--amber-bg)"></div>Fac.</div>
-              <div class="agenda-legend-item"><div class="agenda-dot" style="background:var(--green-ink)"></div>Pag.</div>
-              <div class="agenda-legend-item"><div class="agenda-dot" style="background:var(--blue-ink)"></div>13º</div>
+              <div class="agenda-legend-item"><div class="agenda-dot" style="background:var(--red-ink)"></div>Feriado</div>
+              <div class="agenda-legend-item"><div class="agenda-dot" style="background:var(--amber-bg); box-shadow: inset 0 0 0 1px var(--amber-ink)"></div>Facultativo</div>
+              <div class="agenda-legend-item"><div class="agenda-dot" style="background:var(--green-ink)"></div>Pagamento</div>
+              <div class="agenda-legend-item"><div class="agenda-dot" style="background:var(--blue-ink)"></div>13º salário</div>
             </div>
             <div class="agenda-creator-info">
-              CRIADO POR<br><span class="agenda-creator-name">Paulo Xavier — CRP-20/09816</span>
+              Criado por<br><span class="agenda-creator-name">Paulo Xavier — CRP-20/09816</span>
             </div>
           </div>
         </div>
@@ -6042,18 +6207,39 @@ function agendaKeyFor(month, day) {
   return AGENDA_YEAR + '-' + String(month + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
 }
 
+// Dia que recebe o foco do teclado (só uma célula fica na ordem de Tab).
+let agendaFocusDay = 0;
+
+function agendaDaysInMonth(month) {
+  return new Date(AGENDA_YEAR, month + 1, 0).getDate();
+}
+
 function agendaRenderCalendar() {
   const grid = document.getElementById('agendaCalendarGrid');
   const display = document.getElementById('agendaMonthDisplay');
   if (!grid || !display) return;
+
+  // A grade é refeita a cada sincronização; guarda o foco para o teclado não
+  // "cair" no meio da navegação.
+  const active = document.activeElement;
+  const keepFocusDay = (active && grid.contains(active) && active.dataset && active.dataset.day) ? Number(active.dataset.day) : 0;
+
   grid.innerHTML = '';
-  display.innerText = AGENDA_MONTH_NAMES[agendaCurrentMonth];
+  display.textContent = AGENDA_MONTH_NAMES[agendaCurrentMonth];
 
   const today = new Date();
+  const inYear = today.getFullYear() === AGENDA_YEAR;
+  const isThisMonth = inYear && today.getMonth() === agendaCurrentMonth;
   const first = new Date(AGENDA_YEAR, agendaCurrentMonth, 1).getDay();
-  const count = new Date(AGENDA_YEAR, agendaCurrentMonth + 1, 0).getDate();
+  const count = agendaDaysInMonth(agendaCurrentMonth);
+  // Só as semanas que o mês realmente usa (5 ou 6 linhas), sem linha vazia.
+  const totalCells = Math.ceil((first + count) / 7) * 7;
+  const tabDay = (agendaFocusDay >= 1 && agendaFocusDay <= count) ? agendaFocusDay : (isThisMonth ? today.getDate() : 1);
 
-  for (let i = 0; i < 42; i++) {
+  const todayBtn = document.getElementById('agendaTodayBtn');
+  if (todayBtn) todayBtn.hidden = !(inYear && !isThisMonth);
+
+  for (let i = 0; i < totalCells; i++) {
     const d = i - first + 1;
     const cell = document.createElement('div');
     cell.className = 'agenda-day-cell';
@@ -6061,143 +6247,491 @@ function agendaRenderCalendar() {
     if (d > 0 && d <= count) {
       const key = agendaKeyFor(agendaCurrentMonth, d);
       const info = AGENDA_DATA_INFO[key];
-      const wd = new Date(AGENDA_YEAR, agendaCurrentMonth, d).getDay();
+      const date = new Date(AGENDA_YEAR, agendaCurrentMonth, d);
+      const wd = date.getDay();
       const note = agendaNotesCache[key];
 
       if (wd === 0) cell.classList.add('agenda-bg-sunday');
       else if (wd === 6) cell.classList.add('agenda-bg-saturday');
 
-      if (today.getFullYear() === AGENDA_YEAR && today.getMonth() === agendaCurrentMonth && today.getDate() === d) {
-        cell.classList.add('agenda-is-today');
-      }
+      const isToday = isThisMonth && today.getDate() === d;
+      if (isToday) cell.classList.add('agenda-is-today');
 
       let html = '<span class="agenda-day-num" style="color:' + (wd === 0 ? 'var(--red-ink)' : 'var(--ink)') + '">' + d + '</span>';
       if (note) {
-        const preview = escapeHtml(note.length > 14 ? note.substring(0, 14) + '…' : note);
-        const tilt = (d % 2 === 0) ? '-2deg' : '1.5deg';
-        html += '<div class="agenda-note-preview" style="transform:rotate(' + tilt + ')" title="' + escapeHtml(note) + '">' + preview + '</div>';
+        const tilt = (d % 2 === 0) ? '-1.5deg' : '1deg';
+        html += '<div class="agenda-note-preview" style="transform:rotate(' + tilt + ')">' + escapeHtml(note) + '</div>';
       }
       if (info) {
-        const tilt2 = (d % 3 === 0) ? '1deg' : '-1deg';
-        html += '<div class="agenda-badge-status ' + info.type + '" style="transform:rotate(' + tilt2 + ')">' + escapeHtml(info.label) + '</div>';
+        const full = info.label === 'FAC.' ? 'Facultativo' : agendaFullName(info);
+        html += '<div class="agenda-badge-status ' + info.type + '" title="' + escapeHtml(agendaDayTitle(key)) + '"><span class="lbl-short">' + escapeHtml(info.label === '13º SAL.' ? '13º' : info.label) + '</span><span class="lbl-full">' + escapeHtml(full) + '</span></div>';
       }
 
       cell.innerHTML = html;
+      cell.dataset.day = String(d);
       cell.setAttribute('role', 'button');
-      cell.setAttribute('tabindex', '0');
-      let ariaLabel = d + ' de ' + AGENDA_MONTH_NAMES[agendaCurrentMonth];
-      if (info) ariaLabel += ', ' + info.label.replace(/\.$/, '');
-      if (note) ariaLabel += ', com anotação';
+      cell.setAttribute('tabindex', d === tabDay ? '0' : '-1');
+      if (isToday) cell.setAttribute('aria-current', 'date');
+      let ariaLabel = agendaLongDate(date);
+      if (info) ariaLabel += ', ' + agendaDayTitle(key);
+      if (note) ariaLabel += ', com anotação: ' + note;
       cell.setAttribute('aria-label', ariaLabel);
-      cell.onclick = () => agendaOpenNoteModal(key, d);
-      cell.onkeydown = (ev) => {
-        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); agendaOpenNoteModal(key, d); }
-      };
+      cell.addEventListener('click', () => { agendaFocusDay = d; agendaOpenNoteModal(key); });
+      cell.addEventListener('focus', () => {
+        agendaFocusDay = d;
+        grid.querySelectorAll('.agenda-day-cell[tabindex="0"]').forEach(c => { if (c !== cell) c.setAttribute('tabindex', '-1'); });
+        cell.setAttribute('tabindex', '0');
+      });
+      cell.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); agendaFocusDay = d; agendaOpenNoteModal(key); return; }
+        const moves = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
+        if (moves[ev.key] !== undefined) { ev.preventDefault(); agendaMoveFocus(d, moves[ev.key]); }
+        else if (ev.key === 'PageUp') { ev.preventDefault(); agendaChangeMonth(-1, d); }
+        else if (ev.key === 'PageDown') { ev.preventDefault(); agendaChangeMonth(1, d); }
+      });
     } else {
-      cell.style.opacity = '0.05';
-      cell.style.cursor = 'default';
+      cell.classList.add('agenda-day-empty');
+      cell.setAttribute('aria-hidden', 'true');
     }
     grid.appendChild(cell);
   }
+
+  if (keepFocusDay) {
+    const again = grid.querySelector('.agenda-day-cell[data-day="' + keepFocusDay + '"]');
+    if (again) again.focus({ preventScroll: true });
+  }
+
+  agendaRenderMonthList();
 }
 
-function agendaChangeMonth(delta) {
+// Página ao lado do calendário: cada data marcada do mês com nome completo,
+// e cada anotação inteira (a grade só mostra o começo dela).
+function agendaRenderMonthList() {
+  const list = document.getElementById('agendaMonthList');
+  const summary = document.getElementById('agendaMonthSummary');
+  if (!list) return;
+
+  const m = agendaCurrentMonth;
+  const count = agendaDaysInMonth(m);
+  const now = new Date();
+  const todayKey = now.getFullYear() === AGENDA_YEAR ? agendaKeyFor(now.getMonth(), now.getDate()) : '';
+  const counts = { feriado: 0, facultativo: 0, pagamento: 0, extra: 0 };
+  let notes = 0;
+  let html = '';
+
+  for (let d = 1; d <= count; d++) {
+    const key = agendaKeyFor(m, d);
+    const info = AGENDA_DATA_INFO[key];
+    const note = agendaNotesCache[key];
+    if (!info && !note) continue;
+    if (info) counts[argoAgendaKind(info)]++;
+    if (note) notes++;
+
+    const date = new Date(AGENDA_YEAR, m, d);
+    const kind = info ? argoAgendaKind(info) : 'nota';
+    const title = agendaDayTitle(key);
+    const rel = agendaRelativeLabel(key);
+    const isToday = key === todayKey;
+    const isPast = !!todayKey && key < todayKey;
+    let label = agendaLongDate(date);
+    if (title) label += ', ' + title;
+    if (note) label += ', anotação: ' + note;
+
+    html += '<button type="button" class="agenda-item agenda-item-' + kind + (isToday ? ' is-today' : '') + (isPast ? ' is-past' : '') + '" data-key="' + key + '" aria-label="' + escapeHtml(label) + '">' +
+      '<span class="agenda-item-date"><b>' + d + '</b><small>' + AGENDA_WEEKDAY_ABBR[date.getDay()].toLowerCase() + '</small></span>' +
+      '<span class="agenda-item-main">' +
+        (info ? '<span class="agenda-item-title"><i class="agenda-item-dot"></i><span>' + escapeHtml(title) + '</span></span>' : '') +
+        (note ? '<span class="agenda-item-note">' + escapeHtml(note) + '</span>' : '') +
+      '</span>' +
+      '<span class="agenda-item-when">' + rel + '</span>' +
+    '</button>';
+  }
+
+  if (!html) {
+    html = '<p class="agenda-list-empty">Nenhuma data marcada em ' + AGENDA_MONTH_NAMES[m].toLowerCase() + '. Toque em um dia do calendário para fazer uma anotação.</p>';
+  }
+  list.innerHTML = html;
+  list.onclick = (ev) => {
+    const btn = ev.target.closest ? ev.target.closest('.agenda-item') : null;
+    if (btn) agendaOpenNoteModal(btn.dataset.key);
+  };
+
+  if (summary) {
+    const parts = [];
+    if (counts.feriado) parts.push(counts.feriado + (counts.feriado === 1 ? ' feriado' : ' feriados'));
+    if (counts.facultativo) parts.push(counts.facultativo + (counts.facultativo === 1 ? ' ponto facultativo' : ' pontos facultativos'));
+    if (counts.pagamento) parts.push(counts.pagamento + (counts.pagamento === 1 ? ' pagamento' : ' pagamentos'));
+    if (counts.extra) parts.push(counts.extra + (counts.extra === 1 ? ' outra data' : ' outras datas'));
+    if (notes) parts.push(notes + (notes === 1 ? ' anotação' : ' anotações'));
+    summary.textContent = agendaJoinPt(parts);
+  }
+}
+
+function agendaChangeMonth(delta, keepDay) {
   agendaCurrentMonth = (agendaCurrentMonth + delta + 12) % 12;
+  agendaFocusDay = keepDay ? Math.min(keepDay, agendaDaysInMonth(agendaCurrentMonth)) : 0;
   agendaRenderCalendar();
+  if (keepDay) agendaFocusCell(agendaFocusDay);
+}
+
+function agendaGoToday() {
+  const now = new Date();
+  if (now.getFullYear() !== AGENDA_YEAR) {
+    agendaToast('A agenda cobre apenas ' + AGENDA_YEAR + '.');
+    return;
+  }
+  agendaCurrentMonth = now.getMonth();
+  agendaFocusDay = 0;
+  agendaRenderCalendar();
+}
+
+function agendaFocusCell(day) {
+  const cell = document.querySelector('#agendaCalendarGrid .agenda-day-cell[data-day="' + day + '"]');
+  if (cell) cell.focus();
+}
+
+// Setas do teclado andam pelos dias; nas pontas do mês, passam para o mês
+// vizinho (sem dar a volta de dezembro para janeiro).
+function agendaMoveFocus(fromDay, delta) {
+  const count = agendaDaysInMonth(agendaCurrentMonth);
+  let target = fromDay + delta;
+  if (target < 1) {
+    if (agendaCurrentMonth === 0) return;
+    agendaCurrentMonth -= 1;
+    target = agendaDaysInMonth(agendaCurrentMonth) + target;
+    agendaFocusDay = target;
+    agendaRenderCalendar();
+  } else if (target > count) {
+    if (agendaCurrentMonth === 11) return;
+    agendaCurrentMonth += 1;
+    target = target - count;
+    agendaFocusDay = target;
+    agendaRenderCalendar();
+  } else {
+    agendaFocusDay = target;
+  }
+  agendaFocusCell(target);
+}
+
+// Deslizar para os lados troca de mês (celular).
+function agendaAttachSwipe() {
+  const book = document.getElementById('agendaBook');
+  if (!book || book.dataset.swipe === '1') return;
+  book.dataset.swipe = '1';
+  let sx = 0, sy = 0, tracking = false;
+  book.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) { tracking = false; return; }
+    tracking = true; sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+  }, { passive: true });
+  book.addEventListener('touchend', (e) => {
+    if (!tracking) return;
+    tracking = false;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - sx, dy = t.clientY - sy;
+    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 2) agendaChangeMonth(dx < 0 ? 1 : -1);
+  }, { passive: true });
 }
 
 // ======= Modais (ficam presos ao <body>, fora do card, para que
 // position:fixed funcione mesmo com a animação de entrada dos cards) =======
 
+let agendaLastFocus = null;
+let agendaNoteOriginal = '';
+let agendaPendingSave = false;   // "guardar assim que a sincronização conectar"
+let agendaDeleteArmed = false;
+let agendaDeleteTimer = null;
+let agendaBusy = false;
+
 function agendaEnsureModals() {
   if (document.getElementById('agendaNoteModal')) return;
   const wrap = document.createElement('div');
   wrap.innerHTML = `
-    <div id="agendaNoteModal" class="agenda-modal-overlay" onclick="if(event.target==this) agendaCloseNoteModal()">
-      <div class="agenda-modal-box">
+    <div id="agendaNoteModal" class="agenda-modal-overlay" onclick="if(event.target==this && !agendaNoteIsDirty()) agendaCloseNoteModal()">
+      <div class="agenda-modal-box" role="dialog" aria-modal="true" aria-labelledby="agendaModalDate">
         <div class="agenda-modal-header">
-          <h3 id="agendaModalDate" style="margin:0; font-size:18px; font-family:'Times New Roman',serif; font-style:italic;">Data</h3>
-          <button type="button" onclick="agendaCloseNoteModal()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#ccc;">&times;</button>
+          <div>
+            <h3 id="agendaModalDate" class="agenda-modal-title">Data</h3>
+            <div id="agendaModalChip" class="agenda-modal-chip" hidden></div>
+          </div>
+          <button type="button" class="agenda-modal-x" onclick="agendaCloseNoteModal()" aria-label="Fechar">&times;</button>
         </div>
-        <textarea id="agendaNoteInput" rows="3" placeholder="Escrever nota..." class="agenda-textarea"></textarea>
+        <label for="agendaNoteInput" class="agenda-sr-only">Anotação do dia</label>
+        <textarea id="agendaNoteInput" rows="4" maxlength="500" placeholder="Escrever nota…" class="agenda-textarea" oninput="agendaUpdateNoteCounter()"></textarea>
+        <div class="agenda-note-meta">
+          <span id="agendaNoteHint" class="agenda-note-hint"></span>
+          <span id="agendaNoteCounter" class="agenda-note-counter">0/500</span>
+        </div>
         <div class="agenda-btn-group">
-          <button type="button" onclick="agendaSaveNote()" class="agenda-btn-save">Guardar</button>
-          <button type="button" onclick="agendaDeleteNote()" class="agenda-btn-del">🗑</button>
+          <button type="button" id="agendaSaveBtn" onclick="agendaSaveNote()" class="agenda-btn-save">Guardar</button>
+          <button type="button" id="agendaDelBtn" onclick="agendaDeleteNote()" class="agenda-btn-del" hidden>Apagar</button>
         </div>
       </div>
     </div>
     <div id="agendaSyncModal" class="agenda-modal-overlay" onclick="if(event.target==this) agendaCloseSyncModal()">
-      <div class="agenda-modal-box">
+      <div class="agenda-modal-box" role="dialog" aria-modal="true" aria-labelledby="agendaSyncTitle">
         <div class="agenda-modal-header">
-          <h3 style="margin:0; font-size:18px; font-family:'Times New Roman',serif; font-style:italic;">Sincronização</h3>
-          <button type="button" onclick="agendaCloseSyncModal()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#ccc;">&times;</button>
+          <h3 id="agendaSyncTitle" class="agenda-modal-title">Sincronização</h3>
+          <button type="button" class="agenda-modal-x" onclick="agendaCloseSyncModal()" aria-label="Fechar">&times;</button>
         </div>
-        <div id="agendaSyncStatusLine" class="agenda-status-line"></div>
+        <div id="agendaSyncStatusLine" class="agenda-status-line" aria-live="polite"></div>
+        <div id="agendaSyncHint" class="agenda-sync-hint" hidden>Sua anotação será guardada assim que a sincronização conectar.</div>
         <div class="agenda-sync-info">Este código conecta suas anotações entre aparelhos. Use o <b>mesmo código</b> em todos os dispositivos.</div>
         <div id="agendaSyncCodeDisplay" class="agenda-sync-code-display" style="display:none;"></div>
-        <input type="text" id="agendaSyncCodeInput" placeholder="Digite um código (ex: familia-xavier)" class="agenda-input">
+        <label for="agendaSyncCodeInput" class="agenda-sr-only">Código de sincronização</label>
+        <input type="text" id="agendaSyncCodeInput" placeholder="Digite um código (ex: familia-xavier)" class="agenda-input" autocomplete="off" autocapitalize="off" spellcheck="false">
         <div class="agenda-btn-group">
           <button type="button" onclick="agendaUseSyncCode()" class="agenda-btn-save">Usar este código</button>
           <button type="button" onclick="agendaGenerateSyncCode()" class="agenda-btn-secondary">Gerar novo</button>
         </div>
+        <button type="button" id="agendaCopyBtn" onclick="agendaCopySyncCode()" class="agenda-btn-link" hidden>Copiar código atual</button>
       </div>
     </div>
     <style>
-      .agenda-modal-overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(20,16,10,0.45); z-index:999; align-items:center; justify-content:center; }
-      .agenda-modal-box { background:#f8f2e4; background-image: repeating-linear-gradient(to bottom, transparent 0px, transparent 25px, #e0d3ac 25px, #e0d3ac 26px); width:90%; max-width:320px; border-radius:4px 14px 14px 4px; padding:22px; box-shadow:0 16px 34px rgba(0,0,0,0.28); position:relative; border-left:8px solid #1f3d33; font-family:'Times New Roman', Times, serif; color:#2c2620; }
-      .agenda-modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
-      .agenda-textarea, .agenda-input { width:100%; border:1px solid #e0d3ac; background:rgba(255,255,255,0.5); border-radius:8px; padding:10px; box-sizing:border-box; margin-bottom:15px; }
-      .agenda-textarea { font-family:'Caveat', cursive; font-size:18px; color:#2f5d8a; resize:none; }
-      .agenda-input { font-family:'Times New Roman', Times, serif; font-size:13px; color:#2c2620; }
+      .agenda-modal-overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(20,16,10,0.5); z-index:999; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; }
+      .agenda-modal-box { background:#f8f2e4; background-image: repeating-linear-gradient(to bottom, transparent 0px, transparent 25px, #e0d3ac 25px, #e0d3ac 26px); width:100%; max-width:360px; max-height:100%; overflow:auto; border-radius:4px 14px 14px 4px; padding:20px 22px 22px; box-shadow:0 16px 34px rgba(0,0,0,0.28); position:relative; border-left:8px solid #1f3d33; font-family:'Times New Roman', Times, serif; color:#2c2620; box-sizing:border-box; }
+      .agenda-modal-header { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:12px; }
+      .agenda-modal-title { margin:0; font-size:20px; font-style:italic; font-weight:700; line-height:1.2; }
+      #agendaModalDate::first-letter { text-transform:uppercase; }
+      .agenda-modal-chip { display:inline-flex; align-items:center; gap:6px; margin-top:6px; padding:3px 10px 3px 8px; border-radius:12px; font-size:13px; font-weight:700; background:rgba(44,38,32,0.07); }
+      .agenda-modal-chip[hidden] { display:none; }
+      .agenda-modal-chip i { width:9px; height:9px; border-radius:50%; background:#6f6551; }
+      .agenda-modal-chip[data-kind="feriado"] i { background:#b3413a; }
+      .agenda-modal-chip[data-kind="facultativo"] i { background:#a9762a; }
+      .agenda-modal-chip[data-kind="pagamento"] i { background:#3f7d55; }
+      .agenda-modal-chip[data-kind="extra"] i { background:#2f5d8a; }
+      .agenda-modal-x { background:none; border:none; font-size:26px; line-height:1; cursor:pointer; color:#6f6551; padding:2px 8px; border-radius:6px; }
+      .agenda-modal-x:hover { background:#efe4cb; color:#1f3d33; }
+      .agenda-textarea, .agenda-input { width:100%; border:1px solid #d3c495; background:rgba(255,255,255,0.6); border-radius:8px; padding:10px; box-sizing:border-box; color:#2c2620; }
+      .agenda-textarea { font-family:'Caveat', cursive; font-size:21px; line-height:1.15; color:#2f5d8a; resize:vertical; min-height:96px; max-height:220px; margin-bottom:4px; }
+      .agenda-input { font-family:'Times New Roman', Times, serif; font-size:15px; margin-bottom:14px; }
+      .agenda-textarea:focus, .agenda-input:focus { outline:2px solid #1f3d33; outline-offset:1px; }
+      .agenda-note-meta { display:flex; justify-content:space-between; gap:10px; font-size:12px; color:#6f6551; margin-bottom:12px; min-height:16px; }
+      .agenda-note-hint { flex:1; line-height:1.3; }
+      .agenda-note-counter { white-space:nowrap; }
       .agenda-btn-group { display:flex; gap:8px; }
-      .agenda-btn-save { flex:1; background:#1f3d33; color:#f8f2e4; border:none; padding:10px; border-radius:8px; font-weight:700; cursor:pointer; }
-      .agenda-btn-save:hover { background:#14261f; }
-      .agenda-btn-del { background:#f3dbd8; color:#b3413a; border:none; padding:10px; border-radius:8px; cursor:pointer; }
-      .agenda-btn-secondary { flex:1; background:#efe4cb; color:#2c2620; border:1px solid #e0d3ac; padding:10px; border-radius:8px; font-weight:700; cursor:pointer; }
-      .agenda-sync-info { font-size:12px; color:#8a7f6a; margin-bottom:10px; line-height:1.5; }
-      .agenda-sync-code-display { font-size:16px; font-weight:800; letter-spacing:1px; background:#efe4cb; border:1px dashed #b8894f; border-radius:8px; padding:10px; text-align:center; margin-bottom:15px; color:#1f3d33; }
-      .agenda-status-line { font-size:11px; margin-bottom:10px; }
+      .agenda-btn-group button { font-family:inherit; font-size:15px; }
+      .agenda-btn-save { flex:1; background:#1f3d33; color:#f8f2e4; border:none; padding:11px; border-radius:8px; font-weight:700; cursor:pointer; }
+      .agenda-btn-save:hover:not(:disabled) { background:#14261f; }
+      .agenda-btn-save:disabled { opacity:0.6; cursor:progress; }
+      .agenda-btn-del { background:#f3dbd8; color:#8f2d27; border:none; padding:11px 14px; border-radius:8px; font-weight:700; cursor:pointer; }
+      .agenda-btn-del[hidden] { display:none; }
+      .agenda-btn-del.armed { background:#b3413a; color:#fff; }
+      .agenda-btn-secondary { flex:1; background:#efe4cb; color:#2c2620; border:1px solid #d3c495; padding:11px; border-radius:8px; font-weight:700; cursor:pointer; }
+      .agenda-btn-link { display:block; margin:12px auto 0; background:none; border:none; color:#1f3d33; font-family:inherit; font-size:14px; font-weight:700; text-decoration:underline; cursor:pointer; padding:4px 8px; }
+      .agenda-btn-link[hidden] { display:none; }
+      .agenda-modal-box button:focus-visible { outline:2px solid #1f3d33; outline-offset:2px; }
+      .agenda-sync-info { font-size:14px; color:#5f5644; margin-bottom:10px; line-height:1.5; }
+      .agenda-sync-hint { font-size:13px; font-weight:700; color:#5c3f0d; background:#f0d78a; border-radius:8px; padding:8px 10px; margin-bottom:10px; line-height:1.4; }
+      .agenda-sync-hint[hidden] { display:none; }
+      .agenda-sync-code-display { font-size:17px; font-weight:800; letter-spacing:1px; background:#efe4cb; border:1px dashed #b8894f; border-radius:8px; padding:10px; text-align:center; margin-bottom:12px; color:#1f3d33; overflow-wrap:anywhere; }
+      .agenda-status-line { font-size:13px; margin-bottom:10px; }
+      .agenda-sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+      .agenda-toast { position:fixed; left:50%; bottom:max(24px, env(safe-area-inset-bottom)); transform:translate(-50%, 12px); max-width:min(92vw, 420px); background:#1f3d33; color:#f8f2e4; padding:11px 16px; border-radius:10px; font:600 14px/1.4 'Times New Roman', Times, serif; box-shadow:0 10px 24px rgba(0,0,0,0.3); z-index:1001; opacity:0; pointer-events:none; transition:opacity .18s, transform .18s; text-align:center; }
+      .agenda-toast.visible { opacity:1; transform:translate(-50%, 0); }
+      .agenda-toast[data-kind="error"] { background:#8f2d27; }
+      @media (prefers-reduced-motion: reduce) { .agenda-toast { transition:none; } }
     </style>
   `;
   document.body.appendChild(wrap);
+
+  // Teclado dos modais (registrado uma única vez): Esc fecha, Ctrl/⌘+Enter
+  // guarda a nota, e Tab fica preso dentro do modal aberto.
+  if (!window.__agendaKeysBound) {
+    window.__agendaKeysBound = true;
+    document.addEventListener('keydown', function (e) {
+      const noteModal = document.getElementById('agendaNoteModal');
+      const syncModal = document.getElementById('agendaSyncModal');
+      const noteOpen = noteModal && noteModal.style.display === 'flex';
+      const syncOpen = syncModal && syncModal.style.display === 'flex';
+      if (!noteOpen && !syncOpen) return;
+      const top = syncOpen ? syncModal : noteModal;   // o de sincronização abre por cima
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (syncOpen) agendaCloseSyncModal(); else agendaCloseNoteModal();
+        return;
+      }
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && top === noteModal) {
+        e.preventDefault();
+        agendaSaveNote();
+        return;
+      }
+      if (e.key === 'Tab') {
+        const items = Array.from(top.querySelectorAll('button, textarea, input')).filter(el => !el.disabled && !el.hidden && el.offsetParent !== null);
+        if (!items.length) return;
+        const first = items[0], last = items[items.length - 1];
+        if (!top.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+        else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    });
+  }
 }
 
-function agendaOpenNoteModal(key, d) {
+function agendaNoteIsDirty() {
+  const input = document.getElementById('agendaNoteInput');
+  return !!input && input.value.trim() !== agendaNoteOriginal.trim();
+}
+
+function agendaUpdateNoteCounter() {
+  const input = document.getElementById('agendaNoteInput');
+  const counter = document.getElementById('agendaNoteCounter');
+  if (input && counter) counter.textContent = input.value.length + '/' + (input.maxLength > 0 ? input.maxLength : 500);
+}
+
+function agendaResetDeleteButton() {
+  agendaDeleteArmed = false;
+  clearTimeout(agendaDeleteTimer);
+  const del = document.getElementById('agendaDelBtn');
+  if (del) { del.textContent = 'Apagar'; del.classList.remove('armed'); }
+}
+
+function agendaOpenNoteModal(key) {
   agendaEnsureModals();
   agendaSelectedKey = key;
-  document.getElementById('agendaModalDate').innerText = d + " de " + AGENDA_MONTH_NAMES[agendaCurrentMonth];
-  document.getElementById('agendaNoteInput').value = agendaNotesCache[key] || "";
+  agendaLastFocus = document.activeElement;
+  agendaPendingSave = false;
+  agendaResetDeleteButton();
+
+  const date = agendaDateFromKey(key);
+  const info = AGENDA_DATA_INFO[key];
+  const note = agendaNotesCache[key] || '';
+  agendaNoteOriginal = note;
+
+  document.getElementById('agendaModalDate').textContent = agendaLongDate(date);
+  const chip = document.getElementById('agendaModalChip');
+  if (info) {
+    chip.hidden = false;
+    chip.dataset.kind = argoAgendaKind(info);
+    chip.innerHTML = '<i></i>' + escapeHtml(agendaDayTitle(key));
+  } else {
+    chip.hidden = true;
+    chip.innerHTML = '';
+  }
+
+  const input = document.getElementById('agendaNoteInput');
+  input.value = note;
+  agendaUpdateNoteCounter();
+
+  const hint = document.getElementById('agendaNoteHint');
+  const save = document.getElementById('agendaSaveBtn');
+  save.disabled = false;
+  if (!agendaSyncCode) {
+    hint.textContent = 'Para guardar, defina um código de sincronização.';
+    save.textContent = 'Guardar e sincronizar';
+  } else {
+    hint.textContent = (window.matchMedia && window.matchMedia('(hover: hover)').matches) ? 'Ctrl+Enter guarda.' : '';
+    save.textContent = 'Guardar';
+  }
+  document.getElementById('agendaDelBtn').hidden = !note;
+
   document.getElementById('agendaNoteModal').style.display = 'flex';
+  input.focus();
 }
+
 function agendaCloseNoteModal() {
   const m = document.getElementById('agendaNoteModal');
   if (m) m.style.display = 'none';
-}
-async function agendaSaveNote() {
-  if (!agendaSyncCode) { agendaOpenSyncModal(); return; }
-  if (!agendaDb) { alert('Ainda conectando à nuvem — aguarde alguns segundos e tente novamente.'); return; }
-  const txt = document.getElementById('agendaNoteInput').value.trim();
-  const ref = agendaDb.collection('agendas').doc(agendaSyncCode).collection('notes').doc(agendaSelectedKey);
-  try {
-    if (txt) {
-      await ref.set({ text: txt, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-    } else {
-      await ref.delete();
-    }
-    agendaCloseNoteModal();
-  } catch (e) {
-    console.error(e);
-    alert('Não foi possível salvar a anotação na nuvem. Verifique sua internet e tente novamente.');
+  agendaPendingSave = false;
+  agendaResetDeleteButton();
+  const sm = document.getElementById('agendaSyncModal');
+  if (sm && sm.style.display === 'flex') return;   // o foco fica com o modal de cima
+  // A grade e a lista são redesenhadas a cada sincronização (inclusive logo
+  // depois de guardar), então o elemento que abriu o modal pode já ter sido
+  // substituído. Nesse caso, procura o equivalente pelo dia.
+  let target = agendaLastFocus;
+  if (!target || !document.contains(target)) {
+    const day = agendaSelectedKey ? Number(agendaSelectedKey.slice(8)) : 0;
+    const fromList = agendaLastFocus && agendaLastFocus.classList && agendaLastFocus.classList.contains('agenda-item');
+    target = fromList ? document.querySelector('#agendaMonthList .agenda-item[data-key="' + agendaSelectedKey + '"]') : null;
+    // Item da lista que sumiu (nota apagada): cai no dia do calendário.
+    if (!target) target = document.querySelector('#agendaCalendarGrid .agenda-day-cell[data-day="' + day + '"]');
+  }
+  if (target && typeof target.focus === 'function') {
+    try { target.focus({ preventScroll: true }); } catch (e) { /* ignora */ }
   }
 }
-async function agendaDeleteNote() {
-  if (!agendaSyncCode || !agendaDb) { alert('Ainda conectando à nuvem — aguarde alguns segundos e tente novamente.'); return; }
+
+// Grava (ou apaga, se o texto for vazio) e espera a confirmação do servidor
+// por até 7 s. O Firestore já atualiza a tela na hora, mesmo sem internet;
+// se a confirmação demorar, avisa que o envio fica na fila.
+async function agendaCommitNote(key, text) {
+  const ref = agendaDb.collection('agendas').doc(agendaSyncCode).collection('notes').doc(key);
+  const op = text
+    ? ref.set({ text: text, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
+    : ref.delete();
+  op.catch(() => { /* tratado abaixo ou depois do prazo */ });
+  const outcome = await Promise.race([
+    op.then(() => 'ok'),
+    new Promise(resolve => setTimeout(() => resolve('slow'), 7000))
+  ]);
+  return outcome;
+}
+
+async function agendaSaveNote() {
+  if (agendaBusy) return;
+  const input = document.getElementById('agendaNoteInput');
+  const txt = input.value.trim();
+
+  if (!txt && !agendaNoteOriginal) { agendaToast('Escreva algo antes de guardar.'); input.focus(); return; }
+
+  if (!agendaSyncCode) {
+    // Sem código ainda: abre a sincronização e guarda sozinho quando conectar.
+    agendaPendingSave = true;
+    agendaOpenSyncModal();
+    return;
+  }
+  if (!agendaDb) {
+    agendaPendingSave = true;
+    agendaToast('Conectando à nuvem. A anotação será guardada assim que conectar.');
+    return;
+  }
+
+  const save = document.getElementById('agendaSaveBtn');
+  agendaBusy = true;
+  save.disabled = true;
+  save.textContent = 'Guardando…';
+  const key = agendaSelectedKey;
   try {
-    await agendaDb.collection('agendas').doc(agendaSyncCode).collection('notes').doc(agendaSelectedKey).delete();
+    const outcome = await agendaCommitNote(key, txt);
     agendaCloseNoteModal();
+    if (outcome === 'ok') agendaToast(txt ? 'Anotação guardada.' : 'Anotação apagada.');
+    else agendaToast('Sem resposta do servidor. A anotação já aparece aqui e será enviada quando a conexão voltar; mantenha o app aberto.', 'error');
   } catch (e) {
     console.error(e);
-    alert('Não foi possível apagar a anotação na nuvem. Verifique sua internet e tente novamente.');
+    save.disabled = false;
+    save.textContent = 'Guardar';
+    agendaToast('Não foi possível guardar na nuvem. Verifique a internet e tente de novo.', 'error');
+  } finally {
+    agendaBusy = false;
+  }
+}
+
+// Apagar pede um segundo toque (o botão vira "Apagar mesmo?") — a nota some
+// de todos os aparelhos, então não pode ser um toque acidental.
+async function agendaDeleteNote() {
+  if (agendaBusy) return;
+  if (!agendaSyncCode || !agendaDb) { agendaToast('Ainda conectando à nuvem. Tente de novo em alguns segundos.'); return; }
+  const del = document.getElementById('agendaDelBtn');
+  if (!agendaDeleteArmed) {
+    agendaDeleteArmed = true;
+    del.textContent = 'Apagar mesmo?';
+    del.classList.add('armed');
+    clearTimeout(agendaDeleteTimer);
+    agendaDeleteTimer = setTimeout(agendaResetDeleteButton, 3500);
+    return;
+  }
+  agendaBusy = true;
+  agendaResetDeleteButton();
+  try {
+    const outcome = await agendaCommitNote(agendaSelectedKey, '');
+    agendaCloseNoteModal();
+    if (outcome === 'ok') agendaToast('Anotação apagada.');
+    else agendaToast('Sem resposta do servidor. A exclusão será enviada quando a conexão voltar; mantenha o app aberto.', 'error');
+  } catch (e) {
+    console.error(e);
+    agendaToast('Não foi possível apagar na nuvem. Verifique a internet e tente de novo.', 'error');
+  } finally {
+    agendaBusy = false;
   }
 }
 
@@ -6206,6 +6740,12 @@ async function agendaDeleteNote() {
 function agendaUpdateSyncIndicator(connected) {
   const dot = document.getElementById('agendaSyncDot');
   if (dot) dot.className = 'agenda-sync-dot ' + (connected ? 'agenda-sync-ok' : 'agenda-sync-off');
+  const btn = document.getElementById('agendaSyncBtn');
+  if (btn) {
+    const t = connected ? 'Sincronização: conectada' : (agendaSyncCode ? 'Sincronização: desconectada' : 'Sincronização: defina um código');
+    btn.title = t;
+    btn.setAttribute('aria-label', t);
+  }
 }
 
 let agendaConnectingCode = '';
@@ -6224,7 +6764,7 @@ async function agendaConnectSync(code, force) {
   agendaSyncCode = newCode;
   localStorage.setItem('argo_agenda_sync_code', agendaSyncCode);
 
-  agendaSetSyncStatus('<span style="color:#8a7f6a">● Conectando…</span>', 'connecting');
+  agendaSetSyncStatus('<span style="color:#6f6551">● Conectando…</span>', 'connecting');
 
   let firebaseLib;
   try {
@@ -6256,9 +6796,16 @@ async function agendaConnectSync(code, force) {
       // A notificação da sincronização agora fica num card dentro da agenda
       // (antes disparava uma notificação do sistema a cada sincronização).
       agendaRenderTodayBanner(true);
-      const display = document.getElementById('agendaSyncCodeDisplay');
-      if (display) { display.style.display = 'block'; display.innerText = agendaSyncCode; }
+      agendaRefreshSyncModal();
       agendaSetSyncStatus('<span style="color:var(--green-ink,#3f7d55)">● Conectado</span>', 'ok');
+      // Anotação que estava esperando a conexão: guarda agora e fecha a
+      // janela de sincronização.
+      if (agendaPendingSave) {
+        agendaPendingSave = false;
+        agendaCloseSyncModal();
+        const nm = document.getElementById('agendaNoteModal');
+        if (nm && nm.style.display === 'flex') agendaSaveNote();
+      }
     }, err => {
       console.error(err);
       // O Firestore encerra a escuta quando dá erro; sem limpar aqui, a
@@ -6271,28 +6818,72 @@ async function agendaConnectSync(code, force) {
     });
 }
 
+function agendaRefreshSyncModal() {
+  const display = document.getElementById('agendaSyncCodeDisplay');
+  const copy = document.getElementById('agendaCopyBtn');
+  const hint = document.getElementById('agendaSyncHint');
+  if (display) {
+    if (agendaSyncCode) { display.style.display = 'block'; display.textContent = agendaSyncCode; }
+    else display.style.display = 'none';
+  }
+  if (copy) copy.hidden = !agendaSyncCode;
+  if (hint) hint.hidden = !agendaPendingSave;
+}
+
+let agendaSyncOpener = null;
+
 function agendaOpenSyncModal() {
   agendaEnsureModals();
-  document.getElementById('agendaSyncModal').style.display = 'flex';
-  const display = document.getElementById('agendaSyncCodeDisplay');
+  const modal = document.getElementById('agendaSyncModal');
+  if (modal.style.display !== 'flex') agendaSyncOpener = document.activeElement;
+  modal.style.display = 'flex';
+  agendaRefreshSyncModal();
   const statusLine = document.getElementById('agendaSyncStatusLine');
   if (agendaSyncCode) {
-    display.style.display = 'block';
-    display.innerText = agendaSyncCode;
-    statusLine.innerHTML = agendaSyncStatusHtml || '<span style="color:#8a7f6a">● Conectando…</span>';
+    statusLine.innerHTML = agendaSyncStatusHtml || '<span style="color:#6f6551">● Conectando…</span>';
   } else {
-    display.style.display = 'none';
-    statusLine.innerHTML = '<span style="color:#8a7f6a">● Nenhum código definido ainda</span>';
+    statusLine.innerHTML = '<span style="color:#6f6551">● Nenhum código definido ainda</span>';
   }
+  const input = document.getElementById('agendaSyncCodeInput');
+  if (input) input.focus();
 }
 function agendaCloseSyncModal() {
   const m = document.getElementById('agendaSyncModal');
   if (m) m.style.display = 'none';
+  const nm = document.getElementById('agendaNoteModal');
+  if (nm && nm.style.display === 'flex') {
+    const input = document.getElementById('agendaNoteInput');
+    if (input) input.focus();
+  } else if (agendaSyncOpener && document.contains(agendaSyncOpener) && typeof agendaSyncOpener.focus === 'function') {
+    try { agendaSyncOpener.focus({ preventScroll: true }); } catch (e) { /* ignora */ }
+  }
 }
 function agendaUseSyncCode() {
-  const val = document.getElementById('agendaSyncCodeInput').value;
-  if (!val.trim()) { alert('Digite um código.'); return; }
+  const input = document.getElementById('agendaSyncCodeInput');
+  const val = input.value.trim();
+  if (!val) { agendaToast('Digite um código.'); input.focus(); return; }
+  // O código vira o nome de um documento no Firestore: barras e "." / ".."
+  // não são aceitos ali e deixariam a conexão travada em "Conectando…".
+  if (/[\/\\]/.test(val) || val === '.' || val === '..') {
+    agendaToast('O código não pode ter barras nem ser só pontos.', 'error');
+    input.focus();
+    return;
+  }
   agendaConnectSync(val);
+}
+async function agendaCopySyncCode() {
+  if (!agendaSyncCode) return;
+  try {
+    await navigator.clipboard.writeText(agendaSyncCode);
+    agendaToast('Código copiado.');
+  } catch (e) {
+    const d = document.getElementById('agendaSyncCodeDisplay');
+    if (d && window.getSelection) {
+      const r = document.createRange(); r.selectNodeContents(d);
+      const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+    }
+    agendaToast('Não deu para copiar sozinho. Selecionei o código: copie manualmente.');
+  }
 }
 function agendaGenerateSyncCode() {
   // Esse código é a única "senha" da agenda sincronizada (ver regras do
@@ -6311,10 +6902,13 @@ function agendaGenerateSyncCode() {
 function agendaUpdateNotifyIndicator() {
   const dot = document.getElementById('agendaNotifyDot');
   if (!dot) return;
-  if (!('Notification' in window)) { dot.className = 'agenda-sync-dot agenda-sync-neutral'; return; }
-  if (Notification.permission === 'granted') dot.className = 'agenda-sync-dot agenda-sync-ok';
-  else if (Notification.permission === 'denied') dot.className = 'agenda-sync-dot agenda-sync-off';
-  else dot.className = 'agenda-sync-dot agenda-sync-neutral';
+  let title;
+  if (!('Notification' in window)) { dot.className = 'agenda-sync-dot agenda-sync-neutral'; title = 'Este navegador não suporta notificações'; }
+  else if (Notification.permission === 'granted') { dot.className = 'agenda-sync-dot agenda-sync-ok'; title = 'Notificações ativadas: toque para ver o resumo da semana'; }
+  else if (Notification.permission === 'denied') { dot.className = 'agenda-sync-dot agenda-sync-off'; title = 'Notificações bloqueadas neste navegador'; }
+  else { dot.className = 'agenda-sync-dot agenda-sync-neutral'; title = 'Ativar notificações do resumo da semana'; }
+  const btn = document.getElementById('agendaNotifyBtn');
+  if (btn) { btn.title = title; btn.setAttribute('aria-label', title); }
 }
 
 async function agendaShowTodayNotification(title, body) {
@@ -6366,7 +6960,7 @@ function agendaBuildWeekSummary(now) {
       const note = agendaNotesCache[key];
       if (!info && !note) return null;
       const parts = [];
-      if (info) parts.push(info.label.replace(/\.$/, ''));
+      if (info) parts.push(agendaDayTitle(key));
       if (note) parts.push(note);
       return {
         isToday: key === todayKey,
@@ -6474,9 +7068,9 @@ function agendaDismissTodayBanner() {
 }
 
 async function agendaToggleNotify() {
-  if (!('Notification' in window)) { alert('Este navegador não suporta notificações.'); return; }
+  if (!('Notification' in window)) { agendaToast('Este navegador não suporta notificações.', 'error'); return; }
   if (Notification.permission === 'denied') {
-    alert('As notificações estão bloqueadas para este site. Para ativar, abra as configurações do navegador/app e permita notificações para esta página.');
+    agendaToast('As notificações estão bloqueadas para este site. Para ativar, permita-as nas configurações do navegador ou do app.', 'error');
     return;
   }
   if (Notification.permission === 'default') {
@@ -6491,6 +7085,7 @@ async function agendaToggleNotify() {
 function initAgendaPanel() {
   agendaEnsureModals();
   agendaRenderCalendar();
+  agendaAttachSwipe();
   agendaUpdateNotifyIndicator();
   agendaUpdateSyncIndicator(!!agendaUnsubscribe);
   agendaRenderTodayBanner();
