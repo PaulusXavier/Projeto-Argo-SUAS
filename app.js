@@ -820,7 +820,9 @@ const ICONS = {
   calendar: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
   mic: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>',
   copy: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
-  check: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>'
+  check: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>',
+  plus: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+  trashSmall: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>'
 };
 
 // ---------------------------------------------------------------------
@@ -3071,6 +3073,14 @@ function renderPdfToolsCard() {
             <div class="pdftools-dropzone-hint">ou arraste os arquivos até aqui</div>
           </label>
 
+          <div class="pdftools-filelist-toolbar" id="pdftoolsMergeToolbar" style="display:none;">
+            <span id="pdftoolsMergeSummary"></span>
+            <button type="button" class="pdftools-sort-btn" id="pdftoolsMergeSortBtn" onclick="pdftoolsSortMergeFilesAlpha()" title="Ordenar arquivos por nome (A-Z)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h6"/><path d="M3 12h4"/><path d="M3 18h2"/><path d="M17 4v16"/><path d="M13 8l4-4 4 4"/></svg>
+              Ordenar A-Z
+            </button>
+          </div>
+
           <ul class="pdftools-filelist" id="pdftoolsMergeList"></ul>
 
           <div class="pdftools-capacity" id="pdftoolsMergeCapacity" role="img" aria-label="Espaço usado do limite de 50 MB">
@@ -3157,7 +3167,7 @@ function renderPdfToolsCard() {
               <span class="pdftools-tool-icon">${ICONS.image}</span>
               <div>
                 <div class="pdftools-tool-title">JPG → PDF</div>
-                <div class="pdftools-tool-limit">Uma ou várias imagens</div>
+                <div class="pdftools-tool-limit">Até 20 imagens · total de 40 MB</div>
               </div>
             </div>
             <p class="pdftools-tool-desc">Junta uma ou mais imagens (JPG ou PNG) em um único arquivo PDF, na ordem escolhida.</p>
@@ -3209,6 +3219,22 @@ const TRADUTOR_PHRASES = [
 let tradutorRecognition = null;
 let tradutorListening = false;
 
+// O serviço gratuito MyMemory limita cada tradução a ~500 caracteres; acima
+// disso ele devolve um aviso de limite em vez de traduzir. Avisamos antes de
+// enviar, em vez de deixar o técnico descobrir isso só depois pelo erro.
+const TRADUTOR_MAX_CHARS = 480;
+
+// Cache simples em memória (dura enquanto a aba estiver aberta): evita
+// reenviar ao serviço externo um texto que acabou de ser traduzido (ex.:
+// o técnico traduz, edita e volta ao texto original, ou reusa uma frase
+// rápida várias vezes no mesmo atendimento) — resposta instantânea e um
+// pedido a menos na cota diária gratuita do serviço.
+const tradutorCache = new Map();
+const TRADUTOR_CACHE_MAX = 100;
+
+const TRADUTOR_CUSTOM_KEY = 'argo_tradutor_custom_phrases';
+let tradutorCustomPhrases = [];
+
 function renderTranslatorCard() {
   const langOptions = (selected) => Object.entries(TRADUTOR_LANGS).map(([code, l]) =>
     `<option value="${code}" ${code === selected ? 'selected' : ''}>${l.flag} ${l.label}</option>`
@@ -3249,7 +3275,8 @@ function renderTranslatorCard() {
                 <button type="button" class="tradutor-speak-btn" id="tradutorSpeakFrom" onclick="tradutorSpeak('from')">${ICONS.volume} Ouvir</button>
               </div>
             </div>
-            <textarea id="tradutorInput" placeholder="Digite ou fale aqui o texto em português..." oninput="tradutorClearStatus()" onkeydown="tradutorHandleInputKey(event)"></textarea>
+            <textarea id="tradutorInput" placeholder="Digite ou fale aqui o texto em português..." oninput="tradutorHandleInput()" onkeydown="tradutorHandleInputKey(event)" maxlength="${TRADUTOR_MAX_CHARS}"></textarea>
+            <div class="tradutor-charcount" id="tradutorCharCount">0/${TRADUTOR_MAX_CHARS}</div>
           </div>
           <div class="tradutor-pane">
             <div class="tradutor-pane-head">
@@ -3279,6 +3306,10 @@ function renderTranslatorCard() {
           <div class="tradutor-phrases-head">
             <h3>Frases rápidas de atendimento</h3>
             <input type="text" class="tradutor-phrase-search" id="tradutorPhraseSearch" placeholder="Filtrar frases..." oninput="tradutorFilterPhrases(this.value)" aria-label="Filtrar frases rápidas">
+          </div>
+          <div class="tradutor-phrase-add">
+            <input type="text" id="tradutorNewPhrase" placeholder="Escrever uma frase própria em português e salvar aqui..." maxlength="200" onkeydown="if(event.key==='Enter'){event.preventDefault();tradutorAddPhrase();}">
+            <button type="button" onclick="tradutorAddPhrase()" title="Salvar como frase rápida" aria-label="Salvar como frase rápida">${ICONS.plus} Salvar frase</button>
           </div>
           <div class="tradutor-phrase-list" id="tradutorPhraseList"></div>
         </div>
@@ -3344,6 +3375,7 @@ function tradutorSwapLangs() {
   const speakTo = document.getElementById('tradutorSpeakTo');
   if (speakTo) speakTo.disabled = !outputEl.value.trim();
   tradutorClearStatus();
+  tradutorUpdateCharCount();
 }
 
 function tradutorSetStatus(msg, kind) {
@@ -3355,6 +3387,21 @@ function tradutorSetStatus(msg, kind) {
 
 function tradutorClearStatus() {
   tradutorSetStatus('', '');
+}
+
+function tradutorUpdateCharCount() {
+  const inputEl = document.getElementById('tradutorInput');
+  const countEl = document.getElementById('tradutorCharCount');
+  if (!inputEl || !countEl) return;
+  const len = inputEl.value.length;
+  countEl.textContent = `${len}/${TRADUTOR_MAX_CHARS}`;
+  countEl.classList.toggle('is-near-limit', len >= TRADUTOR_MAX_CHARS * 0.9 && len < TRADUTOR_MAX_CHARS);
+  countEl.classList.toggle('is-over-limit', len >= TRADUTOR_MAX_CHARS);
+}
+
+function tradutorHandleInput() {
+  tradutorClearStatus();
+  tradutorUpdateCharCount();
 }
 
 function tradutorHandleInputKey(e) {
@@ -3373,6 +3420,7 @@ function tradutorClear() {
   if (outputEl) outputEl.value = '';
   if (speakTo) speakTo.disabled = true;
   tradutorClearStatus();
+  tradutorUpdateCharCount();
 }
 
 async function tradutorTranslate() {
@@ -3388,10 +3436,23 @@ async function tradutorTranslate() {
     tradutorSetStatus('Digite um texto para traduzir.', 'error');
     return;
   }
+  if (text.length > TRADUTOR_MAX_CHARS) {
+    tradutorSetStatus(`Texto muito longo (${text.length} caracteres) — o serviço de tradução aceita até ${TRADUTOR_MAX_CHARS}. Divida em partes menores.`, 'error');
+    return;
+  }
   if (from === to) {
     output.value = text;
     if (speakTo) speakTo.disabled = false;
     tradutorSetStatus('Os idiomas são iguais — nada para traduzir.', '');
+    return;
+  }
+
+  const cacheKey = `${from}|${to}|${text}`;
+  const cached = tradutorCache.get(cacheKey);
+  if (cached) {
+    output.value = cached;
+    if (speakTo) speakTo.disabled = false;
+    tradutorSetStatus('Tradução concluída.', 'success');
     return;
   }
 
@@ -3405,9 +3466,21 @@ async function tradutorTranslate() {
     const translated = data && data.responseData && data.responseData.translatedText;
     const status = data && data.responseStatus ? Number(data.responseStatus) : 200;
     if (!translated || status >= 400) throw new Error('bad response');
+    // O MyMemory às vezes devolve status 200 mas com um aviso de cota
+    // esgotada dentro do próprio texto traduzido, em vez de um erro HTTP —
+    // sem esse tratamento, esse aviso em inglês seria mostrado ao técnico
+    // e ao estrangeiro atendido como se fosse a tradução de verdade.
+    if (/MYMEMORY WARNING/i.test(translated)) {
+      tradutorSetStatus('O serviço de tradução gratuito atingiu o limite diário de uso. Tente novamente mais tarde ou em outro horário.', 'error');
+      return;
+    }
     output.value = translated;
     if (speakTo) speakTo.disabled = false;
     tradutorSetStatus('Tradução concluída.', 'success');
+    if (tradutorCache.size >= TRADUTOR_CACHE_MAX) {
+      tradutorCache.delete(tradutorCache.keys().next().value);
+    }
+    tradutorCache.set(cacheKey, translated);
   } catch (e) {
     tradutorSetStatus('Não foi possível traduzir agora. Verifique a internet e tente novamente.', 'error');
   } finally {
@@ -3415,7 +3488,24 @@ async function tradutorTranslate() {
   }
 }
 
-function tradutorSpeak(which) {
+// Em alguns navegadores (principalmente Chrome no primeiro uso da página),
+// a lista de vozes do speechSynthesis carrega de forma assíncrona: chamar
+// falar antes dela estar pronta silenciosamente não emitia nenhum som. Esta
+// função espera o evento "voiceschanged" (com um tempo limite de segurança)
+// antes da primeira fala.
+let tradutorVoicesReadyPromise = null;
+function tradutorEnsureVoices() {
+  if (window.speechSynthesis.getVoices().length) return Promise.resolve();
+  if (tradutorVoicesReadyPromise) return tradutorVoicesReadyPromise;
+  tradutorVoicesReadyPromise = new Promise(resolve => {
+    const done = () => resolve();
+    window.speechSynthesis.addEventListener('voiceschanged', done, { once: true });
+    setTimeout(done, 1200);
+  });
+  return tradutorVoicesReadyPromise;
+}
+
+async function tradutorSpeak(which) {
   if (!('speechSynthesis' in window)) {
     tradutorSetStatus('Este navegador não tem suporte a voz.', 'error');
     return;
@@ -3423,11 +3513,13 @@ function tradutorSpeak(which) {
   const langCode = which === 'from' ? document.getElementById('tradutorFrom').value : document.getElementById('tradutorTo').value;
   const text = which === 'from' ? document.getElementById('tradutorInput').value : document.getElementById('tradutorOutput').value;
   if (!text || !text.trim()) return;
+  await tradutorEnsureVoices();
   const slow = document.getElementById('tradutorSlowSpeech');
   window.speechSynthesis.cancel();
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = TRADUTOR_LANGS[langCode].voice;
   utter.rate = (slow && slow.checked) ? 0.7 : 1;
+  utter.onerror = () => tradutorSetStatus('Não foi possível reproduzir o áudio.', 'error');
   window.speechSynthesis.speak(utter);
 }
 
@@ -3472,6 +3564,7 @@ function tradutorToggleMic() {
       else interimChunk += transcript;
     }
     inputEl.value = baseText + finalChunk + interimChunk;
+    tradutorUpdateCharCount();
   };
 
   tradutorRecognition.onerror = () => {
@@ -3517,23 +3610,76 @@ function tradutorCopy(which) {
   }
 }
 
+// Frases próprias do técnico, salvas em localStorage (somente neste
+// aparelho/navegador) e somadas às frases fixas do app — cada CRAS/técnico
+// acaba tendo perguntas de rotina diferentes das oito frases padrão.
+function tradutorLoadCustomPhrases() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(TRADUTOR_CUSTOM_KEY) || '[]');
+    tradutorCustomPhrases = Array.isArray(saved) ? saved.filter(p => typeof p === 'string' && p.trim()) : [];
+  } catch (e) {
+    tradutorCustomPhrases = [];
+  }
+}
+
+function tradutorSaveCustomPhrases() {
+  try {
+    localStorage.setItem(TRADUTOR_CUSTOM_KEY, JSON.stringify(tradutorCustomPhrases));
+  } catch (e) { /* localStorage indisponível — ignora silenciosamente */ }
+}
+
+function tradutorAllPhrases() {
+  return TRADUTOR_PHRASES.map((p, i) => ({ text: p, custom: false, idx: i }))
+    .concat(tradutorCustomPhrases.map((p, i) => ({ text: p, custom: true, idx: i })));
+}
+
+function tradutorAddPhrase() {
+  const input = document.getElementById('tradutorNewPhrase');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  const exists = tradutorAllPhrases().some(p => p.text.toLowerCase() === text.toLowerCase());
+  if (exists) {
+    tradutorSetStatus('Essa frase já está na lista.', 'warn');
+    return;
+  }
+  tradutorCustomPhrases.push(text);
+  tradutorSaveCustomPhrases();
+  input.value = '';
+  tradutorRenderPhrases(document.getElementById('tradutorPhraseSearch')?.value || '');
+}
+
+function tradutorRemoveCustomPhrase(idx) {
+  tradutorCustomPhrases.splice(idx, 1);
+  tradutorSaveCustomPhrases();
+  tradutorRenderPhrases(document.getElementById('tradutorPhraseSearch')?.value || '');
+}
+
+// Guarda o texto de cada frase mostrada na tela atual, na mesma ordem dos
+// botões renderizados — o clique manda só a posição nesta lista (evita ter
+// que colocar o texto da frase, com aspas e acentos, dentro do atributo
+// onclick do HTML).
+let tradutorPhraseRenderCache = [];
+
 function tradutorRenderPhrases(filter) {
   const list = document.getElementById('tradutorPhraseList');
   if (!list) return;
   const term = (filter || '').trim().toLowerCase();
-  const items = TRADUTOR_PHRASES
-    .map((p, i) => ({ p, i }))
-    .filter(({ p }) => !term || p.toLowerCase().includes(term));
+  const items = tradutorAllPhrases().filter(({ text }) => !term || text.toLowerCase().includes(term));
+  tradutorPhraseRenderCache = items.map(({ text }) => text);
 
   if (!items.length) {
     list.innerHTML = '<div class="tradutor-phrase-empty">Nenhuma frase encontrada.</div>';
     return;
   }
 
-  list.innerHTML = items.map(({ p, i }) => `
-    <div class="tradutor-phrase-item">
-      <span>${p}</span>
-      <button type="button" onclick="tradutorUsePhrase(${i})">${ICONS.translate} Traduzir</button>
+  list.innerHTML = items.map(({ text, custom, idx }, pos) => `
+    <div class="tradutor-phrase-item${custom ? ' is-custom' : ''}">
+      <span>${escapeHtml(text)}</span>
+      <span class="tradutor-phrase-item-btns">
+        ${custom ? `<button type="button" class="tradutor-phrase-remove" onclick="tradutorRemoveCustomPhrase(${idx})" title="Remover frase" aria-label="Remover frase">${ICONS.trashSmall}</button>` : ''}
+        <button type="button" onclick="tradutorUsePhrase(${pos})">${ICONS.translate} Traduzir</button>
+      </span>
     </div>
   `).join('');
 }
@@ -3542,21 +3688,24 @@ function tradutorFilterPhrases(term) {
   tradutorRenderPhrases(term);
 }
 
-function tradutorUsePhrase(idx) {
-  const phrase = TRADUTOR_PHRASES[idx];
+function tradutorUsePhrase(pos) {
+  const phrase = tradutorPhraseRenderCache[pos];
   if (!phrase) return;
   const fromSel = document.getElementById('tradutorFrom');
   const inputEl = document.getElementById('tradutorInput');
   if (fromSel) fromSel.value = 'pt';
   if (inputEl) inputEl.value = phrase;
   tradutorSyncSpeakLabels();
+  tradutorUpdateCharCount();
   tradutorTranslate();
 }
 
 function initTranslatorPanel() {
   tradutorLoadLangPref();
   tradutorSyncSpeakLabels();
+  tradutorLoadCustomPhrases();
   tradutorRenderPhrases();
+  tradutorUpdateCharCount();
   const micBtn = document.getElementById('tradutorMicBtn');
   if (micBtn && !(window.SpeechRecognition || window.webkitSpeechRecognition)) {
     micBtn.disabled = true;
@@ -7222,6 +7371,16 @@ async function pdftoolsAddMergeFiles(fileList) {
       pdftoolsSetStatus('pdftoolsMergeStatus', `"${file.name}" já está na lista.`, 'warn');
       continue;
     }
+    // Verifica o limite de 50 MB ANTES de ler o arquivo inteiro para a
+    // memória — evita carregar arquivos grandes que de qualquer forma não
+    // vão caber, o que antes só era avisado depois (e deixava o botão
+    // "Unificar" travado sem dizer qual arquivo estava sobrando).
+    const currentTotal = pdftoolsMergeState.files.reduce((s, f) => s + (f.size || 0), 0);
+    if (currentTotal + file.size > PDFTOOLS_MERGE_MAX_BYTES) {
+      const remaining = Math.max(0, PDFTOOLS_MERGE_MAX_BYTES - currentTotal);
+      pdftoolsSetStatus('pdftoolsMergeStatus', `"${file.name}" (${pdftoolsFormatBytes(file.size)}) não cabe no limite de 50 MB — restam ${pdftoolsFormatBytes(remaining)}. Remova algum arquivo ou escolha um menor.`, 'error');
+      continue;
+    }
     try {
       const bytes = await file.arrayBuffer();
       const doc = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
@@ -7290,6 +7449,15 @@ function pdftoolsRenderMergeList() {
   if (btn) btn.disabled = pdftoolsMergeState.files.length < 2 || totalBytes > PDFTOOLS_MERGE_MAX_BYTES;
   if (clearBtn) clearBtn.disabled = pdftoolsMergeState.files.length === 0;
 
+  const toolbar = document.getElementById('pdftoolsMergeToolbar');
+  const sortBtn = document.getElementById('pdftoolsMergeSortBtn');
+  const summary = document.getElementById('pdftoolsMergeSummary');
+  if (toolbar) toolbar.style.display = pdftoolsMergeState.files.length ? 'flex' : 'none';
+  if (sortBtn) sortBtn.disabled = pdftoolsMergeState.files.length < 2;
+  if (summary) summary.textContent = pdftoolsMergeState.files.length
+    ? `${pdftoolsMergeState.files.length} arquivo(s) · ${totalPages} pág.`
+    : '';
+
   if (pdftoolsMergeState.files.length === 0) {
     pdftoolsSetStatus('pdftoolsMergeStatus', '', 'info');
   } else if (totalBytes > PDFTOOLS_MERGE_MAX_BYTES) {
@@ -7299,6 +7467,16 @@ function pdftoolsRenderMergeList() {
   } else {
     pdftoolsSetStatus('pdftoolsMergeStatus', `${pdftoolsMergeState.files.length} de ${PDFTOOLS_MERGE_MAX_FILES} arquivo(s) · ${totalPages} pág. · ${pdftoolsFormatBytes(totalBytes)} de 50 MB.`, 'info');
   }
+}
+
+// Ordena a lista por nome (A-Z), útil quando muitos arquivos foram
+// escolhidos de uma vez e a ordem de seleção não é a ordem desejada no
+// PDF final — evita ter que arrastar item por item ou usar as setas
+// repetidas vezes.
+function pdftoolsSortMergeFilesAlpha() {
+  if (pdftoolsMergeState.files.length < 2) return;
+  pdftoolsMergeState.files.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { numeric: true, sensitivity: 'base' }));
+  pdftoolsRenderMergeList();
 }
 
 function pdftoolsMoveMergeFile(id, dir) {
@@ -7392,7 +7570,7 @@ async function pdftoolsMergePdfs() {
     const typed = filenameInput ? filenameInput.value.trim() : '';
     const base = (typed || 'pdf-unificado').replace(/[\\/:*?"<>|]+/g, '').replace(/\.pdf$/i, '').trim() || 'pdf-unificado';
     pdftoolsDownloadBlob(new Blob([bytes], { type: 'application/pdf' }), `${base}.pdf`);
-    pdftoolsSetStatus('pdftoolsMergeStatus', 'PDF unificado gerado com sucesso!', 'success');
+    pdftoolsSetStatus('pdftoolsMergeStatus', `PDF unificado gerado com sucesso! (${merged.getPageCount()} páginas · ${pdftoolsFormatBytes(bytes.length)})`, 'success');
   } catch (e) {
     pdftoolsSetStatus('pdftoolsMergeStatus', 'Erro ao unificar os PDFs. Tente novamente.', 'error');
   } finally {
@@ -7401,6 +7579,12 @@ async function pdftoolsMergePdfs() {
 }
 
 /* ---------- JPG → PDF ---------- */
+// Antes sem limite algum: era possível escolher dezenas de fotos em alta
+// resolução (comum em fotos tiradas direto do celular) e travar o
+// navegador tentando processar tudo de uma vez. Usa os mesmos princípios
+// de limite do "Unificar PDF" (quantidade + tamanho total).
+const PDFTOOLS_JPGPDF_MAX_FILES = 20;
+const PDFTOOLS_JPGPDF_MAX_BYTES = 40 * 1024 * 1024;
 const pdftoolsJpgPdfState = { files: [] };
 
 function pdftoolsAddJpgPdfFiles(fileList) {
@@ -7409,18 +7593,28 @@ function pdftoolsAddJpgPdfFiles(fileList) {
     pdftoolsSetStatus('pdftoolsJpgPdfStatus', 'Selecione arquivos JPG ou PNG.', 'error');
     return;
   }
+  let skippedLimit = false;
   files.forEach(file => {
+    if (pdftoolsJpgPdfState.files.length >= PDFTOOLS_JPGPDF_MAX_FILES) { skippedLimit = true; return; }
+    const currentTotal = pdftoolsJpgPdfState.files.reduce((s, f) => s + (f.file.size || 0), 0);
+    if (currentTotal + file.size > PDFTOOLS_JPGPDF_MAX_BYTES) { skippedLimit = true; return; }
+    const isDuplicate = pdftoolsJpgPdfState.files.some(f => f.file.name === file.name && f.file.size === file.size);
+    if (isDuplicate) return;
     pdftoolsJpgPdfState.files.push({ id: 'j' + Date.now() + Math.random().toString(36).slice(2), file });
   });
   const input = document.getElementById('pdftoolsJpgPdfInput');
   if (input) input.value = '';
   pdftoolsRenderJpgPdfList();
+  if (skippedLimit) {
+    pdftoolsSetStatus('pdftoolsJpgPdfStatus', `Algumas imagens não foram adicionadas — limite de ${PDFTOOLS_JPGPDF_MAX_FILES} imagens ou 40 MB no total.`, 'warn');
+  }
 }
 
 function pdftoolsRenderJpgPdfList() {
   const list = document.getElementById('pdftoolsJpgPdfList');
   const btn = document.getElementById('pdftoolsJpgPdfBtn');
   if (!list) return;
+  const totalBytes = pdftoolsJpgPdfState.files.reduce((s, f) => s + (f.file.size || 0), 0);
   list.innerHTML = pdftoolsJpgPdfState.files.map((f, idx) => `
     <li class="pdftools-fileitem">
       <span class="pdftools-fileitem-name">${idx + 1}. ${escapeHtml(f.file.name)}</span>
@@ -7439,7 +7633,7 @@ function pdftoolsRenderJpgPdfList() {
     </li>
   `).join('');
   if (btn) btn.disabled = pdftoolsJpgPdfState.files.length === 0;
-  pdftoolsSetStatus('pdftoolsJpgPdfStatus', pdftoolsJpgPdfState.files.length ? `${pdftoolsJpgPdfState.files.length} imagem(ns) selecionada(s).` : '', 'info');
+  pdftoolsSetStatus('pdftoolsJpgPdfStatus', pdftoolsJpgPdfState.files.length ? `${pdftoolsJpgPdfState.files.length} de ${PDFTOOLS_JPGPDF_MAX_FILES} imagem(ns) · ${pdftoolsFormatBytes(totalBytes)} de 40 MB.` : '', 'info');
 }
 
 function pdftoolsMoveJpgPdfFile(id, dir) {
