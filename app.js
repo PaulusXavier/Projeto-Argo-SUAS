@@ -356,7 +356,7 @@ function argoEnsureGreetingUI() {
 
           <div class="argo-week" id="argoGreetingWeek"></div>
 
-          <div class="argo-sync-row" id="argoGreetingSync" data-state="none" role="status" aria-live="polite">
+          <div class="argo-sync-row" id="argoGreetingSync" data-state="none" role="status" aria-live="polite" aria-atomic="true">
           <span class="argo-sync-dot" aria-hidden="true"></span>
           <span class="argo-sync-text"></span>
           <button type="button" class="argo-sync-retry" id="argoGreetingSyncRetry" onclick="argoGreetingSyncRetry()">Tentar de novo</button>
@@ -461,6 +461,11 @@ function argoEnsureGreetingUI() {
     </style>
   `;
   document.body.appendChild(wrap);
+  // Se a internet cair/voltar enquanto o cartão está aberto, atualiza a
+  // mensagem de sincronização na hora (argoRefreshGreeting já verifica
+  // sozinho se o cartão está visível antes de mexer em qualquer coisa).
+  window.addEventListener('online', argoRefreshGreeting);
+  window.addEventListener('offline', argoRefreshGreeting);
   document.addEventListener('keydown', function (e) {
     const modal = document.getElementById('argoGreetingModal');
     if (!modal || !modal.classList.contains('visible')) return;
@@ -582,6 +587,13 @@ function argoGreetingWeekHtml() {
 function argoGreetingSyncState() {
   if (!agendaSyncCode) {
     return { key: 'none', text: 'Sincronização ainda não configurada neste aparelho.' };
+  }
+  // Sem internet, a sincronização nunca vai responder — antes o cartão ficava
+  // preso em "Sincronizando…" e só depois de 8s avisava "está demorando",
+  // uma mensagem que soa como se fosse voltar sozinha a qualquer momento.
+  // Checar aqui deixa isso claro na hora, sem esperar o timer.
+  if (navigator.onLine === false) {
+    return { key: 'error', text: 'Você está offline — a sincronização volta assim que a internet voltar.' };
   }
   if (agendaSyncState === 'error') {
     return { key: 'error', text: 'Sem conexão com a sincronização. Confira a internet.' };
@@ -2549,7 +2561,7 @@ function render() {
                </div>
              </div>`
           : `<div class="image-preview">
-               <img data-attach-src="${i.id}" alt="Anexo de ${i.name}" loading="lazy" decoding="async">
+               <img data-attach-src="${i.id}" alt="Anexo de ${escapeHtml(i.name)}" loading="lazy" decoding="async">
                <button type="button" class="image-remove-btn" title="Remover imagem" aria-label="Remover imagem de ${escapeHtml(i.name)}" onclick="removeAttachment('${i.id}')">✕</button>
              </div>`)
       : `<label class="btn-tech btn-secondary image-upload-label">
@@ -2990,6 +3002,7 @@ function renderWhatsappButton(id, name) {
 
 function share(id) {
   const i = DATA.find(x => x.id === id);
+  if (!i) return; // segurança: item não encontrado (ex.: dado alterado entre a renderização e o clique)
   const t = `*UNIDADE:* ${i.fullName || i.name}\n*ENDEREÇO:* ${stripHtml(i.address)}\n*HORÁRIO:* ${stripHtml(i.hours || 'Não informado')}\n*CONTATO:* ${stripHtml((i.phones || []).join(' / ') || 'Não informado')}${i.website ? `\n*SITE:* ${i.website}` : ''}`;
   window.open(`https://wa.me/?text=${encodeURIComponent(t)}`, '_blank', 'noopener,noreferrer');
 }
@@ -4090,6 +4103,25 @@ function newsFormatUpdated(ts) {
   return d.toLocaleDateString('pt-BR') + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
+// "há 2 dias", "há 3h" etc., para facilitar a leitura rápida ao lado da
+// data completa. Fica em branco além de ~30 dias (a data completa basta).
+function newsRelativeTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const diffMs = Date.now() - d.getTime();
+  if (diffMs < 0) return '';
+  const min = Math.floor(diffMs / 60000);
+  if (min < 1) return 'agora há pouco';
+  if (min < 60) return `há ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `há ${h}h`;
+  const dias = Math.floor(h / 24);
+  if (dias === 1) return 'há 1 dia';
+  if (dias <= 30) return `há ${dias} dias`;
+  return '';
+}
+
 // Classifica o item só pelo título, para dar uma etiqueta visual útil.
 function newsKind(item) {
   const t = item.title.toLowerCase();
@@ -4115,9 +4147,10 @@ function newsSourceInfo(sourceId) {
 
 function renderNewsCard() {
   const sourceChips = NEWS_SOURCES.map(s => `
-    <label class="noticias-source-chip">
+    <label class="noticias-source-chip" title="${escapeHtml(s.fullLabel)}">
       <input type="checkbox" class="noticias-source-checkbox" value="${s.id}" checked onchange="renderNewsList()">
       <span>${escapeHtml(s.label)}</span>
+      <span class="noticias-source-count" id="noticiasCount-${s.id}"></span>
     </label>
   `).join('');
 
@@ -4170,6 +4203,12 @@ function renderNewsCard() {
 // Lista atualmente carregada em memória (preenchida pelo cache e pela rede).
 let newsState = { items: [], ts: 0, loading: false };
 
+// Guarda quando a aba foi vista pela última vez, só para destacar com a
+// etiqueta "Novo" as publicações mais recentes que essa marca. Atualizada
+// no fim de initNewsPanel, depois que a lista já foi lida/renderizada.
+const NEWS_LAST_SEEN_KEY = 'argo_noticias_last_seen_v1';
+let newsLastSeenTs = 0;
+
 function newsSetStatus(msg) {
   const el = document.getElementById('noticiasStatus');
   if (el) el.innerHTML = msg || '';
@@ -4181,9 +4220,40 @@ function newsSelectedSources() {
   return new Set(Array.from(boxes).filter(b => b.checked).map(b => b.value));
 }
 
+// Atualiza o numerozinho de publicações ao lado de cada chip de ministério,
+// sempre com base na lista completa (não no filtro de palavra atual), para
+// o usuário saber de onde vêm as publicações antes mesmo de marcar/desmarcar.
+function newsUpdateSourceCounts() {
+  NEWS_SOURCES.forEach(s => {
+    const el = document.getElementById(`noticiasCount-${s.id}`);
+    if (!el) return;
+    const n = newsState.items.filter(it => it.source === s.id).length;
+    el.textContent = n ? `(${n})` : '';
+  });
+}
+
+function newsClearFilters() {
+  const filterEl = document.getElementById('noticiasFilter');
+  if (filterEl) filterEl.value = '';
+  document.querySelectorAll('.noticias-source-checkbox').forEach(b => { b.checked = true; });
+  renderNewsList();
+}
+
+function newsSkeletonHtml() {
+  return Array.from({ length: 3 }).map(() => `
+    <div class="noticias-item noticias-skeleton" aria-hidden="true">
+      <div class="noticias-skeleton-line" style="width:35%;"></div>
+      <div class="noticias-skeleton-line" style="width:85%; height:1rem; margin-top:0.5rem;"></div>
+      <div class="noticias-skeleton-line" style="width:60%;"></div>
+    </div>
+  `).join('');
+}
+
 function renderNewsList() {
   const list = document.getElementById('noticiasList');
   if (!list) return;
+
+  newsUpdateSourceCounts();
 
   const filterEl = document.getElementById('noticiasFilter');
   const filter = filterEl ? filterEl.value.trim().toLowerCase() : '';
@@ -4194,28 +4264,38 @@ function renderNewsList() {
   if (filter) items = items.filter(it => (it.title + ' ' + it.desc).toLowerCase().includes(filter));
 
   if (!items.length) {
-    list.innerHTML = `<p style="color:var(--text-muted,#64748b); padding:1rem 0;">${
-      newsState.items.length
-        ? 'Nenhuma publicação corresponde a esse filtro.'
-        : (newsState.loading ? 'Carregando publicações…' : 'Nenhuma publicação carregada ainda.')
-    }</p>`;
+    if (newsState.loading && !newsState.items.length) {
+      list.innerHTML = newsSkeletonHtml();
+      return;
+    }
+    const hasActiveFilter = !!filter || (selectedSources && selectedSources.size < NEWS_SOURCES.length);
+    list.innerHTML = `
+      <div class="noticias-empty">
+        <p>${newsState.items.length
+          ? 'Nenhuma publicação corresponde a esse filtro.'
+          : 'Nenhuma publicação carregada ainda.'}</p>
+        ${hasActiveFilter ? `<button type="button" class="tradutor-btn-ghost" onclick="newsClearFilters()">Limpar filtros</button>` : ''}
+      </div>`;
     return;
   }
 
   list.innerHTML = items.map(it => {
     const src = newsSourceInfo(it.source);
     const color = NEWS_SOURCE_COLORS[it.source] || NEWS_SOURCE_COLORS.mds;
+    const isNew = newsLastSeenTs && it.date && new Date(it.date).getTime() > newsLastSeenTs;
+    const rel = newsRelativeTime(it.date);
     return `
-    <article style="border:1px solid #e2e8f0; border-radius:12px; padding:0.9rem 1rem; margin-bottom:0.7rem; background:#fff;">
-      <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom:0.35rem;">
-        <span title="${escapeHtml(src.fullLabel)}" style="font-size:0.7rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; background:${color.bg}; color:${color.fg}; padding:0.2rem 0.5rem; border-radius:6px;">${escapeHtml(src.label)}</span>
-        <span style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; background:#f1f5f9; color:#475569; padding:0.2rem 0.5rem; border-radius:6px;">${escapeHtml(newsKind(it))}</span>
-        <span style="font-size:0.78rem; color:var(--text-muted,#64748b);">${escapeHtml(newsFormatDate(it.date))}</span>
+    <article class="noticias-item">
+      <div class="noticias-item-tags">
+        <span class="noticias-tag" title="${escapeHtml(src.fullLabel)}" style="--tag-bg:${color.bg}; --tag-fg:${color.fg};">${escapeHtml(src.label)}</span>
+        <span class="noticias-tag noticias-tag-kind">${escapeHtml(newsKind(it))}</span>
+        ${isNew ? `<span class="noticias-tag noticias-tag-new">Novo</span>` : ''}
+        <span class="noticias-date">${escapeHtml(newsFormatDate(it.date))}${rel ? ` · ${escapeHtml(rel)}` : ''}</span>
       </div>
-      <h3 style="margin:0 0 0.3rem 0; font-size:1rem; line-height:1.35;">
-        <a href="${escapeHtml(it.link)}" target="_blank" rel="noopener noreferrer" style="color:#0f4a41; text-decoration:none;">${escapeHtml(it.title)}</a>
+      <h3 class="noticias-title">
+        <a href="${escapeHtml(it.link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(it.title)} ${ICONS.external}</a>
       </h3>
-      ${it.desc ? `<p style="margin:0; font-size:0.88rem; line-height:1.5; color:#475569;">${escapeHtml(it.desc)}</p>` : ''}
+      ${it.desc ? `<p class="noticias-desc">${escapeHtml(it.desc)}</p>` : ''}
     </article>
   `;
   }).join('');
@@ -4226,7 +4306,7 @@ async function refreshNews() {
   if (btn) btn.disabled = true;
   newsState.loading = true;
   newsSetStatus(newsState.items.length ? 'Buscando publicações mais recentes…' : 'Carregando publicações…');
-  renderNewsList();
+  if (!newsState.items.length) renderNewsList(); // sem lista salva ainda: mostra o skeleton
 
   try {
     const { items, failedSources } = await newsFetchFeed();
@@ -4251,6 +4331,11 @@ async function refreshNews() {
 }
 
 function initNewsPanel() {
+  // Lê a marca de "última vez visto" ANTES de sobrescrevê-la, para que as
+  // publicações mais novas que a visita anterior ganhem a etiqueta "Novo".
+  newsLastSeenTs = Number(localStorage.getItem(NEWS_LAST_SEEN_KEY)) || 0;
+  try { localStorage.setItem(NEWS_LAST_SEEN_KEY, String(Date.now())); } catch (e) { /* ignora */ }
+
   const cached = newsReadCache();
   if (cached) {
     newsState.items = cached.items;
@@ -4277,7 +4362,6 @@ function initNewsPanel() {
 }
 
 function renderMapCard() {
-  const activeChip = document.querySelector('.filter-chip.active[data-cat="mapa"]');
   const categoryOptions = ['<option value="all">Todas as categorias</option>']
     .concat(Object.entries(CATEGORY_LABELS_PRINT)
       .filter(([cat]) => cat !== 'cas' && cat !== 'cras' && cat !== 'interior')
