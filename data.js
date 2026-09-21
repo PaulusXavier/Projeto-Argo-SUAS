@@ -5122,9 +5122,9 @@ const DATA = [
       { label: "Calendário Pagamento", icon: "cash", url: "PagamentoPBF.html" }
     ],
     rmaLinks: [
-      { label: "RMA (MDS)", icon: "barchart", url: "RMA_Paulo_Xavier_2026.html" },
-      { label: "Registro (Planilha)", icon: "table", url: "Registro_de_Atendimento__Planilha_.html" },
-      { label: "RMA Imprimir", icon: "excel", url: "https://drive.google.com/drive/folders/1iQ4kv_LOFiDaXAb1RbC5ZMC7cL7zn7yl" }
+      { label: "RMA (MDS)", icon: "barchart", url: "RMA_Paulo_Xavier_2026.html", desc: "Formulário mensal do CRAS (blocos do PAIF). Salva no aparelho e imprime em A4 retrato." },
+      { label: "Registro (Planilha)", icon: "table", url: "Registro_de_Atendimento__Planilha_.html", desc: "Contagem mensal por nacionalidade, sexo e faixa etária, com soma automática. Imprime em A4 paisagem." },
+      { label: "RMA Imprimir", icon: "excel", url: "https://drive.google.com/drive/folders/1iQ4kv_LOFiDaXAb1RbC5ZMC7cL7zn7yl", desc: "Pasta no Google Drive com os modelos de RMA para impressão." }
     ],
     driveLinks: [
       { label: "Danilo", url: "https://drive.google.com/drive/folders/1MtK9Kz3mlxTwIESPp28YwiVtrNdI55Lt?usp=drive_link" },
@@ -5148,10 +5148,10 @@ const DATA = [
       { label: "Dados Pessoais", icon: "badge", url: "https://servidor.rr.gov.br/#/login" }
     ],
     systemLinks: [
-      { label: "Matrículas", icon: "table", url: "https://docs.google.com/spreadsheets/d/1qH4Jnv0ElOBet4u9wzjmM5x_HekjHLo-eNJh_Nry5lc/edit?gid=1280155602#gid=1280155602" },
-      { label: "Perfil Socioeconômico (Responsáveis/Família)", icon: "table", url: "https://docs.google.com/spreadsheets/d/1wJRiXA-jCIoT9lXsRYDNBi6M2vBrynz0TLxCxhBsdPY/edit?gid=106275944#gid=106275944" },
-      { label: "Registro Diário", icon: "form", url: "https://docs.google.com/forms/d/e/1FAIpQLScTIV1jwi-p1RpyNM-_4_IET4MQXVwkP0zFPodbvJkvF7uw8Q/viewform" },
-      { label: "RMA (CAS)", icon: "barchart", url: "https://docs.google.com/spreadsheets/d/1e90rJQms6E6mbOPWbtnEk76y101ntYKmn2mpC74R0Og/edit?gid=261916308#gid=261916308" }
+      { label: "Registro Diário", icon: "form", url: "https://docs.google.com/forms/d/e/1FAIpQLScTIV1jwi-p1RpyNM-_4_IET4MQXVwkP0zFPodbvJkvF7uw8Q/viewform", desc: "Formulário do Google para registrar os atendimentos do dia." },
+      { label: "RMA (CAS)", icon: "barchart", url: "https://docs.google.com/spreadsheets/d/1e90rJQms6E6mbOPWbtnEk76y101ntYKmn2mpC74R0Og/edit?gid=261916308#gid=261916308", desc: "Planilha do Google com o registro mensal de atendimentos do CAS." },
+      { label: "Matrículas", icon: "table", url: "https://docs.google.com/spreadsheets/d/1qH4Jnv0ElOBet4u9wzjmM5x_HekjHLo-eNJh_Nry5lc/edit?gid=1280155602#gid=1280155602", desc: "Planilha do Google com as matrículas de 2026." },
+      { label: "Perfil Socioeconômico (Responsáveis/Família)", icon: "table", url: "https://docs.google.com/spreadsheets/d/1wJRiXA-jCIoT9lXsRYDNBi6M2vBrynz0TLxCxhBsdPY/edit?gid=106275944#gid=106275944", desc: "Planilha do Google com o perfil socioeconômico dos responsáveis e das famílias." }
     ],
     driveLinks: [
       { label: "Pasta Geral", url: "https://drive.google.com/drive/folders/1YGruf7xXsUTcwYhE0Ibte1g9nvmJojs6?usp=drive_link" },
@@ -5161,7 +5161,7 @@ const DATA = [
       { label: "Paulo", url: "https://drive.google.com/drive/folders/1uC3Gt5FCm7xMg0Z-mxU_7V51RxZpBPVv" }
     ],
     mapLinks: [
-      { label: "Mapa do Território (Vila Jardim)", icon: "map", url: "vila-jardim.html" }
+      { label: "Mapa do Território (Vila Jardim)", icon: "map", url: "vila-jardim.html", desc: "Mapa interativo do território de referência.", meta: "Mapa interativo" }
     ]
   },
   {
