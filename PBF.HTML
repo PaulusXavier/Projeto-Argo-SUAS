@@ -124,10 +124,14 @@
                         <label class="text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-2">
                             <i data-lucide="sticky-note" class="w-3.5 h-3.5"></i> Observações Compartilhadas
                         </label>
+                        <div id="syncConfigWarning" class="hidden text-[10px] leading-snug text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mb-2 flex items-start gap-1.5">
+                            <i data-lucide="alert-triangle" class="w-3 h-3 mt-0.5 shrink-0"></i>
+                            <span>Sincronização com a nuvem ainda não configurada — as anotações ficam salvas só neste navegador, não são vistas pelo resto da equipe.</span>
+                        </div>
                         <textarea id="noteInput" class="flex-1 w-full bg-transparent border-none focus:ring-0 text-sm resize-none" placeholder="Anotações para a equipe..."></textarea>
                         <div class="mt-2 flex justify-end">
                             <button id="btnSave" onclick="saveNote()" class="w-full sm:w-auto justify-center bg-slate-800 text-white px-6 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-700 active:bg-slate-900 transition-colors flex items-center gap-2">
-                                <i data-lucide="save" class="w-3 h-3"></i> Salvar na Nuvem
+                                <i data-lucide="save" class="w-3 h-3"></i> <span id="btnSaveLabel">Salvar na Nuvem</span>
                             </button>
                         </div>
                     </div>
@@ -160,15 +164,22 @@
 
         async function init() {
             if (window.lucide) lucide.createIcons();
+            const warning = document.getElementById('syncConfigWarning');
+            if (warning) warning.classList.toggle('hidden', WEB_APP_CONFIGURED);
             await loadNotesOnline();
             render();
         }
 
         async function loadNotesOnline() {
             const loader = document.getElementById('syncStatus');
+            // Sem URL configurada não há nuvem para consultar — pula direto
+            // para o localStorage, sem fingir que está "sincronizando".
+            if (!WEB_APP_CONFIGURED) {
+                notes = JSON.parse(localStorage.getItem('pbf_notes_2026_v2') || '{}');
+                return;
+            }
             loader.style.display = 'flex';
             try {
-                if (!WEB_APP_CONFIGURED) throw new Error('WEB_APP_URL não configurada.');
                 const response = await fetch(WEB_APP_URL);
                 notes = await response.json();
             } catch (e) {
@@ -183,9 +194,11 @@
             const val = document.getElementById('noteInput').value.trim();
             const key = formatDate(selectedDay);
             const btn = document.getElementById('btnSave');
-            
+            const savingLabel = WEB_APP_CONFIGURED ? 'Sincronizando...' : 'Salvando...';
+            const idleLabel = WEB_APP_CONFIGURED ? 'Salvar na Nuvem' : 'Salvar neste navegador';
+
             btn.disabled = true;
-            btn.innerHTML = `<span class="animate-spin h-3 w-3 border-2 border-white border-t-transparent rounded-full mr-2"></span> Sincronizando...`;
+            btn.innerHTML = `<span class="animate-spin h-3 w-3 border-2 border-white border-t-transparent rounded-full mr-2"></span> ${savingLabel}`;
 
             try {
                 // Envia para o Google (só tenta se a URL já foi configurada)
@@ -206,7 +219,7 @@
                 
                 setTimeout(() => {
                     btn.disabled = false;
-                    btn.innerHTML = `<i data-lucide="save" class="w-3 h-3"></i> Salvar na Nuvem`;
+                    btn.innerHTML = `<i data-lucide="save" class="w-3 h-3"></i> ${idleLabel}`;
                     btn.classList.replace('bg-emerald-600', 'bg-slate-800');
                     if (window.lucide) lucide.createIcons();
                     render();
