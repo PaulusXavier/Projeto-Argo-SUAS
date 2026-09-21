@@ -1938,6 +1938,88 @@
     box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.18) inset;
   }
 
+  /* "Unificar PDFs e fotos": cada item pode ter uma segunda linha com o
+     campo "Páginas" (só PDFs), então o item quebra linha em vez de espremer. */
+  .pdftools-mergeitem { flex-wrap: wrap; row-gap: 0.4rem; }
+
+  .pdftools-kind {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    color: var(--brand-pdftools-light);
+    background: rgba(59, 130, 246, 0.14);
+  }
+
+  .pdftools-kind svg { width: 14px; height: 14px; }
+
+  .pdftools-kind.is-image {
+    color: var(--cas-ink, #15803D);
+    background: rgba(0, 151, 57, 0.12);
+  }
+
+  .pdftools-icon-btn.is-active { color: var(--brand-pdftools-light); background: rgba(59, 130, 246, 0.14); }
+
+  .pdftools-fileitem-options {
+    flex: 1 1 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem 0.7rem;
+    padding-left: 1.9rem;
+  }
+
+  .pdftools-range {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-muted);
+  }
+
+  .pdftools-range input {
+    width: 11.5rem;
+    max-width: 100%;
+    padding: 0.3rem 0.55rem;
+    border-radius: 6px;
+    border: 1.5px solid var(--border-ui);
+    background: var(--bg-main);
+    color: var(--text-main);
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 500;
+  }
+
+  .pdftools-range input:focus {
+    outline: none;
+    border-color: var(--brand-pdftools-light);
+    box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.14);
+  }
+
+  .pdftools-range input.is-invalid { border-color: #DC2626; }
+
+  /* Telas estreitas: nome do arquivo numa linha só dele (não some atrás dos
+     botões); tamanho e botões na linha de baixo; campo "Páginas" ocupa a
+     largura toda. */
+  @media (max-width: 560px) {
+    .pdftools-mergeitem .pdftools-fileitem-name { flex: 1 1 calc(100% - 3.4rem); }
+    .pdftools-mergeitem .pdftools-fileitem-meta { flex: 1 1 auto; padding-left: 2.4rem; }
+    .pdftools-mergeitem .pdftools-fileitem-btns { margin-left: auto; }
+    .pdftools-fileitem-options { padding-left: 0.4rem; min-width: 0; }
+    .pdftools-range { flex: 1 1 100%; min-width: 0; }
+    .pdftools-range input { flex: 1; width: auto; min-width: 0; }
+  }
+
+  .pdftools-range-error {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #DC2626;
+  }
+
   .pdftools-fileitem-name {
     flex: 1;
     min-width: 0;
@@ -2961,6 +3043,220 @@
     color: var(--text-muted);
     opacity: 0.6;
     transition: opacity 0.2s var(--ease), transform 0.2s var(--ease);
+  }
+
+  /* Aba "Registro de Atendimento (CRAS)": tinta turquesa legível como
+     texto (o --brand-cras puro fica abaixo de 4,5:1 sobre branco), atalhos
+     do RMA em destaque e localizador de bairro. */
+  :root { --cras-ink: #0F766E; }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --cras-ink: #5EEAD4; }
+  }
+
+  :root[data-theme="dark"] { --cras-ink: #5EEAD4; }
+
+  .cras-card .info-group a {
+    color: var(--cras-ink);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .cras-card .info-group a:hover { text-decoration: underline; }
+
+  .cras-rma-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr));
+    gap: 0.9rem;
+  }
+
+  .cras-rma-tile {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--border-ui);
+    border-radius: 10px;
+    background: var(--bg-card);
+    color: var(--text-main);
+    text-decoration: none;
+    box-shadow: var(--shadow-xs);
+    transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+  }
+
+  .cras-rma-tile:hover {
+    border-color: var(--brand-cras);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .cras-rma-tile:hover .cras-link-arrow {
+    opacity: 1;
+    transform: translateX(2px);
+  }
+
+  .cras-rma-icon {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 10px;
+    background: rgba(13, 148, 136, 0.12);
+    color: var(--cras-ink);
+  }
+
+  .cras-rma-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+  }
+
+  .cras-rma-title {
+    font-weight: 800;
+    font-size: 0.95rem;
+  }
+
+  .cras-rma-desc {
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: var(--text-muted);
+  }
+
+  .cras-rma-meta {
+    margin-top: 0.15rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--cras-ink);
+  }
+
+  .cras-rma-tile .cras-link-arrow {
+    margin-left: auto;
+    color: var(--text-muted);
+    opacity: 0.6;
+    transition: opacity 0.2s var(--ease), transform 0.2s var(--ease);
+  }
+
+  .cras-groups {
+    grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  }
+
+  .cras-lookup {
+    margin-bottom: 1.25rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid rgba(13, 148, 136, 0.3);
+    border-radius: 10px;
+    background: rgba(13, 148, 136, 0.06);
+  }
+
+  .cras-lookup-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 800;
+    font-size: 0.9rem;
+    color: var(--cras-ink);
+  }
+
+  .cras-lookup-input {
+    width: 100%;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--border-ui);
+    border-radius: 8px;
+    background: var(--bg-card);
+    color: var(--text-main);
+    font: inherit;
+    font-size: 0.9rem;
+  }
+
+  .cras-lookup-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.75rem;
+  }
+
+  .cras-chip {
+    min-height: 2.1rem;
+    padding: 0.3rem 0.75rem;
+    border: 1px solid var(--border-ui);
+    border-radius: 999px;
+    background: var(--bg-card);
+    color: var(--text-main);
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
+  }
+
+  .cras-chip:hover { border-color: var(--brand-cras); }
+
+  /* Painel CAS: mesmos cartões de destaque do CRAS (cras-rma-*), com a
+     tinta verde do CAS em vez da turquesa. */
+  :root { --cas-ink: #15803D; }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --cas-ink: #4ADE80; }
+  }
+
+  :root[data-theme="dark"] { --cas-ink: #4ADE80; }
+
+  /* Quatro cartões: duas colunas (2×2) em vez de 3+1 sozinho. */
+  .cras-rma-grid-pairs {
+    grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
+  }
+
+  .cas-card .cras-rma-tile:hover { border-color: var(--brand-cas); }
+
+  .cas-card .cras-rma-icon {
+    background: rgba(0, 151, 57, 0.12);
+    color: var(--cas-ink);
+  }
+
+  .cas-card .cras-rma-meta { color: var(--cas-ink); }
+
+
+  .cras-chip[aria-pressed="true"] {
+    border-color: var(--brand-cras);
+    background: rgba(13, 148, 136, 0.18);
+    color: var(--cras-ink);
+  }
+
+  .cras-lookup-result:empty { display: none; }
+
+  .cras-lookup-result {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.85rem;
+  }
+
+  .cras-result-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.75rem;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--border-ui);
+    border-radius: 8px;
+    background: var(--bg-card);
+  }
+
+  .cras-result-row .team-name { display: inline; }
+
+  .cras-result-where {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .cras-lookup-note {
+    padding: 0.7rem 0.9rem;
+    border-radius: 8px;
+    background: var(--bg-card);
+    border: 1px dashed var(--border-ui);
+    font-size: 0.82rem;
+    color: var(--text-muted);
   }
 
   /* Cartões da categoria "Delegacias" — visual de segurança pública,
