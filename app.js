@@ -3906,36 +3906,58 @@ function mapaRedeCategoryIcon(colorHex) {
 /* ==========================================================================
    ABA "NOTÍCIAS DO MDS"
    --------------------------------------------------------------------------
-   Lê o feed RSS público do Ministério do Desenvolvimento e Assistência Social
-   (https://www.gov.br/mds/RSS) e lista as publicações mais recentes: notícias,
-   instruções normativas e portarias.
+   Lê os feeds RSS públicos do Ministério do Desenvolvimento e Assistência
+   Social (MDS), do Ministério da Educação (MEC) e do Ministério da Saúde
+   (MS) e lista as publicações mais recentes de todos juntos: notícias,
+   instruções normativas e portarias — com uma etiqueta indicando de qual
+   ministério cada publicação veio.
 
    O portal gov.br não envia o cabeçalho Access-Control-Allow-Origin, então o
    navegador bloqueia a leitura direta do feed a partir de outro domínio
-   (CORS). Por isso tentamos, nesta ordem:
+   (CORS). Por isso tentamos, nesta ordem, para cada feed:
      1) buscar o feed direto (funciona se o gov.br um dia liberar CORS, e
         funciona hoje quando o app é aberto como arquivo local em alguns
         navegadores);
      2) reler o mesmo endereço através de um repassador público (allorigins,
         depois corsproxy), que apenas copia o XML e devolve com CORS liberado.
    Nenhum dado de atendido sai do aparelho: a única coisa pedida é a lista
-   pública de notícias do ministério.
+   pública de notícias de cada ministério.
 
    O resultado fica guardado em localStorage, sem criptografia (é conteúdo
    público), para que a aba abra instantaneamente e continue mostrando a
    última lista baixada mesmo sem internet.
    ========================================================================== */
 
-// Feed raiz do portal (traz notícias, portarias e instruções normativas) e,
-// como reforço, o feed da pasta de notícias. Se o segundo endereço mudar ou
-// sair do ar, ele é simplesmente ignorado e a aba segue com o primeiro.
-const NEWS_FEED_URLS = [
-  'https://www.gov.br/mds/RSS',
-  'https://www.gov.br/mds/pt-br/noticias/RSS'
+// Um "source" por ministério: id (usado no filtro e no cache), rótulo
+// mostrado na etiqueta de cada publicação, feed(s) RSS (o segundo de cada
+// lista é um reforço — se sair do ar, é simplesmente ignorado) e o link do
+// site para o botão "Abrir o site". Para incluir mais um ministério no
+// futuro, basta acrescentar um item aqui.
+const NEWS_SOURCES = [
+  {
+    id: 'mds',
+    label: 'MDS',
+    fullLabel: 'Ministério do Desenvolvimento e Assistência Social, Família e Combate à Fome',
+    feeds: ['https://www.gov.br/mds/RSS', 'https://www.gov.br/mds/pt-br/noticias/RSS'],
+    siteUrl: 'https://www.gov.br/mds/pt-br'
+  },
+  {
+    id: 'mec',
+    label: 'MEC',
+    fullLabel: 'Ministério da Educação',
+    feeds: ['https://www.gov.br/mec/RSS', 'https://www.gov.br/mec/pt-br/noticias/RSS'],
+    siteUrl: 'https://www.gov.br/mec/pt-br'
+  },
+  {
+    id: 'saude',
+    label: 'Saúde',
+    fullLabel: 'Ministério da Saúde',
+    feeds: ['https://www.gov.br/saude/RSS', 'https://www.gov.br/saude/pt-br/noticias/RSS'],
+    siteUrl: 'https://www.gov.br/saude/pt-br'
+  }
 ];
-const NEWS_SITE_URL = 'https://www.gov.br/mds/pt-br';
-const NEWS_CACHE_KEY = 'argo_noticias_mds_v1';
-const NEWS_MAX_ITEMS = 30;
+const NEWS_CACHE_KEY = 'argo_noticias_mds_v2';
+const NEWS_MAX_ITEMS = 45;
 
 // Repassadores tentados em ordem. O primeiro é a tentativa direta.
 const NEWS_FETCHERS = [
@@ -3971,7 +3993,7 @@ function newsField(item, tag) {
   return found && found.length ? (found[0].textContent || '').trim() : '';
 }
 
-function newsParseFeed(xmlText) {
+function newsParseFeed(xmlText, sourceId) {
   const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
   if (doc.getElementsByTagName('parsererror').length) throw new Error('XML inválido');
 
@@ -3982,7 +4004,8 @@ function newsParseFeed(xmlText) {
       link: newsField(item, 'link') || item.getAttribute('rdf:about') || '',
       desc: newsField(item, 'description'),
       date: newsField(item, 'date') || newsField(item, 'pubDate'),
-      type: newsField(item, 'type')
+      type: newsField(item, 'type'),
+      source: sourceId
     }))
     // O feed traz também PDFs e imagens soltas do portal (dc:type "File" e
     // "Image"), que não interessam aqui. Ficam só os conteúdos editoriais
@@ -3992,13 +4015,13 @@ function newsParseFeed(xmlText) {
 }
 
 // Busca UM feed, tentando o acesso direto e depois os repassadores.
-async function newsFetchOne(feedUrl) {
+async function newsFetchOne(feedUrl, sourceId) {
   let lastError = null;
   for (const fetcher of NEWS_FETCHERS) {
     try {
       const resp = await fetch(fetcher.build(feedUrl), { cache: 'no-store' });
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      const items = newsParseFeed(await resp.text());
+      const items = newsParseFeed(await resp.text(), sourceId);
       if (items.length) return items;
       throw new Error('feed vazio');
     } catch (e) {
@@ -4008,25 +4031,49 @@ async function newsFetchOne(feedUrl) {
   throw lastError || new Error('falha ao buscar o feed');
 }
 
-// Busca os dois feeds, junta, tira repetidos pelo endereço e ordena do mais
-// novo para o mais antigo. Só dá erro se NENHUM dos feeds responder.
-async function newsFetchFeed() {
-  const results = await Promise.allSettled(NEWS_FEED_URLS.map(newsFetchOne));
+// Busca os feeds de um único ministério (principal + reforço), juntando e
+// tirando repetidos pelo endereço.
+async function newsFetchSource(source) {
+  const results = await Promise.allSettled(source.feeds.map(url => newsFetchOne(url, source.id)));
   const merged = new Map();
-
   results.forEach(r => {
     if (r.status !== 'fulfilled') return;
     r.value.forEach(it => { if (!merged.has(it.link)) merged.set(it.link, it); });
   });
-
   if (!merged.size) {
     const firstError = results.find(r => r.status === 'rejected');
     throw (firstError && firstError.reason) || new Error('falha ao buscar o feed');
   }
+  return Array.from(merged.values());
+}
 
-  return Array.from(merged.values())
+// Busca os feeds de todos os ministérios em paralelo, junta tudo e ordena do
+// mais novo para o mais antigo. Só dá erro se NENHUM ministério responder;
+// se só alguns falharem, a lista sai só com os que responderam e o aviso
+// deixa claro quais faltaram.
+async function newsFetchFeed() {
+  const results = await Promise.allSettled(NEWS_SOURCES.map(newsFetchSource));
+  const merged = new Map();
+  const failedSources = [];
+
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled') {
+      r.value.forEach(it => { if (!merged.has(it.link)) merged.set(it.link, it); });
+    } else {
+      failedSources.push(NEWS_SOURCES[i].label);
+    }
+  });
+
+  if (!merged.size) {
+    const firstError = results.find(r => r.status === 'rejected');
+    throw (firstError && firstError.reason) || new Error('falha ao buscar os feeds');
+  }
+
+  const items = Array.from(merged.values())
     .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
     .slice(0, NEWS_MAX_ITEMS);
+
+  return { items, failedSources };
 }
 
 function newsFormatDate(iso) {
@@ -4054,20 +4101,50 @@ function newsKind(item) {
   return 'Notícia';
 }
 
+// Cor de destaque por ministério, só para diferenciar rapidamente a
+// etiqueta de origem de cada publicação na lista.
+const NEWS_SOURCE_COLORS = {
+  mds: { bg: '#e8f1f9', fg: '#0f4a41' },
+  mec: { bg: '#fef3e2', fg: '#92400e' },
+  saude: { bg: '#e7f7ec', fg: '#065f46' }
+};
+
+function newsSourceInfo(sourceId) {
+  return NEWS_SOURCES.find(s => s.id === sourceId) || NEWS_SOURCES[0];
+}
+
 function renderNewsCard() {
+  const sourceChips = NEWS_SOURCES.map(s => `
+    <label class="noticias-source-chip">
+      <input type="checkbox" class="noticias-source-checkbox" value="${s.id}" checked onchange="renderNewsList()">
+      <span>${escapeHtml(s.label)}</span>
+    </label>
+  `).join('');
+
+  const siteLinks = NEWS_SOURCES.map(s => `
+    <a class="tradutor-btn-ghost" href="${s.siteUrl}" target="_blank" rel="noopener noreferrer"
+       style="text-decoration:none; display:inline-flex; align-items:center; gap:0.4rem;">
+      ${ICONS.external} ${escapeHtml(s.label)}
+    </a>
+  `).join('');
+
   return `
     <div class="tech-card noticias-card">
       <div class="card-top">
         <div style="display:flex; align-items:center; gap:0.55rem;">
           <span class="tradutor-badge">${ICONS.form}</span>
-          <h2 style="margin:0;">Notícias do MDS</h2>
+          <h2 style="margin:0;">Notícias do MDS, MEC e Saúde</h2>
         </div>
-        <span class="subtitle">📰 Últimas publicações do Ministério do Desenvolvimento e Assistência Social, Família e Combate à Fome</span>
+        <span class="subtitle">📰 Últimas publicações do Ministério do Desenvolvimento e Assistência Social, do Ministério da Educação e do Ministério da Saúde</span>
       </div>
       <div class="card-body">
         <div class="tradutor-privacy">
           ${ICONS.info}
-          <span>A lista vem do feed público do portal gov.br/mds. Como o portal não libera leitura direta por outros sites, o app pode buscar o mesmo endereço por um repassador público (allorigins/corsproxy) — só o endereço do feed é enviado, nenhum dado de atendido. A última lista baixada fica salva neste navegador e continua visível offline.</span>
+          <span>A lista vem dos feeds públicos dos três ministérios (gov.br/mds, gov.br/mec e gov.br/saude). Como o portal não libera leitura direta por outros sites, o app pode buscar o mesmo endereço por um repassador público (allorigins/corsproxy) — só o endereço do feed é enviado, nenhum dado de atendido. A última lista baixada fica salva neste navegador e continua visível offline.</span>
+        </div>
+
+        <div class="noticias-source-filter" role="group" aria-label="Filtrar por ministério">
+          ${sourceChips}
         </div>
 
         <div style="display:flex; flex-wrap:wrap; gap:0.6rem; align-items:center; margin:0.85rem 0;">
@@ -4078,10 +4155,9 @@ function renderNewsCard() {
           <button type="button" class="tradutor-btn" id="noticiasRefreshBtn" onclick="refreshNews()">
             ${ICONS.cloud} Atualizar
           </button>
-          <a class="tradutor-btn" href="${NEWS_SITE_URL}" target="_blank" rel="noopener noreferrer"
-             style="text-decoration:none; display:inline-flex; align-items:center; gap:0.4rem;">
-            ${ICONS.external} Abrir o site do MDS
-          </a>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.85rem;">
+          ${siteLinks}
         </div>
 
         <div id="noticiasStatus" style="font-size:0.85rem; color:var(--text-muted, #64748b); margin-bottom:0.6rem;"></div>
@@ -4099,15 +4175,23 @@ function newsSetStatus(msg) {
   if (el) el.innerHTML = msg || '';
 }
 
+function newsSelectedSources() {
+  const boxes = document.querySelectorAll('.noticias-source-checkbox');
+  if (!boxes.length) return null; // painel ainda não montado: não filtra
+  return new Set(Array.from(boxes).filter(b => b.checked).map(b => b.value));
+}
+
 function renderNewsList() {
   const list = document.getElementById('noticiasList');
   if (!list) return;
 
   const filterEl = document.getElementById('noticiasFilter');
   const filter = filterEl ? filterEl.value.trim().toLowerCase() : '';
-  const items = filter
-    ? newsState.items.filter(it => (it.title + ' ' + it.desc).toLowerCase().includes(filter))
-    : newsState.items;
+  const selectedSources = newsSelectedSources();
+
+  let items = newsState.items;
+  if (selectedSources) items = items.filter(it => selectedSources.has(it.source));
+  if (filter) items = items.filter(it => (it.title + ' ' + it.desc).toLowerCase().includes(filter));
 
   if (!items.length) {
     list.innerHTML = `<p style="color:var(--text-muted,#64748b); padding:1rem 0;">${
@@ -4118,10 +4202,14 @@ function renderNewsList() {
     return;
   }
 
-  list.innerHTML = items.map(it => `
+  list.innerHTML = items.map(it => {
+    const src = newsSourceInfo(it.source);
+    const color = NEWS_SOURCE_COLORS[it.source] || NEWS_SOURCE_COLORS.mds;
+    return `
     <article style="border:1px solid #e2e8f0; border-radius:12px; padding:0.9rem 1rem; margin-bottom:0.7rem; background:#fff;">
       <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom:0.35rem;">
-        <span style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; background:#e8f1f9; color:#0f4a41; padding:0.2rem 0.5rem; border-radius:6px;">${escapeHtml(newsKind(it))}</span>
+        <span title="${escapeHtml(src.fullLabel)}" style="font-size:0.7rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; background:${color.bg}; color:${color.fg}; padding:0.2rem 0.5rem; border-radius:6px;">${escapeHtml(src.label)}</span>
+        <span style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; background:#f1f5f9; color:#475569; padding:0.2rem 0.5rem; border-radius:6px;">${escapeHtml(newsKind(it))}</span>
         <span style="font-size:0.78rem; color:var(--text-muted,#64748b);">${escapeHtml(newsFormatDate(it.date))}</span>
       </div>
       <h3 style="margin:0 0 0.3rem 0; font-size:1rem; line-height:1.35;">
@@ -4129,7 +4217,8 @@ function renderNewsList() {
       </h3>
       ${it.desc ? `<p style="margin:0; font-size:0.88rem; line-height:1.5; color:#475569;">${escapeHtml(it.desc)}</p>` : ''}
     </article>
-  `).join('');
+  `;
+  }).join('');
 }
 
 async function refreshNews() {
@@ -4140,16 +4229,19 @@ async function refreshNews() {
   renderNewsList();
 
   try {
-    const items = await newsFetchFeed();
+    const { items, failedSources } = await newsFetchFeed();
     newsState.items = items;
     newsState.ts = Date.now();
     newsWriteCache(items);
-    newsSetStatus(`${items.length} publicações · atualizado em ${escapeHtml(newsFormatUpdated(newsState.ts))}`);
+    const base = `${items.length} publicações · atualizado em ${escapeHtml(newsFormatUpdated(newsState.ts))}`;
+    newsSetStatus(failedSources.length
+      ? `${base} — não foi possível buscar: ${escapeHtml(failedSources.join(', '))}.`
+      : base);
   } catch (e) {
     if (newsState.items.length) {
       newsSetStatus(`Não foi possível atualizar agora. Mostrando a lista salva em ${escapeHtml(newsFormatUpdated(newsState.ts))}.`);
     } else {
-      newsSetStatus(`Não foi possível carregar as publicações. Verifique a conexão e toque em “Atualizar”, ou acesse <a href="${NEWS_SITE_URL}" target="_blank" rel="noopener noreferrer">gov.br/mds</a> direto no navegador.`);
+      newsSetStatus('Não foi possível carregar as publicações. Verifique a conexão e toque em “Atualizar”, ou abra o site de um dos ministérios acima direto no navegador.');
     }
   } finally {
     newsState.loading = false;
