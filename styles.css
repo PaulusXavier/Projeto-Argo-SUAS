@@ -4179,3 +4179,101 @@
     border-color: var(--brand-info-light, #D97706);
     color: var(--brand-info, #B45309);
   }
+
+  .noticias-source-count {
+    font-weight: 600;
+    opacity: 0.75;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Cada publicação da lista. Antes usava cores fixas (branco/cinza) direto
+     no HTML gerado por JS, então ficava ilegível no modo escuro (fundo claro
+     preso, igual ao bug já corrigido nas Anotações Técnicas); agora usa as
+     mesmas variáveis de tema do resto do app. */
+  .noticias-item {
+    border: 1px solid var(--border-ui);
+    border-radius: var(--radius-ui, 12px);
+    padding: 0.9rem 1rem;
+    margin-bottom: 0.7rem;
+    background: var(--bg-card);
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+
+  .noticias-item:hover { border-color: var(--brand-info-light, #D97706); }
+
+  .noticias-item-tags {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 0.4rem;
+  }
+
+  .noticias-tag {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    background: var(--tag-bg, var(--bg-main));
+    color: var(--tag-fg, var(--text-muted));
+  }
+
+  .noticias-tag-kind { background: var(--bg-main); color: var(--text-muted); font-weight: 700; }
+
+  .noticias-tag-new {
+    background: #059669;
+    color: #fff;
+  }
+
+  .noticias-date { font-size: 0.78rem; color: var(--text-muted); }
+
+  .noticias-title { margin: 0 0 0.3rem 0; font-size: 1rem; line-height: 1.35; }
+
+  .noticias-title a {
+    color: var(--brand-info, #0f4a41);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .noticias-title a:hover { text-decoration: underline; }
+  .noticias-title a svg { flex-shrink: 0; opacity: 0.7; }
+
+  .noticias-desc {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+  }
+
+  .noticias-empty {
+    text-align: center;
+    padding: 1.5rem 1rem;
+    color: var(--text-muted);
+  }
+
+  .noticias-empty p { margin: 0 0 0.6rem 0; }
+
+  /* Estado de carregamento inicial (sem lista ainda), no lugar do texto seco
+     "Carregando publicações…": três blocos que pulsam, no formato de uma
+     publicação de verdade, para o usuário já ver "a forma" do conteúdo. */
+  .noticias-skeleton { pointer-events: none; }
+
+  .noticias-skeleton-line {
+    height: 0.7rem;
+    border-radius: 6px;
+    background: var(--border-ui);
+    animation: noticias-pulse 1.3s ease-in-out infinite;
+  }
+
+  @keyframes noticias-pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .noticias-skeleton-line { animation: none; }
+  }
