@@ -4150,3 +4150,32 @@
   @media print {
     #loginScreen::after, body::after { display: none; }
   }
+
+  /* Aba "Notícias do MDS, MEC e Saúde": chips para filtrar por ministério */
+  .noticias-source-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.2rem;
+  }
+
+  .noticias-source-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.65rem;
+    border: 1.5px solid var(--border-ui, #dbe3ea);
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-muted, #64748b);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .noticias-source-chip input { accent-color: var(--brand-info, #B45309); cursor: pointer; }
+
+  .noticias-source-chip:has(input:checked) {
+    border-color: var(--brand-info-light, #D97706);
+    color: var(--brand-info, #B45309);
+  }
