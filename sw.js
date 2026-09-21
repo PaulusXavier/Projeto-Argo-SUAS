@@ -1,6 +1,6 @@
 // Troque este número toda vez que publicar uma alteração no app.
 // É essa mudança de versão que dispara a atualização automática.
-const CACHE_VERSION = 'v61';
+const CACHE_VERSION = 'v62';
 const CACHE_NAME = `rede-apoio-bv-${CACHE_VERSION}`;
 
 // Cache separado e SEM número de versão, para conteúdo pesado de fora do
@@ -35,12 +35,29 @@ const ASSETS = [
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;1,400&family=Caveat:wght@600;700&display=swap'
 ];
 
+// Sem estes o app não funciona: se algum falhar, a instalação inteira falha
+// e o Service Worker antigo continua valendo (melhor que um app pela metade).
+const CRITICAL_ASSETS = ['./', './index.html', './styles.css', './equipe-cras-cristiana.js', './data.js', './app.js', './manifest.json'];
+
 // INSTALAÇÃO: baixa os arquivos novos e já assume o controle,
 // sem esperar todas as abas antigas fecharem.
+//
+// Os arquivos são pedidos com cache:'reload', que ignora o cache HTTP do
+// navegador. Sem isso, logo após publicar (o GitHub Pages permite cache de
+// alguns minutos) a versão nova do Service Worker podia guardar cópias
+// ANTIGAS de app.js/styles.css como se fossem novas — e a atualização "pegava"
+// sem trazer nada de novo. Já os itens não essenciais (ícones, imagens,
+// fontes do Google) não derrubam mais a instalação se um deles falhar.
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    await cache.addAll(CRITICAL_ASSETS.map(url => new Request(url, { cache: 'reload' })));
+    await Promise.all(
+      ASSETS.filter(url => !CRITICAL_ASSETS.includes(url)).map(url =>
+        cache.add(new Request(url, { cache: 'reload' })).catch(() => { /* opcional: ignora */ })
+      )
+    );
+  })());
   self.skipWaiting();
 });
 
@@ -123,11 +140,20 @@ self.addEventListener('fetch', event => {
           // arquivo certo.
           if (response && (response.ok || response.type === 'opaque')) {
             const clone = response.clone();
-            caches.open(targetCacheName).then(cache => cache.put(event.request, clone));
+            const saved = caches.open(targetCacheName).then(cache => cache.put(event.request, clone)).catch(() => {});
+            try { event.waitUntil(saved); } catch (e) { /* evento já encerrado */ }
           }
           return response;
         })
         .catch(() => cached || offlineFallback());
+
+      // Quando já há cópia em cache, a resposta sai na hora e a busca da
+      // versão nova segue "solta". Sem waitUntil, o navegador podia encerrar
+      // o Service Worker antes de ela terminar e o cache nunca era
+      // atualizado (o app ficava preso na versão antiga por mais tempo).
+      if (cached) {
+        try { event.waitUntil(networkFetch.catch(() => {})); } catch (e) { /* ignora */ }
+      }
 
       return cached || networkFetch;
     })
