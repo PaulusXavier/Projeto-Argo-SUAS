@@ -115,6 +115,9 @@ function lockApp() {
     }
   }
   document.body.style.overflow = 'hidden';
+  // Havia uma versão nova esperando (ver controllerchange): ao trancar, é o
+  // momento seguro para recarregar sem atrapalhar ninguém.
+  if (window.__argoUpdatePending) window.location.reload();
 }
 
 function initAuth() {
@@ -158,14 +161,6 @@ function initAuth() {
         errorEl.classList.remove('visible');
         sessionEncKey = await deriveSessionKey(value);
         unlockApp();
-        // Notificação de abertura do Argo (saudação do horário + resumo
-        // da semana da agenda + estado da sincronização; ver bloco
-        // "Notificação de Abertura" mais abaixo). Um pequeno atraso deixa
-        // a entrada do app respirar antes do cartão aparecer por cima.
-        setTimeout(() => {
-          const alreadyMutedToday = (typeof argoGreetingMutedToday === 'function') && argoGreetingMutedToday();
-          if (!alreadyMutedToday && typeof argoShowGreeting === 'function') argoShowGreeting();
-        }, 450);
         // Monta a lista de 374 fichas (render()) só DEPOIS que o navegador
         // já pintou a tela desbloqueada (ver comentário em unlockApp) —
         // antes, esse processamento pesado rodava competindo com o próprio
@@ -178,6 +173,17 @@ function initAuth() {
           requestAnimationFrame(() => {
             if (typeof render === 'function') render();
             if (typeof syncCategoryToggleLabel === 'function') syncCategoryToggleLabel();
+            // Notificação de abertura do Argo (saudação do horário + resumo
+            // da semana da agenda + estado da sincronização; ver bloco
+            // "Notificação de Abertura" mais abaixo). Só é agendada DEPOIS
+            // do render() acima: ele trava a thread por um instante, e se o
+            // cartão já estivesse animando nesse momento a entrada dele
+            // ficaria travada/pulando. Assim a lista aparece primeiro e o
+            // cartão entra por cima, com a animação inteira e fluida.
+            setTimeout(() => {
+              const alreadyMutedToday = (typeof argoGreetingMutedToday === 'function') && argoGreetingMutedToday();
+              if (!alreadyMutedToday && typeof argoShowGreeting === 'function') argoShowGreeting();
+            }, 250);
           });
         });
       } else {
@@ -374,7 +380,7 @@ function argoEnsureGreetingUI() {
     <style>
       .argo-greeting-overlay { display:none; position:fixed; inset:0; background:rgba(4,10,22,0.62); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); z-index:1200; align-items:center; justify-content:center; padding:18px; }
       .argo-greeting-overlay.visible { display:flex; }
-      .argo-greeting-box { position:relative; background:var(--bg-card,#fff); color:var(--text-main,#1e293b); width:100%; max-width:392px; max-height:calc(100vh - 36px); max-height:calc(100dvh - 36px); overflow-y:auto; border-radius:20px; box-shadow:0 30px 64px -12px rgba(0,0,0,0.6), 0 0 0 1px rgba(184,137,79,0.4); animation:argoGreetingPop .4s cubic-bezier(.2,.8,.2,1); }
+      .argo-greeting-box { overscroll-behavior:contain; position:relative; background:var(--bg-card,#fff); color:var(--text-main,#1e293b); width:100%; max-width:392px; max-height:calc(100vh - 36px); max-height:calc(100dvh - 36px); overflow-y:auto; border-radius:20px; box-shadow:0 30px 64px -12px rgba(0,0,0,0.6), 0 0 0 1px rgba(184,137,79,0.4); animation:argoGreetingPop .4s cubic-bezier(.2,.8,.2,1); }
       @keyframes argoGreetingPop { from { transform:translateY(16px) scale(.96); opacity:0; } to { transform:none; opacity:1; } }
 
       .argo-scene { position:relative; height:188px; background:#050f22; overflow:hidden; }
@@ -412,6 +418,16 @@ function argoEnsureGreetingUI() {
       .argo-week-list li:first-child { border-top:none; }
       .argo-week-day { flex-shrink:0; min-width:64px; font-weight:700; color:var(--text-main,#1e293b); }
       .argo-week-more { color:var(--text-muted,#475569); font-style:italic; }
+      .argo-entry { flex:1 1 auto; min-width:0; }
+      .argo-chip { display:inline-flex; align-items:center; gap:6px; font-weight:700; }
+      .argo-chip::before { content:''; flex-shrink:0; width:8px; height:8px; border-radius:50%; background:var(--chip,#94a3b8); }
+      .argo-chip-feriado { --chip:#c0463d; }
+      .argo-chip-facultativo { --chip:#d99a2b; }
+      .argo-chip-pagamento { --chip:#3f9d6b; }
+      .argo-chip-extra { --chip:#2f7fb8; }
+      .argo-note { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; font-weight:500; color:var(--text-muted,#475569); }
+      .argo-chip + .argo-note { margin-top:1px; }
+      .argo-when { margin-left:8px; font-size:12px; color:var(--text-muted,#475569); }
       .argo-week-empty { margin-top:6px; color:var(--text-muted,#475569); }
 
       .argo-sync-row { display:flex; align-items:center; flex-wrap:wrap; gap:9px; margin:12px 2px 0 2px; font-size:12.5px; color:var(--text-muted,#475569); line-height:1.4; }
@@ -450,7 +466,7 @@ function argoEnsureGreetingUI() {
     if (!modal || !modal.classList.contains('visible')) return;
     if (e.key === 'Escape') { argoDismissGreeting(); return; }
     if (e.key === 'Tab') {
-      const items = Array.from(modal.querySelectorAll('button')).filter(b => b.offsetParent !== null);
+      const items = Array.from(modal.querySelectorAll('button, input[type="checkbox"]')).filter(b => b.offsetParent !== null && !b.disabled);
       if (!items.length) return;
       const first = items[0], last = items[items.length - 1];
       if (!modal.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
@@ -460,25 +476,104 @@ function argoEnsureGreetingUI() {
   });
 }
 
+// Nomes por extenso das etiquetas abreviadas de AGENDA_DATA_INFO (as
+// abreviações cabem na grade do calendário, mas no cartão há espaço e ficam
+// mais claras por extenso). Etiqueta sem nome aqui aparece como está.
+const ARGO_AGENDA_LABEL_NAMES = {
+  'CONF.': 'Confraternização Universal', 'FAC.': 'Ponto facultativo', 'S. SEB.': 'São Sebastião',
+  'PAG.': 'Pagamento', 'CAR.': 'Carnaval', 'CIN.': 'Quarta-feira de Cinzas', 'PAIX.': 'Sexta-feira da Paixão',
+  'TIR.': 'Tiradentes', 'TRAB.': 'Dia do Trabalho', 'CORP.': 'Corpus Christi', '13º SAL.': '13º salário',
+  'S. PED.': 'São Pedro', 'B. VIST.': 'Aniversário de Boa Vista', 'IND.': 'Independência',
+  'ROR.': 'Dia de Roraima', 'APAR.': 'N. Sra. Aparecida', 'SERV.': 'Dia do Servidor',
+  'FIN.': 'Finados', 'REP.': 'Proclamação da República', 'C. NEG.': 'Consciência Negra',
+  'CONC.': 'Imaculada Conceição', 'NATAL': 'Natal'
+};
+
+function argoAgendaKind(info) {
+  const t = (info && info.type) || '';
+  if (t.indexOf('feriado') > -1) return 'feriado';
+  if (t.indexOf('facultativo') > -1) return 'facultativo';
+  if (t.indexOf('pagamento') > -1) return 'pagamento';
+  return 'extra';
+}
+
+// Etiqueta do dia: bolinha colorida por tipo (feriado / facultativo /
+// pagamento / outros) + nome por extenso. Só a cor da bolinha muda, então
+// o texto continua legível nos temas claro e escuro.
+function argoChipHtml(info) {
+  if (!info) return '';
+  const name = ARGO_AGENDA_LABEL_NAMES[info.label] || info.label;
+  return `<span class="argo-chip argo-chip-${argoAgendaKind(info)}">${escapeHtml(name)}</span>`;
+}
+
+function argoEntryHtml(info, note) {
+  const chip = argoChipHtml(info);
+  const noteHtml = note ? `<div class="argo-note">${escapeHtml(note)}</div>` : '';
+  return `<div class="argo-entry">${chip}${noteHtml}</div>`;
+}
+
+// Próxima data marcada em AGENDA_DATA_INFO depois de hoje (feriado,
+// facultativo, pagamento…). Usada quando o resto da semana está vazio,
+// para o cartão não terminar em "nada marcado" sem dizer o que vem depois.
+function argoNextMilestone(now) {
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const keys = Object.keys(AGENDA_DATA_INFO).sort();
+  for (const key of keys) {
+    const [y, m, d] = key.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    const days = Math.round((date - today) / 86400000);
+    if (days > 0) return { key, date, days, info: AGENDA_DATA_INFO[key] };
+  }
+  return null;
+}
+
+function argoDayLabel(date, days) {
+  const base = AGENDA_WEEKDAY_ABBR[date.getDay()] + ' ' + String(date.getDate()).padStart(2, '0') + '/' + String(date.getMonth() + 1).padStart(2, '0');
+  return days === 1 ? 'Amanhã' : base;
+}
+
 // Resumo da semana (mesma fonte do card da agenda). Hoje sempre aparece;
-// os próximos dias com algo marcado vêm em lista curta (máx. 3).
+// os próximos dias com algo marcado vêm em lista curta (máx. 3). Se o resto
+// da semana estiver vazio, mostra o próximo marco do ano com contagem de dias.
 function argoGreetingWeekHtml() {
-  const summary = (typeof agendaBuildWeekSummary === 'function') ? agendaBuildWeekSummary(new Date()) : null;
+  const now = new Date();
+  const summary = (typeof agendaBuildWeekSummary === 'function') ? agendaBuildWeekSummary(now) : null;
   if (!summary) {
-    return `<div class="argo-week-empty" style="margin-top:0;">A agenda cobre apenas ${AGENDA_YEAR} — não há datas cadastradas para este ano.</div>`;
+    const y = now.getFullYear();
+    const msg = y > AGENDA_YEAR
+      ? `A agenda de ${AGENDA_YEAR} já terminou e as datas de ${y} ainda não foram cadastradas.`
+      : `A agenda ainda não tem datas de ${y} (cobre apenas ${AGENDA_YEAR}).`;
+    return `<div class="argo-week-empty" style="margin-top:0;">${msg}</div>`;
   }
   const total = summary.weekEntries.length;
-  const rest = summary.restEntries;
-  let html = `<div class="argo-week-head"><span>Resumo da semana</span><span class="argo-week-count">${total} ${total === 1 ? 'item' : 'itens'}</span></div>`;
-  html += `<div class="argo-week-today"><span class="argo-week-tag">Hoje</span><span>${summary.todayEntry ? escapeHtml(summary.todayEntry.text) : 'nada marcado'}</span></div>`;
+  const today0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  // "Próximos dias" = só o que ainda vem pela frente; dias da semana que já
+  // passaram continuam contando no resumo, mas não são listados como próximos.
+  const rest = summary.restEntries.filter(e => e.date > today0);
+
+  const countBadge = total ? `<span class="argo-week-count">${total} ${total === 1 ? 'item' : 'itens'}</span>` : '';
+  let html = `<div class="argo-week-head"><span>Resumo da semana</span>${countBadge}</div>`;
+
+  const te = summary.todayEntry;
+  html += `<div class="argo-week-today"><span class="argo-week-tag">Hoje</span>` +
+    (te ? argoEntryHtml(te.info, te.note) : `<span class="argo-week-empty" style="margin:0;">nada marcado</span>`) +
+    `</div>`;
+
   if (rest.length) {
-    const rows = rest.slice(0, 3)
-      .map(e => `<li><span class="argo-week-day">${escapeHtml(e.label)}</span><span>${escapeHtml(e.text)}</span></li>`)
-      .join('');
+    const rows = rest.slice(0, 3).map(e => {
+      const days = Math.round((e.date - today0) / 86400000);
+      return `<li><span class="argo-week-day">${escapeHtml(argoDayLabel(e.date, days))}</span>${argoEntryHtml(e.info, e.note)}</li>`;
+    }).join('');
     const more = rest.length > 3 ? `<li class="argo-week-more">+ ${rest.length - 3} na agenda</li>` : '';
     html += `<div class="argo-week-label">Próximos dias</div><ul class="argo-week-list">${rows}${more}</ul>`;
-  } else if (!total) {
-    html += `<div class="argo-week-empty">Nada marcado para esta semana.</div>`;
+  } else {
+    const next = argoNextMilestone(now);
+    if (next) {
+      const when = next.days === 1 ? 'amanhã' : `em ${next.days} dias`;
+      html += `<div class="argo-week-label">Próximo marco</div><ul class="argo-week-list"><li><span class="argo-week-day">${escapeHtml(argoDayLabel(next.date, next.days))}</span><div class="argo-entry">${argoChipHtml(next.info)}<span class="argo-when">${when}</span></div></li></ul>`;
+    } else if (!total) {
+      html += `<div class="argo-week-empty">Nada marcado para esta semana.</div>`;
+    }
   }
   return html;
 }
@@ -511,7 +606,7 @@ function argoGreetingSyncRetry() {
   const btn = document.getElementById('argoGreetingSyncRetry');
   if (btn) { btn.disabled = true; btn.textContent = 'Tentando…'; }
   argoGreetingShownAt = Date.now();
-  agendaConnectSync(agendaSyncCode);
+  agendaConnectSync(agendaSyncCode, true);
   argoRefreshGreeting();
   clearTimeout(argoGreetingSlowTimer);
   argoGreetingSlowTimer = setTimeout(argoRefreshGreeting, 8100);
@@ -569,6 +664,10 @@ function argoGreetingPersistMuteChoice() {
 // Mostra o cartão. Chamada uma vez a cada desbloqueio bem-sucedido (ver
 // submit do loginForm, em initAuth).
 function argoShowGreeting() {
+  // Se o app foi trancado no intervalo entre o login e a abertura do cartão
+  // (ex.: "Sair" logo em seguida), não mostra a notificação por cima do login.
+  const appRoot = document.getElementById('appRoot');
+  if (appRoot && appRoot.dataset.locked === 'true') return;
   argoEnsureGreetingUI();
   const modal = document.getElementById('argoGreetingModal');
   const title = document.getElementById('argoGreetingTitle');
@@ -606,6 +705,7 @@ function argoDismissGreeting() {
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   const modal = document.getElementById('argoGreetingModal');
   if (modal) modal.classList.remove('visible');
+  if (window.__argoUpdatePending && typeof argoShowUpdateToast === 'function') argoShowUpdateToast();
 }
 
 // Botão principal: leva à aba "Agenda Boa Vista 2026" (onde está o card de
@@ -5581,18 +5681,49 @@ if ('serviceWorker' in navigator) {
     }).catch(() => {
     });
 
-    // Quando o novo Service Worker assume o controle, recarrega a página sozinho
+    // Quando o novo Service Worker assume o controle:
+    //  • primeira instalação (a página ainda não tinha Service Worker): não há
+    //    versão nova a carregar, então não recarrega — antes recarregava já na
+    //    primeira visita;
+    //  • app trancado (tela de senha): recarrega na hora, sem custo;
+    //  • app em uso: NÃO recarrega no meio do trabalho (isso jogava a pessoa
+    //    de volta na tela de senha). Mostra um aviso discreto com o botão
+    //    "Atualizar" e recarrega sozinho na próxima vez que o app for trancado.
+    const jaTinhaControlador = !!navigator.serviceWorker.controller;
     let jaRecarregou = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (jaRecarregou) return;
-      jaRecarregou = true;
-      window.location.reload();
+      if (!jaTinhaControlador || jaRecarregou) return;
+      const appRoot = document.getElementById('appRoot');
+      const emUso = appRoot && appRoot.dataset.locked === 'false';
+      if (!emUso) {
+        jaRecarregou = true;
+        window.location.reload();
+        return;
+      }
+      window.__argoUpdatePending = true;
+      const greeting = document.getElementById('argoGreetingModal');
+      // Com o cartão de abertura na tela, o aviso espera ele ser fechado
+      // (ver argoDismissGreeting) para não ficar por cima dos botões.
+      if (!(greeting && greeting.classList.contains('visible'))) argoShowUpdateToast();
     });
   });
 }
 
 function ativarAtualizacao(worker) {
   worker.postMessage({ type: 'SKIP_WAITING' });
+}
+
+// Aviso discreto de "nova versão disponível" (ver controllerchange acima).
+function argoShowUpdateToast() {
+  if (document.getElementById('argoUpdateToast')) return;
+  const el = document.createElement('div');
+  el.id = 'argoUpdateToast';
+  el.setAttribute('role', 'status');
+  el.style.cssText = 'position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:1300;width:max-content;max-width:calc(100vw - 24px);display:flex;align-items:center;gap:12px;padding:9px 10px 9px 16px;border-radius:14px;background:#0c2946;color:#f6e7bd;border:1px solid rgba(243,213,138,.45);box-shadow:0 12px 30px -8px rgba(0,0,0,.6);font:600 13px Inter,system-ui,sans-serif;';
+  el.innerHTML = '<span>Nova versão do Argo disponível.</span>' +
+    '<button type="button" style="flex-shrink:0;border:none;border-radius:10px;padding:7px 14px;background:linear-gradient(135deg,#29ABE2,#0091C2);color:#fff;font:700 13px Inter,system-ui,sans-serif;cursor:pointer;">Atualizar</button>';
+  el.querySelector('button').addEventListener('click', () => window.location.reload());
+  document.body.appendChild(el);
 }
 
 /* ============================================================
@@ -6079,13 +6210,16 @@ function agendaUpdateSyncIndicator(connected) {
 
 let agendaConnectingCode = '';
 
-async function agendaConnectSync(code) {
+async function agendaConnectSync(code, force) {
   const newCode = code.trim().toLowerCase().replace(/\s+/g, '-');
   if (!newCode) return;
   // Já há uma conexão em andamento (ou ativa) com este mesmo código: não
   // abre uma segunda escuta. A notificação de abertura e a aba da agenda
   // podem chamar esta função quase ao mesmo tempo.
-  if (newCode === agendaConnectingCode && (agendaUnsubscribe || agendaSyncState === 'connecting')) return;
+  // `force` (botão "Tentar de novo" da notificação) ignora essa trava: quando
+  // a conexão fica pendurada em "connecting" (rede ruim, sem erro), sem isso
+  // o botão caía aqui e não reconectava nada.
+  if (!force && newCode === agendaConnectingCode && (agendaUnsubscribe || agendaSyncState === 'connecting')) return;
   agendaConnectingCode = newCode;
   agendaSyncCode = newCode;
   localStorage.setItem('argo_agenda_sync_code', agendaSyncCode);
@@ -6161,7 +6295,13 @@ function agendaUseSyncCode() {
   agendaConnectSync(val);
 }
 function agendaGenerateSyncCode() {
-  const code = 'agenda-' + Math.random().toString(36).substring(2, 8);
+  // Esse código é a única "senha" da agenda sincronizada (ver regras do
+  // Firestore acima), então usa gerador criptográfico e 10 caracteres em vez
+  // de Math.random() com 6. Só vale para códigos NOVOS; os já em uso seguem
+  // funcionando normalmente.
+  const bytes = new Uint8Array(10);
+  (window.crypto || window.msCrypto).getRandomValues(bytes);
+  const code = 'agenda-' + Array.from(bytes, b => 'abcdefghijkmnpqrstuvwxyz23456789'[b % 32]).join('');
   document.getElementById('agendaSyncCodeInput').value = code;
   agendaConnectSync(code);
 }
@@ -6231,7 +6371,13 @@ function agendaBuildWeekSummary(now) {
       return {
         isToday: key === todayKey,
         label: AGENDA_WEEKDAY_ABBR[d.getDay()] + ' ' + String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0'),
-        text: parts.join(' • ')
+        text: parts.join(' • '),
+        // Campos separados (usados pela notificação de abertura para
+        // colorir o tipo do dia e limitar o tamanho da anotação).
+        key: key,
+        date: d,
+        info: info || null,
+        note: note || ''
       };
     })
     .filter(Boolean);
