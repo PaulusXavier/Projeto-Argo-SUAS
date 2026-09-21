@@ -746,8 +746,8 @@ function argoOpenAgendaFromGreeting() {
 // (nome, endereço, NIS, fotos e PDFs anexados, anotações de encaminhamento).
 // Usada tanto para apagar quanto para fazer backup/restaurar esses dados —
 // mantendo as duas operações sempre em sincronia.
-const SENSITIVE_DATA_PREFIXES = ['attach_', 'img_', 'note_', 'userdata_'];
-const SENSITIVE_DATA_EXACT_KEYS = ['nota_geral_encaminhamento'];
+const SENSITIVE_DATA_PREFIXES = ['attach_', 'img_', 'note_', 'userdata_', 'gnote_'];
+const SENSITIVE_DATA_EXACT_KEYS = ['nota_geral_encaminhamento', 'gnotes_index'];
 
 function isSensitiveDataKey(key) {
   return SENSITIVE_DATA_EXACT_KEYS.includes(key) || SENSITIVE_DATA_PREFIXES.some(p => key.startsWith(p));
@@ -2016,6 +2016,7 @@ function updateChipCounts() {
   }
   const counts = _staticChipCounts;
   counts.favoritos = getFavoriteIds().size;
+  counts.anotacoes = getNotesIndex().length;
 
   const setCount = (id, value) => {
     const el = document.getElementById(id);
@@ -2046,6 +2047,7 @@ function updateChipCounts() {
   setCount('count-defesacivil', counts.defesacivil);
   setCount('count-conselhosdireitos', counts.conselhosdireitos);
   setCount('count-favoritos', counts.favoritos);
+  setCount('count-anotacoes', counts.anotacoes);
 }
 
 // Liga/desliga a busca principal conforme a aba aberta. Ao desligar, limpa o
@@ -2117,7 +2119,13 @@ function render() {
     if (resultsInfo) resultsInfo.style.display = 'none';
     const infoBannerEarly = document.getElementById('categoryInfoBanner');
     if (infoBannerEarly) { infoBannerEarly.style.display = 'none'; infoBannerEarly.innerHTML = ''; }
-    grid.innerHTML = renderNotesCard();
+    // Só remonta o painel se ele ainda não estiver na tela. Sem isso, digitar
+    // na busca principal (que dispara render() a cada tecla) apagava o texto
+    // sendo escrito na anotação e desfazia a anotação selecionada a cada
+    // pequena pausa — mesmo problema já corrigido nas abas de painel abaixo.
+    if (!document.getElementById('notesRoot')) {
+      grid.innerHTML = renderNotesCard();
+    }
     return;
   }
 
@@ -3126,6 +3134,180 @@ function truncateForPrint(text, maxLen) {
 }
 
 const GENERAL_NOTE_KEY = 'nota_geral_encaminhamento';
+
+// --- Aba "Minhas Anotações": múltiplas anotações -----------------------------
+// Antes só existia UMA anotação geral (chave GENERAL_NOTE_KEY). Agora o
+// técnico pode criar, nomear e guardar quantas anotações precisar — uma por
+// caso/atendimento, por exemplo. GNOTES_INDEX_KEY guarda a LISTA (id, título,
+// data da última edição); o texto de cada anotação fica em uma chave própria
+// 'gnote_<id>' (dados sensíveis: ver SENSITIVE_DATA_PREFIXES acima, o que já
+// cobre backup/restauração e "apagar dados salvos" automaticamente).
+//
+// Os dados do usuário encaminhado (nome, endereço, NIS, CPF, nascimento) já
+// eram salvos por 'id' via getUserData/renderUserDataFields — aqui cada
+// anotação usa o próprio id da anotação como 'id', então cada uma tem seus
+// próprios dados de usuário, independentes das outras.
+const GNOTES_INDEX_KEY = 'gnotes_index';
+
+// ID em memória da anotação aberta no momento (não precisa persistir: ao
+// reabrir o app, mostramos a anotação mais recente da lista).
+let activeNoteId = null;
+
+// Roda uma única vez: se ainda não existe a lista nova (gnotes_index), cria a
+// partir da antiga anotação geral única, SE ela tiver algum conteúdo ou
+// algum dado de usuário preenchido (nome, endereço etc.) — assim ninguém
+// perde o que já tinha escrito. Reaproveita o id 'geral' de propósito, para
+// que 'userdata_geral' (já existente) continue vinculado automaticamente,
+// sem precisar copiar nada.
+function migrateLegacyGeneralNote() {
+  const existing = safeStorage.getJSON(GNOTES_INDEX_KEY, null);
+  if (existing) return existing;
+
+  const legacyContent = safeStorage.get(GENERAL_NOTE_KEY, '');
+  const legacyUserData = safeStorage.getJSON('userdata_geral', null);
+  const hasLegacyUserData = !!(legacyUserData && Object.values(legacyUserData).some(v => v && String(v).trim()));
+
+  let index = [];
+  if (legacyContent || hasLegacyUserData) {
+    const id = 'geral';
+    if (legacyContent) safeStorage.set('gnote_' + id, legacyContent);
+    index = [{ id, title: 'Anotação Geral', updatedAt: Date.now() }];
+  }
+  saveNotesIndex(index);
+  return index;
+}
+
+function getNotesIndex() {
+  return migrateLegacyGeneralNote();
+}
+
+function saveNotesIndex(list) {
+  safeStorage.set(GNOTES_INDEX_KEY, JSON.stringify(list));
+}
+
+function getNoteContent(id) {
+  return safeStorage.get('gnote_' + id, '');
+}
+
+function generateNoteId() {
+  return 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+// "Hoje 14:32", "Ontem 09:10" ou "03/04/2026" — pensado para a listinha de
+// anotações, onde a hora exata importa menos que saber "foi hoje?".
+function formatNoteTimestamp(ts) {
+  if (!ts) return '';
+  const date = new Date(ts);
+  const now = new Date();
+  const time = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  if (date.toDateString() === now.toDateString()) return 'Hoje ' + time;
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return 'Ontem ' + time;
+  return date.toLocaleDateString('pt-BR', {
+    day: '2-digit', month: '2-digit',
+    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+  });
+}
+
+function refreshNotesPanel() {
+  const grid = document.getElementById('grid');
+  if (grid) grid.innerHTML = renderNotesCard();
+}
+
+function createNote() {
+  const notes = getNotesIndex();
+  const id = generateNoteId();
+  notes.unshift({ id, title: `Anotação ${notes.length + 1}`, updatedAt: Date.now() });
+  saveNotesIndex(notes);
+  safeStorage.set('gnote_' + id, '');
+  activeNoteId = id;
+  refreshNotesPanel();
+  updateChipCounts();
+  // Foca o título para o técnico já poder nomear a anotação (ex.: o nome do
+  // caso ou do usuário atendido) antes de começar a escrever.
+  requestAnimationFrame(() => {
+    const titleInput = document.getElementById('noteTitleInput');
+    if (titleInput) { titleInput.focus(); titleInput.select(); }
+  });
+}
+
+function selectNote(id) {
+  if (id === activeNoteId) return;
+  activeNoteId = id;
+  refreshNotesPanel();
+}
+
+function renameNote(id, value) {
+  const notes = getNotesIndex();
+  const note = notes.find(n => n.id === id);
+  if (!note) return;
+  note.title = value;
+  saveNotesIndex(notes);
+  // Atualiza só o título na listinha, sem remontar tudo — assim o cursor não
+  // pula do campo enquanto o técnico ainda está digitando o nome.
+  const titleEl = document.querySelector(`.note-list-item[data-note-id="${CSS.escape(id)}"] .note-list-item-title`);
+  if (titleEl) titleEl.textContent = value.trim() || 'Sem título';
+}
+
+function deleteNote(id) {
+  const notes = getNotesIndex();
+  const note = notes.find(n => n.id === id);
+  if (!note) return;
+  const ok = confirm(`Excluir a anotação "${note.title || 'Sem título'}"? Isso apaga o texto e os dados do usuário preenchidos nela. Esta ação não pode ser desfeita.`);
+  if (!ok) return;
+  const remaining = notes.filter(n => n.id !== id);
+  saveNotesIndex(remaining);
+  safeStorage.remove('gnote_' + id);
+  safeStorage.remove('userdata_' + id);
+  if (activeNoteId === id) activeNoteId = remaining.length ? remaining[0].id : null;
+  refreshNotesPanel();
+  updateChipCounts();
+}
+
+let noteMetaDebounceTimer = null;
+
+// Salva o texto da anotação a cada tecla (para nunca perder nada), mas só
+// atualiza a data/prévia na listinha lateral com um pequeno atraso — refazer
+// isso a cada tecla seria trabalho desnecessário durante a digitação.
+function saveGeneralNote(id, value) {
+  const statusEl = document.getElementById('generalNoteStatus');
+  const statusTextEl = document.getElementById('generalNoteStatusText');
+  const ok = safeStorage.set('gnote_' + id, value);
+
+  if (!ok) {
+    if (statusEl) statusEl.innerHTML = `${ICONS.info}<span style="color:#DC2626;">Não foi possível salvar (armazenamento indisponível ou cheio).</span>`;
+    return;
+  }
+
+  if (statusTextEl) {
+    statusTextEl.textContent = `${value.length} caractere${value.length === 1 ? '' : 's'} · salvando…`;
+  }
+
+  clearTimeout(noteMetaDebounceTimer);
+  noteMetaDebounceTimer = setTimeout(() => {
+    const notes = getNotesIndex();
+    const note = notes.find(n => n.id === id);
+    if (note) {
+      note.updatedAt = Date.now();
+      saveNotesIndex(notes);
+    }
+    updateNoteListItemPreview(id, value, note);
+    if (statusTextEl) {
+      statusTextEl.textContent = `${value.length} caractere${value.length === 1 ? '' : 's'} · salva automaticamente`;
+    }
+  }, 500);
+}
+
+function updateNoteListItemPreview(id, value, note) {
+  const item = document.querySelector(`.note-list-item[data-note-id="${CSS.escape(id)}"]`);
+  if (!item) return;
+  const metaEl = item.querySelector('.note-list-item-meta');
+  if (!metaEl) return;
+  const preview = stripHtml(value).trim().replace(/\s+/g, ' ').slice(0, 60);
+  const ts = note ? formatNoteTimestamp(note.updatedAt) : '';
+  metaEl.textContent = preview ? (ts ? `${ts} · ${preview}` : preview) : ts;
+}
 
 function renderPdfToolsCard() {
   return `
@@ -4832,57 +5014,87 @@ async function renderMapaRedeMarkers() {
 }
 
 function renderNotesCard() {
-  const savedNote = safeStorage.get(GENERAL_NOTE_KEY, '');
+  const notes = getNotesIndex();
+
+  if (!activeNoteId || !notes.some(n => n.id === activeNoteId)) {
+    activeNoteId = notes.length ? notes[0].id : null;
+  }
+  const activeNote = notes.find(n => n.id === activeNoteId) || null;
+  const content = activeNote ? getNoteContent(activeNote.id) : '';
+
+  const listHtml = notes.length ? notes.map(n => {
+    const isActive = n.id === activeNoteId;
+    const preview = stripHtml(getNoteContent(n.id)).trim().replace(/\s+/g, ' ').slice(0, 60);
+    const meta = [formatNoteTimestamp(n.updatedAt), preview].filter(Boolean).join(' · ');
+    return `
+      <button type="button" class="note-list-item ${isActive ? 'active' : ''}" data-note-id="${escapeHtml(n.id)}" onclick="selectNote('${n.id}')" aria-current="${isActive ? 'true' : 'false'}">
+        <span class="note-list-item-title">${escapeHtml(n.title || 'Sem título')}</span>
+        <span class="note-list-item-meta">${escapeHtml(meta)}</span>
+      </button>
+    `;
+  }).join('') : `<p class="notes-empty-hint">Nenhuma anotação ainda.<br>Toque em "Nova Anotação" para começar.</p>`;
+
+  const editorHtml = activeNote ? `
+      <div class="note-editor" id="noteEditorPane">
+        <div class="note-editor-header">
+          <label for="noteTitleInput" class="sr-only">Título da anotação</label>
+          <input type="text" id="noteTitleInput" class="note-title-input" value="${escapeHtml(activeNote.title)}" placeholder="Título da anotação (ex.: nome do caso)" maxlength="80" oninput="renameNote('${activeNote.id}', this.value)">
+          <button type="button" class="btn-icon-danger" onclick="deleteNote('${activeNote.id}')" title="Excluir esta anotação" aria-label="Excluir esta anotação">${ICONS.trashSmall}</button>
+        </div>
+        ${renderUserDataFields(activeNote.id)}
+        <label for="generalNoteArea" class="sr-only">Texto da anotação</label>
+        <textarea id="generalNoteArea" class="notes-textarea" placeholder="Escreva aqui um encaminhamento, resumo do caso ou observações..." oninput="saveGeneralNote('${activeNote.id}', this.value)">${escapeHtml(content)}</textarea>
+        <div class="notes-save-status" id="generalNoteStatus" aria-live="polite">
+          ${ICONS.info}
+          <span id="generalNoteStatusText">${content.length} caractere${content.length === 1 ? '' : 's'} · salva automaticamente</span>
+        </div>
+        <div class="card-actions">
+          <button type="button" class="btn-tech btn-whatsapp" onclick="shareGeneralNote('${activeNote.id}')" title="Enviar esta anotação por WhatsApp" aria-label="Enviar esta anotação por WhatsApp">${ICONS.whatsapp} WhatsApp</button>
+          <button class="btn-tech btn-primary" onclick="printGeneralNote('${activeNote.id}')">Gerar Guia</button>
+        </div>
+      </div>
+    ` : `
+      <div class="note-editor note-editor-empty">
+        <p>Selecione uma anotação na lista ao lado ou crie uma nova para começar a escrever.</p>
+      </div>
+    `;
 
   return `
-    <div class="tech-card notes-card">
+    <div class="tech-card notes-card" id="notesRoot">
       <div class="card-top">
         <div style="display:flex; align-items:center; gap:0.55rem;">
           <span class="notes-badge">${ICONS.form}</span>
-          <h2 style="margin:0;">Anotação Geral</h2>
+          <h2 style="margin:0;">Minhas Anotações</h2>
         </div>
-        <span class="subtitle">📝 Campo livre para encaminhamento geral</span>
+        <span class="subtitle">📝 Crie quantas anotações precisar — uma para cada caso ou atendimento</span>
       </div>
-      <div class="card-body">
-        ${renderUserDataFields('geral')}
-        <label for="generalNoteArea" class="sr-only">Anotação geral / encaminhamento</label>
-        <textarea id="generalNoteArea" class="notes-textarea" placeholder="Escreva aqui um encaminhamento geral, resumo do caso ou observações que não pertencem a uma unidade específica..." oninput="saveGeneralNote(this.value)">${escapeHtml(savedNote)}</textarea>
-        <div class="notes-save-status" id="generalNoteStatus" aria-live="polite">
-          ${ICONS.info}
-          <span>As anotações ficam salvas automaticamente neste navegador.</span>
+      <div class="card-body notes-layout">
+        <div class="notes-list-pane">
+          <button type="button" class="btn-tech btn-primary notes-new-btn" onclick="createNote()">${ICONS.plus} Nova Anotação</button>
+          <div class="notes-list" id="notesList">${listHtml}</div>
         </div>
-      </div>
-      <div class="card-actions">
-        <button type="button" class="btn-tech btn-whatsapp" onclick="shareGeneralNote()" title="Enviar esta anotação por WhatsApp" aria-label="Enviar a anotação de encaminhamento geral por WhatsApp">${ICONS.whatsapp} WhatsApp</button>
-        <button class="btn-tech btn-primary" onclick="printGeneralNote()">Gerar Guia</button>
+        ${editorHtml}
       </div>
     </div>
   `;
 }
 
-function saveGeneralNote(value) {
-  const statusEl = document.getElementById('generalNoteStatus');
-  if (!safeStorage.set(GENERAL_NOTE_KEY, value)) {
-    if (statusEl) {
-      statusEl.innerHTML = `${ICONS.info}<span style="color:#DC2626;">Não foi possível salvar (armazenamento indisponível ou cheio).</span>`;
-    }
-  }
-}
-
-function shareGeneralNote() {
-  const note = safeStorage.get(GENERAL_NOTE_KEY, '').trim();
+function shareGeneralNote(id) {
+  const note = getNoteContent(id).trim();
   if (!note) {
     alert('Escreva uma anotação antes de compartilhar.');
     return;
   }
-  const t = `*ENCAMINHAMENTO GERAL*\n\n${note}`;
+  const notes = getNotesIndex();
+  const title = (notes.find(n => n.id === id) || {}).title || 'Anotação';
+  const t = `*${title.toUpperCase()}*\n\n${note}`;
   window.open(`https://wa.me/?text=${encodeURIComponent(t)}`, '_blank', 'noopener,noreferrer');
 }
 
-async function printGeneralNote() {
-  const note = safeStorage.get(GENERAL_NOTE_KEY, '').trim() || 'Nenhuma anotação registrada.';
+async function printGeneralNote(id) {
+  const note = getNoteContent(id).trim() || 'Nenhuma anotação registrada.';
   const date = new Date().toLocaleDateString('pt-BR', {day:'numeric', month:'long', year:'numeric'});
-  const userData = getUserData('geral');
+  const userData = getUserData(id);
   const watermark = buildPrintWatermark();
 
   const firstPage = `
