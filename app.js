@@ -62,9 +62,9 @@ const APP_PASSWORD_HASH = '0a94e7ea0d2d585c64b206eeadaf4327045bc5398774fe04d8b96
 // — pode deixar a linha antiga como está, ela só volta a ser usada se você
 // apagar/zerar este valor). Para trocar a senha, é a mesma coisa: rode
 // setAppPassword('a-senha-nova') e cole o resultado aqui.
-const APP_PASSWORD_STRONG = null;
-// Exemplo, depois de migrar:
+// Exemplo de formato, depois de migrar (ver setAppPassword() mais abaixo):
 // const APP_PASSWORD_STRONG = { salt: 'a1b2c3...', hash: 'd4e5f6...', iterations: 300000 };
+const APP_PASSWORD_STRONG = null;
 
 const AUTH_MAX_ATTEMPTS = 5;
 // A espera após 5 tentativas erradas agora dobra a cada novo "ciclo" de
@@ -76,31 +76,42 @@ const AUTH_MAX_ATTEMPTS = 5;
 const AUTH_LOCKOUT_BASE_MS = 30000;
 const AUTH_LOCKOUT_MAX_MS = 10 * 60 * 1000;
 
-// Tentativas erradas e o horário de término do lockout ficam guardados no
-// localStorage (não só em memória) para que dar F5 ou fechar/reabrir a aba
-// durante o lockout não zere a contagem — um dos poucos ganhos reais de
-// segurança que dá pra ter num app 100% client-side. Nenhuma senha é salva
-// aqui, só números.
+// Tentativas erradas, o horário de término do lockout e o "nível" atual do
+// backoff (quantos ciclos de bloqueio seguidos já aconteceram, para calcular
+// 30s, 1min, 2min, 4min...) ficam guardados no localStorage (não só em
+// memória) para que dar F5 ou fechar/reabrir a aba durante o lockout não
+// zere a contagem nem o backoff — um dos poucos ganhos reais de segurança
+// que dá pra ter num app 100% client-side. Nenhuma senha é salva aqui, só
+// números.
 const AUTH_STATE_KEY = 'argo_auth_lock_state';
 
 function readAuthState() {
   try {
     const raw = localStorage.getItem(AUTH_STATE_KEY);
-    if (!raw) return { attempts: 0, lockedUntil: 0 };
+    if (!raw) return { attempts: 0, lockedUntil: 0, level: 0 };
     const parsed = JSON.parse(raw);
     return {
       attempts: Number(parsed.attempts) || 0,
-      lockedUntil: Number(parsed.lockedUntil) || 0
+      lockedUntil: Number(parsed.lockedUntil) || 0,
+      level: Number(parsed.level) || 0
     };
   } catch (e) {
-    return { attempts: 0, lockedUntil: 0 };
+    return { attempts: 0, lockedUntil: 0, level: 0 };
   }
 }
 
-function writeAuthState(attempts, lockedUntil) {
+function writeAuthState(attempts, lockedUntil, level) {
   try {
-    localStorage.setItem(AUTH_STATE_KEY, JSON.stringify({ attempts, lockedUntil }));
+    localStorage.setItem(AUTH_STATE_KEY, JSON.stringify({ attempts, lockedUntil, level: level || 0 }));
   } catch (e) { /* localStorage indisponível (modo privado) - segue só em memória */ }
+}
+
+// Calcula a duração do próximo bloqueio a partir do "nível" de backoff
+// (0 = primeiro bloqueio, 1 = segundo ciclo seguido, etc.): 30s, 1min, 2min,
+// 4min, 8min, e a partir daí sempre o teto de 10min. level é sempre >= 0.
+function computeLockoutMs(level) {
+  const ms = AUTH_LOCKOUT_BASE_MS * Math.pow(2, level);
+  return Math.min(ms, AUTH_LOCKOUT_MAX_MS);
 }
 
 let authFailedAttempts = 0;
