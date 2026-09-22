@@ -45,6 +45,34 @@
 const APP_PASSWORD_HASH = '0a94e7ea0d2d585c64b206eeadaf4327045bc5398774fe04d8b9605b299e7431'; // para trocar a senha, rode setAppPassword('nova-senha') no console e cole o resultado aqui
 const AUTH_MAX_ATTEMPTS = 5;
 const AUTH_LOCKOUT_MS = 30000;
+
+// Tentativas erradas e o horário de término do lockout ficam guardados no
+// localStorage (não só em memória) para que dar F5 ou fechar/reabrir a aba
+// durante o lockout não zere a contagem — um dos poucos ganhos reais de
+// segurança que dá pra ter num app 100% client-side. Nenhuma senha é salva
+// aqui, só números.
+const AUTH_STATE_KEY = 'argo_auth_lock_state';
+
+function readAuthState() {
+  try {
+    const raw = localStorage.getItem(AUTH_STATE_KEY);
+    if (!raw) return { attempts: 0, lockedUntil: 0 };
+    const parsed = JSON.parse(raw);
+    return {
+      attempts: Number(parsed.attempts) || 0,
+      lockedUntil: Number(parsed.lockedUntil) || 0
+    };
+  } catch (e) {
+    return { attempts: 0, lockedUntil: 0 };
+  }
+}
+
+function writeAuthState(attempts, lockedUntil) {
+  try {
+    localStorage.setItem(AUTH_STATE_KEY, JSON.stringify({ attempts, lockedUntil }));
+  } catch (e) { /* localStorage indisponível (modo privado) - segue só em memória */ }
+}
+
 let authFailedAttempts = 0;
 let authLockedUntil = 0;
 
@@ -129,6 +157,18 @@ function initAuth() {
   const errorTextEl = document.getElementById('loginErrorText');
   const toggleBtn = document.getElementById('loginToggleVisibility');
   const submitBtn = form ? form.querySelector('button[type="submit"]') : null;
+  const submitTextEl = document.getElementById('loginSubmitText');
+  const submitIconEl = submitBtn ? submitBtn.querySelector('.login-submit-icon') : null;
+  const submitSpinnerEl = submitBtn ? submitBtn.querySelector('.login-submit-spinner') : null;
+  const capsHintEl = document.getElementById('loginCapsLockHint');
+
+  // Retoma um lockout em andamento (ex.: a pessoa deu F5 no meio da espera).
+  const savedState = readAuthState();
+  authFailedAttempts = savedState.attempts;
+  authLockedUntil = savedState.lockedUntil;
+
+  let lockoutTimer = null;
+  let isSubmitting = false;
 
   function showError(msg) {
     if (errorTextEl && msg) errorTextEl.textContent = msg;
@@ -138,29 +178,89 @@ function initAuth() {
     errorEl.classList.add('shake');
   }
 
+  function setLoading(loading) {
+    isSubmitting = loading;
+    if (submitBtn) submitBtn.disabled = loading;
+    if (submitIconEl) submitIconEl.hidden = loading;
+    if (submitSpinnerEl) submitSpinnerEl.hidden = !loading;
+    if (submitTextEl) submitTextEl.textContent = loading ? 'Verificando…' : 'Entrar';
+  }
+
+  // Enquanto durar o lockout: desabilita o campo e o botão, e atualiza a
+  // contagem regressiva a cada segundo (em vez de uma mensagem estática que
+  // não muda até a próxima tentativa). Ao zerar, libera o formulário de novo.
+  function tickLockout() {
+    const now = Date.now();
+    const remaining = authLockedUntil - now;
+    if (remaining <= 0) {
+      clearInterval(lockoutTimer);
+      lockoutTimer = null;
+      authLockedUntil = 0;
+      writeAuthState(0, 0);
+      errorEl.classList.remove('visible');
+      if (pwField) pwField.disabled = false;
+      if (submitBtn) submitBtn.disabled = false;
+      return;
+    }
+    const secs = Math.ceil(remaining / 1000);
+    if (errorTextEl) errorTextEl.textContent = `Muitas tentativas erradas. Aguarde ${secs}s.`;
+    errorEl.classList.add('visible');
+  }
+
+  function startLockoutCountdown() {
+    if (pwField) pwField.disabled = true;
+    if (submitBtn) submitBtn.disabled = true;
+    tickLockout();
+    if (lockoutTimer) clearInterval(lockoutTimer);
+    lockoutTimer = setInterval(tickLockout, 1000);
+  }
+
+  // Se a página foi recarregada em meio a um lockout salvo, retoma a
+  // contagem regressiva imediatamente.
+  if (authLockedUntil > Date.now()) {
+    startLockoutCountdown();
+  }
+
+  // Aviso de Caps Lock: getModifierState precisa de um evento de teclado
+  // (não dá pra checar isso "parado"), então observa enquanto a pessoa
+  // digita ou pressiona/solta qualquer tecla com o campo focado.
+  if (pwField && capsHintEl) {
+    const updateCapsHint = function(e) {
+      const isOn = typeof e.getModifierState === 'function' && e.getModifierState('CapsLock');
+      capsHintEl.classList.toggle('visible', !!isOn);
+    };
+    pwField.addEventListener('keydown', updateCapsHint);
+    pwField.addEventListener('keyup', updateCapsHint);
+    pwField.addEventListener('blur', () => capsHintEl.classList.remove('visible'));
+  }
+
   if (form) {
     form.addEventListener('submit', async function(e) {
       e.preventDefault();
+      if (isSubmitting) return;
 
       const now = Date.now();
       if (now < authLockedUntil) {
-        const secs = Math.ceil((authLockedUntil - now) / 1000);
-        showError(`Muitas tentativas erradas. Aguarde ${secs}s.`);
+        startLockoutCountdown();
         return;
       }
 
       const value = (pwField.value || '').trim();
       if (!value) return;
 
-      if (submitBtn) submitBtn.disabled = true;
+      setLoading(true);
       const valueHash = await sha256Hex(value);
-      if (submitBtn) submitBtn.disabled = false;
 
       if (valueHash === APP_PASSWORD_HASH) {
         authFailedAttempts = 0;
+        writeAuthState(0, 0);
         errorEl.classList.remove('visible');
+        if (capsHintEl) capsHintEl.classList.remove('visible');
         sessionEncKey = await deriveSessionKey(value);
         unlockApp();
+        // setLoading(false) não é necessário aqui: a tela de login some em
+        // unlockApp() e o botão só reaparece já resetado da próxima vez que
+        // lockApp() recriar a tela (ver initAuth acima).
         // Monta a lista de 374 fichas (render()) só DEPOIS que o navegador
         // já pintou a tela desbloqueada (ver comentário em unlockApp) —
         // antes, esse processamento pesado rodava competindo com o próprio
@@ -187,12 +287,15 @@ function initAuth() {
           });
         });
       } else {
+        setLoading(false);
         authFailedAttempts++;
         if (authFailedAttempts >= AUTH_MAX_ATTEMPTS) {
           authLockedUntil = Date.now() + AUTH_LOCKOUT_MS;
           authFailedAttempts = 0;
-          showError(`Muitas tentativas erradas. Aguarde ${Math.ceil(AUTH_LOCKOUT_MS/1000)}s.`);
+          writeAuthState(0, authLockedUntil);
+          startLockoutCountdown();
         } else {
+          writeAuthState(authFailedAttempts, 0);
           showError('Senha incorreta. Tente novamente.');
         }
         pwField.value = '';
