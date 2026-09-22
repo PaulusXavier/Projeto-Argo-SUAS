@@ -4457,6 +4457,23 @@
     color: var(--text-main);
   }
 
+  /* Aviso de Caps Lock ativado: some por padrão, aparece via JS (initAuth,
+     em app.js) enquanto o campo de senha está focado e a tecla está ativa.
+     Cor âmbar para não ser confundido com o estado de erro (vermelho). */
+  .login-capslock-hint {
+    display: none;
+    align-items: center;
+    gap: 0.35rem;
+    text-align: left;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: #B45309;
+    margin-top: 0.5rem;
+  }
+
+  .login-capslock-hint.visible { display: flex; }
+  .login-capslock-hint svg { flex-shrink: 0; }
+
   .login-error {
     display: none;
     align-items: center;
@@ -4483,6 +4500,15 @@
     40%, 60% { transform: translateX(4px); }
   }
 
+  /* Campo de senha travado durante o lockout por tentativas erradas
+     (ver AUTH_MAX_ATTEMPTS/AUTH_LOCKOUT_MS em app.js): fica visivelmente
+     inativo, para reforçar a contagem regressiva mostrada em #loginError. */
+  #loginPassword:disabled {
+    background: var(--border-ui);
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
   .login-submit {
     width: 100%;
     padding: 0.85rem;
@@ -4504,6 +4530,22 @@
   .login-submit:hover { background: var(--brand-primary-light); }
   .login-submit:active { transform: scale(0.98); }
   .login-submit:disabled { opacity: 0.7; cursor: default; }
+
+  /* Estado "verificando..." do botão Entrar: troca o ícone de seta pelo
+     spinner giratório enquanto o hash da senha é calculado (ver
+     data-loading em app.js). Some raro perceber em conexão rápida, mas
+     evita a sensação de clique "sem resposta" em aparelhos mais lentos. */
+  .login-submit-spinner {
+    animation: loginSpin 0.7s linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .login-submit-spinner { animation-duration: 1.6s; }
+  }
+
+  @keyframes loginSpin {
+    to { transform: rotate(360deg); }
+  }
 
   .login-trust-note {
     display: flex;
