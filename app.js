@@ -39,12 +39,42 @@
      com login). Em computador compartilhado, use "Apagar dados salvos
      neste dispositivo" no rodapé antes de emprestar/devolver o aparelho.
 
-   A senha do app não fica mais em texto puro no código: comparamos o hash
-   SHA-256 dela, e o campo tenta pouco a pouco travar após várias
-   tentativas erradas seguidas. */
-const APP_PASSWORD_HASH = '0a94e7ea0d2d585c64b206eeadaf4327045bc5398774fe04d8b9605b299e7431'; // para trocar a senha, rode setAppPassword('nova-senha') no console e cole o resultado aqui
+   A senha do app não fica mais em texto puro no código: comparamos um hash
+   dela, e o campo tenta pouco a pouco travar após várias tentativas
+   erradas seguidas.
+
+   REFORÇO DE SEGURANÇA (verificação da senha): quem tiver o arquivo deste
+   site pode tentar "adivinhar" a senha offline, testando hashes no próprio
+   computador sem passar pelo formulário (e sem lockout nenhum). Um único
+   SHA-256 é rápido demais para isso — uma GPU comum testa bilhões de
+   tentativas por segundo. Por isso a verificação agora prefere PBKDF2-
+   HMAC-SHA256 com muitas iterações (ver APP_PASSWORD_STRONG abaixo), que é
+   deliberadamente lento: cada tentativa custa dezenas de milhares de vezes
+   mais que um SHA-256 simples. Enquanto APP_PASSWORD_STRONG estiver vazio
+   (null), o app continua aceitando o formato antigo em APP_PASSWORD_HASH
+   normalmente — a migração é opcional e não quebra nada. */
+const APP_PASSWORD_HASH = '0a94e7ea0d2d585c64b206eeadaf4327045bc5398774fe04d8b9605b299e7431'; // formato ANTIGO (SHA-256 simples); usado só se APP_PASSWORD_STRONG estiver vazio
+
+// Formato NOVO e recomendado. Para migrar: abra o app, digite a senha ATUAL
+// para desbloquear, abra o console (F12) e rode:
+//   await setAppPassword('sua-senha-atual')
+// Cole aqui o objeto impresso (ele substitui, na prática, APP_PASSWORD_HASH
+// — pode deixar a linha antiga como está, ela só volta a ser usada se você
+// apagar/zerar este valor). Para trocar a senha, é a mesma coisa: rode
+// setAppPassword('a-senha-nova') e cole o resultado aqui.
+const APP_PASSWORD_STRONG = null;
+// Exemplo, depois de migrar:
+// const APP_PASSWORD_STRONG = { salt: 'a1b2c3...', hash: 'd4e5f6...', iterations: 300000 };
+
 const AUTH_MAX_ATTEMPTS = 5;
-const AUTH_LOCKOUT_MS = 30000;
+// A espera após 5 tentativas erradas agora dobra a cada novo "ciclo" de
+// bloqueio (30s, 1min, 2min, 4min...) até um teto de 10 minutos, em vez de
+// ser sempre 30s. Isso encarece bastante tentar forçar a senha repetindo o
+// ciclo várias vezes seguidas pelo próprio formulário. Continua sendo uma
+// proteção só local/no navegador (ver aviso no topo do arquivo) — por isso
+// a defesa mais forte de verdade é o PBKDF2 acima, não o lockout.
+const AUTH_LOCKOUT_BASE_MS = 30000;
+const AUTH_LOCKOUT_MAX_MS = 10 * 60 * 1000;
 
 // Tentativas erradas e o horário de término do lockout ficam guardados no
 // localStorage (não só em memória) para que dar F5 ou fechar/reabrir a aba
