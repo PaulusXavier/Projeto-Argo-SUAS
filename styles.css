@@ -4056,7 +4056,13 @@
     position: fixed;
     inset: 0;
     z-index: 5000;
-    background-color: var(--brand-secondary);
+    /* Fundo em degradê (em vez de cor chapada): mesma família de cores do
+       painel esquerdo, só que mais escura/comprimida, para o cartão de
+       login "flutuar" sobre uma cena, não sobre uma parede plana. */
+    background:
+      radial-gradient(1100px 620px at 14% -6%, rgba(0, 145, 194, 0.20), transparent 60%),
+      radial-gradient(900px 560px at 100% 108%, rgba(0, 151, 57, 0.16), transparent 62%),
+      linear-gradient(160deg, #0B1220 0%, #0F172A 46%, #0A1B22 100%);
     display: flex;
     align-items: center;
     align-items: safe center;
@@ -4075,7 +4081,7 @@
     position: fixed;
     inset: 48% 58% 0 0;
     z-index: 0;
-    background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20720%20150%22%20width%3D%22720%22%20height%3D%22150%22%3E%3Cpath%20d%3D%22M0%20102%20C45%2072%2045%20132%2090%20102%20C135%2072%20135%20132%20180%20102%20C225%2072%20225%20132%20270%20102%20C315%2072%20315%20132%20360%20102%20C405%2072%20405%20132%20450%20102%20C495%2072%20495%20132%20540%20102%20C585%2072%20585%20132%20630%20102%20C675%2072%20675%20132%20720%20102%22%20fill%3D%22none%22%20stroke%3D%22%2329ABE2%22%20stroke-width%3D%222.4%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.25%22%2F%3E%3Cpath%20d%3D%22M0%2070%20C45%2042%2045%2096%2090%2070%20C135%2042%20135%2096%20180%2070%20C225%2042%20225%2096%20270%2070%20C315%2042%20315%2096%20360%2070%20C405%2042%20405%2096%20450%2070%20C495%2042%20495%2096%20540%2070%20C585%2042%20585%2096%20630%2070%20C675%2042%20675%2096%20720%2070%22%20fill%3D%22none%22%20stroke%3D%22%230091C2%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.18%22%2F%3E%3Cpath%20d%3D%22M0%20126%20C45%20108%2045%20142%2090%20126%20C135%20108%20135%20142%20180%20126%20C225%20108%20225%20142%20270%20126%20C315%20108%20315%20142%20360%20126%20C405%20108%20405%20142%20450%20126%20C495%20108%20495%20142%20540%20126%20C585%20108%20585%20142%20630%20126%20C675%20108%20675%20142%20720%20126%22%20fill%3D%22none%22%20stroke%3D%22%23E8AC3D%22%20stroke-width%3D%221.3%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.1%22%2F%3E%3C%2Fsvg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20720%20150%22%20width%3D%22720%22%20height%3D%22150%22%3E%3Cpath%20d%3D%22M0%20102%20C45%2072%2045%20132%2090%20102%20C135%2072%20135%20132%20180%20102%20C225%2072%20225%20132%20270%20102%20C315%2072%20315%20132%20360%20102%20C405%2072%20405%20132%20450%20102%20C495%2072%20495%20132%20540%20102%20C585%2072%20585%20132%20630%20102%20C675%2072%20675%20132%20720%20102%22%20fill%3D%22none%22%20stroke%3D%22%2329ABE2%22%20stroke-width%3D%222.4%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.25%22%2F%3E%3Cpath%20d%3D%22M0%2070%20C45%2042%2045%2096%2090%2070%20C135%2042%20135%2096%20180%2070%20C225%2042%20225%2096%20270%2070%20C315%2042%20315%2096%20360%2070%20C405%2042%20405%2096%20450%2070%20C495%2042%20495%2096%20540%2070%20C585%2042%20585%2096%20630%2070%20C675%2042%20675%2096%20720%2070%22%20fill%3D%22none%22%20stroke%3D%22%230091C2%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.18%22%2F%3E%3Cpath%20d%3D%22M0%20126%20C45%20108%2045%20142%2090%20126%20C135%20108%20135%20142%20180%20126%20C225%20108%20225%20142%20270%20126%20C315%20108%20315%20142%20360%20126%20C405%20108%20405%20142%20450%20126%20C495%20108%20495%20142%20540%20126%20C585%20108%20585%20142%20630%20126%20C675%20108%20675%20142%20720%20126%22%20fill%3D%22none%22%20stroke%3D%22%23E8AC3D%22%20stroke-width%3D%221.3%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.14%22%2F%3E%3C%2Fsvg%3E");
     background-repeat: no-repeat;
     background-position: left bottom;
     background-size: 760px 158px;
@@ -4106,13 +4112,19 @@
     position: relative;
     z-index: 1;
     width: 100%;
-    max-width: 900px;
+    max-width: 940px;
     margin: auto;
     display: grid;
     grid-template-columns: 1fr 1.05fr;
-    border-radius: 20px;
+    border-radius: 24px;
     overflow: hidden;
-    box-shadow: 0 30px 70px -15px rgba(0, 0, 0, 0.55);
+    /* Sombra em duas camadas — uma ampla e suave, outra mais próxima e
+       tingida da cor da marca — para o cartão parecer flutuar sobre o
+       degradê de fundo em vez de só "ter uma sombra genérica". */
+    box-shadow:
+      0 40px 90px -20px rgba(2, 6, 16, 0.65),
+      0 14px 32px -12px rgba(0, 145, 194, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     background: var(--bg-card);
     animation: loginShellIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
   }
@@ -4136,15 +4148,18 @@
   /* ---- Painel esquerdo: identidade Argo SUAS ---- */
   .login-story {
     position: relative;
-    background: var(--brand-secondary);
+    /* Degradê diagonal (em vez de cor chapada) do azul-marinho da marca até
+       um verde petróleo bem escuro — ecoa as duas cores "frias" da bandeira
+       de Roraima sem competir com o texto branco por cima. */
+    background: linear-gradient(155deg, #101A2E 0%, #0F172A 45%, #0B2420 100%);
     color: #fff;
-    padding: 2.5rem 2.25rem;
+    padding: 2.75rem 2.25rem;
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
+    justify-content: flex-end;
     gap: 1.75rem;
     overflow: hidden;
-    min-height: 460px;
+    min-height: 480px;
   }
 
   @media (max-width: 760px) {
@@ -4152,6 +4167,7 @@
       min-height: unset;
       padding: 1.6rem 1.5rem;
       gap: 0.9rem;
+      justify-content: flex-start;
     }
   }
 
@@ -4172,8 +4188,8 @@
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(480px circle at 18% 15%, rgba(0, 145, 194, 0.3), transparent 62%),
-      radial-gradient(420px circle at 88% 92%, rgba(0, 151, 57, 0.22), transparent 60%);
+      radial-gradient(520px circle at 82% 10%, rgba(0, 145, 194, 0.32), transparent 62%),
+      radial-gradient(420px circle at 10% 100%, rgba(0, 151, 57, 0.2), transparent 60%);
     pointer-events: none;
   }
 
@@ -4183,130 +4199,121 @@
      Opacidade baixa e mix-blend-mode para não competir com o texto em primeiro plano. */
   .login-story-historic {
     position: absolute;
-    /* Área um pouco menor que o painel (9% de folga em cima e embaixo):
-       com background-size: cover o barco fica ~18% menor do que quando a
-       imagem cobria o painel inteiro. A máscara esmaece as bordas dessa área
-       para não aparecer o retângulo da foto sobre o fundo do painel. */
-    top: 9%; right: 0; bottom: 9%; left: 0;
-    -webkit-mask-image:
-      linear-gradient(to bottom, transparent 0, #000 16%, #000 84%, transparent 100%),
-      linear-gradient(to right, transparent 0, #000 6%, #000 94%, transparent 100%);
-    -webkit-mask-composite: source-in;
-    mask-image:
-      linear-gradient(to bottom, transparent 0, #000 16%, #000 84%, transparent 100%),
-      linear-gradient(to right, transparent 0, #000 6%, #000 94%, transparent 100%);
-    mask-composite: intersect;
+    /* Faixa alta do painel (o texto agora ancora embaixo, ver justify-content
+       em .login-story) — a foto do navio fica "no horizonte", como pano de
+       fundo do bloco de texto, em vez de espalhada pelo painel inteiro. */
+    top: 0; right: 0; left: 0; height: 58%;
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%);
     background-image: url('argo-navis-historico.jpg');
     background-size: cover;
-    background-position: center 38%;
+    background-position: center 32%;
     background-repeat: no-repeat;
-    opacity: 0.24;
+    opacity: 0.3;
     mix-blend-mode: luminosity;
     pointer-events: none;
   }
 
   @media (max-width: 760px) {
-    /* No celular o painel é largo e baixo (o barco é dimensionado pela
-       largura), então a folga vem dos lados. */
-    .login-story-historic { opacity: 0.16; top: 0; bottom: 0; left: 9%; right: 9%; }
+    .login-story-historic { opacity: 0.2; height: 100%; }
   }
 
-  /* Emblema do navio no painel de login: a mesma foto usada em .hero-ship-photo
-     e .login-story-historic, agora em destaque como medalhão, no lugar do
-     desenho vetorial da constelação usado antes. */
+  /* Selo do navio: a mesma foto usada em .hero-ship-photo e
+     .login-story-historic, em destaque como medalhão no canto superior
+     direito — o único "objeto" do painel, ancorando o olhar antes do texto
+     de baixo. Sem anel decorativo ao redor além de um fio fino dourado. */
   .login-story-emblem {
     position: absolute;
-    right: -8%;
-    bottom: -10%;
-    width: 220px;
-    height: 220px;
+    top: 1.75rem;
+    right: 1.75rem;
+    width: 76px;
+    height: 76px;
     border-radius: 50%;
     object-fit: cover;
     object-position: center 40%;
-    border: 3px solid rgba(255, 212, 0, 0.55);
-    box-shadow: 0 14px 34px -10px rgba(0, 0, 0, 0.6);
-    opacity: 0.85;
+    border: 2px solid rgba(255, 212, 0, 0.5);
+    box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.6);
+    opacity: 0.92;
     pointer-events: none;
   }
 
   @media (max-width: 760px) {
     .login-story-emblem {
-      width: 130px;
-      height: 130px;
-      right: -6%;
-      bottom: -14%;
-      opacity: 0.55;
+      width: 46px;
+      height: 46px;
+      top: 1.1rem;
+      right: 1.1rem;
     }
   }
 
   .login-story-top {
     position: relative;
     z-index: 1;
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.4rem;
+    align-self: flex-start;
+    padding: 0.35rem 0.7rem 0.35rem 0.6rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(6px);
   }
 
   .login-story-top svg { flex-shrink: 0; }
 
-  .login-story-ship-badge {
-    overflow: visible;
-    vertical-align: middle;
-    margin-right: 0.5rem;
-    flex-shrink: 0;
-  }
-  .login-story-ship-badge .argo-ship-sail { fill: #F1F5F9; }
-  .login-story-ship-badge .argo-ship-swirl { fill: #F1F5F9; }
-  .login-story-ship-badge .argo-ship-mast { stroke: #F1F5F9; stroke-width: 3; stroke-linecap: round; }
-  .login-story-ship-badge .argo-ship-oars { fill: #F1F5F9; stroke: #F1F5F9; }
-  .login-story-ship-badge .argo-ship-oars path { fill: none; stroke-width: 2.4; stroke-linecap: round; }
-
   .login-story-eyebrow {
     font-size: 0.68rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: #94A3B8;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: #CBD5E1;
   }
 
   .login-story-content { position: relative; z-index: 1; }
 
   .login-story-brand {
     display: flex;
-    align-items: center;
+    align-items: baseline;
+    flex-wrap: wrap;
     font-family: var(--font-serif);
     font-weight: 700;
     font-style: italic;
-    font-size: 2.1rem;
-    margin: 0 0 0.35rem;
+    font-size: 2.5rem;
+    margin: 0 0 0.5rem;
     letter-spacing: 0.01em;
     line-height: 1.1;
+    color: #fff;
   }
 
   .login-story-brand span {
+    display: inline-flex;
+    align-items: center;
     font-family: var(--font-sans);
     font-style: normal;
-    font-weight: 700;
-    font-size: 0.42em;
-    color: #29ABE2;
+    font-weight: 800;
+    font-size: 0.32em;
+    letter-spacing: 0.06em;
+    color: #0F172A;
+    background: linear-gradient(120deg, #FFD400, #E8AC3D);
+    padding: 0.32em 0.6em;
+    border-radius: 999px;
+    margin-left: 0.5em;
     vertical-align: middle;
-    margin-left: 0.3em;
   }
 
   .login-story-tagline {
     margin: 0 0 0.9rem;
-    font-size: 0.78rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #94A3B8;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: #7DD3C0;
   }
 
   .login-story-desc {
     margin: 0;
     max-width: 320px;
-    font-size: 0.85rem;
-    line-height: 1.6;
+    font-size: 0.87rem;
+    line-height: 1.65;
     color: #CBD5E1;
   }
 
@@ -4315,19 +4322,31 @@
     z-index: 1;
     display: flex;
     flex-wrap: wrap;
-    gap: 0.4rem;
-    margin-top: 1.1rem;
+    gap: 0.5rem;
+    margin-top: 1.35rem;
   }
 
   .login-story-tags span {
-    font-size: 0.68rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.7rem;
     font-weight: 600;
-    letter-spacing: 0.02em;
-    color: #CFE3DD;
-    background: rgba(255, 255, 255, 0.08);
+    letter-spacing: 0.01em;
+    color: #E2E8F0;
+    background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.14);
-    padding: 0.25rem 0.6rem;
-    border-radius: 5px;
+    padding: 0.32rem 0.7rem 0.32rem 0.6rem;
+    border-radius: 999px;
+  }
+
+  .login-story-tags span::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #29ABE2;
+    flex-shrink: 0;
   }
 
   @media (max-width: 760px) {
@@ -4342,35 +4361,40 @@
   .login-panel {
     position: relative;
     background: var(--bg-card);
-    padding: 2.75rem 2.5rem;
+    padding: 3rem 2.75rem;
     display: flex;
     flex-direction: column;
     justify-content: center;
   }
 
   @media (max-width: 760px) {
-    .login-panel { padding: 2rem 1.75rem 1.85rem; }
+    .login-panel { padding: 2.1rem 1.75rem 1.9rem; }
   }
 
   .login-eyebrow {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
+    align-self: flex-start;
     font-size: 0.68rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
+    font-weight: 700;
+    letter-spacing: 0.02em;
     color: var(--brand-primary);
-    margin-bottom: 0.65rem;
+    background: color-mix(in srgb, var(--brand-primary) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brand-primary) 25%, transparent);
+    padding: 0.32rem 0.7rem 0.32rem 0.6rem;
+    border-radius: 999px;
+    margin-bottom: 1rem;
   }
 
   .login-title {
     font-family: var(--font-serif);
     font-weight: 700;
-    font-size: 1.55rem;
+    font-size: 1.75rem;
     color: var(--text-main);
     margin: 0 0 0.7rem;
     line-height: 1.2;
+    letter-spacing: -0.01em;
   }
 
   .login-river {
@@ -4388,13 +4412,14 @@
   }
 
   .login-sub {
-    margin: 0 0 1.75rem;
-    font-size: 0.85rem;
+    margin: 0 0 2rem;
+    font-size: 0.88rem;
     color: var(--text-muted);
-    line-height: 1.5;
+    line-height: 1.55;
+    max-width: 34ch;
   }
 
-  .login-field { text-align: left; margin-bottom: 1rem; }
+  .login-field { text-align: left; margin-bottom: 1.1rem; }
 
   .login-field label {
     display: block;
@@ -4414,7 +4439,7 @@
 
   .login-input-wrapper svg {
     position: absolute;
-    left: 0.95rem;
+    left: 1rem;
     color: var(--text-muted);
     pointer-events: none;
   }
@@ -4423,8 +4448,8 @@
     width: 100%;
     background: var(--bg-main);
     border: 1.5px solid var(--border-ui);
-    padding: 0.8rem 2.7rem;
-    border-radius: 9px;
+    padding: 0.9rem 2.8rem;
+    border-radius: 12px;
     color: var(--text-main);
     font-family: var(--font-sans);
     font-size: 16px; /* >=16px evita o zoom automático do Safari iOS ao focar */
@@ -4433,23 +4458,24 @@
 
   #loginPassword:focus {
     border-color: var(--brand-primary);
-    box-shadow: 0 0 0 3px rgba(0, 145, 194, 0.15);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-primary) 16%, transparent);
     outline: none;
   }
 
   .login-toggle-visibility {
     position: absolute;
-    right: 0.5rem;
+    right: 0.55rem;
     background: none;
     border: none;
     color: var(--text-muted);
     cursor: pointer;
     width: 32px;
     height: 32px;
-    border-radius: 6px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: background 0.15s, color 0.15s;
   }
 
   .login-toggle-visibility:hover {
@@ -4468,6 +4494,9 @@
     font-size: 0.74rem;
     font-weight: 700;
     color: #B45309;
+    background: rgba(180, 83, 9, 0.09);
+    border-radius: 7px;
+    padding: 0.4rem 0.6rem;
     margin-top: 0.5rem;
   }
 
