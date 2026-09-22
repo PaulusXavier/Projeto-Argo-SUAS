@@ -1,6 +1,6 @@
 // Troque este número toda vez que publicar uma alteração no app.
 // É essa mudança de versão que dispara a atualização automática.
-const CACHE_VERSION = 'v75';
+const CACHE_VERSION = 'v76';
 const CACHE_NAME = `rede-apoio-bv-${CACHE_VERSION}`;
 
 // Cache separado e SEM número de versão, para conteúdo pesado de fora do
@@ -103,7 +103,7 @@ self.addEventListener('activate', event => {
 // tocar em "Atualizar", porque o Service Worker responderia na hora com a
 // cópia salva. Aqui a rede vem primeiro e o cache só entra como reserva
 // quando não há internet.
-const NETWORK_FIRST_HOSTS = ['www.gov.br', 'api.allorigins.win', 'corsproxy.io', 'firestore.googleapis.com'];
+const NETWORK_FIRST_HOSTS = ['www.gov.br', 'api.allorigins.win', 'corsproxy.io', 'api.codetabs.com', 'firestore.googleapis.com'];
 
 // Resposta de reserva para quando NEM a rede NEM o cache têm o recurso
 // pedido (ex.: primeiro acesso, offline). Sem isso, respondWith() recebia
