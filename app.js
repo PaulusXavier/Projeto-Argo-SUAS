@@ -496,7 +496,8 @@ function argoEnsureGreetingUI() {
         </div>
         <div class="argo-greeting-content">
           <p class="argo-greeting-date" id="argoGreetingDate"></p>
-          <h3 id="argoGreetingTitle">Olá! Eu sou o Argo</h3>
+          <h3 id="argoGreetingTitle">Olá! Meu nome é Argo</h3>
+          <p class="argo-greeting-intro" id="argoGreetingIntro"></p>
 
           <div class="argo-week" id="argoGreetingWeek"></div>
 
@@ -4372,12 +4373,73 @@ const NEWS_SOURCES = [
 const NEWS_CACHE_KEY = 'argo_noticias_mds_v2';
 const NEWS_MAX_ITEMS = 45;
 
-// Repassadores tentados em ordem. O primeiro é a tentativa direta.
+// Repassadores tentados em ordem (o primeiro é a tentativa direta, que quase
+// sempre falha por CORS — o portal gov.br não libera leitura por outros
+// sites — mas é mantida por segurança, caso isso mude). Um quarto repassador
+// (codetabs) foi somado aos dois já existentes: com só dois, bastava os dois
+// estarem fora do ar ao mesmo tempo (comum em proxies públicos gratuitos)
+// para a aba de notícias ficar sem nenhuma fonte funcionando.
 const NEWS_FETCHERS = [
   { label: 'direto', build: url => url },
   { label: 'allorigins', build: url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url) },
-  { label: 'corsproxy', build: url => 'https://corsproxy.io/?url=' + encodeURIComponent(url) }
+  { label: 'corsproxy', build: url => 'https://corsproxy.io/?url=' + encodeURIComponent(url) },
+  { label: 'codetabs', build: url => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url) }
 ];
+
+// Tempo máximo para UMA tentativa (direta ou por um repassador). Sem isso,
+// um repassador que não responde nem com erro — só "pendura" a conexão —
+// podia travar a aba de notícias por muito tempo, já que fetch() sozinho não
+// tem timeout embutido: ele só falha se a rede devolver um erro explícito.
+const NEWS_FETCH_TIMEOUT_MS = 8000;
+
+async function newsFetchWithTimeout(url) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), NEWS_FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(url, { cache: 'no-store', signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Lembra, por endereço de feed, qual repassador funcionou da última vez.
+// Sem isso, toda atualização repetia a tentativa direta (falha quase
+// garantida) e depois sempre o MESMO primeiro repassador da lista antes de
+// chegar ao que realmente está no ar — desperdiçando tempo e requisições a
+// cada busca. Guardado neste navegador; some se o usuário limpar os dados do
+// site, e nesse caso a ordem padrão acima volta a valer.
+const NEWS_FETCHER_PREF_KEY = 'argo_noticias_fetcher_pref_v1';
+
+function newsReadFetcherPrefs() {
+  try {
+    const raw = localStorage.getItem(NEWS_FETCHER_PREF_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function newsRememberFetcher(feedUrl, label) {
+  try {
+    const prefs = newsReadFetcherPrefs();
+    prefs[feedUrl] = label;
+    localStorage.setItem(NEWS_FETCHER_PREF_KEY, JSON.stringify(prefs));
+  } catch (e) {
+    // Sem espaço no navegador: só perde a preferência guardada, a busca
+    // continua funcionando normalmente na ordem padrão.
+  }
+}
+
+// Coloca o repassador que funcionou da última vez (para esse feed) em
+// primeiro lugar na fila de tentativas; os demais mantêm a ordem padrão.
+function newsOrderedFetchers(feedUrl) {
+  const preferred = newsReadFetcherPrefs()[feedUrl];
+  if (!preferred) return NEWS_FETCHERS;
+  const match = NEWS_FETCHERS.find(f => f.label === preferred);
+  if (!match) return NEWS_FETCHERS;
+  return [match, ...NEWS_FETCHERS.filter(f => f.label !== preferred)];
+}
 
 function newsReadCache() {
   try {
@@ -4427,18 +4489,24 @@ function newsParseFeed(xmlText, sourceId) {
     .slice(0, NEWS_MAX_ITEMS);
 }
 
-// Busca UM feed, tentando o acesso direto e depois os repassadores.
+// Busca UM feed, tentando o acesso direto e depois os repassadores (o que
+// funcionou da última vez para este feed entra primeiro na fila).
 async function newsFetchOne(feedUrl, sourceId) {
   let lastError = null;
-  for (const fetcher of NEWS_FETCHERS) {
+  for (const fetcher of newsOrderedFetchers(feedUrl)) {
     try {
-      const resp = await fetch(fetcher.build(feedUrl), { cache: 'no-store' });
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const resp = await newsFetchWithTimeout(fetcher.build(feedUrl));
+      if (!resp.ok) throw new Error('HTTP ' + resp.status + ' (' + fetcher.label + ')');
       const items = newsParseFeed(await resp.text(), sourceId);
-      if (items.length) return items;
-      throw new Error('feed vazio');
+      if (items.length) {
+        newsRememberFetcher(feedUrl, fetcher.label);
+        return items;
+      }
+      throw new Error('feed vazio (' + fetcher.label + ')');
     } catch (e) {
-      lastError = e;
+      lastError = e && e.name === 'AbortError'
+        ? new Error('tempo esgotado (' + fetcher.label + ')')
+        : e;
     }
   }
   throw lastError || new Error('falha ao buscar o feed');
@@ -4573,7 +4641,7 @@ function renderNewsCard() {
       <div class="card-body">
         <div class="tradutor-privacy">
           ${ICONS.info}
-          <span>A lista vem dos feeds públicos dos três ministérios (gov.br/mds, gov.br/mec e gov.br/saude). Como o portal não libera leitura direta por outros sites, o app pode buscar o mesmo endereço por um repassador público (allorigins/corsproxy) — só o endereço do feed é enviado, nenhum dado de atendido. A última lista baixada fica salva neste navegador e continua visível offline.</span>
+          <span>A lista vem dos feeds públicos dos três ministérios (gov.br/mds, gov.br/mec e gov.br/saude). Como o portal não libera leitura direta por outros sites, o app pode buscar o mesmo endereço por um repassador público (allorigins, corsproxy ou codetabs, nessa ordem de tentativa) — só o endereço do feed é enviado, nenhum dado de atendido. A última lista baixada fica salva neste navegador e continua visível offline.</span>
         </div>
 
         <div class="noticias-source-filter" role="group" aria-label="Filtrar por ministério">
