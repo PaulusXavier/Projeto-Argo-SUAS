@@ -4051,6 +4051,197 @@
     .external-resource-card { flex-direction: column; align-items: stretch; text-align: center; }
   }
 
+  /* ===================== Busca: grifo e aviso de correção ===================== */
+  .search-mark {
+    background: rgba(245, 197, 24, 0.38);
+    color: inherit;
+    border-radius: 3px;
+    padding: 0 1px;
+  }
+
+  .search-hint {
+    margin-top: 0.85rem;
+    padding: 0.65rem 1rem;
+    border: 1px solid var(--border-ui);
+    border-left: 4px solid var(--brand-primary);
+    border-radius: 8px;
+    background: var(--bg-card);
+    color: var(--text-main);
+    font-size: 0.85rem;
+    line-height: 1.45;
+  }
+
+  .search-hint[hidden] { display: none; }
+
+  /* ===================== Busca: sugestões enquanto digita ===================== */
+  .search-suggest {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 6px);
+    z-index: 60;
+    margin: 0;
+    padding: 0.35rem;
+    list-style: none;
+    background: var(--bg-card);
+    border: 1px solid var(--border-ui);
+    border-radius: 10px;
+    box-shadow: var(--shadow-md);
+    max-height: min(60vh, 380px);
+    overflow-y: auto;
+  }
+
+  .search-suggest[hidden] { display: none; }
+
+  .search-suggest-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 0.7rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.92rem;
+    color: var(--text-main);
+  }
+
+  .search-suggest-item:hover,
+  .search-suggest-item[aria-selected="true"] { background: rgba(0, 145, 194, 0.12); }
+
+  .search-suggest-item .ss-icon { display: inline-flex; flex-shrink: 0; color: var(--brand-primary); }
+  .search-suggest-item .ss-main { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .search-suggest-item .ss-sub { flex: 0 1 40%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.72rem; font-weight: 700; color: var(--text-muted); }
+
+  /* ===================== Modo destaque (aba em tela cheia) =====================
+     Ao clicar numa aba, o #mainContent (.content-area) sobe para uma camada
+     fixa que cobre a tela inteira, com uma barra própria no topo (título,
+     busca e botão "Fechar"). Fechar o destaque só remove a classe
+     body.tab-focus — nada é remontado, então a rolagem, o texto digitado e o
+     estado do painel continuam como estavam. */
+  .tab-focus-bar { display: none; }
+
+  body.tab-focus { overflow: hidden; }
+
+  body.tab-focus .content-area {
+    --tf-pad: max(clamp(0.75rem, 3vw, 2rem), env(safe-area-inset-left), env(safe-area-inset-right));
+    position: fixed;
+    inset: 0;
+    z-index: 950; /* acima da barra lateral (300); abaixo do cartão de abertura (1200), avisos (1300) e login (5000). As janelas da agenda (999) ficam DENTRO desta camada. */
+    box-sizing: border-box;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    background: var(--bg-main);
+    padding: 0 var(--tf-pad) calc(2rem + env(safe-area-inset-bottom));
+    animation: tabFocusIn 0.18s var(--ease);
+  }
+
+  @keyframes tabFocusIn { from { opacity: 0; } to { opacity: 1; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    body.tab-focus .content-area { animation: none; }
+  }
+
+  body.tab-focus .tab-focus-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.6rem 0.9rem;
+    position: sticky;
+    top: 0;
+    z-index: 500;
+    margin: 0 calc(-1 * var(--tf-pad));
+    padding: calc(0.65rem + env(safe-area-inset-top)) var(--tf-pad) 0.65rem;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-ui);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .tab-focus-title {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex: 1 1 200px;
+    min-width: 0;
+    color: var(--brand-primary);
+  }
+
+  .tab-focus-icon { display: inline-flex; flex-shrink: 0; }
+  .tab-focus-icon:empty { display: none; }
+  .tab-focus-icon svg { width: 20px; height: 20px; }
+
+  .tab-focus-name {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tab-focus-search { flex: 0 1 380px; min-width: 0; position: relative; }
+  .tab-focus-search .search-input { width: 100%; box-sizing: border-box; padding: 0.6rem 1rem; font-size: 0.95rem; }
+
+  .tab-focus-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 44px;
+    padding: 0 1.1rem;
+    border-radius: 999px;
+    border: 1.5px solid var(--border-ui);
+    background: var(--bg-main);
+    color: var(--text-main);
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: border-color 0.2s var(--ease), color 0.2s var(--ease), background 0.2s var(--ease);
+  }
+
+  .tab-focus-close:hover { border-color: var(--brand-primary); color: var(--brand-primary); }
+  .tab-focus-close:active { transform: translateY(1px); }
+  .tab-focus-close:focus-visible { outline: 3px solid rgba(0, 145, 194, 0.45); outline-offset: 2px; }
+
+  @media (max-width: 640px) {
+    .tab-focus-title { flex-basis: 0; }
+    body.tab-focus .tab-focus-search { order: 3; flex: 1 1 100%; }
+  }
+
+  /* Em tela cheia o conteúdo ocupa a largura toda (com um teto para não
+     esticar demais em monitores enormes) e some o que era só "vitrine". */
+  body.tab-focus .content-area > :not(.tab-focus-bar) {
+    max-width: 1600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  body.tab-focus .content-area .external-resource-card,
+  body.tab-focus .category-toggle-btn { display: none !important; }
+
+  /* O sentinela da rolagem infinita agora fica dentro de um contêiner com
+     rolagem própria (que recorta o rootMargin do IntersectionObserver).
+     Esta faixa sobreposta às últimas ~1400px da lista devolve a
+     pré-carga: os próximos cartões entram antes de o fim aparecer. */
+  body.tab-focus #gridSentinel { height: 1400px !important; margin-top: -1400px; }
+
+  /* O mapa aproveita a altura extra da tela cheia. */
+  @media (min-width: 861px) {
+    body.tab-focus .mapa-rede-layout #mapaRedeMapContainer,
+    body.tab-focus .mapa-rede-detail-panel { height: max(420px, calc(100vh - 17rem)); }
+  }
+
+  /* Camadas internas do Leaflet (z-index até 1000) ficam presas ao mapa e
+     não passam por cima da barra do destaque. */
+  #mapaRedeMapContainer { isolation: isolate; }
+
+  @media print {
+    body.tab-focus { overflow: visible !important; }
+  }
+
   /* ===================== Tela de Login ===================== */
   #loginScreen {
     position: fixed;
