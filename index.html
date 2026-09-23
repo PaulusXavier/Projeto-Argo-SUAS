@@ -528,6 +528,22 @@
   </aside>
 
   <main class="content-area" id="mainContent">
+  <!-- Barra do modo destaque: só aparece quando uma aba está em tela cheia
+       (body.tab-focus). Ver openTabFocus()/closeTabFocus() em app.js. -->
+  <div class="tab-focus-bar" id="tabFocusBar">
+    <div class="tab-focus-title">
+      <span class="tab-focus-icon" id="tabFocusIcon" aria-hidden="true"></span>
+      <h2 class="tab-focus-name" id="tabFocusName"></h2>
+    </div>
+    <div class="tab-focus-search" id="tabFocusSearchWrap">
+      <label for="tabFocusSearch" class="sr-only">Pesquisar unidade, bairro ou serviço</label>
+      <input type="search" id="tabFocusSearch" class="search-input" placeholder="Pesquisar nesta aba..." autocomplete="off">
+    </div>
+    <button type="button" class="tab-focus-close" id="tabFocusClose" aria-label="Fechar destaque e voltar à tela normal" title="Fechar destaque (Esc)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      <span>Fechar</span>
+    </button>
+  </div>
   <div style="margin-top: 1.5rem; display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
     <button class="category-toggle-btn" id="categoryToggleBtn" type="button" aria-expanded="false" aria-controls="categorySidebar">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/></svg>
@@ -561,6 +577,7 @@
   </div>
 
   <div class="category-info-banner" id="categoryInfoBanner" style="display:none;"></div>
+  <div class="search-hint" id="searchHint" role="status" aria-live="polite" hidden></div>
   <div class="equipment-grid" id="grid" aria-live="polite"></div>
   </main>
 
