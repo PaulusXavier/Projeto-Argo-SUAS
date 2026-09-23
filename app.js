@@ -1198,7 +1198,8 @@ const ICONS = {
   copy: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
   check: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>',
   plus: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
-  trashSmall: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>'
+  trashSmall: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>',
+  rocket: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>'
 };
 
 // ---------------------------------------------------------------------
@@ -2995,7 +2996,8 @@ function render() {
     tradutor: { rootId: 'tradutorInput',     render: renderTranslatorCard, init: initTranslatorPanel },
     noticias: { rootId: 'noticiasList',      render: renderNewsCard,       init: initNewsPanel },
     mapa:     { rootId: 'mapaRedeMapContainer', render: renderMapCard,     init: initMapPanel },
-    agenda:   { rootId: 'agendaCalendarGrid', render: renderAgendaCard,    init: initAgendaPanel }
+    agenda:   { rootId: 'agendaCalendarGrid', render: renderAgendaCard,    init: initAgendaPanel },
+    appsext:  { rootId: 'appsExternosGrid',  render: renderExternalAppsCard, init: initExternalAppsPanel }
   };
 
   if (PANEL_TABS[cat]) {
@@ -4363,6 +4365,82 @@ let tradutorCustomPhrases = [];
 // obrigando o técnico a marcar de novo a cada atendimento. Agora ficam
 // salvas neste aparelho.
 const TRADUTOR_SPEECH_PREFS_KEY = 'argo_tradutor_speech_prefs';
+
+// ---------------------------------------------------------------------
+// Painel "Aplicativos": atalhos para os demais aplicativos do
+// autor (Paulo Xavier), cada um hospedado em seu próprio endereço fora
+// deste projeto, com login e sincronização independentes. São só links
+// externos (abrem em nova aba) — nada é embutido/carregado aqui dentro,
+// então não há estado para preservar e o "init" não precisa fazer nada.
+// Para adicionar, remover ou editar um app da lista, mexa só no array
+// EXTERNAL_APPS abaixo.
+// ---------------------------------------------------------------------
+const EXTERNAL_APPS = [
+  {
+    name: 'Toth — Caderno de Campo',
+    desc: 'Diário de campo com registro de atendimentos individuais, visitas domiciliares e técnicas, grupos/oficinas e acompanhamento — exporta em PDF, Word, CSV ou JSON.',
+    url: 'https://paulusxavier.github.io/Toth/',
+    icon: 'form'
+  },
+  {
+    name: 'Umbrela — PAIF/PAF',
+    desc: 'Plano de Acompanhamento Familiar (PAIF/PAF): registros, prioridades e gráficos de acompanhamento das famílias em atendimento.',
+    url: 'https://paulusxavier.github.io/Projeto-Umbrela-PAIF/',
+    icon: 'team'
+  },
+  {
+    name: 'Anona — Condicionalidades 2026',
+    desc: 'Ferramenta independente de apoio ao acompanhamento de condicionalidades do Bolsa Família: calendário, planilhas do território volante, relatórios e recurso.',
+    url: 'https://paulusxavier.github.io/Anona/',
+    icon: 'cash'
+  },
+  {
+    name: 'Bloco de Notas',
+    desc: 'Anotações pessoais rápidas, sincronizadas por conta e acessíveis em qualquer aparelho.',
+    url: 'https://paulusxavier.github.io/Bloco-de-Notas-PX-/index.html',
+    icon: 'pen'
+  }
+];
+
+function renderExternalAppsCard() {
+  const tiles = EXTERNAL_APPS.map(app => `
+    <a class="appsext-tile" href="${app.url}" target="_blank" rel="noopener noreferrer">
+      <span class="appsext-icon" aria-hidden="true">${ICONS[app.icon] || ICONS.external}</span>
+      <span class="appsext-text">
+        <span class="appsext-title">${app.name}</span>
+        <span class="appsext-desc">${app.desc}</span>
+        <span class="appsext-meta">Abre em outra aba</span>
+      </span>
+      <span class="cras-link-arrow" aria-hidden="true">${ICONS.external}</span>
+    </a>
+  `).join('');
+
+  return `
+    <div class="tech-card appsext-card" id="appsExternosGrid">
+      <div class="card-top">
+        <div style="display:flex; align-items:center; gap:0.55rem;">
+          <span class="appsext-badge">${ICONS.rocket}</span>
+          <h2 style="margin:0;">Aplicativos</h2>
+        </div>
+        <span class="subtitle">🚀 Demais ferramentas do autor, cada uma em seu próprio endereço</span>
+      </div>
+      <div class="card-body">
+        <div class="appsext-privacy">
+          ${ICONS.info}
+          <span>Estes aplicativos são projetos independentes do mesmo autor, hospedados fora do Argo SUAS. Cada um abre em uma nova aba, com login e sincronização próprios.</span>
+        </div>
+        <div class="appsext-grid">
+          ${tiles}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Painel só de links externos: não há nada para inicializar (sem
+// formulário, upload ou estado próprio), mas a função existe para seguir
+// o mesmo contrato { rootId, render, init } dos demais PANEL_TABS.
+function initExternalAppsPanel() {}
 
 function renderTranslatorCard() {
   const langOptions = (selected) => Object.entries(TRADUTOR_LANGS).map(([code, l]) =>
