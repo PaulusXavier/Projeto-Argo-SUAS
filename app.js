@@ -1059,7 +1059,7 @@ function collectSensitiveData() {
 function clearAllLocalData() {
   const toRemove = Object.keys(collectSensitiveData());
   if (toRemove.length === 0) {
-    alert('Não há dados sensíveis salvos neste navegador.');
+    argoAviso('Não há dados sensíveis salvos neste navegador.', 'notfound');
     return;
   }
   const ok = confirm(`Isso vai apagar ${toRemove.length} item(ns) salvos neste navegador (nomes, endereços, NIS, anotações e anexos de usuários atendidos).\n\nDica: se ainda não fez backup, use "Backup de anotações" no rodapé antes de apagar. Esta ação não pode ser desfeita.\n\nDeseja continuar?`);
@@ -1069,7 +1069,7 @@ function clearAllLocalData() {
   // dados antes de emprestar/devolver o computador espera que a próxima
   // pessoa a abrir o Argo caia na tela de senha, não direto no diretório.
   rememberSessionClear();
-  alert('Dados sensíveis apagados deste dispositivo.');
+  argoAviso('Dados sensíveis apagados deste dispositivo.', 'success');
   if (typeof render === 'function') render();
 }
 
@@ -1251,7 +1251,7 @@ function toggleProximitySort() {
   }
 
   if (!navigator.geolocation) {
-    alert('Este navegador não permite obter a localização atual.');
+    argoAviso('Este navegador não permite obter a localização atual.', 'error');
     return;
   }
 
@@ -1281,7 +1281,7 @@ function toggleProximitySort() {
   }, () => {
     if (btn) btn.disabled = false;
     setProximityButtonLabel('Ordenar por proximidade');
-    alert('Não foi possível obter sua localização. Verifique se a permissão de localização foi concedida ao navegador.');
+    argoAviso('Não foi possível obter sua localização. Verifique se a permissão de localização foi concedida ao navegador.', 'error');
   }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
 }
 
@@ -2860,14 +2860,11 @@ function render() {
   document.getElementById('counter').textContent = filtered.length;
 
   if (filtered.length === 0) {
-    grid.innerHTML = `
-      <div class="empty-state">
-        <span class="empty-state-icon" aria-hidden="true">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        </span>
-        <strong>Nenhum registro encontrado</strong>
-        Tente ajustar os termos da busca ou selecionar outra categoria.
-      </div>`;
+    grid.innerHTML = `<div class="empty-state" style="padding:0">${
+      (typeof ArgoMascot !== 'undefined')
+        ? ArgoMascot.emptyStateHTML('Nenhum registro encontrado', { type: 'notfound', hint: 'Tente ajustar os termos da busca ou selecionar outra categoria.' })
+        : '<strong style="display:block;padding:3.5rem 1.5rem">Nenhum registro encontrado</strong>'
+    }</div>`;
     return;
   }
 
@@ -5217,7 +5214,7 @@ function mapaRedeShowUserMarker(L, lat, lon) {
 function mapaRedeLocateMe() {
   const btn = document.getElementById('mapaRedeLocateBtn');
   if (!navigator.geolocation) {
-    alert('Este navegador não permite obter a localização atual.');
+    argoAviso('Este navegador não permite obter a localização atual.', 'error');
     return;
   }
   if (btn) btn.disabled = true;
@@ -5436,7 +5433,7 @@ function renderNotesCard() {
 function shareGeneralNote(id) {
   const note = getNoteContent(id).trim();
   if (!note) {
-    alert('Escreva uma anotação antes de compartilhar.');
+    argoAviso('Escreva uma anotação antes de compartilhar.', 'info');
     return;
   }
   const notes = getNotesIndex();
@@ -6397,11 +6394,11 @@ function exportData() {
   const data = collectSensitiveData();
   const keys = Object.keys(data);
   if (keys.length === 0) {
-    alert('Não há anotações, dados de encaminhamento ou anexos salvos neste navegador para fazer backup.');
+    argoAviso('Não há anotações, dados de encaminhamento ou anexos salvos neste navegador para fazer backup.', 'notfound');
     return;
   }
   if (!sessionEncKey) {
-    alert('O app precisa estar desbloqueado (senha digitada) para gerar um backup cifrado. Faça login e tente novamente.');
+    argoAviso('O app precisa estar desbloqueado (senha digitada) para gerar um backup cifrado. Faça login e tente novamente.', 'error');
     return;
   }
   const payload = {
@@ -6458,10 +6455,10 @@ function importData(fileInput) {
       const ok = confirm(`Este arquivo contém ${keys.length} item(ns) de backup (anotações, dados de encaminhamento e/ou anexos).\n\nImportar agora vai SOBRESCREVER, neste navegador, qualquer dado já salvo com o mesmo identificador. Deseja continuar?`);
       if (!ok) return;
       keys.forEach(k => safeStorage.set(k, dados[k]));
-      alert(`Backup importado com sucesso: ${keys.length} item(ns) restaurado(s).`);
+      argoAviso(`Backup importado com sucesso: ${keys.length} item(ns) restaurado(s).`, 'success');
       if (typeof render === 'function') render();
     } catch (err) {
-      alert('Não foi possível importar este arquivo. Verifique se é um backup gerado pelo próprio Argo SUAS (botão "Backup de anotações") e se a senha digitada no login é a mesma usada quando o backup foi feito.');
+      argoAviso('Não foi possível importar este arquivo. Verifique se é um backup gerado pelo próprio Argo SUAS (botão "Backup de anotações") e se a senha digitada no login é a mesma usada quando o backup foi feito.', 'error');
     } finally {
       fileInput.value = '';
     }
@@ -6897,23 +6894,24 @@ function agendaJoinPt(parts) {
 
 // ======= Avisos rápidos (substituem os alert() da agenda) =======
 
-let agendaToastTimer = null;
+// Aviso com o mascote Argo (argo-mascot.js). Se o script não carregar,
+// cai para o alert() nativo para o usuário nunca ficar sem a mensagem.
+// type: 'info' | 'error' | 'notfound' | 'success'
+function argoAviso(msg, type, extra) {
+  if (typeof ArgoMascot !== 'undefined') {
+    const opts = Object.assign({ type: type || 'info' }, extra || {});
+    if (!opts.duration && String(msg).length > 90) opts.duration = 9000;
+    ArgoMascot.notify(msg, opts);
+  } else {
+    alert(msg);
+  }
+}
+
 function agendaToast(msg, kind) {
   agendaEnsureModals();
-  let el = document.getElementById('agendaToast');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'agendaToast';
-    el.className = 'agenda-toast';
-    el.setAttribute('role', 'status');
-    el.setAttribute('aria-live', 'polite');
-    document.body.appendChild(el);
-  }
-  el.textContent = msg;
-  el.dataset.kind = kind || 'info';
-  el.classList.add('visible');
-  clearTimeout(agendaToastTimer);
-  agendaToastTimer = setTimeout(() => el.classList.remove('visible'), kind === 'error' ? 6500 : 4200);
+  let type = kind === 'error' ? 'error' : 'info';
+  if (type === 'info' && /^(Anotação (guardada|apagada)|Código copiado)/.test(msg)) type = 'success';
+  argoAviso(msg, type);
 }
 
 // ======= Card da agenda =======
