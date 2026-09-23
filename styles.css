@@ -4503,6 +4503,70 @@
   .login-capslock-hint.visible { display: flex; }
   .login-capslock-hint svg { flex-shrink: 0; }
 
+  /* Linha "manter conectado" + "esqueci a senha", entre o campo de senha e
+     a mensagem de erro. Ver initAuth (app.js) para o comportamento de cada
+     um: o checkbox guarda a chave de sessão em sessionStorage (some ao
+     fechar a aba, com expiração de 12h) e o link só abre um aviso — não há
+     recuperação automática de senha (ver .login-forgot-panel abaixo). */
+  .login-options-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.6rem 0.9rem;
+    margin: -0.2rem 0 1.1rem;
+  }
+
+  .login-remember {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .login-remember input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    margin: 0;
+    accent-color: var(--brand-primary);
+    cursor: pointer;
+  }
+
+  .login-forgot-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: var(--font-sans);
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--brand-primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+
+  .login-forgot-link:hover { color: var(--brand-primary-light); }
+
+  .login-forgot-panel {
+    text-align: left;
+    font-size: 0.78rem;
+    line-height: 1.55;
+    color: var(--text-muted);
+    background: color-mix(in srgb, var(--brand-primary) 7%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brand-primary) 18%, transparent);
+    border-radius: 10px;
+    padding: 0.75rem 0.9rem;
+    margin: -0.2rem 0 1.1rem;
+  }
+
+  .login-forgot-panel p { margin: 0 0 0.5rem; }
+  .login-forgot-panel p:last-child { margin-bottom: 0; }
+  .login-forgot-panel strong { color: var(--text-main); }
+  .login-forgot-panel[hidden] { display: none; }
+
   .login-error {
     display: none;
     align-items: center;
