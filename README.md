@@ -12,6 +12,7 @@ Um diretório técnico instalável (PWA) dos equipamentos socioassistenciais e d
 - Ficha de encaminhamento técnico para impressão, com dados da unidade e conduta profissional;
 - Anexo de fotos e PDFs à ficha de encaminhamento;
 - Aba **"Unificar / Converter PDF"** (Ferramentas de Arquivo): unificar até 20 arquivos entre PDFs e fotos JPG/PNG (até 50 MB no total), com escolha das páginas de cada PDF, giro de 90° e correção automática da orientação de fotos de celular; converter PDF ⇄ Word e PDF ⇄ JPG — tudo processado no próprio navegador, sem enviar arquivos a servidor algum;
+- Aba **"Aplicativos"**: atalhos para os demais aplicativos do autor (Toth — Caderno de Campo, Umbrela — PAIF/PAF, Anona — Condicionalidades e Bloco de Notas), cada um hospedado em seu próprio endereço e aberto em nova aba, com login e sincronização independentes;
 - Funcionamento offline via Service Worker, com ícones e manifesto para instalação no celular/desktop (as ferramentas de PDF acima baixam pequenas bibliotecas do cdnjs.cloudflare.com na primeira vez que são usadas, então essa aba precisa de internet nesse primeiro uso).
 
 **Arquivos:** `index.html`, `manifest.json`, `sw.js`, `favicon.ico`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`
