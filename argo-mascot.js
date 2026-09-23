@@ -46,54 +46,86 @@
   // Mascote (barco Argo) — casco/mastro compartilhados, "rosto" e bandeira
   // variam por humor (mood) conforme o tipo de aviso.
   // ---------------------------------------------------------------------
+  function normalizeType(t) {
+    return (t && Object.prototype.hasOwnProperty.call(THEME, t)) ? t : 'info';
+  }
+
   function boatSVG(mood, size) {
-    mood = mood || 'info';
+    mood = normalizeType(mood);
     size = size || 40;
-    var accent = (THEME[mood] || THEME.info).color;
+    var accent = THEME[mood].color;
+    var INK = '#0F172A', GOLD = '#F2B84B', CREAM = '#FFF8EC', BLUSH = '#FF8FA3';
 
-    // Bandeirola no topo do mastro (muda de cor/símbolo por humor)
-    var flagSymbol = {
-      info: '<text x="63" y="30" font-size="11" font-weight="700" fill="#fff" text-anchor="middle" font-family="inherit">★</text>',
-      error: '<text x="63" y="31" font-size="12" font-weight="800" fill="#fff" text-anchor="middle" font-family="inherit">!</text>',
-      notfound: '<text x="63" y="31" font-size="11" font-weight="800" fill="#fff" text-anchor="middle" font-family="inherit">?</text>',
-      success: '<text x="63" y="30" font-size="10" font-weight="800" fill="#fff" text-anchor="middle" font-family="inherit">✓</text>'
-    }[mood];
+    function eye(cx, cy) { // olho grande e brilhante
+      return '<ellipse cx="' + cx + '" cy="' + cy + '" rx="6.5" ry="7.5" fill="' + INK + '"/>' +
+             '<circle cx="' + (cx + 2) + '" cy="' + (cy - 3) + '" r="2.4" fill="#fff"/>' +
+             '<circle cx="' + (cx - 2) + '" cy="' + (cy + 3) + '" r="1.1" fill="#fff" opacity=".85"/>';
+    }
+    function happyEye(cx, cy) { // olho fechado sorrindo ^
+      return '<path d="M' + (cx - 6) + ' ' + (cy + 3) + ' Q' + cx + ' ' + (cy - 7) + ' ' + (cx + 6) + ' ' + (cy + 3) +
+             '" fill="none" stroke="' + INK + '" stroke-width="3" stroke-linecap="round"/>';
+    }
+    function stroke(d, w) {
+      return '<path d="' + d + '" fill="none" stroke="' + INK + '" stroke-width="' + (w || 2.4) + '" stroke-linecap="round" stroke-linejoin="round"/>';
+    }
 
-    // Rosto do carneiro (proa grega) — olho e sobrancelha variam por humor
+    // Expressão do rostinho no casco, por humor
     var face = {
-      info: '<circle cx="106" cy="49" r="2.2" fill="#0F172A"/>',
-      error: '<circle cx="106" cy="50" r="2" fill="#0F172A"/><path d="M102.5 45.5 L109 44.5" stroke="#0F172A" stroke-width="1.6" stroke-linecap="round"/>',
-      notfound: '<circle cx="107" cy="48" r="2" fill="#0F172A"/><path d="M103 44.5 Q106.5 42 110 44.5" stroke="#0F172A" stroke-width="1.6" fill="none" stroke-linecap="round"/>',
-      success: '<path d="M102 49 Q106 52.5 110 49" stroke="#0F172A" stroke-width="1.8" fill="none" stroke-linecap="round"/>'
+      info:
+        eye(46, 79) + eye(82, 79) + stroke('M57 89 Q64 96 71 89'),
+      success:
+        happyEye(46, 79) + happyEye(82, 79) +
+        '<path d="M56 87 Q64 101 72 87 Z" fill="' + INK + '"/>' +
+        '<path d="M60 94 Q64 98 68 94 Q64 91 60 94 Z" fill="' + BLUSH + '"/>',
+      error:
+        eye(46, 80) + eye(82, 80) +
+        stroke('M39 68 L53 72', 2.6) + stroke('M89 68 L75 72', 2.6) +
+        stroke('M58 94 Q64 87 70 94') +
+        '<path d="M101 64 Q106 72 101 77 Q96 72 101 64 Z" fill="#7DD3FC" stroke="#38BDF8" stroke-width="1"/>',
+      notfound:
+        eye(47, 79) + eye(83, 79) +
+        stroke('M39 69 Q46 65 53 69', 2.6) +
+        '<ellipse cx="64" cy="91" rx="3.2" ry="3.8" fill="' + INK + '"/>'
     }[mood];
+
+    var flagSymbol = {
+      info: '★', error: '!', notfound: '?', success: '✓'
+    }[mood];
+
+    // Brilhinhos extras no humor de sucesso
+    var sparkles = mood === 'success'
+      ? '<path d="M104 22 l2.2 5.8 5.8 2.2 -5.8 2.2 -2.2 5.8 -2.2 -5.8 -5.8 -2.2 5.8 -2.2 Z" fill="' + GOLD + '"/>' +
+        '<path d="M16 34 l1.6 4.2 4.2 1.6 -4.2 1.6 -1.6 4.2 -1.6 -4.2 -4.2 -1.6 4.2 -1.6 Z" fill="' + GOLD + '"/>'
+      : '';
 
     var bob = mood === 'error' ? '' : ' argo-mascot-bob';
 
     return (
       '<svg class="argo-mascot-icon' + bob + '" width="' + size + '" height="' + size +
       '" viewBox="0 0 130 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">' +
-        // onda
-        '<path d="M6 96 Q22 88 38 96 T70 96 T102 96 T126 96" stroke="' + accent + '" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.55"/>' +
-        // casco
-        '<path d="M14 84 Q10 70 20 66 L96 62 Q108 62 100 76 L88 90 Q70 96 40 94 Q20 92 14 84 Z" fill="#0F172A" stroke="' + accent + '" stroke-width="2.5"/>' +
-        // escudos no casco
-        '<circle cx="34" cy="79" r="4" fill="none" stroke="' + accent + '" stroke-width="1.6"/>' +
-        '<circle cx="48" cy="80" r="4" fill="none" stroke="' + accent + '" stroke-width="1.6"/>' +
-        '<circle cx="62" cy="80" r="4" fill="none" stroke="' + accent + '" stroke-width="1.6"/>' +
-        // voluta encaracolada na popa (traço grego clássico)
-        '<path d="M16 82 Q6 76 9 66 Q11 58 19 60" fill="none" stroke="' + accent + '" stroke-width="2.2" stroke-linecap="round"/>' +
-        // pescoço + cabeça de carneiro na proa (Argo/Velocino de Ouro)
-        '<path d="M92 64 Q100 59 100 48" fill="none" stroke="' + accent + '" stroke-width="3.5" stroke-linecap="round"/>' +
-        '<path d="M100 48 Q110 44 114 50 Q110 55 102 54 Q98 53 100 48 Z" fill="' + accent + '"/>' +
-        '<path d="M104 46 Q112 40 108 32 Q105 26 98 30 Q94 33 98 38 Q101 41 105 39" fill="none" stroke="' + accent + '" stroke-width="2.2" stroke-linecap="round"/>' +
+        // ondinha + bolhas
+        '<path d="M4 102 Q19 93 34 102 T64 102 T94 102 T126 102" stroke="' + accent + '" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.5"/>' +
+        '<circle cx="18" cy="110" r="2.2" fill="' + accent + '" opacity=".35"/><circle cx="112" cy="111" r="2.8" fill="' + accent + '" opacity=".35"/>' +
+        // chifrinhos dourados de carneirinho (Velocino de Ouro), na proa e na popa
+        '<path d="M113 60 Q126 56 123 45 Q120 38 113 42" fill="none" stroke="' + GOLD + '" stroke-width="4.5" stroke-linecap="round"/>' +
+        '<path d="M17 60 Q4 56 7 45 Q10 38 17 42" fill="none" stroke="' + GOLD + '" stroke-width="4.5" stroke-linecap="round"/>' +
+        // casco rechonchudo (é o corpinho do personagem)
+        '<path d="M13 66 Q13 58 21 58 H107 Q115 58 115 66 Q113 100 82 101 H46 Q15 100 13 66 Z" fill="#1B3358" stroke="' + accent + '" stroke-width="3.5" stroke-linejoin="round"/>' +
+        // borda do barco
+        '<rect x="10" y="54" width="108" height="9" rx="4.5" fill="' + accent + '"/>' +
+        // bochechas
+        '<ellipse cx="33" cy="89" rx="6.5" ry="3.8" fill="' + BLUSH + '" opacity=".75"/>' +
+        '<ellipse cx="95" cy="89" rx="6.5" ry="3.8" fill="' + BLUSH + '" opacity=".75"/>' +
         face +
         // mastro
-        '<line x1="63" y1="66" x2="63" y2="20" stroke="' + accent + '" stroke-width="3" stroke-linecap="round"/>' +
-        // vela
-        '<path d="M63 24 Q100 32 84 58 L63 62 Z" fill="#EFEAE0" stroke="' + accent + '" stroke-width="2" stroke-linejoin="round"/>' +
-        // bandeirola
-        '<path d="M63 20 L76 26 L63 32 Z" fill="' + accent + '"/>' +
-        flagSymbol +
+        '<line x1="64" y1="56" x2="64" y2="14" stroke="' + accent + '" stroke-width="4" stroke-linecap="round"/>' +
+        // vela fofinha
+        '<path d="M67 20 Q106 28 93 52 Q80 56 67 54 Z" fill="' + CREAM + '" stroke="' + accent + '" stroke-width="2.6" stroke-linejoin="round"/>' +
+        '<path d="M74 30 Q90 34 86 44" fill="none" stroke="' + accent + '" stroke-width="1.8" stroke-linecap="round" opacity=".35"/>' +
+        // bandeirinha
+        '<path d="M64 8 Q82 8 84 17 Q82 26 64 26 Z" fill="' + accent + '"/>' +
+        '<text x="73" y="21" font-size="12" font-weight="800" fill="#fff" text-anchor="middle" font-family="inherit">' + flagSymbol + '</text>' +
+        sparkles +
       '</svg>'
     );
   }
@@ -104,7 +136,9 @@
       '.argo-mascot-icon{display:block;overflow:visible}' +
       '.argo-mascot-bob{animation:argoMascotBob 3.2s ease-in-out infinite}' +
       '@keyframes argoMascotBob{0%,100%{transform:translateY(0) rotate(-1.5deg)}50%{transform:translateY(-3px) rotate(1.5deg)}}' +
-      '@media (prefers-reduced-motion: reduce){.argo-mascot-bob{animation:none}}' +
+      '@media (prefers-reduced-motion: reduce){.argo-mascot-bob{animation:none}.argo-mascot-toast{transition:none}}' +
+      '@media print{.argo-mascot-toast{display:none!important}}' +
+      'body:has(#argoUpdateToast) .argo-mascot-toast{bottom:calc(76px + env(safe-area-inset-bottom,0px))}' +
 
       '.argo-mascot-toast{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translate(-50%,14px);'+
         'display:flex;align-items:center;gap:12px;max-width:min(92vw,440px);padding:12px 16px 12px 10px;'+
@@ -142,45 +176,58 @@
 
   function renderToast(msg, opts) {
     ensureStyles();
-    var type = (opts && opts.type) || 'info';
-    var duration = (opts && opts.duration) || (type === 'error' ? 6500 : 4200);
-    var accent = (THEME[type] || THEME.info).color;
+    opts = opts || {};
+    var type = normalizeType(opts.type);
+    var duration = opts.duration || (type === 'error' ? 6500 : 4200);
+    var accent = THEME[type].color;
 
     var el = document.getElementById(TOAST_ID);
     if (!el) {
       el = document.createElement('div');
       el.id = TOAST_ID;
       el.className = 'argo-mascot-toast';
-      el.setAttribute('role', 'status');
-      el.setAttribute('aria-live', 'polite');
       document.body.appendChild(el);
     }
+    // Erros são anunciados na hora por leitores de tela; o resto, sem interromper.
+    el.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    el.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
     el.style.setProperty('--argo-mascot-toast-accent', accent);
 
-    var actionHtml = (opts && opts.actionLabel)
-      ? '<button type="button" class="argo-mascot-toast-action" data-argo-action>' + opts.actionLabel + '</button>'
-      : '';
+    // Monta com DOM (textContent) — nada do texto recebido é interpretado como HTML.
+    el.textContent = '';
+    var icon = document.createElement('span');
+    icon.className = 'argo-mascot-toast-icon';
+    icon.innerHTML = boatSVG(type, 38); // SVG gerado aqui dentro, sem dados externos
+    var body = document.createElement('span');
+    body.className = 'argo-mascot-toast-body';
+    body.textContent = msg;
+    el.appendChild(icon);
+    el.appendChild(body);
 
-    el.innerHTML =
-      '<span class="argo-mascot-toast-icon">' + boatSVG(type, 38) + '</span>' +
-      '<span class="argo-mascot-toast-body"></span>' +
-      actionHtml +
-      '<button type="button" class="argo-mascot-toast-close" aria-label="Fechar aviso" data-argo-close>✕</button>';
-
-    el.querySelector('.argo-mascot-toast-body').textContent = msg;
-
-    var closeBtn = el.querySelector('[data-argo-close]');
-    closeBtn.onclick = function () { dismiss(); };
-
-    if (opts && opts.actionLabel && opts.onAction) {
-      var actionBtn = el.querySelector('[data-argo-action]');
+    if (opts.actionLabel && typeof opts.onAction === 'function') {
+      var actionBtn = document.createElement('button');
+      actionBtn.type = 'button';
+      actionBtn.className = 'argo-mascot-toast-action';
+      actionBtn.textContent = opts.actionLabel;
       actionBtn.onclick = function () { dismiss(); opts.onAction(); };
+      el.appendChild(actionBtn);
     }
 
-    requestAnimationFrame(function () { el.classList.add('argo-mascot-visible'); });
+    var closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'argo-mascot-toast-close';
+    closeBtn.setAttribute('aria-label', 'Fechar aviso');
+    closeBtn.textContent = '✕';
+    closeBtn.onclick = dismiss;
+    el.appendChild(closeBtn);
 
-    clearTimeout(hideTimer);
-    hideTimer = setTimeout(dismiss, duration);
+    // Pausa a contagem enquanto a pessoa lê (mouse em cima ou foco no aviso).
+    function arm(ms) { clearTimeout(hideTimer); hideTimer = setTimeout(dismiss, ms); }
+    el.onmouseenter = el.onfocusin = function () { clearTimeout(hideTimer); };
+    el.onmouseleave = el.onfocusout = function () { arm(1800); };
+
+    requestAnimationFrame(function () { el.classList.add('argo-mascot-visible'); });
+    arm(duration);
   }
 
   function dismiss() {
@@ -203,7 +250,14 @@
    * @param {string} message
    * @param {{type?:'info'|'error'|'notfound'|'success', duration?:number, actionLabel?:string, onAction?:Function}} [options]
    */
+  var lastMsg = null;
   function notify(message, options) {
+    message = String(message == null ? '' : message);
+    // Toques repetidos que gerariam o mesmo aviso em sequência viram um só.
+    if (message === lastMsg && (showing || queue.length)) return;
+    // Evita fila enorme (ex.: erro disparado em laço): mantém só os mais recentes.
+    if (queue.length >= 3) queue.shift();
+    lastMsg = message;
     queue.push({ msg: message, opts: options || {} });
     processQueue();
   }
@@ -218,7 +272,7 @@
    */
   function emptyStateHTML(title, options) {
     ensureStyles();
-    var type = (options && options.type) || 'notfound';
+    var type = normalizeType((options && options.type) || 'notfound');
     var hint = (options && options.hint) || '';
     return (
       '<div class="argo-mascot-empty">' +
@@ -233,6 +287,12 @@
     var div = document.createElement('div');
     div.textContent = str == null ? '' : String(str);
     return div.innerHTML;
+  }
+
+  if (typeof document !== 'undefined') {
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && showing) dismiss();
+    });
   }
 
   return {
