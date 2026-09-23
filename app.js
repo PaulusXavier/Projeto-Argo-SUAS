@@ -4233,7 +4233,7 @@ function renderPdfToolsCard() {
               <span class="pdftools-tool-icon">${ICONS.filebinary}</span>
               <div>
                 <div class="pdftools-tool-title">PDF → Word</div>
-                <div class="pdftools-tool-limit">Gera um .docx editável</div>
+                <div class="pdftools-tool-limit">Gera um .docx editável · até 60 MB</div>
               </div>
             </div>
             <p class="pdftools-tool-desc">Extrai o texto do PDF para um documento Word (.docx) que você pode editar depois.</p>
@@ -4252,7 +4252,7 @@ function renderPdfToolsCard() {
               <span class="pdftools-tool-icon">${ICONS.form}</span>
               <div>
                 <div class="pdftools-tool-title">Word → PDF</div>
-                <div class="pdftools-tool-limit">A partir de um .docx</div>
+                <div class="pdftools-tool-limit">A partir de um .docx · até 60 MB</div>
               </div>
             </div>
             <p class="pdftools-tool-desc">Converte um documento Word (.docx) em um arquivo PDF pronto para impressão.</p>
@@ -4271,7 +4271,7 @@ function renderPdfToolsCard() {
               <span class="pdftools-tool-icon">${ICONS.image}</span>
               <div>
                 <div class="pdftools-tool-title">PDF → JPG</div>
-                <div class="pdftools-tool-limit">Uma imagem por página</div>
+                <div class="pdftools-tool-limit">Uma imagem por página · até 60 MB</div>
               </div>
             </div>
             <p class="pdftools-tool-desc">Transforma cada página do PDF em uma imagem JPG (baixa tudo junto em .zip quando houver mais de uma página).</p>
@@ -4358,6 +4358,12 @@ const TRADUTOR_CACHE_MAX = 100;
 const TRADUTOR_CUSTOM_KEY = 'argo_tradutor_custom_phrases';
 let tradutorCustomPhrases = [];
 
+// Preferências de voz ("Falar devagar" e "Ouvir automaticamente após
+// traduzir"): antes reiniciavam desmarcadas toda vez que a aba era aberta,
+// obrigando o técnico a marcar de novo a cada atendimento. Agora ficam
+// salvas neste aparelho.
+const TRADUTOR_SPEECH_PREFS_KEY = 'argo_tradutor_speech_prefs';
+
 function renderTranslatorCard() {
   const langOptions = (selected) => Object.entries(TRADUTOR_LANGS).map(([code, l]) =>
     `<option value="${code}" ${code === selected ? 'selected' : ''}>${l.flag} ${l.label}</option>`
@@ -4418,11 +4424,17 @@ function renderTranslatorCard() {
             <button type="button" class="tradutor-btn" id="tradutorGoBtn" onclick="tradutorTranslate()">${ICONS.translate} Traduzir</button>
             <button type="button" class="tradutor-btn-ghost" onclick="tradutorClear()">Limpar</button>
           </div>
-          <label class="tradutor-rate-toggle" title="A voz fala mais devagar, para ajudar quem tem dificuldade de entender">
-            <input type="checkbox" id="tradutorSlowSpeech">
-            <span>Falar devagar</span>
-          </label>
-          <span class="tradutor-status" id="tradutorStatus"></span>
+          <div class="tradutor-toggles">
+            <label class="tradutor-rate-toggle" title="A voz fala mais devagar, para ajudar quem tem dificuldade de entender">
+              <input type="checkbox" id="tradutorSlowSpeech" onchange="tradutorSaveSpeechPrefs()">
+              <span>Falar devagar</span>
+            </label>
+            <label class="tradutor-rate-toggle" title="Assim que a tradução terminar, ela já é lida em voz alta automaticamente — útil para uma conversa mais fluida, sem precisar tocar no alto-falante a cada frase">
+              <input type="checkbox" id="tradutorAutoSpeak" onchange="tradutorSaveSpeechPrefs()">
+              <span>Ouvir automaticamente</span>
+            </label>
+          </div>
+          <span class="tradutor-status" id="tradutorStatus" role="status" aria-live="polite"></span>
         </div>
 
         <div class="tradutor-phrases">
@@ -4477,6 +4489,28 @@ function tradutorLoadLangPref() {
       toSel.value = saved.to;
     }
   } catch (e) { /* preferência ausente ou corrompida — usa o padrão */ }
+}
+
+function tradutorSaveSpeechPrefs() {
+  const slow = document.getElementById('tradutorSlowSpeech');
+  const autoSpeak = document.getElementById('tradutorAutoSpeak');
+  if (!slow || !autoSpeak) return;
+  try {
+    localStorage.setItem(TRADUTOR_SPEECH_PREFS_KEY, JSON.stringify({ slow: slow.checked, autoSpeak: autoSpeak.checked }));
+  } catch (e) { /* localStorage indisponível — ignora silenciosamente */ }
+}
+
+function tradutorLoadSpeechPrefs() {
+  const slow = document.getElementById('tradutorSlowSpeech');
+  const autoSpeak = document.getElementById('tradutorAutoSpeak');
+  if (!slow || !autoSpeak) return;
+  try {
+    const saved = JSON.parse(localStorage.getItem(TRADUTOR_SPEECH_PREFS_KEY) || 'null');
+    if (saved) {
+      slow.checked = !!saved.slow;
+      autoSpeak.checked = !!saved.autoSpeak;
+    }
+  } catch (e) { /* preferência ausente ou corrompida — usa o padrão (desmarcado) */ }
 }
 
 function tradutorSwapLangs() {
@@ -4567,6 +4601,7 @@ async function tradutorTranslate() {
     output.value = text;
     if (speakTo) speakTo.disabled = false;
     tradutorSetStatus('Os idiomas são iguais — nada para traduzir.', '');
+    tradutorMaybeAutoSpeak();
     return;
   }
 
@@ -4576,6 +4611,16 @@ async function tradutorTranslate() {
     output.value = cached;
     if (speakTo) speakTo.disabled = false;
     tradutorSetStatus('Tradução concluída.', 'success');
+    tradutorMaybeAutoSpeak();
+    return;
+  }
+
+  // Falha rápido e com mensagem clara quando o aparelho está sem internet,
+  // em vez de esperar o fetch estourar em timeout para só então mostrar um
+  // erro genérico — o serviço de tradução é sempre online, mesmo o resto do
+  // app funcionando offline.
+  if (!navigator.onLine) {
+    tradutorSetStatus('Sem conexão com a internet. A tradução de texto precisa estar online (a voz e o microfone continuam funcionando offline).', 'error');
     return;
   }
 
@@ -4604,11 +4649,21 @@ async function tradutorTranslate() {
       tradutorCache.delete(tradutorCache.keys().next().value);
     }
     tradutorCache.set(cacheKey, translated);
+    tradutorMaybeAutoSpeak();
   } catch (e) {
     tradutorSetStatus('Não foi possível traduzir agora. Verifique a internet e tente novamente.', 'error');
   } finally {
     btn.disabled = false;
   }
+}
+
+// Lê a tradução em voz alta assim que ela fica pronta, se o técnico marcou
+// "Ouvir automaticamente" — pensado para uma conversa mais fluida (fala,
+// traduz, o estrangeiro já ouve, sem precisar tocar no alto-falante a cada
+// frase).
+function tradutorMaybeAutoSpeak() {
+  const autoSpeak = document.getElementById('tradutorAutoSpeak');
+  if (autoSpeak && autoSpeak.checked) tradutorSpeak('to');
 }
 
 // Em alguns navegadores (principalmente Chrome no primeiro uso da página),
@@ -4667,6 +4722,7 @@ function tradutorToggleMic() {
   if (!fromSel || !inputEl) return;
 
   const baseText = inputEl.value.trim() ? inputEl.value.trim() + ' ' : '';
+  let tradutorGotFinalResult = false;
   tradutorRecognition = new SpeechRecognitionCtor();
   tradutorRecognition.lang = TRADUTOR_LANGS[fromSel.value].voice;
   tradutorRecognition.interimResults = true;
@@ -4683,7 +4739,7 @@ function tradutorToggleMic() {
     let interimChunk = '';
     for (let i = event.resultIndex; i < event.results.length; i++) {
       const transcript = event.results[i][0].transcript;
-      if (event.results[i].isFinal) finalChunk += transcript + ' ';
+      if (event.results[i].isFinal) { finalChunk += transcript + ' '; tradutorGotFinalResult = true; }
       else interimChunk += transcript;
     }
     inputEl.value = baseText + finalChunk + interimChunk;
@@ -4694,10 +4750,15 @@ function tradutorToggleMic() {
     tradutorSetStatus('Não foi possível captar o áudio. Tente novamente.', 'error');
   };
 
+  // Ao parar de ouvir (o técnico toca no microfone de novo para encerrar),
+  // se algum trecho já foi reconhecido como definitivo, traduz na hora
+  // sozinho — antes era preciso tocar no microfone para parar e depois
+  // ainda tocar em "Traduzir" separadamente.
   tradutorRecognition.onend = () => {
     tradutorListening = false;
     if (micBtn) micBtn.classList.remove('is-listening');
     tradutorClearStatus();
+    if (tradutorGotFinalResult && inputEl.value.trim()) tradutorTranslate();
   };
 
   try {
@@ -4826,6 +4887,7 @@ function tradutorUsePhrase(pos) {
 function initTranslatorPanel() {
   tradutorLoadLangPref();
   tradutorSyncSpeakLabels();
+  tradutorLoadSpeechPrefs();
   tradutorLoadCustomPhrases();
   tradutorRenderPhrases();
   tradutorUpdateCharCount();
@@ -8896,6 +8958,19 @@ function pdftoolsHandleDrop(event, kind) {
   if (kind === 'pdfjpg') { pdftoolsRunPdfToJpg(files[0]); return; }
 }
 
+// Limite para os conversores de um arquivo só (PDF→Word, Word→PDF, PDF→JPG):
+// antes não havia nenhum, e um PDF/Word gigante podia travar o navegador
+// (principalmente em celulares mais fracos) sem nenhum aviso antes de
+// começar a processar. Os mesmos princípios de limite já usados em
+// "Unificar PDF" e "JPG → PDF" agora valem aqui também.
+const PDFTOOLS_SINGLE_MAX_BYTES = 60 * 1024 * 1024;
+function pdftoolsCheckSingleFileSize(file, statusId, inputEl) {
+  if (file.size <= PDFTOOLS_SINGLE_MAX_BYTES) return true;
+  pdftoolsSetStatus(statusId, `"${file.name}" (${pdftoolsFormatBytes(file.size)}) é maior que o limite de 60 MB para essa conversão.`, 'error');
+  if (inputEl) { inputEl.disabled = false; inputEl.value = ''; }
+  return false;
+}
+
 /* ---------- Unificar PDF (até 10 arquivos / 50 MB no total) ---------- */
 const PDFTOOLS_MERGE_MAX_FILES = 20;
 const PDFTOOLS_MERGE_MAX_BYTES = 50 * 1024 * 1024;
@@ -9370,7 +9445,7 @@ function pdftoolsAddJpgPdfFiles(fileList) {
     if (currentTotal + file.size > PDFTOOLS_JPGPDF_MAX_BYTES) { skippedLimit = true; return; }
     const isDuplicate = pdftoolsJpgPdfState.files.some(f => f.file.name === file.name && f.file.size === file.size);
     if (isDuplicate) return;
-    pdftoolsJpgPdfState.files.push({ id: 'j' + Date.now() + Math.random().toString(36).slice(2), file });
+    pdftoolsJpgPdfState.files.push({ id: 'j' + Date.now() + Math.random().toString(36).slice(2), file, rotation: 0 });
   });
   const input = document.getElementById('pdftoolsJpgPdfInput');
   if (input) input.value = '';
@@ -9388,7 +9463,7 @@ function pdftoolsRenderJpgPdfList() {
   list.innerHTML = pdftoolsJpgPdfState.files.map((f, idx) => `
     <li class="pdftools-fileitem">
       <span class="pdftools-fileitem-name">${idx + 1}. ${escapeHtml(f.file.name)}</span>
-      <span class="pdftools-fileitem-meta">${pdftoolsFormatBytes(f.file.size)}</span>
+      <span class="pdftools-fileitem-meta">${pdftoolsFormatBytes(f.file.size)}${f.rotation ? ` · girado ${f.rotation}°` : ''}</span>
       <span class="pdftools-fileitem-btns">
         <button type="button" class="pdftools-icon-btn" title="Mover para cima" ${idx === 0 ? 'disabled' : ''} onclick="pdftoolsMoveJpgPdfFile('${f.id}', -1)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
@@ -9396,6 +9471,7 @@ function pdftoolsRenderJpgPdfList() {
         <button type="button" class="pdftools-icon-btn" title="Mover para baixo" ${idx === pdftoolsJpgPdfState.files.length - 1 ? 'disabled' : ''} onclick="pdftoolsMoveJpgPdfFile('${f.id}', 1)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
+        <button type="button" class="pdftools-icon-btn${f.rotation ? ' is-active' : ''}" title="Girar 90° para a direita" aria-label="Girar ${escapeHtml(f.file.name)} 90 graus" onclick="pdftoolsRotateJpgPdfFile('${f.id}')">${PDFTOOLS_ICON_ROTATE}</button>
         <button type="button" class="pdftools-icon-btn pdftools-remove" title="Remover" onclick="pdftoolsRemoveJpgPdfFile('${f.id}')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
@@ -9420,6 +9496,16 @@ function pdftoolsRemoveJpgPdfFile(id) {
   pdftoolsRenderJpgPdfList();
 }
 
+// Gira uma foto em passos de 90° antes de gerar o PDF — a mesma opção que
+// já existia em "Unificar PDFs e fotos", mas faltava aqui, obrigando a
+// girar a foto fora do app antes de escolher esta ferramenta.
+function pdftoolsRotateJpgPdfFile(id) {
+  const item = pdftoolsJpgPdfState.files.find(f => f.id === id);
+  if (!item) return;
+  item.rotation = ((item.rotation || 0) + 90) % 360;
+  pdftoolsRenderJpgPdfList();
+}
+
 async function pdftoolsRunJpgToPdf() {
   if (!pdftoolsJpgPdfState.files.length) return;
   const btn = document.getElementById('pdftoolsJpgPdfBtn');
@@ -9431,7 +9517,7 @@ async function pdftoolsRunJpgToPdf() {
     const doc = await PDFLib.PDFDocument.create();
     for (const item of pdftoolsJpgPdfState.files) {
       currentName = item.file.name;
-      const prepared = await pdftoolsPrepareImage(item.file, 0);
+      const prepared = await pdftoolsPrepareImage(item.file, item.rotation || 0);
       const jpg = await doc.embedJpg(prepared.bytes);
       pdftoolsAddImagePage(doc, jpg, prepared);
     }
@@ -9451,6 +9537,7 @@ async function pdftoolsRunJpgToPdf() {
 /* ---------- PDF → JPG ---------- */
 async function pdftoolsRunPdfToJpg(file, inputEl) {
   if (!file) return;
+  if (!pdftoolsCheckSingleFileSize(file, 'pdftoolsPdfJpgStatus', inputEl)) return;
   if (inputEl) inputEl.disabled = true;
   pdftoolsSetStatus('pdftoolsPdfJpgStatus', 'Carregando biblioteca de PDF...', 'info');
   pdftoolsSetProgress('PdfJpg', 0, 0);
@@ -9563,6 +9650,7 @@ async function pdftoolsBuildDocx(paragraphsPerPage) {
    e o tamanho/negrito da fonte é preservado a partir do próprio PDF. */
 async function pdftoolsRunPdfToWord(file, inputEl) {
   if (!file) return;
+  if (!pdftoolsCheckSingleFileSize(file, 'pdftoolsPdfWordStatus', inputEl)) return;
   if (inputEl) inputEl.disabled = true;
   pdftoolsSetStatus('pdftoolsPdfWordStatus', 'Carregando bibliotecas...', 'info');
   pdftoolsSetProgress('PdfWord', 0, 0);
@@ -9648,6 +9736,7 @@ async function pdftoolsRunPdfToWord(file, inputEl) {
    normais e em negrito/itálico. */
 async function pdftoolsRunWordToPdf(file, inputEl) {
   if (!file) return;
+  if (!pdftoolsCheckSingleFileSize(file, 'pdftoolsWordPdfStatus', inputEl)) return;
   if (inputEl) inputEl.disabled = true;
   pdftoolsSetStatus('pdftoolsWordPdfStatus', 'Carregando bibliotecas...', 'info');
   try {
