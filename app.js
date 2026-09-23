@@ -248,8 +248,17 @@ function lockApp() {
     const pwField = document.getElementById('loginPassword');
     if (pwField) {
       pwField.value = '';
+      pwField.setAttribute('aria-invalid', 'false');
       setTimeout(() => pwField.focus(), 50);
     }
+    // Limpa um erro/contagem de bloqueio que tivesse ficado visível de uma
+    // sessão anterior (ex.: "Sair" logo depois de um lockout), para a tela
+    // de login sempre reaparecer "limpa" — sem isso, o quadro de erro podia
+    // reaparecer já marcado antes mesmo de qualquer tentativa nova.
+    const loginErrorReset = document.getElementById('loginError');
+    const loginErrorCountdownReset = document.getElementById('loginErrorCountdown');
+    if (loginErrorReset) loginErrorReset.classList.remove('visible', 'shake');
+    if (loginErrorCountdownReset) loginErrorCountdownReset.textContent = '';
     // Fecha o painel "Esqueci a senha" se tivesse ficado aberto de uma
     // tentativa anterior, para a tela de login sempre reaparecer "limpa".
     const forgotPanel = document.getElementById('loginForgotPanel');
@@ -284,6 +293,7 @@ function initAuth() {
   const pwField = document.getElementById('loginPassword');
   const errorEl = document.getElementById('loginError');
   const errorTextEl = document.getElementById('loginErrorText');
+  const errorCountdownEl = document.getElementById('loginErrorCountdown');
   const toggleBtn = document.getElementById('loginToggleVisibility');
   const submitBtn = form ? form.querySelector('button[type="submit"]') : null;
   const submitTextEl = document.getElementById('loginSubmitText');
@@ -305,10 +315,32 @@ function initAuth() {
 
   function showError(msg) {
     if (errorTextEl && msg) errorTextEl.textContent = msg;
+    if (errorCountdownEl) errorCountdownEl.textContent = '';
+    if (pwField) pwField.setAttribute('aria-invalid', 'true');
     errorEl.classList.add('visible');
     errorEl.classList.remove('shake');
     void errorEl.offsetWidth;
     errorEl.classList.add('shake');
+  }
+
+  function clearError() {
+    errorEl.classList.remove('visible', 'shake');
+    if (errorCountdownEl) errorCountdownEl.textContent = '';
+    if (pwField) pwField.setAttribute('aria-invalid', 'false');
+  }
+
+  // Esconde o erro (senha incorreta) assim que a pessoa volta a digitar, em vez
+  // de deixá-lo visível até o próximo Enter — sem isso, um aviso antigo
+  // ficava na tela mesmo depois de já ter corrigido a senha, o que confunde
+  // tanto visualmente quanto para quem usa leitor de tela (o campo
+  // continuava marcado aria-invalid mesmo já tendo mudado de valor). Não
+  // mexe no aviso enquanto o bloqueio por tentativas (lockout) estiver
+  // ativo, já que nesse caso o campo fica desabilitado mesmo.
+  if (pwField) {
+    pwField.addEventListener('input', function() {
+      if (pwField.disabled) return;
+      if (Date.now() >= authLockedUntil) clearError();
+    });
   }
 
   function setLoading(loading) {
@@ -322,6 +354,15 @@ function initAuth() {
   // Enquanto durar o lockout: desabilita o campo e o botão, e atualiza a
   // contagem regressiva a cada segundo (em vez de uma mensagem estática que
   // não muda até a próxima tentativa). Ao zerar, libera o formulário de novo.
+  // O texto DENTRO de #loginError (role="alert") é anunciado por leitor de
+  // tela toda vez que muda. Antes, tickLockout() reescrevia esse texto a
+  // cada segundo com a contagem regressiva embutida ("Aguarde 23s.") — o que
+  // fazia o leitor de tela interromper e reler o alerta uma vez por segundo,
+  // durante até 10 minutos de bloqueio (ver AUTH_LOCKOUT_MAX_MS). Agora:
+  //   - errorTextEl (acessível/anunciado) só muda 2 vezes: quando o bloqueio
+  //     começa e quando termina;
+  //   - errorCountdownEl (aria-hidden) é quem recebe a contagem em segundos,
+  //     atualizada a cada tick só para quem enxerga a tela.
   function tickLockout() {
     const now = Date.now();
     const remaining = authLockedUntil - now;
@@ -336,18 +377,30 @@ function initAuth() {
       // de reiniciar sempre em 30s.
       writeAuthState(0, 0, authLockoutLevel);
       errorEl.classList.remove('visible');
-      if (pwField) pwField.disabled = false;
+      if (errorCountdownEl) errorCountdownEl.textContent = '';
+      if (pwField) {
+        pwField.disabled = false;
+        pwField.setAttribute('aria-invalid', 'false');
+        pwField.focus();
+      }
       if (submitBtn) submitBtn.disabled = false;
       return;
     }
     const secs = Math.ceil(remaining / 1000);
-    if (errorTextEl) errorTextEl.textContent = `Muitas tentativas erradas. Aguarde ${secs}s.`;
+    if (errorCountdownEl) errorCountdownEl.textContent = `Aguarde ${secs}s.`;
     errorEl.classList.add('visible');
   }
 
   function startLockoutCountdown() {
-    if (pwField) pwField.disabled = true;
+    if (pwField) {
+      pwField.disabled = true;
+      pwField.setAttribute('aria-invalid', 'true');
+    }
     if (submitBtn) submitBtn.disabled = true;
+    // Anúncio assertivo único, no início do bloqueio (ver comentário acima
+    // de tickLockout) — a contagem em segundos que segue mudando fica só no
+    // elemento visual/aria-hidden, atualizado por tickLockout a cada tick.
+    if (errorTextEl) errorTextEl.textContent = 'Muitas tentativas erradas. Aguarde antes de tentar de novo.';
     tickLockout();
     if (lockoutTimer) clearInterval(lockoutTimer);
     lockoutTimer = setInterval(tickLockout, 1000);
@@ -394,6 +447,8 @@ function initAuth() {
         authLockoutLevel = 0;
         writeAuthState(0, 0);
         errorEl.classList.remove('visible');
+        if (errorCountdownEl) errorCountdownEl.textContent = '';
+        pwField.setAttribute('aria-invalid', 'false');
         if (capsHintEl) capsHintEl.classList.remove('visible');
         sessionEncKey = await deriveSessionKey(value);
         // Grava (ou limpa) o "manter conectado" de acordo com a caixinha no
@@ -445,6 +500,27 @@ function initAuth() {
       forgotPanel.hidden = !isHidden;
       forgotBtn.setAttribute('aria-expanded', String(isHidden));
       forgotBtn.textContent = isHidden ? 'Ocultar' : 'Esqueci a senha';
+      // Ao abrir, leva o foco para o próprio painel (tem tabindex="-1" só
+      // para isso): quem navega por teclado/leitor de tela ouve o conteúdo
+      // na hora, sem precisar procurar por ele depois do botão. Ao fechar
+      // (inclusive pelo Esc, ver keydown abaixo), o foco volta para o botão.
+      if (isHidden) {
+        forgotPanel.focus({ preventScroll: true });
+      } else {
+        forgotBtn.focus();
+      }
+    });
+    // Esc fecha o painel a partir de qualquer ponto dentro dele (mesmo com
+    // foco lá dentro, já que o painel em si é focável) e devolve o foco ao
+    // botão que o abriu — padrão esperado para conteúdo revelado (disclosure).
+    forgotPanel.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && !forgotPanel.hidden) {
+        e.preventDefault();
+        forgotPanel.hidden = true;
+        forgotBtn.setAttribute('aria-expanded', 'false');
+        forgotBtn.textContent = 'Esqueci a senha';
+        forgotBtn.focus();
+      }
     });
   }
 
