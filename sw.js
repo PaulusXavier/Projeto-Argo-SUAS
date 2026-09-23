@@ -1,6 +1,6 @@
 // Troque este número toda vez que publicar uma alteração no app.
 // É essa mudança de versão que dispara a atualização automática.
-const CACHE_VERSION = 'v76';
+const CACHE_VERSION = 'v77';
 const CACHE_NAME = `rede-apoio-bv-${CACHE_VERSION}`;
 
 // Cache separado e SEM número de versão, para conteúdo pesado de fora do
@@ -24,6 +24,7 @@ const ASSETS = [
   './equipe-cras-cristiana.js',
   './data.js',
   './app.js',
+  './argo-mascot.js',
   './manifest.json',
   './favicon.ico',
   './apple-touch-icon.png',
@@ -44,7 +45,7 @@ const ASSETS = [
 
 // Sem estes o app não funciona: se algum falhar, a instalação inteira falha
 // e o Service Worker antigo continua valendo (melhor que um app pela metade).
-const CRITICAL_ASSETS = ['./', './index.html', './styles.css', './equipe-cras-cristiana.js', './data.js', './app.js', './manifest.json'];
+const CRITICAL_ASSETS = ['./', './index.html', './styles.css', './equipe-cras-cristiana.js', './data.js', './argo-mascot.js', './app.js', './manifest.json'];
 
 // INSTALAÇÃO: baixa os arquivos novos e já assume o controle,
 // sem esperar todas as abas antigas fecharem.
