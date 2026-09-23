@@ -4566,6 +4566,16 @@
   .login-forgot-panel p:last-child { margin-bottom: 0; }
   .login-forgot-panel strong { color: var(--text-main); }
   .login-forgot-panel[hidden] { display: none; }
+  .login-forgot-panel kbd { font-size: 0.78em; }
+
+  /* O painel recebe foco de programação ao abrir (ver forgotBtn em app.js),
+     para quem usa leitor de tela/teclado ouvir o conteúdo na hora, sem
+     precisar navegar até ele — por isso precisa de um contorno de foco
+     próprio (a regra global de :focus-visible não cobre <div tabindex="-1">). */
+  .login-forgot-panel:focus {
+    outline: 3px solid var(--brand-primary-light);
+    outline-offset: 2px;
+  }
 
   .login-error {
     display: none;
@@ -4585,6 +4595,28 @@
   .login-error.visible { display: flex; }
 
   .login-error.shake { animation: loginShake 0.4s; }
+
+  /* Contagem regressiva do bloqueio (ver tickLockout em app.js): fica num
+     span separado, marcado aria-hidden, porque só o texto estático (ex.:
+     "Muitas tentativas erradas.") é anunciado por leitor de tela quando o
+     bloqueio começa — sem isso, o leitor de tela repetiria a leitura
+     assertiva do alerta a cada segundo, por até 10 minutos seguidos. Quem
+     enxerga a tela continua vendo os segundos mudando normalmente. */
+  .login-error-countdown { font-weight: 700; }
+
+  /* Tecla ilustrada em dicas de atalho (ex.: "Esc fecha este aviso" no
+     painel "Esqueci a senha"). */
+  kbd {
+    font-family: var(--font-sans);
+    font-size: 0.82em;
+    font-weight: 700;
+    background: var(--bg-main);
+    border: 1px solid var(--border-ui);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 0.05em 0.4em;
+    color: var(--text-main);
+  }
 
   @keyframes loginShake {
     10%, 90% { transform: translateX(-1px); }
