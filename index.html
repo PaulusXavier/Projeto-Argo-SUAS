@@ -93,6 +93,19 @@
           </div>
         </div>
 
+        <div class="login-options-row">
+          <label class="login-remember" for="loginRemember">
+            <input type="checkbox" id="loginRemember">
+            <span>Manter-me conectado nesta aba</span>
+          </label>
+          <button type="button" id="loginForgotBtn" class="login-forgot-link" aria-expanded="false" aria-controls="loginForgotPanel">Esqueci a senha</button>
+        </div>
+
+        <div id="loginForgotPanel" class="login-forgot-panel" hidden>
+          <p>A senha de acesso é <strong>única e compartilhada por toda a equipe técnica</strong>. O Argo SUAS não tem servidor nem contas individuais, então não existe um "esqueci minha senha" automático.</p>
+          <p>Se você esqueceu a senha, procure a coordenação da sua unidade ou quem administra o Argo SUAS para recebê-la novamente.</p>
+        </div>
+
         <div id="loginError" class="login-error" role="alert">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           <span id="loginErrorText">Senha incorreta. Tente novamente.</span>
