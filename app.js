@@ -243,6 +243,7 @@ function lockApp() {
   const appRoot = document.getElementById('appRoot');
   const loginScreen = document.getElementById('loginScreen');
   if (appRoot) appRoot.dataset.locked = 'true';
+  if (typeof closeTabFocus === 'function') closeTabFocus();
   if (loginScreen) {
     loginScreen.hidden = false;
     const pwField = document.getElementById('loginPassword');
@@ -2016,7 +2017,7 @@ function renderRegistroTile(l) {
 }
 
 function renderCasCard(i, query) {
-  const q = (query || '').toLowerCase();
+  const q = query || null; // consulta estruturada (argoParseQuery) ou null
 
   function linkRow(label, url, icon) {
     return `
@@ -2036,7 +2037,7 @@ function renderCasCard(i, query) {
   function buildGroup(links) {
     const all = links || [];
     if (!q) return all;
-    const matched = all.filter(l => l.label.toLowerCase().includes(q) || (l.desc || '').toLowerCase().includes(q));
+    const matched = all.filter(l => argoTextMatches(q, l.label + ' ' + (l.desc || '')));
     return matched.length ? matched : all;
   }
 
@@ -2147,7 +2148,7 @@ function crasLookupHtml(raw) {
 }
 
 function renderCrasCard(i, query) {
-  const q = (query || '').toLowerCase();
+  const q = query || null; // consulta estruturada (argoParseQuery) ou null
 
   function linkRow(label, url, icon) {
     return `
@@ -2165,7 +2166,7 @@ function renderCrasCard(i, query) {
   function buildGroup(links) {
     const all = links || [];
     if (!q) return all;
-    const matched = all.filter(l => l.label.toLowerCase().includes(q) || (l.desc || '').toLowerCase().includes(q));
+    const matched = all.filter(l => argoTextMatches(q, l.label + ' ' + (l.desc || '')));
     return matched.length ? matched : all;
   }
 
@@ -2200,7 +2201,7 @@ function renderCrasCard(i, query) {
   }
 
   const fixedRows = buildTeam(i.fixedTeam, t =>
-    t.name.toLowerCase().includes(q) || t.role.toLowerCase().includes(q) || t.bairros.toLowerCase().includes(q)
+    argoTextMatches(q, t.name + ' ' + t.role + ' ' + t.bairros)
   ).map(t => `
     <tr>
       <td><span class="team-name">${t.name}</span></td>
@@ -2210,7 +2211,7 @@ function renderCrasCard(i, query) {
   `).join('');
 
   const volanteRows = buildTeam(i.volanteTeam, t =>
-    t.name.toLowerCase().includes(q) || t.role.toLowerCase().includes(q)
+    argoTextMatches(q, t.name + ' ' + t.role)
   ).map(t => `
     <tr>
       <td>
@@ -2417,6 +2418,493 @@ function updateChipCounts() {
 // texto para que uma pesquisa antiga não volte filtrando a lista quando o
 // usuário retornar para uma aba de equipamentos.
 const MAIN_SEARCH_PLACEHOLDER = 'Pesquisar por unidade, bairro ou serviço técnico...';
+/* ===================== Motor de busca =====================
+   Substitui o antigo "texto digitado está contido no texto da ficha".
+   Agora a busca:
+   • ignora acentos, maiúsculas e pontuação ("saude" acha "Saúde", "13 de setembro" acha "13 de Setembro");
+   • aceita várias palavras em qualquer ordem ("caps adulto", "hospital criança"), ignorando "de/da/do/…";
+   • entende plural/singular e gênero (hospitais→hospital, idoso↔idosa) e siglas/sinônimos comuns
+     (ubs = posto de saúde, upa = pronto atendimento, cadúnico = cadastro único…) — ver SEARCH_SYNONYMS;
+   • acha telefones digitando só os números, com ou sem traço/parênteses/DDD;
+   • ordena por relevância (nome > endereço > descrição/serviços);
+   • se nada for encontrado, tenta corrigir erros de digitação ("hopsital") e avisa que o fez;
+   • grifa o termo buscado no nome, subtítulo e endereço dos cartões.
+   Para ensinar um sinônimo novo, basta acrescentar uma linha em SEARCH_SYNONYMS (sem acento, minúsculo). */
+const SEARCH_STOPWORDS = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'a', 'o', 'as', 'os', 'em', 'no', 'na', 'nos', 'nas', 'para', 'por', 'com', 'um', 'uma', 'ao', 'aos']);
+
+const SEARCH_SYNONYMS = {
+  cadunico: ['cadastro unico', 'cad unico'],
+  pbf: ['bolsa familia'],
+  bolsa: ['pbf'],
+  bpc: ['beneficio de prestacao continuada'],
+  inss: ['previdencia'],
+  ubs: ['unidade basica', 'posto de saude'],
+  posto: ['ubs', 'unidade basica'],
+  upa: ['pronto atendimento'],
+  caps: ['centro de atencao psicossocial'],
+  cras: ['centro de referencia de assistencia social'],
+  creas: ['centro de referencia especializado'],
+  dp: ['distrito policial', 'delegacia'],
+  delegacia: ['distrito policial'],
+  policia: ['delegacia', 'distrito policial'],
+  psicologo: ['psicolog'],
+  psicologa: ['psicolog'],
+  emergencia: ['urgencia'],
+  urgencia: ['emergencia'],
+  remedio: ['medicamento', 'farmacia'],
+  medicamento: ['farmacia'],
+  moradia: ['habitacao'],
+  habitacao: ['moradia'],
+  onibus: ['transporte', 'mobilidade'],
+  emprego: ['trabalho', 'sine'],
+  sine: ['emprego', 'trabalho'],
+  imigrante: ['migrante', 'migracao', 'refugiado'],
+  refugiado: ['migrante', 'migracao'],
+  fome: ['alimentar'],
+  comida: ['alimentar'],
+  rg: ['identidade']
+};
+
+function argoNorm(s) {
+  return String(s == null ? '' : s)
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+// Variações simples de uma palavra: plural→singular e troca de gênero.
+function argoTokenVariants(t) {
+  const v = [];
+  if (t.length >= 6 && t.endsWith('ais')) v.push(t.slice(0, -3) + 'al');
+  else if (t.length >= 6 && t.endsWith('oes')) v.push(t.slice(0, -3) + 'ao');
+  else if (t.length >= 5 && t.endsWith('ns')) v.push(t.slice(0, -2) + 'm');
+  else if (t.length >= 5 && t.endsWith('s')) v.push(t.slice(0, -1));
+  if (t.length >= 5 && t.endsWith('o')) v.push(t.slice(0, -1) + 'a');
+  else if (t.length >= 5 && t.endsWith('a')) v.push(t.slice(0, -1) + 'o');
+  return v;
+}
+
+// Transforma o texto digitado numa consulta estruturada (ou null se vazio).
+function argoParseQuery(raw) {
+  const norm = argoNorm(raw);
+  if (!norm) return null;
+  let words = norm.split(' ');
+  const content = words.filter(w => !SEARCH_STOPWORDS.has(w) && !(w.length === 1 && !/\d/.test(w)));
+  if (content.length) words = content;
+  const tokens = words.map(t => {
+    const alts = [{ s: t, w: 1 }];
+    const seen = new Set([t]);
+    const add = (s, w) => { if (s && !seen.has(s)) { seen.add(s); alts.push({ s, w }); } };
+    (SEARCH_SYNONYMS[t] || []).forEach(x => add(x, 0.6));
+    argoTokenVariants(t).forEach(x => { add(x, 0.9); (SEARCH_SYNONYMS[x] || []).forEach(y => add(y, 0.6)); });
+    return { t, alts };
+  });
+  let digits = String(raw).replace(/\D/g, '');
+  if (digits.length >= 12 && digits.startsWith('55')) digits = digits.slice(2);
+  const phoneMode = digits.length >= 4 && /^[\d\s().+\-]+$/.test(String(raw));
+  return { norm, tokens, digits, phoneMode };
+}
+
+// Monta (uma única vez por unidade) o índice normalizado de busca.
+function argoEnsureIndex(i) {
+  if (i._sx) return i._sx;
+  const isCas = i.cat.includes('cas');
+  const isCras = i.cat.includes('cras');
+  let parts;
+  if (isCas) {
+    parts = [
+      i.name, i.fullName, i.address, i.desc,
+      ...(i.phones || []), i.hours,
+      ...(i.adminLinks || []).map(l => l.label),
+      ...(i.systemLinks || []).flatMap(l => [l.label, l.desc || '']),
+      ...(i.mapLinks || []).flatMap(l => [l.label, l.desc || '']),
+      ...(i.driveLinks || []).map(l => l.label)
+    ];
+  } else if (isCras) {
+    parts = [
+      i.name, i.fullName, i.address, i.desc,
+      ...(i.phones || []), i.hours,
+      ...(i.municipalLinks || []).map(l => l.label),
+      ...(i.federalLinks || []).map(l => l.label),
+      ...(i.rmaLinks || []).flatMap(l => [l.label, l.desc || '']),
+      ...(i.driveLinks || []).map(l => l.label),
+      i.teamPanelLink ? i.teamPanelLink.label : '',
+      ...(i.fixedTeam || []).flatMap(t => [t.name, t.role, t.bairros]),
+      ...(i.volanteTeam || []).flatMap(t => [t.name, t.role])
+    ];
+  } else {
+    parts = [
+      i.name, i.fullName, i.address, i.desc,
+      ...(Array.isArray(i.services) ? i.services : [i.services || '']),
+      ...(i.phones || []),
+      i.group || ''
+    ];
+  }
+  const name = argoNorm((i.name || '') + ' ' + (i.fullName || ''));
+  const addr = argoNorm((i.address || '') + ' ' + (i.group || ''));
+  const body = argoNorm(parts.slice(3).join(' '));
+  i._sx = {
+    name, addr, body,
+    nameP: ' ' + name, addrP: ' ' + addr, bodyP: ' ' + body,
+    all: name + ' ' + addr + ' ' + body,
+    phones: (i.phones || []).map(p => String(p).replace(/\D/g, '')).filter(Boolean)
+  };
+  return i._sx;
+}
+
+// Pontuação de uma palavra/expressão em cada campo (0 = não aparece).
+function argoFieldScore(sx, s) {
+  const short = s.length <= 2;            // "dp", "pm": só no começo de palavra
+  const sp = ' ' + s;
+  if (sx.name.startsWith(s)) return 14;
+  if (sx.nameP.includes(sp)) return 12;
+  if (!short && sx.name.includes(s)) return 9;
+  if (sx.addrP.includes(sp)) return 5;
+  if (!short && sx.addr.includes(s)) return 4;
+  if (sx.bodyP.includes(sp)) return 3;
+  if (!short && sx.body.includes(s)) return 2;
+  return 0;
+}
+
+// Relevância da unidade para a consulta; 0 = não corresponde.
+function argoScoreItem(item, q) {
+  const sx = argoEnsureIndex(item);
+  let total = 0;
+  const phoneHit = q.phoneMode && sx.phones.some(p => p.includes(q.digits));
+  if (phoneHit) total += 20;
+  let allTokens = true;
+  for (const tk of q.tokens) {
+    let best = 0;
+    for (const a of tk.alts) {
+      const sc = argoFieldScore(sx, a.s) * a.w;
+      if (sc > best) best = sc;
+    }
+    if (!best) { allTokens = false; break; }
+    total += best;
+  }
+  if (!allTokens) return phoneHit ? total : 0;
+  if (q.tokens.length > 1) {
+    if (sx.name.includes(q.norm)) total += 10;
+    else if (sx.all.includes(q.norm)) total += 4;
+  }
+  return total;
+}
+
+// Serve para filtrar sub-listas (atalhos/equipe) dentro dos cartões CAS e CRAS:
+// vale se QUALQUER palavra da busca aparecer no texto.
+function argoTextMatches(q, text) {
+  if (!q) return true;
+  const t = argoNorm(text);
+  const tp = ' ' + t;
+  return q.tokens.some(tk => tk.alts.some(a => a.s.length <= 2 ? tp.includes(' ' + a.s) : t.includes(a.s)));
+}
+
+// ---- Correção de digitação (só usada quando a busca exata não acha nada) ----
+let _argoVocab = null;
+function argoGetVocab() {
+  if (_argoVocab) return _argoVocab;
+  const freq = new Map();
+  DATA.forEach(i => {
+    argoEnsureIndex(i).all.split(' ').forEach(w => { if (w.length >= 3) freq.set(w, (freq.get(w) || 0) + 1); });
+  });
+  _argoVocab = Array.from(freq, ([w, n]) => ({ w, n }));
+  return _argoVocab;
+}
+
+// Distância de edição com troca de letras vizinhas contando como 1 erro.
+function argoEditDistance(a, b, max) {
+  const al = a.length, bl = b.length;
+  if (Math.abs(al - bl) > max) return max + 1;
+  let prev2 = null;
+  let prev = Array.from({ length: bl + 1 }, (_, j) => j);
+  for (let x = 1; x <= al; x++) {
+    const cur = [x];
+    let rowMin = x;
+    for (let y = 1; y <= bl; y++) {
+      const cost = a[x - 1] === b[y - 1] ? 0 : 1;
+      let v = Math.min(prev[y] + 1, cur[y - 1] + 1, prev[y - 1] + cost);
+      if (x > 1 && y > 1 && a[x - 1] === b[y - 2] && a[x - 2] === b[y - 1]) v = Math.min(v, prev2[y - 2] + 1);
+      cur[y] = v;
+      if (v < rowMin) rowMin = v;
+    }
+    if (rowMin > max) return max + 1;
+    prev2 = prev;
+    prev = cur;
+  }
+  return prev[bl];
+}
+
+// Devolve { query, fixes } com as palavras desconhecidas trocadas pelas mais
+// parecidas do vocabulário do diretório, ou null se não houver o que corrigir.
+function argoFuzzyQuery(q) {
+  const vocab = argoGetVocab();
+  const fixes = [];
+  const tokens = q.tokens.map(tk => {
+    if (tk.t.length < 4 || /^\d+$/.test(tk.t)) return tk;
+    if (vocab.some(v => v.w.includes(tk.t))) return tk;   // a palavra existe: não é erro de digitação
+    const max = tk.t.length <= 6 ? 1 : 2;
+    const cands = [];
+    for (const v of vocab) {
+      if (v.w.charAt(0) !== tk.t.charAt(0) || Math.abs(v.w.length - tk.t.length) > max) continue;
+      const d = argoEditDistance(tk.t, v.w, max);
+      if (d <= max) cands.push({ w: v.w, d, n: v.n });
+    }
+    if (!cands.length) return tk;
+    cands.sort((a, b) => a.d - b.d || b.n - a.n);
+    const top = cands.slice(0, 4);
+    fixes.push({ from: tk.t, to: top[0].w });
+    return { t: tk.t, alts: tk.alts.concat(top.map(c => ({ s: c.w, w: 0.7 }))) };
+  });
+  return fixes.length ? { query: Object.assign({}, q, { tokens }), fixes } : null;
+}
+
+// Grifa os termos buscados num texto simples (sem acento/caixa; mesmo tamanho
+// do original para poder marcar as posições certas). Textos que já contêm
+// HTML/entidades ficam intactos.
+function argoHighlight(text, q) {
+  const s = String(text == null ? '' : text);
+  if (!q || !s || /[<&]/.test(s)) return s;
+  let folded = '';
+  for (let k = 0; k < s.length; k++) {
+    const b = s.charAt(k).normalize('NFD').charAt(0).toLowerCase();
+    folded += b.length === 1 ? b : s.charAt(k);
+  }
+  const ranges = [];
+  q.tokens.forEach(tk => tk.alts.forEach(a => {
+    const needle = a.s;
+    if (!needle) return;
+    const short = needle.length <= 2;
+    let from = 0, idx;
+    while ((idx = folded.indexOf(needle, from)) !== -1) {
+      if (!short || idx === 0 || !/[a-z0-9]/.test(folded.charAt(idx - 1))) ranges.push([idx, idx + needle.length]);
+      from = idx + needle.length;
+    }
+  }));
+  if (!ranges.length) return escapeHtml(s);
+  ranges.sort((a, b) => a[0] - b[0]);
+  const merged = [ranges[0].slice()];
+  for (let r = 1; r < ranges.length; r++) {
+    const last = merged[merged.length - 1];
+    if (ranges[r][0] <= last[1]) last[1] = Math.max(last[1], ranges[r][1]);
+    else merged.push(ranges[r].slice());
+  }
+  let out = '';
+  let pos = 0;
+  merged.forEach(([a, b]) => {
+    out += escapeHtml(s.slice(pos, a)) + '<mark class="search-mark">' + escapeHtml(s.slice(a, b)) + '</mark>';
+    pos = b;
+  });
+  return out + escapeHtml(s.slice(pos));
+}
+
+function setSearchHint(html) {
+  const el = document.getElementById('searchHint');
+  if (!el) return;
+  if (html) { el.innerHTML = html; el.hidden = false; }
+  else { el.innerHTML = ''; el.hidden = true; }
+}
+
+function argoSearchAllCategories() {
+  const chip = document.querySelector('.filter-chip[data-cat="all"]');
+  if (chip) chip.click();
+}
+
+/* ===================== Sugestões enquanto digita =====================
+   Lista abaixo do campo de busca (principal e do modo destaque) com:
+   • até 3 palavras para completar o termo que está sendo digitado ("hosp" → hospital, hospitalar…);
+   • até 5 unidades da aba atual cujo nome bate com o que foi digitado.
+   Teclado: ↓/↑ percorrem, Enter escolhe, Esc fecha a lista (sem sair do destaque). */
+let _argoDisplayWords = null;
+// Forma "bonita" (com acento) de uma palavra do vocabulário normalizado.
+function argoDisplayWord(n) {
+  if (!_argoDisplayWords) {
+    _argoDisplayWords = new Map();
+    const add = (txt) => String(txt || '').split(/[^\p{L}\p{N}]+/u).forEach(w => {
+      if (w.length < 3) return;
+      const k = argoNorm(w);
+      if (!k || k.includes(' ')) return;
+      const lw = w.toLowerCase();
+      const cur = _argoDisplayWords.get(k);
+      if (!cur || (cur === k && lw !== k)) _argoDisplayWords.set(k, lw);   // prefere a grafia acentuada
+    });
+    DATA.forEach(i => {
+      add(i.name); add(i.fullName); add(i.desc);
+      add(Array.isArray(i.services) ? i.services.join(' ') : i.services);
+    });
+  }
+  return _argoDisplayWords.get(n) || n;
+}
+
+function argoCatMatch(i, cat) {
+  return cat === 'all' || (cat === 'social' ? (i.cat.includes('social') || i.cat.includes('idoso')) : i.cat.includes(cat));
+}
+
+// Sugestões para o texto digitado: [{ kind:'term'|'name', label, sub, value }]
+function argoSuggest(rawValue, cat) {
+  const q = argoParseQuery(rawValue);
+  if (!q || rawValue.trim().length < 2) return [];
+  const out = [];
+
+  const tail = rawValue.match(/[\p{L}\p{N}]+$/u);
+  if (tail) {
+    const typed = argoNorm(tail[0]);
+    if (typed.length >= 3 && !/^\d+$/.test(typed)) {
+      argoGetVocab()
+        .filter(v => v.w.length > typed.length && v.w.startsWith(typed) && !/^\d+$/.test(v.w) && !SEARCH_STOPWORDS.has(v.w))
+        .sort((a, b) => b.n - a.n || a.w.length - b.w.length)
+        .slice(0, 3)
+        .forEach(v => {
+          const word = argoDisplayWord(v.w);
+          out.push({
+            kind: 'term',
+            html: '<strong>' + escapeHtml(word.slice(0, typed.length)) + '</strong>' + escapeHtml(word.slice(typed.length)),
+            sub: '',
+            value: rawValue.slice(0, rawValue.length - tail[0].length) + word + ' '
+          });
+        });
+    }
+  }
+
+  const names = [];
+  DATA.forEach((i, idx) => {
+    if (!argoCatMatch(i, cat)) return;
+    const sx = argoEnsureIndex(i);
+    let total = 0;
+    for (const tk of q.tokens) {
+      let best = 0;
+      for (const a of tk.alts) {
+        if (a.w < 0.9) continue;                       // sugestão só por nome, sem sinônimos
+        const s = a.s;
+        const sc = sx.name.startsWith(s) ? 14 : sx.nameP.includes(' ' + s) ? 12 : (s.length > 2 && sx.name.includes(s)) ? 9 : 0;
+        if (sc > best) best = sc;
+      }
+      if (!best) return;
+      total += best;
+    }
+    names.push({ i, idx, total });
+  });
+  names.sort((a, b) => b.total - a.total || String(a.i.name).length - String(b.i.name).length || a.idx - b.idx);
+  const seen = new Set();
+  for (const n of names) {
+    const key = argoNorm(n.i.name);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      kind: 'name',
+      html: argoHighlight(n.i.name, q),
+      sub: n.i.group && !n.i.cat.includes('cas') && !n.i.cat.includes('cras') ? n.i.group : '',
+      value: n.i.name
+    });
+    if (seen.size >= 5) break;
+  }
+  return out;
+}
+
+// Liga a lista de sugestões a um campo de busca. Devolve { close }.
+function argoAttachSuggest(input) {
+  if (!input || !input.parentNode) return null;
+  const listId = input.id + 'Suggest';
+  const list = document.createElement('ul');
+  list.className = 'search-suggest';
+  list.id = listId;
+  list.setAttribute('role', 'listbox');
+  list.setAttribute('aria-label', 'Sugestões de busca');
+  list.hidden = true;
+  input.parentNode.appendChild(list);
+  input.setAttribute('role', 'combobox');
+  input.setAttribute('aria-autocomplete', 'list');
+  input.setAttribute('aria-expanded', 'false');
+  input.setAttribute('aria-controls', listId);
+  input.setAttribute('autocomplete', 'off');
+
+  let items = [];
+  let active = -1;
+  let suppress = false;   // true logo após escolher uma sugestão (não reabrir a lista)
+
+  const close = () => {
+    list.hidden = true;
+    list.innerHTML = '';
+    items = [];
+    active = -1;
+    input.setAttribute('aria-expanded', 'false');
+    input.removeAttribute('aria-activedescendant');
+  };
+
+  const setActive = (n) => {
+    active = n;
+    Array.from(list.children).forEach((li, k) => li.setAttribute('aria-selected', k === n ? 'true' : 'false'));
+    if (n >= 0 && list.children[n]) {
+      input.setAttribute('aria-activedescendant', list.children[n].id);
+      if (list.children[n].scrollIntoView) list.children[n].scrollIntoView({ block: 'nearest' });
+    } else {
+      input.removeAttribute('aria-activedescendant');
+    }
+  };
+
+  const refresh = () => {
+    if (suppress) { suppress = false; close(); return; }
+    if (document.activeElement !== input || input.disabled) { close(); return; }
+    const chip = document.querySelector('.filter-chip.active');
+    const cat = chip ? chip.dataset.cat : 'all';
+    if (cat === 'anotacoes') { close(); return; }
+    items = argoSuggest(input.value, cat);
+    if (!items.length) { close(); return; }
+    list.innerHTML = items.map((it, n) => `
+      <li id="${listId}-${n}" role="option" aria-selected="false" data-n="${n}" class="search-suggest-item">
+        <span class="ss-icon" aria-hidden="true">${it.kind === 'term'
+          ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'
+          : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>'}</span>
+        <span class="ss-main">${it.html}</span>
+        ${it.sub ? `<span class="ss-sub">${escapeHtml(it.sub)}</span>` : ''}
+      </li>`).join('');
+    list.hidden = false;
+    input.setAttribute('aria-expanded', 'true');
+    active = -1;
+  };
+
+  const choose = (n) => {
+    const it = items[n];
+    if (!it) return;
+    close();
+    suppress = true;
+    input.value = it.value;
+    input.dispatchEvent(new Event('input', { bubbles: true }));   // aciona a busca (e o espelho do modo destaque)
+    input.focus();
+  };
+
+  input.addEventListener('input', refresh);
+  input.addEventListener('keydown', (e) => {
+    const open = !list.hidden && items.length > 0;
+    if (e.key === 'ArrowDown') {
+      if (!open) { refresh(); if (list.hidden) return; e.preventDefault(); setActive(0); return; }
+      e.preventDefault();
+      setActive((active + 1) % items.length);
+    } else if (e.key === 'ArrowUp' && open) {
+      e.preventDefault();
+      setActive(active <= 0 ? items.length - 1 : active - 1);
+    } else if (e.key === 'Enter' && open && active >= 0) {
+      e.preventDefault();
+      choose(active);
+    } else if (e.key === 'Escape' && open) {
+      // Fecha só a lista; não deixa o Esc subir e fechar o modo destaque.
+      e.preventDefault();
+      e.stopPropagation();
+      close();
+    } else if (e.key === 'Tab') {
+      close();
+    }
+  });
+  input.addEventListener('blur', () => setTimeout(close, 120));
+  // Manter o foco no campo ao tocar/clicar numa sugestão.
+  list.addEventListener('mousedown', (e) => e.preventDefault());
+  list.addEventListener('click', (e) => {
+    const li = e.target.closest ? e.target.closest('[role="option"]') : null;
+    if (li) choose(Number(li.dataset.n));
+  });
+  return { close };
+}
+
 function setMainSearchEnabled(enabled) {
   const input = document.getElementById('mainSearch');
   if (!input) return;
@@ -2468,6 +2956,7 @@ function hydrateAttachImages(root) {
 
 function render() {
   cancelPendingGridChunks();
+  setSearchHint('');
   const query = document.getElementById('mainSearch').value.toLowerCase();
   const cat = document.querySelector('.filter-chip.active').dataset.cat;
   const grid = document.getElementById('grid');
@@ -2835,53 +3324,48 @@ function render() {
 
   if (resultsInfo) resultsInfo.style.display = '';
 
-  let filtered = DATA.filter(i => {
-    // Índice de busca (todos os campos pesquisáveis, já em minúsculas)
-    // calculado uma única vez por unidade e reaproveitado nas buscas
-    // seguintes, em vez de remontar essas strings a cada tecla digitada —
-    // isso era uma causa real de lentidão com a lista grande de unidades.
-    if (!i._searchIdx) {
-      const isCas = i.cat.includes('cas');
-      const isCras = i.cat.includes('cras');
-      let parts;
-      if (isCas) {
-        parts = [
-          i.name, i.fullName, i.address, i.desc,
-          ...(i.phones || []), i.hours,
-          ...(i.adminLinks || []).map(l => l.label),
-          ...(i.systemLinks || []).flatMap(l => [l.label, l.desc || '']),
-          ...(i.mapLinks || []).flatMap(l => [l.label, l.desc || '']),
-          ...(i.driveLinks || []).map(l => l.label)
-        ];
-      } else if (isCras) {
-        parts = [
-          i.name, i.fullName, i.address, i.desc,
-          ...(i.phones || []), i.hours,
-          ...(i.municipalLinks || []).map(l => l.label),
-          ...(i.federalLinks || []).map(l => l.label),
-          ...(i.rmaLinks || []).flatMap(l => [l.label, l.desc || '']),
-          ...(i.driveLinks || []).map(l => l.label),
-          i.teamPanelLink ? i.teamPanelLink.label : '',
-          ...(i.fixedTeam || []).flatMap(t => [t.name, t.role, t.bairros]),
-          ...(i.volanteTeam || []).flatMap(t => [t.name, t.role])
-        ];
-      } else {
-        parts = [
-          i.name, i.fullName, i.address, i.desc,
-          ...(Array.isArray(i.services) ? i.services : [i.services || '']),
-          ...(i.phones || []),
-          i.group || ''
-        ];
-      }
-      i._searchIdx = parts.join(' ').toLowerCase();
+  // Busca (ver "Motor de busca"): várias palavras, sem acento, com relevância.
+  // Só se nada for encontrado é que se tenta corrigir erros de digitação.
+  const sq = argoParseQuery(document.getElementById('mainSearch').value);
+  const matchCat = i => cat === 'all' ||
+                        (cat === 'social' ? (i.cat.includes('social') || i.cat.includes('idoso')) :
+                        i.cat.includes(cat));
+  const argoScores = new Map();
+  const runFilter = (q) => {
+    argoScores.clear();
+    return DATA.filter(i => {
+      if (!matchCat(i)) return false;
+      if (!q) return true;
+      const sc = argoScoreItem(i, q);
+      if (sc > 0) argoScores.set(i, sc);
+      return sc > 0;
+    });
+  };
+  let activeQuery = sq;
+  let fuzzyFix = null;
+  let filtered = runFilter(sq);
+  if (sq && filtered.length === 0) {
+    const fz = argoFuzzyQuery(sq);
+    if (fz) {
+      const retry = runFilter(fz.query);
+      if (retry.length) { filtered = retry; activeQuery = fz.query; fuzzyFix = fz.fixes; }
     }
+  }
+  if (fuzzyFix) {
+    setSearchHint('Nenhum resultado exato. Mostrando resultados para ' +
+      fuzzyFix.map(f => '<strong>' + escapeHtml(f.to) + '</strong> <span style="opacity:.75;">(você digitou “' + escapeHtml(f.from) + '”)</span>').join(', ') + '.');
+  }
 
-    const matchSearch = i._searchIdx.includes(query);
-    const matchCat = cat === 'all' ||
-                     (cat === 'social' ? (i.cat.includes('social') || i.cat.includes('idoso')) :
-                     i.cat.includes(cat));
-    return matchSearch && matchCat;
-  });
+  // Com uma busca ativa a lista vem em ordem de relevância (nome > endereço >
+  // descrição). Nesse modo os separadores por seção/grupo deixam de fazer
+  // sentido (o mesmo grupo apareceria em vários pontos) e são omitidos.
+  const relevanceMode = !!activeQuery && !proximityState.active;
+  if (relevanceMode) {
+    filtered = filtered
+      .map((item, idx) => ({ item, idx, sc: argoScores.get(item) || 0 }))
+      .sort((a, b) => b.sc - a.sc || a.idx - b.idx)
+      .map(x => x.item);
+  }
 
   // "Ordenar por proximidade": o botão (toggleProximitySort) só geocodificava
   // os endereços e guardava a distância em cache, mas a lista nunca era
@@ -2924,7 +3408,7 @@ function render() {
   // Aplicado em qualquer aba (inclusive "Todos"): tabs sem itens do
   // interior (CAS, CRAS, Anotações, etc.) simplesmente não sofrem alteração,
   // pois "interior" fica vazio e a condição abaixo não entra em ação.
-  if (!proximityState.active && cat !== 'cas' && cat !== 'cras' && cat !== 'anotacoes') {
+  if (!proximityState.active && !relevanceMode && cat !== 'cas' && cat !== 'cras' && cat !== 'anotacoes') {
     const boaVista = filtered.filter(i => !i.cat.includes('interior'));
     const interior = filtered.filter(i => i.cat.includes('interior'));
     if (boaVista.length && interior.length) {
@@ -2936,11 +3420,21 @@ function render() {
   document.getElementById('counter').textContent = filtered.length;
 
   if (filtered.length === 0) {
+    // Busca sem resultado nesta aba: avisa se ela acharia algo nas demais.
+    let crossHtml = '';
+    if (sq && cat !== 'all') {
+      const countAll = (q) => DATA.reduce((n, i) => n + (argoScoreItem(i, q) > 0 ? 1 : 0), 0);
+      let cross = countAll(sq);
+      if (!cross) { const fz = argoFuzzyQuery(sq); if (fz) cross = countAll(fz.query); }
+      if (cross) {
+        crossHtml = `<div style="text-align:center; padding:0 1.5rem 2.5rem;"><button type="button" class="btn-tech btn-primary" onclick="argoSearchAllCategories()">Buscar em todas as categorias (${cross} ${cross === 1 ? 'resultado' : 'resultados'})</button></div>`;
+      }
+    }
     grid.innerHTML = `<div class="empty-state" style="padding:0">${
       (typeof ArgoMascot !== 'undefined')
         ? ArgoMascot.emptyStateHTML('Nenhum registro encontrado', { type: 'notfound', hint: 'Tente ajustar os termos da busca ou selecionar outra categoria.' })
         : '<strong style="display:block;padding:3.5rem 1.5rem">Nenhum registro encontrado</strong>'
-    }</div>`;
+    }${crossHtml}</div>`;
     return;
   }
 
@@ -2958,7 +3452,7 @@ function render() {
     // ou por município no interior) sempre que o campo "group" do item mudar
     // em relação ao anterior na lista já filtrada.
     const prevItem = filtered[idx - 1];
-    const groupChanged = !proximityState.active && i.group && i.group !== (prevItem ? prevItem.group : undefined) && !i.cat.includes('cas') && !i.cat.includes('cras');
+    const groupChanged = !proximityState.active && !relevanceMode && i.group && i.group !== (prevItem ? prevItem.group : undefined) && !i.cat.includes('cas') && !i.cat.includes('cras');
     const groupDivider = groupChanged ? `
       <div class="group-section-divider" style="grid-column:1/-1; display:flex; align-items:center; gap:10px; margin:${idx === socialDividerIndex ? '0.6rem' : '1.25rem'} 0 0.15rem;">
         <span style="display:inline-flex; align-items:center; gap:6px; font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:var(--brand-primary); background:rgba(0,145,194,0.08); padding:5px 12px; border-radius:999px;">
@@ -2971,11 +3465,11 @@ function render() {
     const dividers = sectionDivider + groupDivider;
 
     if (i.cat.includes('cas')) {
-      return dividers + renderCasCard(i, query);
+      return dividers + renderCasCard(i, activeQuery);
     }
 
     if (i.cat.includes('cras')) {
-      return dividers + renderCrasCard(i, query);
+      return dividers + renderCrasCard(i, activeQuery);
     }
 
     const attach = getAttachment(i.id);
@@ -3028,9 +3522,9 @@ function render() {
         <div class="card-top">
           <div style="display:flex; align-items:center; gap:0.55rem;">
             <span class="informe-badge">${ICONS.info}</span>
-            <h2 style="margin:0;">${i.name}</h2>
+            <h2 style="margin:0;">${argoHighlight(i.name, activeQuery)}</h2>
           </div>
-          <span class="subtitle">📋 Programa/Serviço · ${i.fullName}</span>
+          <span class="subtitle">📋 Programa/Serviço · ${argoHighlight(i.fullName, activeQuery)}</span>
           ${renderDistanceBadge(i.id)}
         </div>
         <div class="card-body">
@@ -3069,15 +3563,15 @@ function render() {
         <div style="display:flex; align-items:center; gap:0.55rem;">
           ${isPolice ? `<span class="police-badge">${ICONS.police}</span>` : ''}
           ${isInterior ? `<span class="interior-badge">${ICONS.home}</span>` : ''}
-          <h2>${i.name}</h2>
+          <h2>${argoHighlight(i.name, activeQuery)}</h2>
         </div>
-        <span class="subtitle">${i.fullName}</span>
+        <span class="subtitle">${argoHighlight(i.fullName, activeQuery)}</span>
         ${isPolice && i.group ? `<span class="police-group-tag">${ICONS.shield} ${i.group}</span>` : ''}
         ${isInterior && i.group ? `<span class="interior-group-tag">${ICONS.home} Município: ${i.group}</span>` : ''}
         ${renderDistanceBadge(i.id)}
       </div>
       <div class="card-body">
-        <div class="info-group"><span class="info-icon">${ICONS.map}</span><div><span class="label-tech">Localização</span>${i.address}</div></div>
+        <div class="info-group"><span class="info-icon">${ICONS.map}</span><div><span class="label-tech">Localização</span>${argoHighlight(i.address, activeQuery)}</div></div>
         <div class="info-group"><span class="info-icon">${ICONS.clock}</span><div><span class="label-tech">Disponibilidade</span>${i.hours}</div></div>
         <div class="info-group"><span class="info-icon">${ICONS.phone}</span><div><span class="label-tech">Contato Técnico</span>${i.phones.join(' · ')}</div></div>
         <div class="desc-box">
@@ -6653,6 +7147,154 @@ function syncCategoryToggleLabel() {
   }
 }
 
+/* ---- Modo destaque: a aba clicada ocupa a tela inteira ----
+   Ao clicar numa aba (categoria ou ferramenta), o conteúdo dela sobe para
+   uma camada de tela cheia (body.tab-focus, ver styles.css). Para voltar ao
+   normal basta fechar o destaque: botão "Fechar", tecla Esc ou o botão
+   "voltar" do celular/navegador. Nada é remontado ao entrar/sair — é o
+   mesmo #mainContent, só reposicionado por CSS. */
+const TAB_FOCUS_INERT_SELECTORS = ['header.hero', '.flag-stripe', '.controls', '#categorySidebar', '.site-footer', '#backToTop'];
+let tabFocusOpener = null;
+let tabFocusHistoryPushed = false;
+let tabFocusPopExpected = false;
+
+function isTabFocusOpen() {
+  return document.body.classList.contains('tab-focus');
+}
+
+function setTabFocusInert(on) {
+  TAB_FOCUS_INERT_SELECTORS.forEach(sel => document.querySelectorAll(sel).forEach(el => {
+    if (on) el.setAttribute('inert', ''); else el.removeAttribute('inert');
+  }));
+}
+
+// O mapa (Leaflet) só recalcula o tamanho sozinho no redimensionamento da
+// janela; ao entrar/sair do destaque o contêiner muda de tamanho sem isso.
+function refreshMapSizeAfterFocusChange() {
+  if (typeof mapaRedeMap === 'undefined' || !mapaRedeMap || typeof mapaRedeMap.invalidateSize !== 'function') return;
+  requestAnimationFrame(() => { try { mapaRedeMap.invalidateSize(); } catch (e) { /* mapa já removido */ } });
+}
+
+function syncTabFocusSearch() {
+  const mainSearch = document.getElementById('mainSearch');
+  const focusSearch = document.getElementById('tabFocusSearch');
+  const wrap = document.getElementById('tabFocusSearchWrap');
+  if (!mainSearch || !focusSearch || !wrap) return;
+  const active = document.querySelector('.filter-chip.active');
+  const cat = active ? active.dataset.cat : '';
+  // Mesma regra da busca principal: só existe nas abas de equipamentos.
+  wrap.style.display = (mainSearch.disabled || cat === 'anotacoes') ? 'none' : '';
+  if (focusSearch.value !== mainSearch.value) focusSearch.value = mainSearch.value;
+}
+
+function openTabFocus(chip) {
+  const main = document.getElementById('mainContent');
+  const bar = document.getElementById('tabFocusBar');
+  if (!main || !bar || !chip) return false;
+
+  const nameEl = chip.querySelector('span:not(.chip-icon):not(.chip-count)');
+  const iconEl = chip.querySelector('.chip-icon');
+  document.getElementById('tabFocusName').textContent = nameEl ? nameEl.textContent.trim() : 'Aba';
+  document.getElementById('tabFocusIcon').innerHTML = iconEl ? iconEl.innerHTML : '';
+
+  if (!isTabFocusOpen()) {
+    tabFocusOpener = chip;
+    document.body.classList.add('tab-focus');
+    main.setAttribute('role', 'dialog');
+    main.setAttribute('aria-modal', 'true');
+    main.setAttribute('aria-labelledby', 'tabFocusName');
+    setTabFocusInert(true);
+    // Uma entrada no histórico faz o botão "voltar" do celular fechar o
+    // destaque (em vez de sair do app).
+    try {
+      history.pushState({ argoTabFocus: true }, '');
+      tabFocusHistoryPushed = true;
+    } catch (e) {
+      tabFocusHistoryPushed = false;
+    }
+  }
+
+  main.scrollTop = 0;
+  refreshMapSizeAfterFocusChange();
+  requestAnimationFrame(() => {
+    const closeBtn = document.getElementById('tabFocusClose');
+    if (closeBtn) { try { closeBtn.focus({ preventScroll: true }); } catch (e) { /* ignora */ } }
+  });
+  return true;
+}
+
+function closeTabFocus(opts) {
+  // Primeira linha propositalmente sem tocar em nada além do <body>: o
+  // lockApp() pode chamar esta função ainda no carregamento da página.
+  if (!document.body.classList.contains('tab-focus')) return;
+  document.body.classList.remove('tab-focus');
+  const main = document.getElementById('mainContent');
+  if (main) {
+    main.removeAttribute('role');
+    main.removeAttribute('aria-modal');
+    main.removeAttribute('aria-labelledby');
+  }
+  setTabFocusInert(false);
+
+  if (tabFocusHistoryPushed) {
+    tabFocusHistoryPushed = false;
+    if (!(opts && opts.fromPopstate)) {
+      // Desfaz a entrada criada em openTabFocus; o popstate resultante é
+      // ignorado (o destaque já foi fechado aqui).
+      tabFocusPopExpected = true;
+      setTimeout(() => { tabFocusPopExpected = false; }, 600);
+      try { history.back(); } catch (e) { tabFocusPopExpected = false; }
+    }
+  }
+
+  refreshMapSizeAfterFocusChange();
+  const opener = tabFocusOpener;
+  tabFocusOpener = null;
+  if (opener && !mobileSidebarQuery.matches) {
+    try { opener.focus({ preventScroll: true }); } catch (e) { /* ignora */ }
+  }
+}
+
+document.getElementById('tabFocusClose').addEventListener('click', () => closeTabFocus());
+
+document.getElementById('tabFocusSearch').addEventListener('input', (e) => {
+  const mainSearch = document.getElementById('mainSearch');
+  if (!mainSearch || mainSearch.disabled) return;
+  mainSearch.value = e.target.value;
+  // Reaproveita o ouvinte da busca principal (botão limpar + render com pausa).
+  mainSearch.dispatchEvent(new Event('input', { bubbles: true }));
+});
+
+window.addEventListener('popstate', () => {
+  if (tabFocusPopExpected) { tabFocusPopExpected = false; return; }
+  if (isTabFocusOpen()) {
+    tabFocusHistoryPushed = false;
+    closeTabFocus({ fromPopstate: true });
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || !isTabFocusOpen()) return;
+  // Se houver algo mais "por cima" (gaveta de categorias, cartão de abertura,
+  // janelas da agenda), o Esc pertence a esse elemento primeiro.
+  if (categorySidebar.classList.contains('is-open')) return;
+  const greeting = document.getElementById('argoGreetingModal');
+  if (greeting && greeting.classList.contains('visible')) return;
+  const agendaModalOpen = ['agendaNoteModal', 'agendaSyncModal'].some(id => {
+    const m = document.getElementById(id);
+    return m && m.style.display === 'flex';
+  });
+  if (agendaModalOpen) return;
+  closeTabFocus();
+});
+
+// Sugestões enquanto digita (ver "Sugestões enquanto digita"): busca principal e busca do modo destaque.
+const argoSuggestLists = [
+  argoAttachSuggest(document.getElementById('mainSearch')),
+  argoAttachSuggest(document.getElementById('tabFocusSearch'))
+].filter(Boolean);
+document.getElementById('searchClearBtn').addEventListener('click', () => argoSuggestLists.forEach(l => l.close()));
+
 document.querySelectorAll('.filter-chip').forEach(c => c.addEventListener('click', () => {
   const prevActive = document.querySelector('.filter-chip.active');
   prevActive.classList.remove('active');
@@ -6666,10 +7308,14 @@ document.querySelectorAll('.filter-chip').forEach(c => c.addEventListener('click
     if (chipGroupLabel) chipGroupLabel.setAttribute('aria-expanded', 'true');
   }
   syncCategoryToggleLabel();
+  // Modo destaque: entra ANTES do render() para que painéis como o mapa já
+  // nasçam no tamanho final da tela cheia.
+  const focused = openTabFocus(c);
   render();
+  if (focused) syncTabFocusSearch();
   if (mobileSidebarQuery.matches) {
     closeCategorySidebar();
-  } else {
+  } else if (!focused) {
     const controlsEl = document.querySelector('.controls');
     const controlsBottom = controlsEl.getBoundingClientRect().bottom;
     if (controlsBottom < 0 || window.scrollY > controlsEl.offsetTop + 400) {
