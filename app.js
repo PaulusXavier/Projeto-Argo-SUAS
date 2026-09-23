@@ -116,6 +116,7 @@ function computeLockoutMs(level) {
 
 let authFailedAttempts = 0;
 let authLockedUntil = 0;
+let authLockoutLevel = 0;
 
 // Chave de cifragem da sessão atual (Uint8Array de 32 bytes), derivada da
 // senha digitada no login. Só existe na memória da aba enquanto o app
@@ -137,6 +138,56 @@ async function deriveSessionKey(password) {
   const enc = new TextEncoder().encode('argo-suas-enc-v1:' + password);
   const digest = await crypto.subtle.digest('SHA-256', enc);
   return new Uint8Array(digest);
+}
+
+/* ---- "Manter-me conectado nesta aba" -------------------------------------
+   Sem isso, a chave de sessão (sessionEncKey) só vive na memória da aba e
+   qualquer F5 obriga a digitar a senha de novo (ver lockApp/initAuth). Para
+   quem passa o dia com o Argo aberto, isso é bem cansativo.
+
+   Guardamos a chave em sessionStorage (não localStorage) de propósito:
+   sessionStorage já é limpo sozinho quando a aba/navegador é fechado, então
+   "manter conectado" aqui só evita redigitar a senha DURANTE a mesma aba
+   aberta — não vira uma senha salva para sempre no aparelho. Como reforço
+   extra (ex.: alguém deixa a aba aberta o dia inteiro num posto), o registro
+   também expira sozinho depois de REMEMBER_SESSION_MAX_MS mesmo sem fechar
+   nada. "Sair" e "Apagar dados salvos neste dispositivo" sempre limpam este
+   registro (ver logout/clearAllLocalData), então nenhum dos dois é
+   contornado por "manter conectado". */
+const REMEMBER_SESSION_KEY = 'argo_remember_session_v1';
+const REMEMBER_SESSION_MAX_MS = 12 * 60 * 60 * 1000; // 12h
+
+// bytesToBase64/base64ToBytes já existem mais abaixo neste arquivo (usadas
+// para cifrar anexos) — são declarações de função (hoisted), então já dão
+// para usar aqui mesmo estando definidas depois. Reaproveitá-las evita ter
+// duas versões da mesma função no arquivo (uma delas ficaria "morta" e só
+// confundiria quem for ler o código depois).
+function rememberSessionSave(key) {
+  try {
+    sessionStorage.setItem(REMEMBER_SESSION_KEY, JSON.stringify({
+      k: bytesToBase64(key),
+      exp: Date.now() + REMEMBER_SESSION_MAX_MS
+    }));
+  } catch (e) { /* sessionStorage indisponível (modo privado) - segue sem lembrar */ }
+}
+
+function rememberSessionLoad() {
+  try {
+    const raw = sessionStorage.getItem(REMEMBER_SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.k || !parsed.exp || Date.now() > Number(parsed.exp)) {
+      sessionStorage.removeItem(REMEMBER_SESSION_KEY);
+      return null;
+    }
+    return base64ToBytes(parsed.k);
+  } catch (e) {
+    return null;
+  }
+}
+
+function rememberSessionClear() {
+  try { sessionStorage.removeItem(REMEMBER_SESSION_KEY); } catch (e) { /* ignora */ }
 }
 
 // Utilitário de uso único (rodar no console) para gerar o hash de uma nova
@@ -166,6 +217,23 @@ function unlockApp() {
   }
 }
 
+// Extraído do antigo submit do #loginForm para ser reaproveitado também pelo
+// desbloqueio automático via "manter conectado" (ver rememberSessionLoad em
+// initAuth): monta a lista de fichas e dispara a notificação de abertura
+// depois que a tela já foi pintada, exatamente como no login manual.
+function finishUnlockAfterRender() {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (typeof render === 'function') render();
+      if (typeof syncCategoryToggleLabel === 'function') syncCategoryToggleLabel();
+      setTimeout(() => {
+        const alreadyMutedToday = (typeof argoGreetingMutedToday === 'function') && argoGreetingMutedToday();
+        if (!alreadyMutedToday && typeof argoShowGreeting === 'function') argoShowGreeting();
+      }, 250);
+    });
+  });
+}
+
 function lockApp() {
   // Ao trancar (inclusive ao carregar a página, antes do login), a chave de
   // cifragem sai da memória — os dados sensíveis salvos ficam ilegíveis até
@@ -182,6 +250,15 @@ function lockApp() {
       pwField.value = '';
       setTimeout(() => pwField.focus(), 50);
     }
+    // Fecha o painel "Esqueci a senha" se tivesse ficado aberto de uma
+    // tentativa anterior, para a tela de login sempre reaparecer "limpa".
+    const forgotPanel = document.getElementById('loginForgotPanel');
+    const forgotBtn = document.getElementById('loginForgotBtn');
+    if (forgotPanel) forgotPanel.hidden = true;
+    if (forgotBtn) {
+      forgotBtn.setAttribute('aria-expanded', 'false');
+      forgotBtn.textContent = 'Esqueci a senha';
+    }
   }
   document.body.style.overflow = 'hidden';
   // Havia uma versão nova esperando (ver controllerchange): ao trancar, é o
@@ -190,7 +267,18 @@ function lockApp() {
 }
 
 function initAuth() {
-  lockApp();
+  // "Manter-me conectado nesta aba": se há uma chave de sessão válida e não
+  // expirada guardada em sessionStorage (ver rememberSessionSave, gravada no
+  // submit abaixo), pula a tela de login e entra direto — sem isso, dar F5
+  // sempre trancaria o app de novo mesmo com a caixinha marcada.
+  const remembered = rememberSessionLoad();
+  if (remembered) {
+    sessionEncKey = remembered;
+    unlockApp();
+    finishUnlockAfterRender();
+  } else {
+    lockApp();
+  }
 
   const form = document.getElementById('loginForm');
   const pwField = document.getElementById('loginPassword');
@@ -202,11 +290,15 @@ function initAuth() {
   const submitIconEl = submitBtn ? submitBtn.querySelector('.login-submit-icon') : null;
   const submitSpinnerEl = submitBtn ? submitBtn.querySelector('.login-submit-spinner') : null;
   const capsHintEl = document.getElementById('loginCapsLockHint');
+  const rememberEl = document.getElementById('loginRemember');
+  const forgotBtn = document.getElementById('loginForgotBtn');
+  const forgotPanel = document.getElementById('loginForgotPanel');
 
   // Retoma um lockout em andamento (ex.: a pessoa deu F5 no meio da espera).
   const savedState = readAuthState();
   authFailedAttempts = savedState.attempts;
   authLockedUntil = savedState.lockedUntil;
+  authLockoutLevel = savedState.level;
 
   let lockoutTimer = null;
   let isSubmitting = false;
@@ -237,7 +329,12 @@ function initAuth() {
       clearInterval(lockoutTimer);
       lockoutTimer = null;
       authLockedUntil = 0;
-      writeAuthState(0, 0);
+      // Mantém o "nível" salvo (ver authLockoutLevel) mesmo com o bloqueio
+      // zerado: ele só volta a 0 depois de um login CERTO (ver mais abaixo).
+      // Assim, se a pessoa errar de novo logo em seguida, o próximo
+      // bloqueio já começa no próximo degrau (1min, depois 2min...), em vez
+      // de reiniciar sempre em 30s.
+      writeAuthState(0, 0, authLockoutLevel);
       errorEl.classList.remove('visible');
       if (pwField) pwField.disabled = false;
       if (submitBtn) submitBtn.disabled = false;
@@ -294,46 +391,43 @@ function initAuth() {
 
       if (valueHash === APP_PASSWORD_HASH) {
         authFailedAttempts = 0;
+        authLockoutLevel = 0;
         writeAuthState(0, 0);
         errorEl.classList.remove('visible');
         if (capsHintEl) capsHintEl.classList.remove('visible');
         sessionEncKey = await deriveSessionKey(value);
+        // Grava (ou limpa) o "manter conectado" de acordo com a caixinha no
+        // momento do login — assim, desmarcá-la também derruba um "lembrar"
+        // de uma sessão anterior nesta mesma aba.
+        if (rememberEl && rememberEl.checked) {
+          rememberSessionSave(sessionEncKey);
+        } else {
+          rememberSessionClear();
+        }
         unlockApp();
         // setLoading(false) não é necessário aqui: a tela de login some em
         // unlockApp() e o botão só reaparece já resetado da próxima vez que
         // lockApp() recriar a tela (ver initAuth acima).
         // Monta a lista de 374 fichas (render()) só DEPOIS que o navegador
-        // já pintou a tela desbloqueada (ver comentário em unlockApp) —
-        // antes, esse processamento pesado rodava competindo com o próprio
-        // clique em "Entrar" (já que é síncrono e trava a thread principal
-        // por um instante), dando a impressão de que o clique demorava para
-        // responder. O duplo requestAnimationFrame garante que o quadro com
-        // a tela desbloqueada/aviso de carregamento já foi desenhado antes
-        // de começar o trabalho pesado.
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            if (typeof render === 'function') render();
-            if (typeof syncCategoryToggleLabel === 'function') syncCategoryToggleLabel();
-            // Notificação de abertura do Argo (saudação do horário + resumo
-            // da semana da agenda + estado da sincronização; ver bloco
-            // "Notificação de Abertura" mais abaixo). Só é agendada DEPOIS
-            // do render() acima: ele trava a thread por um instante, e se o
-            // cartão já estivesse animando nesse momento a entrada dele
-            // ficaria travada/pulando. Assim a lista aparece primeiro e o
-            // cartão entra por cima, com a animação inteira e fluida.
-            setTimeout(() => {
-              const alreadyMutedToday = (typeof argoGreetingMutedToday === 'function') && argoGreetingMutedToday();
-              if (!alreadyMutedToday && typeof argoShowGreeting === 'function') argoShowGreeting();
-            }, 250);
-          });
-        });
+        // já pintou a tela desbloqueada (ver comentário em unlockApp e em
+        // finishUnlockAfterRender, reaproveitada aqui e no desbloqueio
+        // automático via "manter conectado").
+        finishUnlockAfterRender();
       } else {
         setLoading(false);
         authFailedAttempts++;
         if (authFailedAttempts >= AUTH_MAX_ATTEMPTS) {
-          authLockedUntil = Date.now() + AUTH_LOCKOUT_MS;
+          // BUG CORRIGIDO: aqui estava "authLockedUntil = Date.now() + AUTH_LOCKOUT_MS",
+          // uma constante que nunca existiu neste arquivo (só AUTH_LOCKOUT_BASE_MS
+          // e AUTH_LOCKOUT_MAX_MS). Isso somava "Date.now() + undefined" = NaN, e
+          // como "NaN <= 0" é falso, tickLockout() nunca zerava o bloqueio — o
+          // formulário ficava travado, mostrando "Aguarde NaNs" para sempre, sem
+          // nenhum backoff progressivo (30s, 1min, 2min...) realmente acontecer.
+          const lockoutMs = computeLockoutMs(authLockoutLevel);
+          authLockedUntil = Date.now() + lockoutMs;
           authFailedAttempts = 0;
-          writeAuthState(0, authLockedUntil);
+          authLockoutLevel++;
+          writeAuthState(0, authLockedUntil, authLockoutLevel);
           startLockoutCountdown();
         } else {
           writeAuthState(authFailedAttempts, 0);
@@ -342,6 +436,15 @@ function initAuth() {
         pwField.value = '';
         pwField.focus();
       }
+    });
+  }
+
+  if (forgotBtn && forgotPanel) {
+    forgotBtn.addEventListener('click', function() {
+      const isHidden = forgotPanel.hidden;
+      forgotPanel.hidden = !isHidden;
+      forgotBtn.setAttribute('aria-expanded', String(isHidden));
+      forgotBtn.textContent = isHidden ? 'Ocultar' : 'Esqueci a senha';
     });
   }
 
@@ -363,12 +466,19 @@ function initAuth() {
 }
 
 function logout() {
+  // "Sair" sempre exige a senha de novo, mesmo com "manter conectado"
+  // marcado numa sessão anterior — sem isso, o botão Sair não sairia de
+  // verdade enquanto a aba permanecesse aberta.
+  rememberSessionClear();
   lockApp();
 }
 
 /* ===================== Notificação de Abertura (Argo) =====================
    Ao desbloquear o app, o Argo aparece num cartão de boas-vindas com:
      • a saudação do horário (bom dia / boa tarde / boa noite) e a data;
+     • uma frase de apresentação logo abaixo do título — completa na
+       PRIMEIRA vez que o app é aberto neste aparelho, e mais curta nas
+       vezes seguintes (ver ARGO_INTRO_FIRST_TIME/ARGO_INTRO_RETURNING);
      • o resumo da semana da agenda (hoje em destaque + próximos dias) —
        já visível na própria notificação, sem precisar de um "sim" antes;
      • o estado da sincronização entre aparelhos (Firebase), que é iniciada
@@ -384,6 +494,27 @@ function logout() {
 
 let argoGreetingShownAt = 0;
 let argoGreetingSlowTimer = null;
+
+// "Quem sou eu" do Argo: uma frase breve dizendo o que o app faz, logo
+// abaixo do título. Na PRIMEIRA vez que o app é desbloqueado neste
+// aparelho, mostra a versão mais completa (apresentação de verdade, para
+// quem está vendo o Argo pela primeira vez); nas próximas vezes, troca por
+// uma frase mais curta — só um lembrete do que o app é, sem repetir a
+// apresentação inteira toda santo dia.
+const ARGO_INTRO_FIRST_TIME = 'Sou o Argo, guia da Rede de Políticas Públicas de Roraima. Aqui você encontra equipamentos de Assistência Social, Saúde, Educação e outras áreas, monta a ficha de encaminhamento técnico para imprimir e acompanha a agenda da semana — tudo direto do navegador, mesmo sem internet.';
+const ARGO_INTRO_RETURNING = 'Diretório técnico da Rede de Políticas Públicas de Roraima: equipamentos, ficha de encaminhamento e agenda, em um só lugar.';
+
+function argoIntroAlreadySeen() {
+  try {
+    return localStorage.getItem('argo_intro_seen_v1') === '1';
+  } catch (e) {
+    return false;
+  }
+}
+
+function argoIntroMarkSeen() {
+  try { localStorage.setItem('argo_intro_seen_v1', '1'); } catch (e) { /* localStorage indisponível - ignora */ }
+}
 
 function argoGreetingWord() {
   const hour = new Date().getHours();
@@ -550,7 +681,8 @@ function argoEnsureGreetingUI() {
 
       .argo-greeting-content { padding:18px 22px 22px; }
       .argo-greeting-date { margin:0 0 4px 0; font-size:11px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:#b8894f; }
-      .argo-greeting-box h3 { margin:0 0 14px 0; font-family:var(--font-serif,'Lora',Georgia,serif); font-size:23px; font-weight:500; line-height:1.2; color:var(--text-main,#1e293b); }
+      .argo-greeting-box h3 { margin:0 0 8px 0; font-family:var(--font-serif,'Lora',Georgia,serif); font-size:23px; font-weight:500; line-height:1.2; color:var(--text-main,#1e293b); }
+      .argo-greeting-intro { margin:0 0 14px 0; font-size:13px; line-height:1.55; color:var(--text-muted,#475569); }
 
       .argo-week { background:rgba(0,145,194,0.07); border:1px solid var(--border-ui,#e2e8f0); border-radius:14px; padding:12px 14px; font-size:13px; line-height:1.5; }
       .argo-week-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted,#475569); }
@@ -836,6 +968,12 @@ function argoShowGreeting() {
     const d = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
     dateEl.textContent = d.charAt(0).toUpperCase() + d.slice(1);
   }
+  const introEl = document.getElementById('argoGreetingIntro');
+  if (introEl) {
+    const firstTime = !argoIntroAlreadySeen();
+    introEl.textContent = firstTime ? ARGO_INTRO_FIRST_TIME : ARGO_INTRO_RETURNING;
+    if (firstTime) argoIntroMarkSeen();
+  }
   const muteChk = document.getElementById('argoGreetingMuteToday');
   if (muteChk) muteChk.checked = false;
 
@@ -927,6 +1065,10 @@ function clearAllLocalData() {
   const ok = confirm(`Isso vai apagar ${toRemove.length} item(ns) salvos neste navegador (nomes, endereços, NIS, anotações e anexos de usuários atendidos).\n\nDica: se ainda não fez backup, use "Backup de anotações" no rodapé antes de apagar. Esta ação não pode ser desfeita.\n\nDeseja continuar?`);
   if (!ok) return;
   toRemove.forEach(key => safeStorage.remove(key));
+  // Some com qualquer "manter conectado" desta aba também: quem apaga os
+  // dados antes de emprestar/devolver o computador espera que a próxima
+  // pessoa a abrir o Argo caia na tela de senha, não direto no diretório.
+  rememberSessionClear();
   alert('Dados sensíveis apagados deste dispositivo.');
   if (typeof render === 'function') render();
 }
