@@ -4661,7 +4661,7 @@ const DATA = [
     hours: "Segunda a quinta-feira (Manhã: 08h às 10h30 | Tarde: 14h30 às 16h30)",
     phones: ["N/A"],
     services: "Prevenção de risco social e fortalecimento de vínculos familiares e comunitários.",
-    desc: "Tem como objetivo prevenir situações de risco social e fortalecer vínculos familiares e comunitários. Requisitos: • Ter entre 6 e 17 anos completos; • Estar regularmente matriculado e frequentando a rede pública de ensino; • Responsável legal inscrito no CadÚnico.<br>Atividades: oficinas e palestras; esporte e lazer; orientação psicológica, social e pedagógica.<br>Benefícios: camiseta e lanche.<br>Documentos necessários para inclusão e atualização no SCFV (xerox e originais) — Da criança/adolescente: 1. RG e CPF; 2. Declaração escolar; 3. Cartão do SUS; 4. 1 (uma) foto 3x4; 5. Cartão de vacinação. — Do responsável: 1. RG e CPF; 2. Comprovante de residência; 3. Folha resumo CadÚnico.<br>Para preencher o formulário de inscrição, acesse: <a href=\"https://drive.google.com/drive/folders/1OfNRMl_PUXLziwZLagyknDLmXApX46w2\" target=\"_blank\" rel=\"noopener noreferrer\">drive.google.com/drive/folders/1OfNRMl_PUXLziwZLagyknDLmXApX46w2</a>."
+    desc: "Tem como objetivo prevenir situações de risco social e fortalecer vínculos familiares e comunitários. Requisitos: • Ter entre 6 e 17 anos completos; • Estar regularmente matriculado e frequentando a rede pública de ensino; • Responsável legal inscrito no CadÚnico.<br>Atividades: oficinas e palestras; esporte e lazer; orientação psicológica, social e pedagógica.<br>Benefícios: camiseta e lanche.<br>Documentos necessários: para inclusão e atualização no SCFV (xerox e originais).<br><b>Da criança/adolescente:</b> 1) RG e CPF; 2) Declaração escolar; 3) Cartão do SUS; 4) 1 (uma) foto 3x4; 5) Cartão de vacinação.<br><b>Do responsável:</b> 1) RG e CPF; 2) Comprovante de residência; 3) Folha resumo CadÚnico.<br>Como solicitar: para preencher o formulário de inscrição, acesse: https://drive.google.com/drive/folders/1OfNRMl_PUXLziwZLagyknDLmXApX46w2"
   },
   {
     id: "projeto-cabelos-de-prata",
@@ -4673,7 +4673,7 @@ const DATA = [
     hours: "Segunda a quinta-feira, das 08h às 10h",
     phones: ["N/A"],
     services: "Atividades para o envelhecimento saudável.",
-    desc: "Desenvolve atividades que contribuem para o envelhecimento saudável. Requisitos: • Ter 60 anos ou mais; • Estar inscrito no CadÚnico.<br>Atividades: atividades recreativas; acesso a informações e orientações; orientação psicológica, social e pedagógica.<br>Benefícios: bolsa; camiseta e lanche.<br>Documentos necessários para inclusão e atualização no SCFV (xerox e originais): 1. RG e CPF; 2. Comprovante de residência; 3. Cartão do benefício (caso tenha); 4. Folha resumo CadÚnico; 5. Cartão do SUS; 6. 1 (uma) foto 3x4; 7. Laudo médico de aptidão física; 8. Cartão de vacinação."
+    desc: "Desenvolve atividades que contribuem para o envelhecimento saudável. Requisitos: • Ter 60 anos ou mais; • Estar inscrito no CadÚnico.<br>Atividades: atividades recreativas; acesso a informações e orientações; orientação psicológica, social e pedagógica.<br>Benefícios: bolsa; camiseta e lanche.<br>Documentos necessários: para inclusão e atualização no SCFV (xerox e originais). 1) RG e CPF; 2) Comprovante de residência; 3) Cartão do benefício (caso tenha); 4) Folha resumo CadÚnico; 5) Cartão do SUS; 6) 1 (uma) foto 3x4; 7) Laudo médico de aptidão física; 8) Cartão de vacinação."
   },
   {
     id: "crianca-feliz-suas",
