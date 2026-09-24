@@ -461,9 +461,12 @@ function initAuth() {
           rememberSessionClear();
         }
         unlockApp();
-        // setLoading(false) não é necessário aqui: a tela de login some em
-        // unlockApp() e o botão só reaparece já resetado da próxima vez que
-        // lockApp() recriar a tela (ver initAuth acima).
+        // BUG CORRIGIDO: antes não havia setLoading(false) aqui, na suposição de
+        // que lockApp() "recriava" a tela de login. Não recria: ela é só
+        // reexibida (hidden = false). Com isso, isSubmitting ficava true e o
+        // botão ficava desabilitado em "Verificando…" para sempre — depois de
+        // Sair, não dava mais para entrar sem recarregar a página.
+        setLoading(false);
         // Monta a lista de 374 fichas (render()) só DEPOIS que o navegador
         // já pintou a tela desbloqueada (ver comentário em unlockApp e em
         // finishUnlockAfterRender, reaproveitada aqui e no desbloqueio
@@ -4414,28 +4417,35 @@ const TRADUTOR_SPEECH_PREFS_KEY = 'argo_tradutor_speech_prefs';
 // então não há estado para preservar e o "init" não precisa fazer nada.
 // Para adicionar, remover ou editar um app da lista, mexa só no array
 // EXTERNAL_APPS abaixo.
+// "img" = ícone do app (arquivo local icon-app-*.png, também guardado no
+// cache offline em sw.js); "icon" = ícone SVG de reserva, usado só se a
+// imagem não carregar.
 // ---------------------------------------------------------------------
 const EXTERNAL_APPS = [
   {
     name: 'Toth — Caderno de Campo',
+    img: 'icon-app-toth.png',
     desc: 'Diário de campo com registro de atendimentos individuais, visitas domiciliares e técnicas, grupos/oficinas e acompanhamento — exporta em PDF, Word, CSV ou JSON.',
     url: 'https://paulusxavier.github.io/Toth/',
     icon: 'form'
   },
   {
     name: 'Umbrela — PAIF/PAF',
+    img: 'icon-app-umbrela.png',
     desc: 'Plano de Acompanhamento Familiar (PAIF/PAF): registros, prioridades e gráficos de acompanhamento das famílias em atendimento.',
     url: 'https://paulusxavier.github.io/Projeto-Umbrela-PAIF/',
     icon: 'team'
   },
   {
     name: 'Anona — Condicionalidades 2026',
+    img: 'icon-app-anona.png',
     desc: 'Ferramenta independente de apoio ao acompanhamento de condicionalidades do Bolsa Família: calendário, planilhas do território volante, relatórios e recurso.',
     url: 'https://paulusxavier.github.io/Anona/',
     icon: 'cash'
   },
   {
     name: 'Bloco de Notas',
+    img: 'icon-app-notas.png',
     desc: 'Anotações pessoais rápidas, sincronizadas por conta e acessíveis em qualquer aparelho.',
     url: 'https://paulusxavier.github.io/Bloco-de-Notas-PX-/index.html',
     icon: 'pen'
@@ -4445,7 +4455,10 @@ const EXTERNAL_APPS = [
 function renderExternalAppsCard() {
   const tiles = EXTERNAL_APPS.map(app => `
     <a class="appsext-tile" href="${app.url}" target="_blank" rel="noopener noreferrer">
-      <span class="appsext-icon" aria-hidden="true">${ICONS[app.icon] || ICONS.external}</span>
+      <span class="appsext-icon${app.img ? ' has-img' : ''}" aria-hidden="true">
+        ${app.img ? `<img src="${app.img}" alt="" width="48" height="48" loading="lazy" decoding="async" onerror="this.parentNode.classList.add('is-fallback');this.remove()">` : ''}
+        <span class="appsext-icon-fallback">${ICONS[app.icon] || ICONS.external}</span>
+      </span>
       <span class="appsext-text">
         <span class="appsext-title">${app.name}</span>
         <span class="appsext-desc">${app.desc}</span>
