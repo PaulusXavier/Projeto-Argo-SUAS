@@ -1610,9 +1610,24 @@ function escapeHtml(str) {
 function formatInformeDesc(desc) {
   let html = String(desc);
 
+  // Rótulos mais específicos (com emoji, quando é assim que aparecem no
+  // texto de origem) vêm ANTES dos genéricos correspondentes na lista
+  // abaixo, para que fiquem destacados por inteiro (emoji incluso). A
+  // ordem, porém, deixou de ser garantia de segurança contra negrito
+  // duplicado — ver o guard "(?<!<strong>)" logo abaixo, que evita
+  // envolver em <strong> um rótulo que já esteja dentro de um <strong>
+  // (seja porque o texto de origem já veio em negrito, seja porque um
+  // rótulo mais longo da lista já envolveu esse mesmo trecho antes).
   const labels = [
     '⚠️ Observações técnicas:',
     'Atividades por idade:',
+    '📝 Como acessar:',
+    '📝 Como solicitar:',
+    '📝 Onde emitir em Boa Vista:',
+    'Como acessar:',
+    'Como solicitar:',
+    'Como usar:',
+    'Como funciona:',
     'Requisitos:',
     'Atividades:',
     'Benefícios:',
@@ -1621,10 +1636,25 @@ function formatInformeDesc(desc) {
     'Duas formas de solicitação:',
     'Gerar ID Jovem e mais informações:',
     'Link para solicitação:',
+    'Quantidade de recargas:',
     'Site:'
   ];
   labels.forEach(l => {
-    html = html.split(l).join('<br><strong>' + l + '</strong>');
+    // Escapa caracteres especiais de regex no rótulo (ex.: nenhum dos
+    // atuais tem, mas evita quebra silenciosa se um novo rótulo vier a
+    // ter parênteses, pontos etc.) e só envolve em negrito quando o
+    // rótulo NÃO estiver já imediatamente precedido por "<strong>" —
+    // ou seja, quando ainda não foi negritado nem pelo texto de origem
+    // (ex.: um <strong>Rótulo:</strong> já escrito à mão em algum
+    // cadastro) nem por um rótulo mais longo já processado antes neste
+    // mesmo laço. Sem esse guard, um rótulo já em negrito (na origem ou
+    // por um rótulo mais específico da lista) era envolvido de novo,
+    // gerando <strong><br><strong>...</strong></strong> — tags
+    // aninhadas e desbalanceadas que quebravam a divisão em seções da
+    // Guia impressa (ver printInformeGuide / splitInformeGuideSections).
+    const escaped = l.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp('(?<!<strong>)' + escaped, 'g');
+    html = html.replace(re, '<br><strong>' + l + '</strong>');
   });
 
   html = html.replace(/\s*•\s*/g, '<br>• ');
@@ -1660,7 +1690,7 @@ function splitInformeGuideSections(descRaw) {
   const parts = formatted.split(/<br>(?=<strong>)/);
   const intro = parts[0] || '';
 
-  const HOW_TO_LABELS = ['requisitos', 'canais para solicitação', 'duas formas de solicitação', 'como solicitar', 'link para solicitação', 'gerar id jovem', 'site'];
+  const HOW_TO_LABELS = ['requisitos', 'canais para solicitação', 'duas formas de solicitação', 'como solicitar', 'como acessar', 'como usar', 'como funciona', 'onde emitir', 'link para solicitação', 'gerar id jovem', 'quantidade de recargas', 'site'];
   const DOC_LABELS = ['documentos necessários'];
 
   const howTo = [];
@@ -3595,7 +3625,7 @@ function render() {
           ${BPC_GUIDE_IDS.includes(i.id)
             ? `<button class="btn-tech btn-primary" onclick="printBpcGuide('${i.id}','pt')">📄 Guia do Benefício (PT)</button>
                <button class="btn-tech btn-primary" onclick="printBpcGuide('${i.id}','es')">📄 Guía del Beneficio (ES)</button>`
-            : `<button class="btn-tech btn-primary" onclick="printGuide('${i.id}')">Gerar Guia</button>`
+            : `<button class="btn-tech btn-primary" onclick="printInformeGuide('${i.id}')">Gerar Guia</button>`
           }
         </div>
       </div>
@@ -6738,6 +6768,100 @@ async function pdfDataUrlToImages(dataUrl) {
     canvas.height = 0;
   }
   return images;
+}
+
+/* Guia informativo dos itens da aba "Programas, Projetos e Serviços"
+   (categoria "informes") — voltado à leitura pelo cidadão/família, com três
+   blocos bem distintos: "O que é" (descrição), "Como Participar" (requisitos
+   e canais/passo a passo de solicitação) e "Documentação Necessária" —
+   obtidos de splitInformeGuideSections(), que reaproveita o mesmo texto já
+   cadastrado em i.desc (com os rótulos destacados por formatInformeDesc,
+   igual ao card em tela) e o separa nesses três grupos. Diferente da Ficha
+   de Encaminhamento Técnico gerada por printGuide() — formulário de
+   encaminhamento entre unidades, em A4 paisagem, com layout de página única
+   e fixa — este guia sai em A4 retrato e flui livremente por quantas
+   páginas o conteúdo exigir (min-height + overflow:visible, sem redução
+   automática de fonte), já que a extensão da descrição varia muito de um
+   programa para outro (de poucas linhas a vários parágrafos). */
+async function printInformeGuide(id) {
+  const i = DATA.find(x => x.id === id);
+  if (!i) return;
+
+  const now = new Date();
+  const dateLong = now.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+  const watermark = buildPrintWatermark();
+
+  const metaRows = [
+    informeMetaRow(ICONS.map, 'Localização', i.address),
+    informeMetaRow(ICONS.clock, 'Disponibilidade', i.hours),
+    informeMetaRow(ICONS.phone, 'Contato Técnico', i.phones.join(' · '))
+  ].filter(Boolean).join('');
+
+  const servicesRaw = Array.isArray(i.services) ? i.services.join(', ') : i.services;
+  const servicesDisplay = cleanPrintField(servicesRaw, '');
+  const descRaw = cleanPrintField(i.desc, '');
+  const sections = descRaw ? splitInformeGuideSections(descRaw) : { description: '', howTo: '', docs: '' };
+
+  // Só mostra o selo com "name" (sigla/apelido) quando ele agrega alguma
+  // informação além do que já está em "fullName" — mesmo critério usado em
+  // printGuide(), para não repetir o mesmo texto duas vezes no cabeçalho.
+  const showBadge = i.name && i.fullName &&
+    !i.fullName.toLowerCase().startsWith(i.name.toLowerCase().replace(/\.$/, ''));
+
+  const section = (icon, label, html) => html ? `
+        <div style="border:1.5px solid #0F172A; border-radius:7px; padding:12px 18px; margin-bottom:11px; break-inside:avoid-page;">
+          <div style="font-size:0.76rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#0091C2; margin-bottom:6px;">${icon} ${label}</div>
+          <div style="font-size:0.85rem; line-height:1.55; color:#0F172A; text-align:justify;">${html}</div>
+        </div>` : '';
+
+  const hasAnySection = sections.description || sections.howTo || sections.docs;
+
+  const page = `
+    <div class="print-page" style="position:relative; padding:0; box-sizing:border-box; display:flex; flex-direction:column; background:white; border:2px solid #0F172A; width:100%; min-height:27.7cm; height:auto; overflow:visible;">
+      ${watermark}
+      <div style="position:absolute; inset:0.25cm; border:1px solid #94A3B8; z-index:0; pointer-events:none;"></div>
+      <div style="position:relative; z-index:1; padding:0.7cm 0.9cm; font-family:'Inter', sans-serif; color:#0F172A;">
+
+        <table style="width:100%; border-collapse:collapse; margin-bottom:10px; table-layout:fixed;">
+          <tr>
+            <td style="border:1.5px solid #0F172A; border-left:8px solid #0091C2; border-radius:3px; padding:10px 16px; vertical-align:middle;">
+              <div style="font-size:0.64rem; font-weight:800; letter-spacing:0.05em; color:#0091C2; text-transform:uppercase;">Sistema Único de Assistência Social (SUAS) · CRAS Cristiana Vicente Nunes</div>
+              <div style="display:inline-block; font-size:0.74rem; font-weight:800; letter-spacing:0.04em; color:#fff; background:#0F172A; padding:3px 11px; border-radius:20px; margin-top:5px;">📋 GUIA DO PROGRAMA / SERVIÇO</div>
+              <div style="display:flex; align-items:baseline; gap:8px; margin-top:6px; flex-wrap:wrap;">
+                ${showBadge ? `<span style="flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; padding:2px 8px; border-radius:5px; background:#0091C2; color:#fff; font-weight:800; font-size:0.78rem; letter-spacing:0.02em; white-space:nowrap;">${escapeHtml(i.name)}</span>` : ''}
+                <div style="font-size:1.1rem; color:#0F172A; font-weight:800; font-family:'Lora', serif; line-height:1.25;">${escapeHtml(i.fullName)}</div>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        ${metaRows ? `<div style="border:1px solid #CBD5E1; border-radius:7px; padding:8px 14px; margin-bottom:10px; font-size:0.8rem; line-height:1.4;">${metaRows}</div>` : ''}
+
+        ${servicesDisplay ? `<div style="font-size:0.85rem; font-weight:700; color:#0F172A; margin-bottom:10px;">${servicesDisplay}</div>` : ''}
+
+        ${hasAnySection ? `
+          ${section('📖', 'O que é', sections.description)}
+          ${section('✅', 'Como Participar', sections.howTo)}
+          ${section('📄', 'Documentação Necessária', sections.docs)}
+        ` : `<div style="border:1.5px solid #0F172A; border-radius:7px; padding:12px 18px; margin-bottom:11px; font-size:0.85rem; color:#0F172A;">Sem informações detalhadas cadastradas — consultar diretamente a unidade responsável.</div>`}
+
+        <div style="font-size:0.64rem; line-height:1.35; color:#94A3B8; text-align:center; padding-top:7px; border-top:1px dashed #CBD5E1;">
+          Documento gerado em ${dateLong} · Argo SUAS — CRAS Cristiana Vicente Nunes, SEMADS, Boa Vista/RR
+        </div>
+      </div>
+    </div>
+  `;
+
+  const printArea = document.getElementById('print-area');
+  printArea.innerHTML = page;
+
+  setTempPageOrientation('A4 portrait');
+  window.addEventListener('afterprint', function clearOrientation() {
+    setTempPageOrientation(null);
+    window.removeEventListener('afterprint', clearOrientation);
+  });
+
+  window.print();
 }
 
 async function printGuide(id) {
