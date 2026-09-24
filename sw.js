@@ -1,6 +1,6 @@
 // Troque este número toda vez que publicar uma alteração no app.
 // É essa mudança de versão que dispara a atualização automática.
-const CACHE_VERSION = 'v84';
+const CACHE_VERSION = 'v85';
 const CACHE_NAME = `rede-apoio-bv-${CACHE_VERSION}`;
 
 // Cache separado e SEM número de versão, para conteúdo pesado de fora do
@@ -33,6 +33,11 @@ const ASSETS = [
   './icon-maskable-512.png',
   './argo-navis-historico.jpg',
   './argo-constellation-bg.svg',
+  // Ícones dos aplicativos listados na aba "Aplicativos":
+  './icon-app-toth.png',
+  './icon-app-umbrela.png',
+  './icon-app-anona.png',
+  './icon-app-notas.png',
   // Páginas de apoio abertas pela aba "Registro de Atendimento (CRAS)":
   // entram no cache na instalação para abrirem sem internet já na 1ª vez.
   './RMA_Paulo_Xavier_2026.html',
