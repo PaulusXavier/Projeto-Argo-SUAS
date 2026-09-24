@@ -1787,7 +1787,7 @@ const BPC_GUIDE_CONTENT = {
       ],
       channelsNote: 'Depois de pedir: acompanhe pelo "Acompanhar Pedido" no Meu INSS. Aprovado → pagamento pelo Banco. Negado → recurso em até 30 dias.',
       valueLabel: 'Valor e Pagamento',
-      value: '1 salário mínimo por mês (R$ 1.621,00 em 2026), pago por por meio de um cartão magnético que é usado apenas para o BPC. O cartão é gratuito e o beneficiário não precisa comprar nenhum serviço ou produto do banco. É possível também receber o pagamento do BPC por meio de conta corrente ou conta-poupança.',
+      value: '1 salário mínimo por mês (R$ 1.621,00 em 2026), pago por meio de um cartão magnético que é usado apenas para o BPC. O cartão é gratuito e o beneficiário não precisa comprar nenhum serviço ou produto do banco. É possível também receber o pagamento do BPC por meio de conta corrente ou conta-poupança.',
       denialLabel: 'Se o pedido for negado',
       denial: 'É possível recorrer em até 30 dias pelo Meu INSS ou em uma agência do INSS. Persistindo a negativa, procure orientação jurídica gratuita na Defensoria Pública da União (DPU), endereço R. Gen. Penha Brasil, 1262 - São Francisco, Boa Vista - RR',
       contactLabel: 'Onde buscar ajuda',
@@ -1821,9 +1821,9 @@ const BPC_GUIDE_CONTENT = {
       ],
       stepsLabel: 'Paso a paso',
       steps: [
-        { title: '1. Solicite el beneficio', desc: 'Acceda al Meu INSS (meu.inss.gov.br o aplicación) y toque en "Entrar com gov.br" — o llame a la Central 135 (gov.br/inss, llamada gratuita, todos los días de 7h a 22h). Informe el CPF, si no sabe el número) y responda a las preguntas sobre la composición y el ingreso familiar.' },
+        { title: '1. Solicite el beneficio', desc: 'Acceda al Meu INSS (meu.inss.gov.br o aplicación) y toque en "Entrar com gov.br" — o llame a la Central 135 (gov.br/inss, llamada gratuita, todos los días de 7h a 22h). Informe el CPF y responda a las preguntas sobre la composición y el ingreso de la familia.' },
         { title: '2. Siga la solicitud', desc: 'Siga el trámite por la opción "Acompanhar Pedido" en el Meu INSS. El INSS puede pedir algún documento complementario dentro de un plazo determinado — esté atento a las notificaciones de la aplicación para no perder la solicitud por falta de respuesta.' },
-        { title: '3. Reciba el resultado', desc: 'Si es aprobado, el pago el Banco. Si es negado, hay 30 días desde la notificación para pedir recurso administrativo, por el propio Meu INSS o en una agencia del INSS (Conselho de Recursos do Seguro Social - CRPS).' }
+        { title: '3. Reciba el resultado', desc: 'Si es aprobado, el pago se hace por el banco. Si es negado, hay 30 días desde la notificación para pedir recurso administrativo, por el propio Meu INSS o en una agencia del INSS (Conselho de Recursos do Seguro Social - CRPS).' }
       ],
       channelsTitle: 'Cómo solicitarlo',
       channels: [
@@ -1840,14 +1840,28 @@ const BPC_GUIDE_CONTENT = {
           'Anote el número de protocolo'
         ] }
       ],
-      channelsNote: 'Después de solicitar: siga el trámite por "Acompanhar Pedido" en el Meu INSS. Aprobado → pago por la Caixa. Negado → recurso en hasta 30 días.',
+      channelsNote: 'Después de solicitar: siga el trámite por "Acompanhar Pedido" en el Meu INSS. Aprobado → pago por el Banco. Negado → recurso en hasta 30 días.',
       valueLabel: 'Valor y Pago',
-      value: '1 salario mínimo por mes (R$ 1.621,00 en 2026), sin aguinaldo (13º salário).',
+      value: '1 salario mínimo por mes (R$ 1.621,00 en 2026), pagado por medio de una tarjeta magnética que se usa solo para el BPC. La tarjeta es gratuita y el beneficiario no necesita comprar ningún servicio o producto del banco. También es posible recibir el pago del BPC en cuenta corriente o cuenta de ahorros.',
       denialLabel: 'Si la solicitud es negada',
-      denial: 'Es posible recurrir dentro de 30 días por el Meu INSS o en una agencia del INSS. Si persiste la negativa, busque orientación jurídica gratuita en la Defensoria Pública da União (DPU), endereço R. Gen. Penha Brasil, 1262 - São Francisco, Boa Vista - RR, 69305-130',
+      denial: 'Es posible recurrir dentro de 30 días por el Meu INSS o en una agencia del INSS. Si persiste la negativa, busque orientación jurídica gratuita en la Defensoría Pública de la Unión (DPU), dirección: R. Gen. Penha Brasil, 1262 - São Francisco, Boa Vista - RR.',
       contactLabel: 'Dónde buscar ayuda',
       crasClarificationLabel: '⚖️ Rol del CRAS x INSS',
-      crasClarification: 'El CRAS no analiza, no concede ni paga el BPC — esa es una atribución exclusiva del INSS (Instituto Nacional do Seguro Social), por delegación del MDS, conforme el art. 29 de la Ley nº 8.742/1993 (LOAS) y el art. 39 del Decreto nº 6.214/2007. El papel del CRAS (art. 6º-C de la LOAS; Decreto nº 6.135/2007) es hacer la inclusión y actualización de la familia en el Cadastro Único (CadÚnico) y orientar sobre el BPC — nunca decidir sobre el beneficio.',
+      crasClarification: 'El CRAS no analiza, no concede ni paga el BPC — esa es una atribución exclusiva del INSS (Instituto Nacional del Seguro Social), por delegación del MDS, conforme el art. 29 de la Ley nº 8.742/1993 (LOAS) y el art. 39 del Decreto nº 6.214/2007. El papel del CRAS (art. 6º-C de la LOAS; Decreto nº 6.135/2007) es hacer la inclusión y actualización de la familia en el Cadastro Único (CadÚnico) y orientar sobre el BPC — nunca decidir sobre el beneficio.',
+      familyComposition: {
+        title: 'Composición Familiar e Ingresos',
+        includedLabel: '👨‍👩‍👧‍👦 Quiénes entran en el cálculo del ingreso per cápita',
+        includedIntro: 'Art. 20, §1º de la Ley 8.742/93 (LOAS) — siempre que vivan bajo el mismo techo:',
+        included: ['Solicitante', 'Cónyuge o compañero(a)', 'Padres (o madrastra/padrastro en ausencia de ellos)', 'Hermanos solteros', 'Hijos e hijastros solteros', 'Menores bajo tutela'],
+        excludedLabel: 'Quiénes NO entran en el cálculo',
+        excluded: 'Nietos, abuelos, tíos, sobrinos, primos, yernos/nueras, cuñados, ni hijos/hermanos/hijastros casados, en unión estable, divorciados, separados de hecho o viudos, aunque vivan en la misma casa.',
+        incomeExclusionsLabel: '💵 Qué NO entra en el ingreso familiar',
+        incomeExclusions: 'Otro BPC; beneficio previsional de hasta 1 salario mínimo recibido por una persona mayor (65+) o con discapacidad de la familia (si hay más de una, solo se puede descontar una); valores de contrato de aprendizaje; beca de prácticas supervisadas; ayuda financiera temporal o indemnización por ruptura/colapso de represa; y el valor del Auxílio-Inclusão y de la remuneración de quien lo recibe. Cualquier otro valor recibido por la familia entra en el cálculo.',
+        accumulationLabel: '🔗 Acumulación con otros beneficios',
+        accumulation: 'El BPC no puede acumularse con otros beneficios de la Seguridad Social (ej.: jubilación, pensión, seguro de desempleo), pero SÍ puede recibirse junto con el Bolsa Família — en ese caso, el valor del Bolsa Família entra en el cálculo del ingreso per cápita de la familia, que no puede superar ¼ del salario mínimo por persona.',
+        cancellationLabel: '🚫 Cancelación',
+        cancellation: 'Puede ser solicitada voluntariamente por el propio beneficiario (o su representante legal) por el Meu INSS, la aplicación o el teléfono 135, cuando ya no desee recibir el beneficio o cuando la familia ya no cumpla los criterios; el INSS también puede suspender o cesar el beneficio de oficio en revisiones bienales, por fallecimiento, superación de ingresos o irregularidades en el CadÚnico.'
+      }
     }
   },
   'bpc-pcd': {
@@ -1932,7 +1946,7 @@ const BPC_GUIDE_CONTENT = {
         { title: '3. Solicite el beneficio', desc: 'Por la aplicación o sitio Meu INSS (gov.br/meuinss), con inicio de sesión gov.br, o por el teléfono 135 (llamada gratuita, todos los días, de 7h a 22h). Informe el CPF y, si es posible, adjunte el informe médico digitalizado en el propio Meu INSS.' },
         { title: '4. Asista a la evaluación', desc: 'El INSS programa una evaluación médica y social (pericia biopsicosocial), generalmente en fechas separadas. Lleve el informe médico original y todos los documentos de la familia a cada evaluación.' },
         { title: '5. Siga la solicitud', desc: 'Siga el trámite por la opción "Acompanhar Pedido" en el Meu INSS, respondiendo a cualquier exigencia dentro del plazo informado, para que la solicitud no sea archivada por falta de respuesta.' },
-        { title: '6. Reciba el resultado', desc: 'Si es aprobado, el pago lo hace el banco. Si es negado, hay 30 días desde la notificación para pedir recurso administrativo, por el propio Meu INSS o en una agencia del INSS (Conselho de Recursos do Seguro Social - CRPS).' }
+        { title: '6. Reciba el resultado', desc: 'Si es aprobado, el pago se hace por medio de una tarjeta magnética que se usa solo para el BPC. La tarjeta es gratuita y el beneficiario no necesita comprar ningún servicio o producto del banco. También es posible recibir el pago del BPC en cuenta corriente o cuenta de ahorros. Si es negado, hay 30 días desde la notificación para pedir recurso administrativo, por el propio Meu INSS o en una agencia del INSS (Conselho de Recursos do Seguro Social - CRPS).' }
       ],
       channelsTitle: 'Cómo solicitarlo',
       channelsIntro: 'Antes: CadÚnico actualizado + informe médico con CID a mano.',
@@ -1952,13 +1966,27 @@ const BPC_GUIDE_CONTENT = {
       ],
       channelsNote: 'Después: asista a la evaluación médica y social programada por el INSS. Aprobado → pago por el Banco. Negado → recurso en hasta 30 días.',
       valueLabel: 'Valor y Pago',
-      value: '1 salario mínimo por mes (R$ 1.621,00 en 2026), sin aguinaldo (13º salário). No está permitido trabajar de forma registrada y recibir el BPC al mismo tiempo: quien consigue empleo formal tiene derecho al Auxílio-Inclusão (mitad del salario mínimo) o, si no cumple los requisitos, tiene el BPC suspendido mientras dure el trabajo — en ambos casos, el beneficio no se cancela.',
+      value: '1 salario mínimo por mes (R$ 1.621,00 en 2026), sin aguinaldo (13.º salario). No está permitido trabajar de forma registrada y recibir el BPC al mismo tiempo: quien consigue empleo formal tiene derecho al Auxílio-Inclusão (mitad del salario mínimo) o, si no cumple los requisitos, tiene el BPC suspendido mientras dure el trabajo — en ambos casos, el beneficio no se cancela.',
       denialLabel: 'Si la solicitud es negada',
-      denial: 'Es posible recurrir dentro de 30 días por el Meu INSS o en una agencia del INSS. Si persiste la negativa, busque orientación jurídica gratuita en la Defensoria Pública da União (DPU), endereço: R. Gen. Penha Brasil, 1262 - São Francisco, Boa Vista - RR.',
+      denial: 'Es posible recurrir dentro de 30 días por el Meu INSS o en una agencia del INSS. Si persiste la negativa, busque orientación jurídica gratuita en la Defensoría Pública de la Unión (DPU), dirección: R. Gen. Penha Brasil, 1262 - São Francisco, Boa Vista - RR.',
       contactLabel: 'Dónde buscar ayuda',
       footer: 'Esta guía es solo informativa y no sustituye la atención en el CRAS o en el INSS. Las reglas y valores pueden cambiar — confirme siempre en el CRAS o por el Meu INSS/135.',
       crasClarificationLabel: '⚖️ Rol del CRAS x INSS',
-      crasClarification: 'El CRAS no analiza, no concede ni paga el BPC — esa es una atribución exclusiva del INSS (Instituto Nacional do Seguro Social), por delegación del MDS, conforme el art. 29 de la Ley nº 8.742/1993 (LOAS) y el art. 39 del Decreto nº 6.214/2007. El papel del CRAS (art. 6º-C de la LOAS; Decreto nº 6.135/2007) es hacer la inclusión y actualización de la familia en el Cadastro Único (CadÚnico) y orientar sobre el BPC — nunca decidir sobre el beneficio.',
+      crasClarification: 'El CRAS no analiza, no concede ni paga el BPC — esa es una atribución exclusiva del INSS (Instituto Nacional del Seguro Social), por delegación del MDS, conforme el art. 29 de la Ley nº 8.742/1993 (LOAS) y el art. 39 del Decreto nº 6.214/2007. El papel del CRAS (art. 6º-C de la LOAS; Decreto nº 6.135/2007) es hacer la inclusión y actualización de la familia en el Cadastro Único (CadÚnico) y orientar sobre el BPC — nunca decidir sobre el beneficio.',
+      familyComposition: {
+        title: 'Composición Familiar e Ingresos',
+        includedLabel: '👨‍👩‍👧‍👦 Quiénes entran en el cálculo del ingreso per cápita',
+        includedIntro: 'Art. 20, §1º de la Ley 8.742/93 (LOAS) — siempre que vivan bajo el mismo techo:',
+        included: ['Solicitante', 'Cónyuge o compañero(a)', 'Padres (o madrastra/padrastro en ausencia de ellos)', 'Hermanos solteros', 'Hijos e hijastros solteros', 'Menores bajo tutela'],
+        excludedLabel: 'Quiénes NO entran en el cálculo',
+        excluded: 'Nietos, abuelos, tíos, sobrinos, primos, yernos/nueras, cuñados, ni hijos/hermanos/hijastros casados, en unión estable, divorciados, separados de hecho o viudos, aunque vivan en la misma casa.',
+        incomeExclusionsLabel: '💵 Qué NO entra en el ingreso familiar',
+        incomeExclusions: 'Otro BPC; beneficio previsional de hasta 1 salario mínimo recibido por una persona mayor (65+) o con discapacidad de la familia (si hay más de una, solo se puede descontar una); valores de contrato de aprendizaje; beca de prácticas supervisadas; ayuda financiera temporal o indemnización por ruptura/colapso de represa; y el valor del Auxílio-Inclusão y de la remuneración de quien lo recibe. Cualquier otro valor recibido por la familia entra en el cálculo.',
+        accumulationLabel: '🔗 Acumulación con otros beneficios',
+        accumulation: 'El BPC no puede acumularse con otros beneficios de la Seguridad Social (ej.: jubilación, pensión, seguro de desempleo), pero SÍ puede recibirse junto con el Bolsa Família — en ese caso, el valor del Bolsa Família entra en el cálculo del ingreso per cápita de la familia, que no puede superar ¼ del salario mínimo por persona.',
+        cancellationLabel: '🚫 Cancelación',
+        cancellation: 'Puede ser solicitada voluntariamente por el propio beneficiario (o su representante legal) por el Meu INSS, la aplicación o el teléfono 135, cuando ya no desee recibir el beneficio o cuando la familia ya no cumpla los criterios; el INSS también puede suspender o cesar el beneficio de oficio en revisiones bienales, por fallecimiento, superación de ingresos o irregularidades en el CadÚnico.'
+      }
     }
   }
 };
@@ -6236,6 +6264,7 @@ function shareGeneralNote(id) {
 }
 
 async function printGeneralNote(id) {
+  setTempPageOrientation(null); // garante A4 paisagem mesmo se um guia em retrato ficou pendente
   const note = getNoteContent(id).trim() || 'Nenhuma anotação registrada.';
   const date = new Date().toLocaleDateString('pt-BR', {day:'numeric', month:'long', year:'numeric'});
   const userData = getUserData(id);
@@ -6703,6 +6732,18 @@ async function printBpcGuide(id, lang) {
   let guidePage = buildGuidePageHtml(guideScale);
   printArea.innerHTML = guidePage + familyCompositionPage + illustrationPage + attachPages;
 
+  // #print-area fica com display:none na tela (só aparece na impressão), e
+  // num elemento display:none scrollHeight é sempre 0 — então o laço abaixo
+  // achava que o guia "cabia" e nunca reduzia a escala, deixando o rodapé
+  // (contato/INSS) cortado nos guias mais longos (Recuperação de Senha e
+  // versões em espanhol). Como já faz printGuide(), mostra a área fora da
+  // tela (largura útil do A4 retrato: 21cm - 2cm de margem) só durante a
+  // medição e espera as fontes carregarem para medir com o texto real.
+  printArea.style.cssText = 'display:block; position:fixed; top:-10000px; left:-10000px; width:19cm; visibility:hidden;';
+  if (document.fonts && document.fonts.ready) {
+    try { await document.fonts.ready; } catch (e) { /* segue com as fontes atuais */ }
+  }
+
   for (let attempt = 0; attempt < 4; attempt++) {
     const guideEl = printArea.querySelector('.guide-measure-page');
     if (!guideEl) break;
@@ -6715,6 +6756,8 @@ async function printBpcGuide(id, lang) {
     guidePage = buildGuidePageHtml(guideScale);
     printArea.innerHTML = guidePage + familyCompositionPage + illustrationPage + attachPages;
   }
+
+  printArea.style.cssText = '';
 
   setTempPageOrientation('A4 portrait');
   window.addEventListener('afterprint', function clearOrientation() {
@@ -6791,6 +6834,83 @@ async function printInformeGuide(id) {
   const dateLong = now.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
   const watermark = buildPrintWatermark();
 
+  // Dados digitados no card (usuário, anotações técnicas e 2ª unidade) —
+  // agora também saem na guia. O anexo (imagem/PDF) continua só no card.
+  const userData = getUserData(id);
+  const hasUserData = Object.values(userData).some(v => String(v || '').trim());
+  const noteText = String(safeStorage.get('note_' + id) || '').trim();
+  const secondUnitId = getSecondUnit(id);
+  const secondUnitItem = secondUnitId ? DATA.find(x => x.id === secondUnitId) : null;
+
+  const udLabelStyle = 'font-size:0.55rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.02em;';
+  const udValueStyle = 'font-size:0.8rem; font-weight:700; color:#0F172A; min-height:1.1em;';
+  const udCell = (label, value, flex, last) => `
+        <div style="flex:${flex}; padding:5px 10px; ${last ? '' : 'border-right:1px solid #CBD5E1;'}">
+          <div style="${udLabelStyle}">${label}</div>
+          <div style="${udValueStyle}">${value ? escapeHtml(value) : '&nbsp;'}</div>
+        </div>`;
+  const userDataBlock = hasUserData ? `
+        <div style="border:1.5px solid #0F172A; border-radius:7px; overflow:hidden; margin-bottom:11px; break-inside:avoid-page;">
+          <div style="background:#F1F5F9; padding:4px 12px; font-size:0.62rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#0F172A; border-bottom:1px solid #0F172A;">Dados do(a) Usuário(a)</div>
+          <div style="display:flex; border-bottom:1px solid #CBD5E1;">
+            ${udCell('Unidade de Origem', userData.unidadeOrigem, 1, true)}
+          </div>
+          <div style="display:flex; border-bottom:1px solid #CBD5E1;">
+            ${udCell('Nome Completo', userData.nome, 1.5, false)}
+            ${udCell('Endereço / Bairro', userData.endereco, 1.2, false)}
+            ${udCell('Nº NIS', userData.nis, 0.7, true)}
+          </div>
+          <div style="display:flex;">
+            ${udCell('CPF', userData.cpf, 1, false)}
+            ${udCell('Data de Nascimento', userData.dataNascimento ? formatBirthDateDisplay(userData.dataNascimento) : '', 1, true)}
+          </div>
+        </div>` : '';
+
+  const noteBlock = noteText ? `
+        <div style="border:1.5px solid #0F172A; border-radius:7px; padding:12px 18px; margin-bottom:11px;">
+          <div style="font-size:0.76rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#0091C2; margin-bottom:6px;">📝 Anotações Técnicas / Conduta</div>
+          <div style="font-size:0.85rem; line-height:1.55; color:#0F172A; text-align:justify; white-space:pre-wrap;">${escapeHtml(noteText)}</div>
+        </div>` : '';
+
+  // 2ª unidade: entra como um quadro compacto no fim da própria guia (nome,
+  // endereço, horário e contato), sem abrir página extra — assim o conteúdo
+  // todo tende a caber em duas páginas.
+  let secondUnitBlock = '';
+  if (secondUnitItem) {
+    const capSegments = (txt, maxSegments, maxChars, moreLabel) => {
+      const segs = String(txt).split(/<br\s*\/?>/i).map(s => s.trim()).filter(Boolean);
+      const shown = segs.slice(0, maxSegments).map(seg => {
+        const plain = stripHtml(seg).trim();
+        if (plain.length <= maxChars) return seg;
+        let cut = plain.slice(0, maxChars);
+        const sp = cut.lastIndexOf(' ');
+        if (sp > maxChars * 0.6) cut = cut.slice(0, sp);
+        return escapeHtml(cut.trimEnd()) + '…';
+      });
+      let out = shown.join('<br>');
+      if (segs.length > maxSegments) out += `<br><span style="font-style:italic; font-weight:600; opacity:0.75;">+ ${segs.length - maxSegments} ${moreLabel}</span>`;
+      return out;
+    };
+    const su = secondUnitItem;
+    const suAddress = capSegments(cleanPrintField(su.address, 'Endereço não informado — consultar coordenação.'), 2, 110, 'endereço(s) — consulte a unidade');
+    const suHours = cleanPrintField(su.hours, 'A confirmar diretamente com a unidade.');
+    const suPhones = capSegments(cleanPrintField((su.phones || []).join('<br>'), '—'), 3, 70, 'contato(s) — consulte a unidade');
+    const suBadge = su.name && su.fullName && !su.fullName.toLowerCase().startsWith(su.name.toLowerCase().replace(/\.$/, ''));
+    const suRow = (label, html, color, last) => `
+          <div style="padding:6px 14px; ${last ? '' : 'border-bottom:1px solid #CBD5E1;'}">
+            <div style="${udLabelStyle}">${label}</div>
+            <div style="font-size:0.82rem; line-height:1.35; font-weight:700; color:${color};">${html}</div>
+          </div>`;
+    secondUnitBlock = `
+        <div style="border:1.5px solid #0F172A; border-radius:7px; overflow:hidden; margin-bottom:11px; break-inside:avoid-page;">
+          <div style="background:#F1F5F9; padding:4px 12px; font-size:0.62rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#0F172A; border-bottom:1px solid #0F172A;">📄 2ª Unidade do Encaminhamento</div>
+          ${suRow('Unidade', `${suBadge ? `<span style="display:inline-block; padding:1px 7px; margin-right:6px; border-radius:5px; background:#0091C2; color:#fff; font-size:0.72rem; font-weight:800;">${escapeHtml(su.name)}</span>` : ''}${escapeHtml(su.fullName)}`, '#0F172A', false)}
+          ${suRow('Endereço', suAddress, '#0F172A', false)}
+          ${suRow('Horário', suHours, '#0F172A', false)}
+          ${suRow('Contato', suPhones, '#0091C2', true)}
+        </div>`;
+  }
+
   const metaRows = [
     informeMetaRow(ICONS.map, 'Localização', i.address),
     informeMetaRow(ICONS.clock, 'Disponibilidade', i.hours),
@@ -6808,10 +6928,10 @@ async function printInformeGuide(id) {
   const showBadge = i.name && i.fullName &&
     !i.fullName.toLowerCase().startsWith(i.name.toLowerCase().replace(/\.$/, ''));
 
-  const section = (icon, label, html) => html ? `
-        <div style="border:1.5px solid #0F172A; border-radius:7px; padding:12px 18px; margin-bottom:11px; break-inside:avoid-page;">
+  const section = (icon, label, html, align = 'justify') => html ? `
+        <div style="border:1.5px solid #0F172A; border-radius:7px; padding:12px 18px; margin-bottom:11px; break-inside:${String(html).length > 1500 ? 'auto' : 'avoid-page'};">
           <div style="font-size:0.76rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:#0091C2; margin-bottom:6px;">${icon} ${label}</div>
-          <div style="font-size:0.85rem; line-height:1.55; color:#0F172A; text-align:justify;">${html}</div>
+          <div style="font-size:0.85rem; line-height:1.55; color:#0F172A; text-align:${align};">${html}</div>
         </div>` : '';
 
   const hasAnySection = sections.description || sections.howTo || sections.docs;
@@ -6835,15 +6955,20 @@ async function printInformeGuide(id) {
           </tr>
         </table>
 
-        ${metaRows ? `<div style="border:1px solid #CBD5E1; border-radius:7px; padding:8px 14px; margin-bottom:10px; font-size:0.8rem; line-height:1.4;">${metaRows}</div>` : ''}
+        ${userDataBlock}
+
+        ${metaRows ? `<div style="border:1px solid #CBD5E1; border-radius:7px; padding:8px 14px; margin-bottom:10px; font-size:0.8rem; line-height:1.4; display:flex; flex-direction:column; gap:8px;">${metaRows}</div>` : ''}
 
         ${servicesDisplay ? `<div style="font-size:0.85rem; font-weight:700; color:#0F172A; margin-bottom:10px;">${servicesDisplay}</div>` : ''}
 
         ${hasAnySection ? `
           ${section('📖', 'O que é', sections.description)}
-          ${section('✅', 'Como Participar', sections.howTo)}
-          ${section('📄', 'Documentação Necessária', sections.docs)}
+          ${section('✅', 'Como Participar', sections.howTo, 'left')}
+          ${section('📄', 'Documentação Necessária', sections.docs, 'left')}
         ` : `<div style="border:1.5px solid #0F172A; border-radius:7px; padding:12px 18px; margin-bottom:11px; font-size:0.85rem; color:#0F172A;">Sem informações detalhadas cadastradas — consultar diretamente a unidade responsável.</div>`}
+
+        ${noteBlock}
+        ${secondUnitBlock}
 
         <div style="font-size:0.64rem; line-height:1.35; color:#94A3B8; text-align:center; padding-top:7px; border-top:1px dashed #CBD5E1;">
           Documento gerado em ${dateLong} · Argo SUAS — CRAS Cristiana Vicente Nunes, SEMADS, Boa Vista/RR
@@ -6865,6 +6990,7 @@ async function printInformeGuide(id) {
 }
 
 async function printGuide(id) {
+  setTempPageOrientation(null); // garante A4 paisagem mesmo se um guia em retrato ficou pendente
   const i = DATA.find(x => x.id === id);
   const note = safeStorage.get('note_'+id) || 'Avaliação técnica e conduta especializada indicadas.';
   const attach = getAttachment(id);
