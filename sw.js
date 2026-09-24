@@ -7,7 +7,7 @@ const CACHE_NAME = `rede-apoio-bv-${CACHE_VERSION}`;
 // domínio do app: bibliotecas de PDF (cdnjs, baixadas na 1ª vez que a aba
 // "Unificar / Converter PDF" é usada), tiles do mapa (OpenStreetMap, usados
 // em vila-jardim.html) e o SDK do Firebase (gstatic, baixado na 1ª vez que a
-// aba "Agenda Boa Vista 2026" configura uma sincronização). Antes, esses
+// aba "Agenda Argo" configura uma sincronização). Antes, esses
 // arquivos entravam no mesmo cache versionado (CACHE_NAME) e eram apagados a
 // cada publicação nova — mesmo sem terem mudado — obrigando a baixar tudo de
 // novo (e precisar de internet) logo após qualquer atualização do app. Como
