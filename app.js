@@ -564,7 +564,7 @@ function logout() {
      • o estado da sincronização entre aparelhos (Firebase), que é iniciada
        em segundo plano assim que o cartão abre e se atualiza sozinha:
        sincronizando → sincronizado às HH:MM (ou erro / não configurada);
-     • um botão que LEVA direto à aba "Agenda Boa Vista 2026" (onde fica o
+     • um botão que LEVA direto à aba "Agenda Argo" (onde fica o
        card de sincronização) — ou, se ainda não há código de sincronização
        neste aparelho, abre a tela de configuração dele.
 
@@ -901,11 +901,10 @@ function argoGreetingWeekHtml() {
   const now = new Date();
   const summary = (typeof agendaBuildWeekSummary === 'function') ? agendaBuildWeekSummary(now) : null;
   if (!summary) {
-    const y = now.getFullYear();
-    const msg = y > AGENDA_YEAR
-      ? `A agenda de ${AGENDA_YEAR} já terminou e as datas de ${y} ainda não foram cadastradas.`
-      : `A agenda ainda não tem datas de ${y} (cobre apenas ${AGENDA_YEAR}).`;
-    return `<div class="argo-week-empty" style="margin-top:0;">${msg}</div>`;
+    // Só acontece se a aba ficar aberta durante a virada do ano (o ano
+    // exibido, AGENDA_YEAR, foi calculado na abertura da página e o
+    // relógio já virou). Um recarregamento simples resolve.
+    return `<div class="argo-week-empty" style="margin-top:0;">O ano virou — recarregue a página para ver a agenda de ${now.getFullYear()}.</div>`;
   }
   const total = summary.weekEntries.length;
   const today0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -1083,7 +1082,7 @@ function argoDismissGreeting() {
   if (window.__argoUpdatePending && typeof argoShowUpdateToast === 'function') argoShowUpdateToast();
 }
 
-// Botão principal: leva à aba "Agenda Boa Vista 2026" (onde está o card de
+// Botão principal: leva à aba "Agenda Argo" (onde está o card de
 // sincronização). Sem código de sincronização, já abre a tela para defini-lo.
 function argoOpenAgendaFromGreeting() {
   argoDismissGreeting();
@@ -7879,62 +7878,86 @@ function argoShowUpdateToast() {
 }
 
 /* ============================================================
-   AGENDA BOA VISTA 2026 — calendário com feriados/pagamentos fixos e
-   anotações pessoais sincronizadas entre aparelhos (Firebase Firestore).
-   Mesmo princípio das outras abas de ferramenta: o SDK do Firebase só é
-   baixado do gstatic na primeira vez que o usuário configura um código de
+   AGENDA ARGO — calendário com feriados/pagamentos fixos e anotações
+   pessoais sincronizadas entre aparelhos (Firebase Firestore). Mesmo
+   princípio das outras abas de ferramenta: o SDK do Firebase só é baixado
+   do gstatic na primeira vez que o usuário configura um código de
    sincronização, então não entra no cache offline do Service Worker.
    Sem um código configurado, o calendário funciona normalmente (feriados e
    pagamentos aparecem), só as anotações ficam indisponíveis até sincronizar.
-   ============================================================ */
-const AGENDA_YEAR = 2026;
+
+   A agenda é PERENE: o ano exibido (AGENDA_YEAR, logo abaixo) é sempre o
+   ano atual, calculado sozinho — nada precisa ser trocado no código na
+   virada do ano. O que precisa de atualização TODO ANO são os DADOS de
+   feriados/pontos facultativos/pagamentos de AGENDA_DATA_BY_YEAR, abaixo:
+   sem o bloco do ano corrente ali, o calendário continua funcionando
+   normalmente (troca de mês, anotações, sincronização), só sem as
+   etiquetas de feriado/pagamento daquele ano.
+
+   COMO ATUALIZAR A CADA ANO: copie o bloco do último ano cadastrado,
+   troque o número do ano nas chaves (ex.: "2026-01-01" → "2027-01-01") e
+   preencha as datas a partir do Diário Oficial do Município de Boa Vista
+   (feriados e pontos facultativos) e do calendário oficial de pagamentos
+   (Bolsa Família/Caixa e 13º do INSS) daquele ano. Basta ACRESCENTAR um
+   novo bloco — nunca é preciso apagar os anos anteriores. */
 const AGENDA_MONTH_NAMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
-const AGENDA_DATA_INFO = {
-  "2026-01-01": { label: "CONF.", type: "agenda-badge-feriado" },
-  "2026-01-02": { label: "FAC.", type: "agenda-badge-facultativo" },
-  "2026-01-19": { label: "FAC.", type: "agenda-badge-facultativo" },
-  "2026-01-20": { label: "S. SEB.", type: "agenda-badge-feriado" },
-  "2026-01-30": { label: "PAG.", type: "agenda-badge-pagamento" },
-  "2026-02-16": { label: "CAR.", type: "agenda-badge-facultativo" },
-  "2026-02-17": { label: "CAR.", type: "agenda-badge-facultativo" },
-  "2026-02-18": { label: "CIN.", type: "agenda-badge-facultativo" },
-  "2026-02-27": { label: "PAG.", type: "agenda-badge-pagamento" },
-  "2026-03-31": { label: "PAG.", type: "agenda-badge-pagamento" },
-  "2026-04-02": { label: "FAC.", type: "agenda-badge-facultativo" },
-  "2026-04-03": { label: "PAIX.", type: "agenda-badge-feriado" },
-  "2026-04-20": { label: "FAC.", type: "agenda-badge-facultativo" },
-  "2026-04-21": { label: "TIR.", type: "agenda-badge-feriado" },
-  "2026-04-30": { label: "PAG.", type: "agenda-badge-pagamento" },
-  "2026-05-01": { label: "TRAB.", type: "agenda-badge-feriado" },
-  "2026-05-30": { label: "PAG.", type: "agenda-badge-pagamento" },
-  "2026-06-04": { label: "CORP.", type: "agenda-badge-feriado" },
-  "2026-06-05": { label: "FAC.", type: "agenda-badge-facultativo" },
-  "2026-06-16": { label: "13º SAL.", type: "agenda-badge-extra" },
-  "2026-06-29": { label: "S. PED.", type: "agenda-badge-feriado" },
-  "2026-06-30": { label: "PAG.", type: "agenda-badge-pagamento" },
-  "2026-07-09": { label: "B. VIST.", type: "agenda-badge-feriado" },
-  "2026-07-10": { label: "FAC.", type: "agenda-badge-facultativo" },
-  "2026-07-31": { label: "PAG.", type: "agenda-badge-pagamento" },
-  "2026-08-28": { label: "PAG.", type: "agenda-badge-pagamento" },
-  "2026-09-07": { label: "IND.", type: "agenda-badge-feriado" },
-  "2026-09-30": { label: "PAG.", type: "agenda-badge-pagamento" },
-  "2026-10-05": { label: "ROR.", type: "agenda-badge-feriado" },
-  "2026-10-12": { label: "APAR.", type: "agenda-badge-feriado" },
-  "2026-10-28": { label: "SERV.", type: "agenda-badge-feriado" },
-  "2026-10-30": { label: "PAG.", type: "agenda-badge-pagamento" },
-  "2026-11-02": { label: "FIN.", type: "agenda-badge-feriado" },
-  "2026-11-15": { label: "REP.", type: "agenda-badge-feriado" },
-  "2026-11-20": { label: "C. NEG.", type: "agenda-badge-feriado" },
-  "2026-11-27": { label: "PAG.", type: "agenda-badge-pagamento" },
-  "2026-12-07": { label: "FAC.", type: "agenda-badge-facultativo" },
-  "2026-12-08": { label: "CONC.", type: "agenda-badge-feriado" },
-  "2026-12-18": { label: "13º SAL.", type: "agenda-badge-extra" },
-  "2026-12-24": { label: "FAC.", type: "agenda-badge-facultativo" },
-  "2026-12-25": { label: "NATAL", type: "agenda-badge-feriado" },
-  "2026-12-29": { label: "PAG.", type: "agenda-badge-pagamento" },
-  "2026-12-31": { label: "FAC.", type: "agenda-badge-facultativo" }
+const AGENDA_DATA_BY_YEAR = {
+  2026: {
+    "2026-01-01": { label: "CONF.", type: "agenda-badge-feriado" },
+    "2026-01-02": { label: "FAC.", type: "agenda-badge-facultativo" },
+    "2026-01-19": { label: "FAC.", type: "agenda-badge-facultativo" },
+    "2026-01-20": { label: "S. SEB.", type: "agenda-badge-feriado" },
+    "2026-01-30": { label: "PAG.", type: "agenda-badge-pagamento" },
+    "2026-02-16": { label: "CAR.", type: "agenda-badge-facultativo" },
+    "2026-02-17": { label: "CAR.", type: "agenda-badge-facultativo" },
+    "2026-02-18": { label: "CIN.", type: "agenda-badge-facultativo" },
+    "2026-02-27": { label: "PAG.", type: "agenda-badge-pagamento" },
+    "2026-03-31": { label: "PAG.", type: "agenda-badge-pagamento" },
+    "2026-04-02": { label: "FAC.", type: "agenda-badge-facultativo" },
+    "2026-04-03": { label: "PAIX.", type: "agenda-badge-feriado" },
+    "2026-04-20": { label: "FAC.", type: "agenda-badge-facultativo" },
+    "2026-04-21": { label: "TIR.", type: "agenda-badge-feriado" },
+    "2026-04-30": { label: "PAG.", type: "agenda-badge-pagamento" },
+    "2026-05-01": { label: "TRAB.", type: "agenda-badge-feriado" },
+    "2026-05-30": { label: "PAG.", type: "agenda-badge-pagamento" },
+    "2026-06-04": { label: "CORP.", type: "agenda-badge-feriado" },
+    "2026-06-05": { label: "FAC.", type: "agenda-badge-facultativo" },
+    "2026-06-16": { label: "13º SAL.", type: "agenda-badge-extra" },
+    "2026-06-29": { label: "S. PED.", type: "agenda-badge-feriado" },
+    "2026-06-30": { label: "PAG.", type: "agenda-badge-pagamento" },
+    "2026-07-09": { label: "B. VIST.", type: "agenda-badge-feriado" },
+    "2026-07-10": { label: "FAC.", type: "agenda-badge-facultativo" },
+    "2026-07-31": { label: "PAG.", type: "agenda-badge-pagamento" },
+    "2026-08-28": { label: "PAG.", type: "agenda-badge-pagamento" },
+    "2026-09-07": { label: "IND.", type: "agenda-badge-feriado" },
+    "2026-09-30": { label: "PAG.", type: "agenda-badge-pagamento" },
+    "2026-10-05": { label: "ROR.", type: "agenda-badge-feriado" },
+    "2026-10-12": { label: "APAR.", type: "agenda-badge-feriado" },
+    "2026-10-28": { label: "SERV.", type: "agenda-badge-feriado" },
+    "2026-10-30": { label: "PAG.", type: "agenda-badge-pagamento" },
+    "2026-11-02": { label: "FIN.", type: "agenda-badge-feriado" },
+    "2026-11-15": { label: "REP.", type: "agenda-badge-feriado" },
+    "2026-11-20": { label: "C. NEG.", type: "agenda-badge-feriado" },
+    "2026-11-27": { label: "PAG.", type: "agenda-badge-pagamento" },
+    "2026-12-07": { label: "FAC.", type: "agenda-badge-facultativo" },
+    "2026-12-08": { label: "CONC.", type: "agenda-badge-feriado" },
+    "2026-12-18": { label: "13º SAL.", type: "agenda-badge-extra" },
+    "2026-12-24": { label: "FAC.", type: "agenda-badge-facultativo" },
+    "2026-12-25": { label: "NATAL", type: "agenda-badge-feriado" },
+    "2026-12-29": { label: "PAG.", type: "agenda-badge-pagamento" },
+    "2026-12-31": { label: "FAC.", type: "agenda-badge-facultativo" }
+  }
+  // 2027: { "2027-01-01": { label: "CONF.", type: "agenda-badge-feriado" }, ... }
+  // ↑ adicione aqui o bloco de 2027 assim que o Diário Oficial e o
+  //   calendário de pagamentos daquele ano forem enviados.
 };
+
+// Ano exibido pela agenda: sempre o ano atual, sozinho — por isso a agenda
+// "nunca vence". Se AGENDA_DATA_BY_YEAR ainda não tiver o ano atual
+// cadastrado, o calendário mostra os dias normalmente, só sem etiquetas.
+const AGENDA_YEAR = new Date().getFullYear();
+const AGENDA_DATA_INFO = AGENDA_DATA_BY_YEAR[AGENDA_YEAR] || {};
 
 // Config do projeto Firebase "agenda-boa-vista" (Firestore em modo de teste,
 // regra liberando leitura/escrita em agendas/{codigo}/notes/{data} — o
@@ -8055,6 +8078,40 @@ function agendaRelativeLabel(key) {
 function agendaJoinPt(parts) {
   if (parts.length <= 1) return parts[0] || '';
   return parts.slice(0, -1).join(', ') + ' e ' + parts[parts.length - 1];
+}
+
+// ======= Anotações do dia (várias por dia, nunca sobrescrevem as antigas) =======
+
+// Lê o documento do Firestore de um dia e devolve sempre uma lista de
+// entradas [{text, createdAt}], da mais antiga para a mais nova. Entende
+// tanto o formato novo ({entries: [...]}) quanto o formato antigo de uma
+// nota só por dia ({text, updatedAt}), usado antes desta versão — assim,
+// anotações já sincronizadas por outros aparelhos não somem.
+function agendaEntriesFromDocData(data) {
+  if (!data) return [];
+  if (Array.isArray(data.entries)) return data.entries.filter(e => e && e.text);
+  if (data.text) {
+    const ts = (data.updatedAt && typeof data.updatedAt.toMillis === 'function') ? data.updatedAt.toMillis() : null;
+    return [{ text: data.text, createdAt: ts }];
+  }
+  return [];
+}
+
+// Texto curto para os lugares com espaço só para uma linha (grade do
+// calendário, resumo da semana, notificação): uma anotação aparece inteira;
+// várias viram "3 anotações — mais recente: ...". A lista completa, com
+// hora de cada uma, só aparece dentro do próprio dia (agendaRenderEntriesList).
+function agendaEntriesPreview(entries) {
+  if (!entries || !entries.length) return '';
+  if (entries.length === 1) return entries[0].text;
+  return entries.length + ' anotações — mais recente: ' + entries[entries.length - 1].text;
+}
+
+function agendaEntryTimeLabel(createdAt) {
+  if (!createdAt) return '';
+  const d = new Date(createdAt);
+  if (isNaN(d.getTime())) return '';
+  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 }
 
 // ======= Avisos rápidos (substituem os alert() da agenda) =======
@@ -8277,7 +8334,7 @@ function renderAgendaCard() {
       <div class="card-top">
         <div style="display:flex; align-items:center; gap:0.55rem;">
           <span class="tradutor-badge agenda-badge">${ICONS.calendar}</span>
-          <h2 style="margin:0;">Agenda Boa Vista 2026</h2>
+          <h2 style="margin:0;">Agenda Argo</h2>
         </div>
         <span class="subtitle">📅 Feriados, pontos facultativos e pagamentos, com anotações que acompanham você entre aparelhos</span>
       </div>
@@ -8291,8 +8348,8 @@ function renderAgendaCard() {
           <div class="agenda-binding"></div>
           <div class="agenda-header">
             <div class="agenda-brand">
-              <h3>Boa Vista</h3>
-              <p>Agenda oficial 2026</p>
+              <h3>Argo</h3>
+              <p>Agenda oficial ${AGENDA_YEAR}</p>
             </div>
             <div class="agenda-monthbar">
               <div class="agenda-nav-controls">
@@ -8399,7 +8456,8 @@ function agendaRenderCalendar() {
       const info = AGENDA_DATA_INFO[key];
       const date = new Date(AGENDA_YEAR, agendaCurrentMonth, d);
       const wd = date.getDay();
-      const note = agendaNotesCache[key];
+      const entries = agendaNotesCache[key];
+      const note = agendaEntriesPreview(entries);
 
       if (wd === 0) cell.classList.add('agenda-bg-sunday');
       else if (wd === 6) cell.classList.add('agenda-bg-saturday');
@@ -8472,10 +8530,11 @@ function agendaRenderMonthList() {
   for (let d = 1; d <= count; d++) {
     const key = agendaKeyFor(m, d);
     const info = AGENDA_DATA_INFO[key];
-    const note = agendaNotesCache[key];
+    const entries = agendaNotesCache[key];
+    const note = agendaEntriesPreview(entries);
     if (!info && !note) continue;
     if (info) counts[argoAgendaKind(info)]++;
-    if (note) notes++;
+    if (entries && entries.length) notes += entries.length;
 
     const date = new Date(AGENDA_YEAR, m, d);
     const kind = info ? argoAgendaKind(info) : 'nota';
@@ -8586,9 +8645,8 @@ function agendaAttachSwipe() {
 // position:fixed funcione mesmo com a animação de entrada dos cards) =======
 
 let agendaLastFocus = null;
-let agendaNoteOriginal = '';
 let agendaPendingSave = false;   // "guardar assim que a sincronização conectar"
-let agendaDeleteArmed = false;
+let agendaDeleteArmed = -1;      // índice da anotação com o botão "Apagar mesmo?" armado (-1 = nenhuma)
 let agendaDeleteTimer = null;
 let agendaBusy = false;
 
@@ -8605,15 +8663,15 @@ function agendaEnsureModals() {
           </div>
           <button type="button" class="agenda-modal-x" onclick="agendaCloseNoteModal()" aria-label="Fechar">&times;</button>
         </div>
-        <label for="agendaNoteInput" class="agenda-sr-only">Anotação do dia</label>
-        <textarea id="agendaNoteInput" rows="4" maxlength="500" placeholder="Escrever nota…" class="agenda-textarea" oninput="agendaUpdateNoteCounter()"></textarea>
+        <div id="agendaEntriesList" class="agenda-entries-list"></div>
+        <label for="agendaNoteInput" class="agenda-sr-only">Nova anotação do dia</label>
+        <textarea id="agendaNoteInput" rows="3" maxlength="500" placeholder="Escrever nova anotação…" class="agenda-textarea" oninput="agendaUpdateNoteCounter()"></textarea>
         <div class="agenda-note-meta">
           <span id="agendaNoteHint" class="agenda-note-hint"></span>
           <span id="agendaNoteCounter" class="agenda-note-counter">0/500</span>
         </div>
         <div class="agenda-btn-group">
-          <button type="button" id="agendaSaveBtn" onclick="agendaSaveNote()" class="agenda-btn-save">Guardar</button>
-          <button type="button" id="agendaDelBtn" onclick="agendaDeleteNote()" class="agenda-btn-del" hidden>Apagar</button>
+          <button type="button" id="agendaSaveBtn" onclick="agendaSaveNote()" class="agenda-btn-save">Adicionar</button>
         </div>
       </div>
     </div>
@@ -8666,6 +8724,15 @@ function agendaEnsureModals() {
       .agenda-btn-del { background:#f3dbd8; color:#8f2d27; border:none; padding:11px 14px; border-radius:8px; font-weight:700; cursor:pointer; }
       .agenda-btn-del[hidden] { display:none; }
       .agenda-btn-del.armed { background:#b3413a; color:#fff; }
+      .agenda-entries-list { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; max-height:200px; overflow-y:auto; }
+      .agenda-entries-list:empty { display:none; margin:0; }
+      .agenda-entry-item { background:rgba(255,255,255,0.55); border:1px solid #d3c495; border-radius:8px; padding:7px 9px 8px; }
+      .agenda-entry-meta { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:2px; }
+      .agenda-entry-time { font-size:11px; font-weight:800; color:#6f6551; letter-spacing:0.3px; }
+      .agenda-entry-del { background:none; border:none; cursor:pointer; color:#6f6551; font-size:12px; font-weight:700; padding:2px 7px; border-radius:6px; line-height:1.4; flex-shrink:0; }
+      .agenda-entry-del:hover { background:#efe4cb; color:#8f2d27; }
+      .agenda-entry-del.armed { background:#b3413a; color:#fff; }
+      .agenda-entry-text { font-family:'Caveat', cursive; font-size:19px; line-height:1.2; color:#2f5d8a; white-space:pre-wrap; overflow-wrap:anywhere; }
       .agenda-btn-secondary { flex:1; background:#efe4cb; color:#2c2620; border:1px solid #d3c495; padding:11px; border-radius:8px; font-weight:700; cursor:pointer; }
       .agenda-btn-link { display:block; margin:12px auto 0; background:none; border:none; color:#1f3d33; font-family:inherit; font-size:14px; font-weight:700; text-decoration:underline; cursor:pointer; padding:4px 8px; }
       .agenda-btn-link[hidden] { display:none; }
@@ -8683,6 +8750,17 @@ function agendaEnsureModals() {
     </style>
   `;
   document.body.appendChild(wrap);
+
+  // Clique num botão "Apagar" da lista de anotações do dia (delegado no
+  // contêiner, que persiste entre re-renders — só o innerHTML dele muda a
+  // cada agendaRenderEntriesList).
+  const entriesList = document.getElementById('agendaEntriesList');
+  if (entriesList) {
+    entriesList.addEventListener('click', (ev) => {
+      const btn = ev.target.closest ? ev.target.closest('.agenda-entry-del') : null;
+      if (btn) agendaDeleteEntry(Number(btn.dataset.idx));
+    });
+  }
 
   // Teclado dos modais (registrado uma única vez): Esc fecha, Ctrl/⌘+Enter
   // guarda a nota, e Tab fica preso dentro do modal aberto.
@@ -8719,7 +8797,7 @@ function agendaEnsureModals() {
 
 function agendaNoteIsDirty() {
   const input = document.getElementById('agendaNoteInput');
-  return !!input && input.value.trim() !== agendaNoteOriginal.trim();
+  return !!input && input.value.trim() !== '';
 }
 
 function agendaUpdateNoteCounter() {
@@ -8728,11 +8806,33 @@ function agendaUpdateNoteCounter() {
   if (input && counter) counter.textContent = input.value.length + '/' + (input.maxLength > 0 ? input.maxLength : 500);
 }
 
-function agendaResetDeleteButton() {
-  agendaDeleteArmed = false;
+// Desarma o botão "Apagar mesmo?" de qualquer anotação da lista (usado ao
+// fechar o dia, trocar de dia, ou depois de passar os 3,5s sem confirmar).
+function agendaResetEntryDelete() {
+  agendaDeleteArmed = -1;
   clearTimeout(agendaDeleteTimer);
-  const del = document.getElementById('agendaDelBtn');
-  if (del) { del.textContent = 'Apagar'; del.classList.remove('armed'); }
+  const list = document.getElementById('agendaEntriesList');
+  if (list) list.querySelectorAll('.agenda-entry-del.armed').forEach(b => { b.classList.remove('armed'); b.textContent = 'Apagar'; });
+}
+
+// Desenha a lista de anotações já guardadas neste dia (da mais antiga para
+// a mais nova, cada uma com a hora em que foi escrita e um botão próprio
+// para apagar só aquela). A caixa de texto abaixo dela é sempre para
+// ACRESCENTAR uma nova — nunca edita as que já existem.
+function agendaRenderEntriesList(key) {
+  const list = document.getElementById('agendaEntriesList');
+  if (!list) return;
+  const entries = agendaNotesCache[key] || [];
+  list.innerHTML = entries.map((e, idx) => {
+    const time = agendaEntryTimeLabel(e.createdAt);
+    return '<div class="agenda-entry-item">' +
+      '<div class="agenda-entry-meta">' +
+        (time ? '<span class="agenda-entry-time">' + time + '</span>' : '<span></span>') +
+        '<button type="button" class="agenda-entry-del" data-idx="' + idx + '" aria-label="Apagar esta anotação">Apagar</button>' +
+      '</div>' +
+      '<div class="agenda-entry-text">' + escapeHtml(e.text) + '</div>' +
+    '</div>';
+  }).join('');
 }
 
 function agendaOpenNoteModal(key) {
@@ -8740,12 +8840,10 @@ function agendaOpenNoteModal(key) {
   agendaSelectedKey = key;
   agendaLastFocus = document.activeElement;
   agendaPendingSave = false;
-  agendaResetDeleteButton();
+  agendaResetEntryDelete();
 
   const date = agendaDateFromKey(key);
   const info = AGENDA_DATA_INFO[key];
-  const note = agendaNotesCache[key] || '';
-  agendaNoteOriginal = note;
 
   document.getElementById('agendaModalDate').textContent = agendaLongDate(date);
   const chip = document.getElementById('agendaModalChip');
@@ -8758,8 +8856,13 @@ function agendaOpenNoteModal(key) {
     chip.innerHTML = '';
   }
 
+  agendaRenderEntriesList(key);
+
+  // A caixa começa sempre vazia: ela é só para escrever uma anotação NOVA,
+  // as que já existem ficam na lista acima (não são carregadas aqui).
   const input = document.getElementById('agendaNoteInput');
-  input.value = note;
+  input.value = '';
+  agendaNoteOriginal = '';
   agendaUpdateNoteCounter();
 
   const hint = document.getElementById('agendaNoteHint');
@@ -8769,10 +8872,9 @@ function agendaOpenNoteModal(key) {
     hint.textContent = 'Para guardar, defina um código de sincronização.';
     save.textContent = 'Guardar e sincronizar';
   } else {
-    hint.textContent = (window.matchMedia && window.matchMedia('(hover: hover)').matches) ? 'Ctrl+Enter guarda.' : '';
-    save.textContent = 'Guardar';
+    hint.textContent = (window.matchMedia && window.matchMedia('(hover: hover)').matches) ? 'Ctrl+Enter adiciona.' : '';
+    save.textContent = 'Adicionar';
   }
-  document.getElementById('agendaDelBtn').hidden = !note;
 
   document.getElementById('agendaNoteModal').style.display = 'flex';
   input.focus();
@@ -8782,7 +8884,7 @@ function agendaCloseNoteModal() {
   const m = document.getElementById('agendaNoteModal');
   if (m) m.style.display = 'none';
   agendaPendingSave = false;
-  agendaResetDeleteButton();
+  agendaResetEntryDelete();
   const sm = document.getElementById('agendaSyncModal');
   if (sm && sm.style.display === 'flex') return;   // o foco fica com o modal de cima
   // A grade e a lista são redesenhadas a cada sincronização (inclusive logo
@@ -8801,14 +8903,15 @@ function agendaCloseNoteModal() {
   }
 }
 
-// Grava (ou apaga, se o texto for vazio) e espera a confirmação do servidor
-// por até 7 s. O Firestore já atualiza a tela na hora, mesmo sem internet;
-// se a confirmação demorar, avisa que o envio fica na fila.
-async function agendaCommitNote(key, text) {
+// Grava a lista inteira de anotações do dia (substitui o documento por
+// completo — inclusive migrando silenciosamente um dia ainda no formato
+// antigo de uma nota só). Lista vazia apaga o documento. Espera a
+// confirmação do servidor por até 7s; o Firestore já atualiza a tela na
+// hora, mesmo sem internet, e se a confirmação demorar, avisa que o envio
+// fica na fila.
+async function agendaCommitEntries(key, entries) {
   const ref = agendaDb.collection('agendas').doc(agendaSyncCode).collection('notes').doc(key);
-  const op = text
-    ? ref.set({ text: text, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
-    : ref.delete();
+  const op = (entries && entries.length) ? ref.set({ entries: entries }) : ref.delete();
   op.catch(() => { /* tratado abaixo ou depois do prazo */ });
   const outcome = await Promise.race([
     op.then(() => 'ok'),
@@ -8817,12 +8920,15 @@ async function agendaCommitNote(key, text) {
   return outcome;
 }
 
+// Acrescenta a anotação escrita na caixa como uma NOVA entrada do dia — as
+// que já existem continuam intactas. O modal fica aberto depois de guardar,
+// para dar para escrever mais de uma anotação seguida sem reabrir o dia.
 async function agendaSaveNote() {
   if (agendaBusy) return;
   const input = document.getElementById('agendaNoteInput');
   const txt = input.value.trim();
 
-  if (!txt && !agendaNoteOriginal) { agendaToast('Escreva algo antes de guardar.'); input.focus(); return; }
+  if (!txt) { agendaToast('Escreva algo antes de guardar.'); input.focus(); return; }
 
   if (!agendaSyncCode) {
     // Sem código ainda: abre a sincronização e guarda sozinho quando conectar.
@@ -8841,40 +8947,55 @@ async function agendaSaveNote() {
   save.disabled = true;
   save.textContent = 'Guardando…';
   const key = agendaSelectedKey;
+  const newEntries = (agendaNotesCache[key] || []).concat([{ text: txt, createdAt: Date.now() }]);
   try {
-    const outcome = await agendaCommitNote(key, txt);
-    agendaCloseNoteModal();
-    if (outcome === 'ok') agendaToast(txt ? 'Anotação guardada.' : 'Anotação apagada.');
+    const outcome = await agendaCommitEntries(key, newEntries);
+    // Atualiza a tela na hora (não espera a confirmação em tempo real do
+    // Firestore, que pode demorar alguns instantes mesmo dando certo).
+    agendaNotesCache[key] = newEntries;
+    input.value = '';
+    agendaUpdateNoteCounter();
+    agendaRenderEntriesList(key);
+    agendaRenderCalendar();
+    if (outcome === 'ok') agendaToast('Anotação adicionada.');
     else agendaToast('Sem resposta do servidor. A anotação já aparece aqui e será enviada quando a conexão voltar; mantenha o app aberto.', 'error');
   } catch (e) {
     console.error(e);
-    save.disabled = false;
-    save.textContent = 'Guardar';
     agendaToast('Não foi possível guardar na nuvem. Verifique a internet e tente de novo.', 'error');
   } finally {
     agendaBusy = false;
+    save.disabled = false;
+    save.textContent = 'Adicionar';
+    input.focus();
   }
 }
 
-// Apagar pede um segundo toque (o botão vira "Apagar mesmo?") — a nota some
-// de todos os aparelhos, então não pode ser um toque acidental.
-async function agendaDeleteNote() {
+// Apaga só a anotação daquele horário, sem mexer nas outras do dia. Pede um
+// segundo toque (o botão vira "Apagar mesmo?") — some de todos os
+// aparelhos, então não pode ser um toque acidental. Delegado a partir de
+// #agendaEntriesList (ver agendaEnsureModals), pelo índice da anotação.
+async function agendaDeleteEntry(idx) {
   if (agendaBusy) return;
   if (!agendaSyncCode || !agendaDb) { agendaToast('Ainda conectando à nuvem. Tente de novo em alguns segundos.'); return; }
-  const del = document.getElementById('agendaDelBtn');
-  if (!agendaDeleteArmed) {
-    agendaDeleteArmed = true;
-    del.textContent = 'Apagar mesmo?';
-    del.classList.add('armed');
+  const btn = document.querySelector('#agendaEntriesList .agenda-entry-del[data-idx="' + idx + '"]');
+  if (agendaDeleteArmed !== idx) {
+    agendaResetEntryDelete();
+    agendaDeleteArmed = idx;
+    if (btn) { btn.textContent = 'Apagar mesmo?'; btn.classList.add('armed'); }
     clearTimeout(agendaDeleteTimer);
-    agendaDeleteTimer = setTimeout(agendaResetDeleteButton, 3500);
+    agendaDeleteTimer = setTimeout(agendaResetEntryDelete, 3500);
     return;
   }
+
   agendaBusy = true;
-  agendaResetDeleteButton();
+  agendaResetEntryDelete();
+  const key = agendaSelectedKey;
+  const newEntries = (agendaNotesCache[key] || []).filter((_, i) => i !== idx);
   try {
-    const outcome = await agendaCommitNote(agendaSelectedKey, '');
-    agendaCloseNoteModal();
+    const outcome = await agendaCommitEntries(key, newEntries);
+    agendaNotesCache[key] = newEntries;
+    agendaRenderEntriesList(key);
+    agendaRenderCalendar();
     if (outcome === 'ok') agendaToast('Anotação apagada.');
     else agendaToast('Sem resposta do servidor. A exclusão será enviada quando a conexão voltar; mantenha o app aberto.', 'error');
   } catch (e) {
@@ -8937,7 +9058,10 @@ async function agendaConnectSync(code, force) {
   agendaUnsubscribe = agendaDb.collection('agendas').doc(agendaSyncCode).collection('notes')
     .onSnapshot(snapshot => {
       agendaNotesCache = {};
-      snapshot.forEach(doc => { agendaNotesCache[doc.id] = doc.data().text; });
+      snapshot.forEach(doc => {
+        const entries = agendaEntriesFromDocData(doc.data());
+        if (entries.length) agendaNotesCache[doc.id] = entries;
+      });
       agendaUpdateSyncIndicator(true);
       // Registra o horário aqui (e não só em agendaRenderTodayBanner), pois a
       // sincronização agora pode conectar antes de a aba da agenda existir.
@@ -9107,7 +9231,7 @@ function agendaBuildWeekSummary(now) {
     .map(d => {
       const key = agendaKeyFor(d.getMonth(), d.getDate());
       const info = AGENDA_DATA_INFO[key];
-      const note = agendaNotesCache[key];
+      const note = agendaEntriesPreview(agendaNotesCache[key]);
       if (!info && !note) return null;
       const parts = [];
       if (info) parts.push(agendaDayTitle(key));
@@ -9146,7 +9270,7 @@ function agendaCheckTodayNotifications(forceShow) {
   if (!summary) return;
 
   if (!summary.weekEntries.length) {
-    if (forceShow) agendaShowTodayNotification('Agenda Boa Vista', 'Nada marcado para esta semana.');
+    if (forceShow) agendaShowTodayNotification('Agenda Argo', 'Nada marcado para esta semana.');
     return;
   }
 
@@ -9159,7 +9283,7 @@ function agendaCheckTodayNotifications(forceShow) {
   const notifiedHash = btoa(unescape(encodeURIComponent(body)));
   if (!forceShow && localStorage.getItem(notifiedKey) === notifiedHash) return;
 
-  agendaShowTodayNotification('Agenda Boa Vista — Semana', body);
+  agendaShowTodayNotification('Agenda Argo — Semana', body);
   localStorage.setItem(notifiedKey, notifiedHash);
 }
 
