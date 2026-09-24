@@ -1644,6 +1644,46 @@ function formatInformeDesc(desc) {
   return html;
 }
 
+// Reaproveita formatInformeDesc (mesma fonte usada no card "O que é" da
+// aba Programas, Projetos e Serviços) e separa o HTML já formatado em três
+// blocos, para montar a Guia impressa desses itens com "O que é",
+// "Como Participar" e "Documentação Necessária" bem distintos, em vez do
+// bloco único mostrado no card. A separação é feita nos mesmos pontos
+// "<br><strong>Rótulo:</strong>" já produzidos por formatInformeDesc (tanto
+// os rótulos que ela mesma coloca em negrito quanto os que já vêm em
+// negrito no próprio texto de origem, ex.: "Como solicitar:").
+function splitInformeGuideSections(descRaw) {
+  const formatted = formatInformeDesc(descRaw);
+  const parts = formatted.split(/<br>(?=<strong>)/);
+  const intro = parts[0] || '';
+
+  const HOW_TO_LABELS = ['requisitos', 'canais para solicitação', 'duas formas de solicitação', 'como solicitar', 'link para solicitação', 'gerar id jovem', 'site'];
+  const DOC_LABELS = ['documentos necessários'];
+
+  const howTo = [];
+  const docs = [];
+  const extra = [];
+
+  for (let k = 1; k < parts.length; k++) {
+    const block = parts[k];
+    const m = /^<strong>([^<]+)<\/strong>/.exec(block);
+    const label = m ? m[1].toLowerCase().replace(/:\s*$/, '').trim() : '';
+    if (DOC_LABELS.some(l => label.includes(l))) {
+      docs.push(block);
+    } else if (HOW_TO_LABELS.some(l => label.includes(l))) {
+      howTo.push(block);
+    } else {
+      extra.push(block);
+    }
+  }
+
+  return {
+    description: [intro, ...extra].filter(Boolean).join('<br>').replace(/^(<br>)+/, ''),
+    howTo: howTo.join('<br>'),
+    docs: docs.join('<br>')
+  };
+}
+
 function informeMetaRow(icon, label, value) {
   const raw = value || '';
   let clean = stripHtml(raw).trim();
