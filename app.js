@@ -1638,23 +1638,37 @@ function formatInformeDesc(desc) {
     'Quantidade de recargas:',
     'Site:'
   ];
-  labels.forEach(l => {
-    // Escapa caracteres especiais de regex no rótulo (ex.: nenhum dos
-    // atuais tem, mas evita quebra silenciosa se um novo rótulo vier a
-    // ter parênteses, pontos etc.) e só envolve em negrito quando o
-    // rótulo NÃO estiver já imediatamente precedido por "<strong>" —
-    // ou seja, quando ainda não foi negritado nem pelo texto de origem
-    // (ex.: um <strong>Rótulo:</strong> já escrito à mão em algum
-    // cadastro) nem por um rótulo mais longo já processado antes neste
-    // mesmo laço. Sem esse guard, um rótulo já em negrito (na origem ou
-    // por um rótulo mais específico da lista) era envolvido de novo,
-    // gerando <strong><br><strong>...</strong></strong> — tags
-    // aninhadas e desbalanceadas que quebravam a divisão em seções da
-    // Guia impressa (ver printInformeGuide / splitInformeGuideSections).
-    const escaped = l.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const re = new RegExp('(?<!<strong>)' + escaped, 'g');
-    html = html.replace(re, '<br><strong>' + l + '</strong>');
-  });
+  // IMPORTANTE: os rótulos são casados numa ÚNICA passada (um só regex
+  // combinado), não num laço com um replace por rótulo. Antes, um laço
+  // por rótulo tinha um bug real: depois que a passada já tinha
+  // negritado, por ex., "📝 Como acessar:" para "<strong>📝 Como
+  // acessar:</strong>", a passada seguinte do rótulo genérico "Como
+  // acessar:" ainda CASAVA de novo dentro desse trecho — porque os 8
+  // caracteres imediatamente antes de "Como" eram "📝 " (emoji + espaço),
+  // não literalmente "<strong>", então o guard "(?<!<strong>)" não
+  // pegava esse caso e deixava passar. O resultado era um <strong>
+  // aninhado e desbalanceado (ex.: "<strong>📝 <strong>Como
+  // acessar:</strong></strong>"), que quebrava a divisão em seções da
+  // Guia impressa (splitInformeGuideSections, que corta o texto em
+  // "<br>" seguido de "<strong>") — sobrava um "</strong>" solto numa
+  // seção e um "<strong>" sem fechar na anterior. Isso já estava
+  // acontecendo de verdade nas fichas de Gás do Povo, Carteira do Idoso,
+  // Acessuas Trabalho e Primeira Infância no SUAS/Criança Feliz (todas
+  // usam "📝 Como acessar:" ou "📝 Como solicitar:").
+  //
+  // Com um único regex combinado (alternação), cada trecho do texto só
+  // pode ser consumido por UM match — o replace global nunca reexamina
+  // caracteres que um match anterior já consumiu. Ordenando os rótulos
+  // do mais longo para o mais curto, a alternação sempre prefere casar
+  // "📝 Como acessar:" (a versão com emoji) inteira antes de considerar
+  // a versão curta "Como acessar:" — então a versão curta nunca chega a
+  // casar dentro do que a versão longa já engoliu. O guard "(?<!<strong>)"
+  // continua aqui, agora só para o outro caso: um rótulo já escrito à
+  // mão em negrito no próprio cadastro (ex.: <strong>Requisitos:</strong>).
+  const sortedLabels = labels.slice().sort((a, b) => b.length - a.length);
+  const escapedAlternatives = sortedLabels.map(l => l.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const combinedRe = new RegExp('(?<!<strong>)(?:' + escapedAlternatives.join('|') + ')', 'g');
+  html = html.replace(combinedRe, match => '<br><strong>' + match + '</strong>');
 
   html = html.replace(/\s*•\s*/g, '<br>• ');
 
@@ -3635,6 +3649,7 @@ function render() {
             <span class="label-tech" style="color:var(--brand-info-light);">O que é</span>
             ${Array.isArray(i.services) ? i.services.join(', ') : i.services}
             ${formatInformeDesc(i.desc)}
+            ${i.cat.includes('educacao') ? BF_HIGHLIGHT_HTML : ''}
           </div>
           ${renderUserDataFields(i.id)}
           <div class="notes-box">
@@ -3647,7 +3662,8 @@ function render() {
             <div class="image-error-msg" id="img-error-${i.id}" role="alert" style="display:none;"></div>
           </div>
         </div>
-        <div class="card-actions"${BPC_GUIDE_IDS.includes(i.id) ? ' style="grid-template-columns: 1fr 1fr 1fr;"' : ''}>
+        <div class="card-actions" ${(i.website || BPC_GUIDE_IDS.includes(i.id)) ? 'style="grid-template-columns: 1fr 1fr 1fr;"' : ''}>
+          ${i.website ? `<a class="btn-tech btn-secondary btn-link" href="${i.website}" target="_blank" rel="noopener noreferrer">Site Oficial</a>` : ''}
           ${renderWhatsappButton(i.id, i.name)}
           ${BPC_GUIDE_IDS.includes(i.id)
             ? `<button class="btn-tech btn-primary" onclick="printBpcGuide('${i.id}','pt')">📄 Guia do Benefício (PT)</button>
