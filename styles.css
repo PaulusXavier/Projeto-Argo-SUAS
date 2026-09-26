@@ -3200,12 +3200,13 @@
     color: var(--text-main);
     text-decoration: none;
     box-shadow: var(--shadow-xs);
-    transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+    transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease), transform 0.2s var(--ease);
   }
 
   .appsext-tile:hover {
-    border-color: var(--brand-appsext);
+    border-color: var(--app-accent, var(--brand-appsext));
     box-shadow: var(--shadow-sm);
+    transform: translateY(-2px);
   }
 
   .appsext-tile:hover .cras-link-arrow {
@@ -3221,8 +3222,8 @@
     width: 2.5rem;
     height: 2.5rem;
     border-radius: 10px;
-    background: rgba(124, 58, 237, 0.12);
-    color: var(--brand-appsext);
+    background: var(--app-accent-bg, rgba(124, 58, 237, 0.12));
+    color: var(--app-accent, var(--brand-appsext));
   }
 
   /* Ícone próprio do app (imagem). O SVG genérico fica só como reserva:
@@ -3230,7 +3231,7 @@
   .appsext-icon .appsext-icon-fallback { display: inline-flex; }
   .appsext-icon.has-img { width: 3rem; height: 3rem; border-radius: 12px; overflow: hidden; background: transparent; box-shadow: var(--shadow-xs); }
   .appsext-icon.has-img .appsext-icon-fallback { display: none; }
-  .appsext-icon.has-img.is-fallback { background: rgba(124, 58, 237, 0.12); box-shadow: none; }
+  .appsext-icon.has-img.is-fallback { background: var(--app-accent-bg, rgba(124, 58, 237, 0.12)); box-shadow: none; }
   .appsext-icon.has-img.is-fallback .appsext-icon-fallback { display: inline-flex; }
   .appsext-icon.has-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
@@ -3241,9 +3242,27 @@
     min-width: 0;
   }
 
+  .appsext-title-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
   .appsext-title {
     font-weight: 800;
     font-size: 0.95rem;
+  }
+
+  .appsext-tag {
+    font-size: 0.68rem;
+    font-weight: 800;
+    line-height: 1;
+    padding: 0.25rem 0.5rem;
+    border-radius: 999px;
+    background: var(--app-accent-bg, rgba(124, 58, 237, 0.12));
+    color: var(--app-accent, var(--brand-appsext));
+    white-space: nowrap;
   }
 
   .appsext-desc {
@@ -3256,7 +3275,7 @@
     margin-top: 0.15rem;
     font-size: 0.72rem;
     font-weight: 700;
-    color: var(--brand-appsext);
+    color: var(--app-accent, var(--brand-appsext));
   }
 
   .appsext-tile .cras-link-arrow {
