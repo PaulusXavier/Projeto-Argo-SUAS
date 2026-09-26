@@ -244,6 +244,7 @@ function lockApp() {
   const loginScreen = document.getElementById('loginScreen');
   if (appRoot) appRoot.dataset.locked = 'true';
   if (typeof closeTabFocus === 'function') closeTabFocus();
+  if (argoAssistantCtrl && typeof argoAssistantCtrl.close === 'function') argoAssistantCtrl.close();
   if (loginScreen) {
     loginScreen.hidden = false;
     const pwField = document.getElementById('loginPassword');
@@ -8145,6 +8146,161 @@ function argoAviso(msg, type, extra) {
   }
 }
 
+// ======= Assistente conversacional (mascote Argo) =======
+// Painel de conversa montado por argo-mascot.js (ArgoMascot.mountAssistant),
+// com o mascote "quase como um assistente" dentro do app: um botão
+// flutuante que qualquer um pode abrir a qualquer momento, não só a
+// notificação única do login (argoShowGreeting, acima). As respostas são
+// uma base fixa de dúvidas frequentes sobre o próprio Argo SUAS — tudo
+// roda neste aparelho, nada do que a pessoa digita aqui sai do navegador
+// nem é enviado a lugar nenhum (sem IA externa, sem servidor).
+// Reaproveita argoNorm() (mesma normalização de acento/maiúscula da busca
+// principal) para casar palavras-chave sem se importar com digitação.
+
+function argoAssistantGoTo(cat) {
+  const chip = document.querySelector('.filter-chip[data-cat="' + cat + '"]');
+  if (chip) chip.click();
+}
+
+function argoAssistantFocusSearch() {
+  argoAssistantGoTo('all');
+  requestAnimationFrame(() => {
+    const el = document.getElementById('mainSearch');
+    if (el && !el.disabled) el.focus();
+  });
+}
+
+// Cada item: palavras-chave (já sem acento/maiúscula) que disparam a
+// resposta, o texto da resposta (string ou função, para casos com hora do
+// dia) e, opcionalmente, um botão de ação rápida que já resolve o pedido
+// (navega até a aba certa e confirma com uma segunda mensagem).
+const ARGO_ASSISTANT_INTENTS = [
+  {
+    keys: ['bom dia', 'boa tarde', 'boa noite', 'oi', 'ola', 'opa', 'eae'],
+    mood: 'success',
+    reply: () => (typeof argoGreetingWord === 'function' ? argoGreetingWord() : 'Olá') +
+      '! Em que posso ajudar? Pergunte sobre busca, ficha de encaminhamento, PDF, agenda, mapa, tradutor, backup ou tema.'
+  },
+  {
+    keys: ['quem e voce', 'quem e vc', 'o que voce faz', 'o que vc faz', 'para que serve', 'ajuda'],
+    mood: 'success',
+    reply: 'Sou o Argo, o mascote-barquinho do app! Posso apontar o caminho mais rápido pro que você precisa — é só perguntar ou tocar num botão abaixo.'
+  },
+  {
+    keys: ['buscar', 'busca', 'pesquisar', 'pesquisa', 'procurar', 'procura', 'achar', 'encontrar', 'bairro'],
+    reply: 'Digite o nome do bairro, do serviço ou da unidade na barra de pesquisa lá em cima — busco em todas as categorias de uma vez, mesmo com erro de digitação.',
+    action: { label: 'Ir para a busca', run: argoAssistantFocusSearch, reply: 'Prontinho, é só digitar ali em cima 🔍', mood: 'success' }
+  },
+  {
+    keys: ['encaminhamento', 'ficha', 'imprimir', 'impressao', 'encaminhar'],
+    reply: 'Abra o card da unidade para onde você quer encaminhar e clique em "Ficha de Encaminhamento Técnico" — dá pra anexar fotos e PDFs antes de imprimir.',
+    action: { label: 'Ir para a busca', run: argoAssistantFocusSearch, reply: 'Beleza! Encontre a unidade na busca e abra o card dela.', mood: 'info' }
+  },
+  {
+    keys: ['pdf', 'unir', 'juntar', 'unificar', 'converter', 'word', 'jpg'],
+    reply: 'Na aba "Unificar / Converter PDF" você une até 20 arquivos entre PDFs e fotos, gira páginas e converte PDF ⇄ Word/JPG — tudo no navegador, sem subir nada pra internet.',
+    action: { label: 'Abrir Unificar/Converter PDF', run: () => argoAssistantGoTo('pdftools'), reply: 'Prontinho, abri a aba de PDF pra você.', mood: 'success' }
+  },
+  {
+    keys: ['agenda', 'anotacao', 'anotacoes', 'calendario', 'lembrete', 'nota'],
+    reply: 'A Agenda Argo guarda suas anotações do dia e pode sincronizar entre aparelhos, se você configurar um código de sincronização.',
+    action: { label: 'Abrir Agenda', run: () => argoAssistantGoTo('agenda'), reply: 'Prontinho, abri a Agenda Argo.', mood: 'success' }
+  },
+  {
+    keys: ['mapa', 'territorio', 'localizacao', 'onde fica', 'proximidade', 'perto de mim'],
+    reply: 'O Mapa dos Equipamentos mostra as unidades no território, e o botão "Ordenar por proximidade" ordena a lista pela sua localização atual.',
+    action: { label: 'Abrir Mapa', run: () => argoAssistantGoTo('mapa'), reply: 'Prontinho, abri o Mapa dos Equipamentos.', mood: 'success' }
+  },
+  {
+    keys: ['tradutor', 'traduzir', 'traducao', 'estrangeiro', 'migrante', 'idioma', 'espanhol', 'ingles', 'frances'],
+    reply: 'A aba de tradução ajuda no atendimento a pessoas estrangeiras, com texto e voz em espanhol, inglês e francês.',
+    action: { label: 'Abrir Tradutor', run: () => argoAssistantGoTo('tradutor'), reply: 'Prontinho, abri o Tradutor.', mood: 'success' }
+  },
+  {
+    keys: ['equipe tecnica', 'tecnico de referencia', 'quem atende', 'meu bairro', 'equipe volante'],
+    reply: 'Na categoria "Registro de Atendimento (CRAS)" tem um link para a consulta em tela cheia da equipe técnica por bairro.',
+    action: { label: 'Abrir CRAS', run: () => argoAssistantGoTo('cras'), reply: 'Prontinho, abri o painel do CRAS.', mood: 'success' }
+  },
+  {
+    keys: ['toth', 'umbrela', 'anona', 'outros aplicativos', 'outros apps', 'bloco de notas'],
+    reply: 'Na aba "Aplicativos" tem atalhos pros outros apps do autor (Toth, Umbrela, Anona e Bloco de Notas), cada um com login e sincronização próprios.',
+    action: { label: 'Abrir Aplicativos', run: () => argoAssistantGoTo('appsext'), reply: 'Prontinho, abri a aba de Aplicativos.', mood: 'success' }
+  },
+  {
+    keys: ['backup', 'exportar'],
+    reply: 'Posso gerar o arquivo de backup com suas anotações agora mesmo, se quiser.',
+    action: { label: 'Baixar backup agora', run: () => { if (typeof exportData === 'function') exportData(); }, reply: 'Backup gerado! Confira os downloads do seu navegador.', mood: 'success' }
+  },
+  {
+    keys: ['restaurar', 'importar backup', 'importar dados'],
+    mood: 'info',
+    reply: 'No rodapé da página tem "Importar backup" — escolha o arquivo .json que você baixou antes para restaurar.'
+  },
+  {
+    keys: ['apagar dados', 'apagar tudo', 'limpar dados', 'limpar dispositivo'],
+    mood: 'notfound',
+    reply: 'Isso fica no rodapé da página, em "Apagar dados salvos neste dispositivo" — apaga nome, endereço, NIS, anotações e anexos deste navegador. Bom usar antes de emprestar ou devolver um computador compartilhado.'
+  },
+  {
+    keys: ['tema', 'modo escuro', 'modo claro', 'escuro', 'claro', 'dark'],
+    reply: 'É só clicar no ícone de sol/lua ali em cima. Posso trocar agora, se quiser.',
+    action: { label: 'Alternar tema agora', run: () => { if (typeof toggleTheme === 'function') toggleTheme(); }, reply: 'Tema alternado ✨', mood: 'success' }
+  },
+  {
+    keys: ['instalar', 'tela inicial', 'sem internet', 'offline'],
+    mood: 'info',
+    reply: 'No navegador do celular, use "Adicionar à tela de início" para instalar o Argo SUAS. Depois de aberto uma vez, ele funciona offline, guardado neste aparelho.'
+  },
+  {
+    keys: ['senha', 'esqueci'],
+    mood: 'info',
+    reply: 'A senha de acesso é única e compartilhada por toda a equipe técnica. Se você esqueceu, procure a coordenação da sua unidade — não existe recuperação automática.'
+  }
+];
+
+function argoAssistantDefaultQuickActions() {
+  return [
+    { label: 'Buscar equipamento', run: argoAssistantFocusSearch, reply: 'Prontinho, é só digitar ali em cima 🔍', mood: 'success' },
+    { label: 'Unificar/Converter PDF', run: () => argoAssistantGoTo('pdftools'), reply: 'Prontinho, abri a aba de PDF pra você.', mood: 'success' },
+    { label: 'Agenda Argo', run: () => argoAssistantGoTo('agenda'), reply: 'Prontinho, abri a Agenda Argo.', mood: 'success' },
+    { label: 'Mapa dos Equipamentos', run: () => argoAssistantGoTo('mapa'), reply: 'Prontinho, abri o Mapa dos Equipamentos.', mood: 'success' },
+    { label: 'Tradutor', run: () => argoAssistantGoTo('tradutor'), reply: 'Prontinho, abri o Tradutor.', mood: 'success' }
+  ];
+}
+
+// Casamento por palavra-chave, não é IA: cada intenção é testada em ordem
+// e a primeira que aparecer (como palavra inteira, cercada de espaços)
+// dentro do que a pessoa escreveu vence. Sem correspondência, o painel
+// devolve null e quem chamou (argo-mascot.js) mostra a resposta padrão de
+// "não captei" com os atalhos mais usados.
+function argoAssistantAsk(rawText) {
+  const norm = argoNorm(rawText);
+  if (!norm) return null;
+  const padded = ' ' + norm + ' ';
+  for (const intent of ARGO_ASSISTANT_INTENTS) {
+    const hit = intent.keys.some(k => padded.indexOf(' ' + k + ' ') > -1);
+    if (!hit) continue;
+    return {
+      reply: typeof intent.reply === 'function' ? intent.reply() : intent.reply,
+      mood: intent.mood || 'info',
+      quickActions: intent.action ? [intent.action] : argoAssistantDefaultQuickActions()
+    };
+  }
+  return null;
+}
+
+// Guardado para poder fechar o painel ao trancar o app (ver lockApp).
+let argoAssistantCtrl = null;
+function initArgoAssistant() {
+  if (typeof ArgoMascot === 'undefined' || typeof ArgoMascot.mountAssistant !== 'function') return;
+  argoAssistantCtrl = ArgoMascot.mountAssistant({
+    greeting: () => (typeof argoGreetingWord === 'function' ? argoGreetingWord() : 'Olá') +
+      '! Eu sou o Argo. Posso ajudar a achar uma função rapidinho — pergunte ou toque num botão abaixo.',
+    ask: argoAssistantAsk,
+    defaultQuickActions: argoAssistantDefaultQuickActions
+  });
+}
+
 function agendaToast(msg, kind) {
   agendaEnsureModals();
   let type = kind === 'error' ? 'error' : 'info';
@@ -10528,3 +10684,4 @@ initAuth();
 applyStoredTheme();
 updateHeaderFooterStats();
 syncCategoryToggleLabel();
+initArgoAssistant();
