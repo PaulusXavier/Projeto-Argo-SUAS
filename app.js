@@ -4501,46 +4501,73 @@ const EXTERNAL_APPS = [
     img: 'icon-app-toth.png',
     desc: 'Diário de campo com registro de atendimentos individuais, visitas domiciliares e técnicas, grupos/oficinas e acompanhamento — exporta em PDF, Word, CSV ou JSON.',
     url: 'https://paulusxavier.github.io/Toth/',
-    icon: 'form'
+    icon: 'form',
+    tag: 'Diário de Campo',
+    accent: '#0EA5E9',
+    accentBg: 'rgba(14, 165, 233, 0.12)'
   },
   {
     name: 'Umbrela — PAIF/PAF',
     img: 'icon-app-umbrela.png',
     desc: 'Plano de Acompanhamento Familiar (PAIF/PAF): registros, prioridades e gráficos de acompanhamento das famílias em atendimento.',
     url: 'https://paulusxavier.github.io/Projeto-Umbrela-PAIF/',
-    icon: 'team'
+    icon: 'team',
+    tag: 'PAIF / PAF',
+    accent: '#059669',
+    accentBg: 'rgba(5, 150, 105, 0.12)'
   },
   {
     name: 'Anona — Condicionalidades 2026',
     img: 'icon-app-anona.png',
     desc: 'Ferramenta independente de apoio ao acompanhamento de condicionalidades do Bolsa Família: calendário, planilhas do território volante, relatórios e recurso.',
     url: 'https://paulusxavier.github.io/Anona/',
-    icon: 'cash'
+    icon: 'cash',
+    tag: 'Bolsa Família',
+    accent: '#D97706',
+    accentBg: 'rgba(217, 119, 6, 0.12)'
   },
   {
     name: 'Bloco de Notas',
     img: 'icon-app-notas.png',
-    desc: 'Anotações pessoais rápidas, sincronizadas por conta e acessíveis em qualquer aparelho.',
+    desc: 'Bloco de notas pessoal e genérico (sem ligação com nenhum caso), sincronizado por conta e acessível em qualquer aparelho. Para anotações por caso ou atendimento, use a aba "Minhas Anotações" deste app.',
     url: 'https://paulusxavier.github.io/Bloco-de-Notas-PX-/index.html',
-    icon: 'pen'
+    icon: 'pen',
+    tag: 'Notas',
+    accent: '#DB2777',
+    accentBg: 'rgba(219, 39, 119, 0.12)'
   }
 ];
 
+// Extrai só o domínio do link (ex.: "paulusxavier.github.io"), para mostrar
+// de forma transparente para onde o botão leva antes da pessoa clicar.
+// Se a URL vier mal formada por algum motivo, mostra em branco em vez de
+// quebrar a tela inteira.
+function appsextHost(url) {
+  try { return new URL(url).host; } catch (e) { return ''; }
+}
+
 function renderExternalAppsCard() {
-  const tiles = EXTERNAL_APPS.map(app => `
-    <a class="appsext-tile" href="${app.url}" target="_blank" rel="noopener noreferrer">
+  const tiles = EXTERNAL_APPS.map(app => {
+    const host = appsextHost(app.url);
+    return `
+    <a class="appsext-tile" href="${app.url}" target="_blank" rel="noopener noreferrer"
+       style="--app-accent:${app.accent || 'var(--brand-appsext)'};--app-accent-bg:${app.accentBg || 'rgba(124, 58, 237, 0.12)'}">
       <span class="appsext-icon${app.img ? ' has-img' : ''}" aria-hidden="true">
         ${app.img ? `<img src="${app.img}" alt="" width="48" height="48" loading="lazy" decoding="async" onerror="this.parentNode.classList.add('is-fallback');this.remove()">` : ''}
         <span class="appsext-icon-fallback">${ICONS[app.icon] || ICONS.external}</span>
       </span>
       <span class="appsext-text">
-        <span class="appsext-title">${app.name}</span>
+        <span class="appsext-title-row">
+          <span class="appsext-title">${app.name}</span>
+          ${app.tag ? `<span class="appsext-tag">${app.tag}</span>` : ''}
+        </span>
         <span class="appsext-desc">${app.desc}</span>
-        <span class="appsext-meta">Abre em outra aba</span>
+        <span class="appsext-meta">${host ? `${host} · ` : ''}abre em outra aba</span>
       </span>
       <span class="cras-link-arrow" aria-hidden="true">${ICONS.external}</span>
     </a>
-  `).join('');
+  `;
+  }).join('');
 
   return `
     <div class="tech-card appsext-card" id="appsExternosGrid">
@@ -8193,7 +8220,7 @@ const ARGO_ASSISTANT_INTENTS = [
   },
   {
     keys: ['encaminhamento', 'ficha', 'imprimir', 'impressao', 'encaminhar'],
-    reply: 'Abra o card da unidade para onde você quer encaminhar e clique em "Ficha de Encaminhamento Técnico" — dá pra anexar fotos e PDFs antes de imprimir.',
+    reply: 'Abra o card da unidade para onde você quer encaminhar e clique em "Gerar Guia" — isso monta a Ficha de Encaminhamento Técnico, com espaço para anexar fotos e PDFs antes de imprimir.',
     action: { label: 'Ir para a busca', run: argoAssistantFocusSearch, reply: 'Beleza! Encontre a unidade na busca e abra o card dela.', mood: 'info' }
   },
   {
@@ -8202,9 +8229,14 @@ const ARGO_ASSISTANT_INTENTS = [
     action: { label: 'Abrir Unificar/Converter PDF', run: () => argoAssistantGoTo('pdftools'), reply: 'Prontinho, abri a aba de PDF pra você.', mood: 'success' }
   },
   {
-    keys: ['agenda', 'anotacao', 'anotacoes', 'calendario', 'lembrete', 'nota'],
-    reply: 'A Agenda Argo guarda suas anotações do dia e pode sincronizar entre aparelhos, se você configurar um código de sincronização.',
+    keys: ['agenda', 'calendario', 'lembrete'],
+    reply: 'A Agenda Argo é um calendário do dia a dia e pode sincronizar entre aparelhos, se você configurar um código de sincronização.',
     action: { label: 'Abrir Agenda', run: () => argoAssistantGoTo('agenda'), reply: 'Prontinho, abri a Agenda Argo.', mood: 'success' }
+  },
+  {
+    keys: ['anotacao', 'anotacoes', 'minhas anotacoes', 'novo caso'],
+    reply: 'Na aba "Minhas Anotações" você cria quantas anotações precisar (uma por caso ou atendimento), com os dados de quem foi atendido, e pode gerar a guia e enviar por WhatsApp.',
+    action: { label: 'Abrir Minhas Anotações', run: () => argoAssistantGoTo('anotacoes'), reply: 'Prontinho, abri Minhas Anotações.', mood: 'success' }
   },
   {
     keys: ['mapa', 'territorio', 'localizacao', 'onde fica', 'proximidade', 'perto de mim'],
