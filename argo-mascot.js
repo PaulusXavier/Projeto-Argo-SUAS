@@ -229,7 +229,7 @@
       '.argo-assistant-fab{position:fixed;left:max(16px,env(safe-area-inset-left));bottom:calc(16px + env(safe-area-inset-bottom));'+
         'width:56px;height:56px;border-radius:50%;background:var(--bg-card,#151F35);border:1px solid rgba(127,127,127,0.18);'+
         'box-shadow:var(--shadow-lg,0 24px 48px -12px rgba(0,0,0,.4));display:flex;align-items:center;justify-content:center;'+
-        'padding:0;cursor:pointer;z-index:9997;transition:transform .18s ease}' +
+        'padding:0;cursor:pointer;z-index:9997;transition:transform .18s ease;touch-action:manipulation}' +
       '.argo-assistant-fab:hover{transform:translateY(-2px) scale(1.04)}' +
       '.argo-assistant-fab[aria-expanded="true"]{transform:scale(.9)}' +
       '.argo-assistant-fab .argo-mascot-icon{width:34px;height:34px}' +
@@ -256,8 +256,15 @@
       '.argo-assistant-head-text{display:flex;flex-direction:column;flex:1;min-width:0}' +
       '.argo-assistant-head-text strong{font-size:14px}' +
       '.argo-assistant-head-text span{font-size:11px;color:var(--text-muted,#A7B7CC)}' +
-      '.argo-assistant-close{flex:0 0 auto;border:none;background:transparent;color:inherit;opacity:.6;cursor:pointer;'+
-        'font-size:15px;padding:6px 8px;border-radius:8px}' +
+      // Área de toque maior (mínimo 36px) e touch-action:manipulation: sem
+      // isso, alguns navegadores de celular esperam ~300ms antes de disparar
+      // o clique (para diferenciar de duplo-toque/zoom), o que pode parecer
+      // "o X não responde" quando na verdade só está atrasado. position:
+      // relative + z-index garantem que o botão sempre fique por cima de
+      // qualquer conteúdo do cabeçalho, mesmo que algo mude ali no futuro.
+      '.argo-assistant-close{position:relative;z-index:2;flex:0 0 auto;min-width:36px;min-height:36px;'+
+        'display:flex;align-items:center;justify-content:center;border:none;background:transparent;color:inherit;'+
+        'opacity:.6;cursor:pointer;font-size:15px;padding:6px 8px;border-radius:8px;touch-action:manipulation}' +
       '.argo-assistant-close:hover{opacity:1;background:rgba(127,127,127,.14)}' +
 
       '.argo-assistant-log{flex:1;overflow-y:auto;padding:12px 12px 4px;display:flex;flex-direction:column;gap:10px;min-height:70px}' +
@@ -614,9 +621,18 @@
     }
 
     fab.addEventListener('click', function () { isOpen ? close() : open(); });
-    closeBtn.addEventListener('click', close);
+    closeBtn.addEventListener('click', function (e) { e.stopPropagation(); close(); });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && isOpen) { close(); fab.focus(); }
+    });
+    // Reforço: tocar/clicar fora do painel também fecha (como já acontece
+    // no cartão de saudação). Mesmo com o X funcionando, isso dá uma
+    // segunda forma de fechar, útil se algum dia outro elemento acabar
+    // sobrepondo o botão.
+    document.addEventListener('click', function (e) {
+      if (!isOpen) return;
+      if (panel.contains(e.target) || fab.contains(e.target)) return;
+      close();
     });
     form.addEventListener('submit', function (e) {
       e.preventDefault();
