@@ -704,7 +704,7 @@ function argoEnsureGreetingUI() {
         <div class="argo-scene">
           ${argoSceneSvg()}
           <span class="argo-scene-pill"><span aria-hidden="true">🔔</span> Notificação</span>
-          <button type="button" class="argo-greeting-x" onclick="argoDismissGreeting()" aria-label="Fechar notificação">✕</button>
+          <button type="button" class="argo-greeting-x" onclick="event.stopPropagation(); argoDismissGreeting()" aria-label="Fechar notificação">✕</button>
         </div>
         <div class="argo-greeting-content">
           <p class="argo-greeting-date" id="argoGreetingDate"></p>
@@ -744,7 +744,15 @@ function argoEnsureGreetingUI() {
       .argo-scene-svg { display:block; width:100%; height:100%; }
       .argo-scene::after { content:''; position:absolute; left:0; right:0; bottom:0; height:2px; background:linear-gradient(90deg, transparent, #f3d58a, transparent); opacity:.7; }
       .argo-scene-pill { position:absolute; top:12px; left:12px; display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.04em; color:#f6e7bd; background:rgba(5,15,34,0.55); border:1px solid rgba(243,213,138,0.4); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); }
-      .argo-greeting-x { position:absolute; top:10px; right:10px; width:28px; height:28px; border-radius:50%; border:1px solid rgba(243,213,138,0.35); background:rgba(5,15,34,0.55); color:#f6e7bd; font-size:12px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+      /* z-index/pointer-events explícitos: garante que o X sempre fique
+         clicável por cima do desenho do barco, mesmo que outra regra de
+         CSS mude no futuro. touch-action:manipulation tira o atraso de
+         ~300ms que alguns navegadores de celular aplicam antes do clique
+         (esperando para ver se vai virar duplo-toque/zoom) — sem isso o
+         toque às vezes parece "não responder" quando só está atrasado.
+         min-width/min-height 32px dá uma área de toque um pouco maior que
+         o círculo visível. */
+      .argo-greeting-x { position:absolute; z-index:2; top:10px; right:10px; width:28px; height:28px; min-width:32px; min-height:32px; border-radius:50%; border:1px solid rgba(243,213,138,0.35); background:rgba(5,15,34,0.55); color:#f6e7bd; font-size:12px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; pointer-events:auto; touch-action:manipulation; }
       .argo-greeting-x:hover { background:rgba(5,15,34,0.85); }
 
       .argo-ship { transform-origin:180px 114px; animation:argoBob 5s ease-in-out infinite; }
@@ -806,9 +814,9 @@ function argoEnsureGreetingUI() {
       .argo-greeting-mute input { accent-color:var(--brand-primary,#0091C2); cursor:pointer; flex-shrink:0; }
 
       .argo-greeting-btns { display:flex; flex-direction:column; gap:9px; margin-top:18px; }
-      .argo-greeting-yes { display:flex; align-items:center; justify-content:center; gap:8px; background:linear-gradient(135deg, var(--brand-primary-light,#29ABE2), var(--brand-primary,#0091C2)); color:#fff; border:none; padding:13px; border-radius:12px; font-weight:700; cursor:pointer; font-size:14px; font-family:inherit; box-shadow:0 8px 18px -8px rgba(0,145,194,0.8); transition:transform .15s ease, filter .15s ease; }
+      .argo-greeting-yes { touch-action:manipulation; display:flex; align-items:center; justify-content:center; gap:8px; background:linear-gradient(135deg, var(--brand-primary-light,#29ABE2), var(--brand-primary,#0091C2)); color:#fff; border:none; padding:13px; border-radius:12px; font-weight:700; cursor:pointer; font-size:14px; font-family:inherit; box-shadow:0 8px 18px -8px rgba(0,145,194,0.8); transition:transform .15s ease, filter .15s ease; }
       .argo-greeting-yes:hover { filter:brightness(1.07); transform:translateY(-1px); }
-      .argo-greeting-no { background:transparent; color:var(--text-muted,#475569); border:1px solid var(--border-ui,#e2e8f0); padding:11px; border-radius:12px; font-weight:600; cursor:pointer; font-size:13.5px; font-family:inherit; }
+      .argo-greeting-no { touch-action:manipulation; background:transparent; color:var(--text-muted,#475569); border:1px solid var(--border-ui,#e2e8f0); padding:11px; border-radius:12px; font-weight:600; cursor:pointer; font-size:13.5px; font-family:inherit; }
       .argo-greeting-no:hover { background:rgba(148,163,184,0.12); }
       .argo-greeting-yes:focus-visible, .argo-greeting-no:focus-visible, .argo-greeting-x:focus-visible { outline:3px solid var(--brand-primary-light,#29ABE2); outline-offset:2px; }
 
