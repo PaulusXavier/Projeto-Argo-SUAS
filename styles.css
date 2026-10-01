@@ -4608,12 +4608,17 @@
   }
 
   /* ---- Mascote Argo apresentando o aplicativo (lado esquerdo do login) ---- */
+  /* Fixo no canto inferior esquerdo da tela de login (sobre as ondas). */
   .login-mascot {
-    position: relative;
+    position: fixed;
+    left: 1.25rem;
+    bottom: 1rem;
     z-index: 1;
     display: flex;
-    align-items: flex-start;
-    gap: 1rem;
+    align-items: flex-end;
+    gap: 0.9rem;
+    max-width: min(340px, calc(100vw - 2.5rem));
+    pointer-events: none;
   }
 
   .login-mascot-figure {
@@ -4648,7 +4653,8 @@
   .login-mascot-bubble::before {
     content: "";
     position: absolute;
-    top: 14px;
+    top: 50%;
+    margin-top: -6px;
     left: -7px;
     width: 12px;
     height: 12px;
@@ -4711,6 +4717,16 @@
     box-shadow: 0 0 6px rgba(41, 171, 226, 0.7);
   }
 
+  /* No canto da tela só a frase de apresentação — a lista cobriria o cartão. */
+  .login-mascot-text, .login-mascot-features { display: none; }
+
+  /* O balão só aparece quando sobra margem ao lado do cartão (telas largas);
+     nas demais fica apenas o mascote no canto, que ainda reage à senha errada. */
+  .login-mascot-bubble { display: none; }
+  @media (min-width: 1700px) {
+    .login-mascot-bubble { display: block; width: 240px; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .login-mascot-bubble { animation: none; }
   }
@@ -4718,10 +4734,10 @@
   /* Celular: o painel vira uma faixa no topo — mascote pequeno com só a
      frase de apresentação, sem a lista, para o formulário aparecer logo. */
   @media (max-width: 760px) {
-    .login-mascot { align-items: center; gap: 0.75rem; }
+    .login-mascot { align-items: center; gap: 0.6rem; left: 0.9rem; bottom: 0.75rem; }
+    #loginScreen { padding-bottom: 5.25rem; }
     .login-mascot-figure { width: 56px; height: 56px; margin-top: 0; padding: 3px; }
     .login-mascot-bubble { padding: 0.6rem 0.8rem; }
-    .login-mascot-bubble::before { top: 50%; margin-top: -6px; }
     .login-mascot-line { margin: 0; font-size: 0.8rem; }
     .login-mascot-text, .login-mascot-features { display: none; }
   }
