@@ -295,6 +295,11 @@
         'justify-content:center;cursor:pointer}' +
       '.argo-assistant-send:hover{filter:brightness(1.1)}' +
 
+      // BUG do X que "não some": o balão e o painel têm display:flex, e uma regra de autor
+      // com display vence o [hidden] padrão do navegador (display:none). Resultado: o JS
+      // marcava hint.hidden = true, mas o balão continuava na tela. Esta regra devolve
+      // ao atributo hidden a força que ele deveria ter.
+      '.argo-assistant-hint[hidden],.argo-assistant-panel[hidden]{display:none!important}' +
       '@keyframes argoAssistantIn{0%{opacity:0;transform:translateY(6px)}100%{opacity:1;transform:translateY(0)}}' +
       '@keyframes argoAssistantTyping{0%,60%,100%{opacity:.3}30%{opacity:1}}' +
       '@media (max-width:480px){.argo-assistant-panel{left:12px;right:12px;width:auto}}' +
@@ -515,11 +520,21 @@
       hint.hidden = true;
       try { localStorage.setItem(HINT_KEY, '1'); } catch (e) { /* modo privado - ignora */ }
     }
-    try {
-      if (!localStorage.getItem(HINT_KEY)) {
-        setTimeout(function () { if (!isOpen) hint.hidden = false; }, 1500);
+    // A dica só começa a contar depois que o app foi desbloqueado e o cartão de
+    // saudação foi fechado. Antes, os 10 s corriam ainda na tela de login e a
+    // dica era dada como "vista" sem ninguém ter visto.
+    function armHint() {
+      var poll = setInterval(function () {
+        var r = document.getElementById('appRoot');
+        if (r && r.dataset.locked === 'true') return;
+        if (document.querySelector('.argo-greeting-overlay.visible')) return;
+        clearInterval(poll);
+        setTimeout(function () { if (!isOpen) hint.hidden = false; }, 1200);
         setTimeout(dismissHint, 10000);
-      }
+      }, 500);
+    }
+    try {
+      if (!localStorage.getItem(HINT_KEY)) armHint();
     } catch (e) { /* localStorage indisponível - sem dica, sem problema */ }
     hintClose.addEventListener('click', function (e) { e.stopPropagation(); dismissHint(); });
 
@@ -656,6 +671,6 @@
     dismiss: dismiss,
     emptyStateHTML: emptyStateHTML,
     mountAssistant: mountAssistant, // ArgoMascot.mountAssistant({...}) → botão flutuante + painel de conversa
-    icon: boatSVG // ArgoMascot.icon('success', 48) → string SVG avulso, para usar em qualquer lugar
+    icon: function (mood, size) { ensureStyles(); return boatSVG(mood, size); } // ArgoMascot.icon('success', 48) → string SVG avulso
   };
 });
