@@ -4607,6 +4607,125 @@
     color: #CBD5E1;
   }
 
+  /* ---- Mascote Argo apresentando o aplicativo (lado esquerdo do login) ---- */
+  .login-mascot {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .login-mascot-figure {
+    flex: 0 0 auto;
+    width: 100px;
+    height: 100px;
+    margin-top: 0.1rem;
+    border-radius: 50%;
+    /* Halo claro atrás do mascote: o casco é azul-marinho e sumia no fundo escuro. */
+    background:
+      radial-gradient(circle at 50% 55%, rgba(125, 211, 192, 0.30) 0%, rgba(41, 171, 226, 0.20) 45%, transparent 72%);
+    padding: 6px;
+    filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.45));
+  }
+
+  .login-mascot-figure svg { width: 100%; height: 100%; display: block; }
+
+  .login-mascot-bubble {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    padding: 0.85rem 1rem 0.9rem;
+    border-radius: 4px 16px 16px 16px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    animation: loginMascotIn 0.6s 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* Rabinho do balão apontando para o mascote */
+  .login-mascot-bubble::before {
+    content: "";
+    position: absolute;
+    top: 14px;
+    left: -7px;
+    width: 12px;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border-left: 1px solid rgba(255, 255, 255, 0.16);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+    transform: rotate(45deg);
+  }
+
+  @keyframes loginMascotIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .login-mascot-line {
+    margin: 0 0 0.35rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: #fff;
+  }
+
+  .login-mascot-line strong { color: #FFD400; font-weight: 800; }
+
+  .login-mascot-line.is-error strong { color: #FCA5A5; }
+
+  .login-mascot-text {
+    margin: 0 0 0.5rem;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: #CBD5E1;
+  }
+
+  .login-mascot-features {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .login-mascot-features li {
+    position: relative;
+    padding-left: 1.05rem;
+    font-size: 0.74rem;
+    line-height: 1.4;
+    color: #E2E8F0;
+  }
+
+  .login-mascot-features li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.42em;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #29ABE2;
+    box-shadow: 0 0 6px rgba(41, 171, 226, 0.7);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .login-mascot-bubble { animation: none; }
+  }
+
+  /* Celular: o painel vira uma faixa no topo — mascote pequeno com só a
+     frase de apresentação, sem a lista, para o formulário aparecer logo. */
+  @media (max-width: 760px) {
+    .login-mascot { align-items: center; gap: 0.75rem; }
+    .login-mascot-figure { width: 56px; height: 56px; margin-top: 0; padding: 3px; }
+    .login-mascot-bubble { padding: 0.6rem 0.8rem; }
+    .login-mascot-bubble::before { top: 50%; margin-top: -6px; }
+    .login-mascot-line { margin: 0; font-size: 0.8rem; }
+    .login-mascot-text, .login-mascot-features { display: none; }
+  }
+
   .login-story-content { position: relative; z-index: 1; }
 
   .login-story-brand {
@@ -5001,6 +5120,11 @@
   .login-submit-spinner {
     animation: loginSpin 0.7s linear infinite;
   }
+
+  /* O atributo hidden não esconde elementos <svg> sozinho (era por isso que o
+     spinner aparecia o tempo todo ao lado de "Entrar"). */
+  .login-submit-spinner[hidden],
+  #loginScreen svg[hidden] { display: none; }
 
   @media (prefers-reduced-motion: reduce) {
     .login-submit-spinner { animation-duration: 1.6s; }
