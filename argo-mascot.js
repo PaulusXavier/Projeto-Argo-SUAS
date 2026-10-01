@@ -59,7 +59,7 @@
     mood = normalizeType(mood);
     size = size || 40;
     var accent = THEME[mood].color;
-    var INK = '#0F172A', GOLD = '#F2B84B', BLUSH = '#FF8FA3';
+    var GOLD = '#F2B84B', STEEL = '#8FA3BF', VISOR = '#050A14';
 
     // IDs únicos por chamada (defs/filter/gradient/clipPath): sem isso, dois
     // mascotes na mesma página (ex.: toast + estado vazio ao mesmo tempo)
@@ -70,49 +70,56 @@
     var uid = 'argoMascot' + mascotUid;
     var glowId = uid + 'Glow';
     var sailGradId = uid + 'SailGrad';
+    var hullGradId = uid + 'HullGrad';
     var sailClipId = uid + 'SailClip';
+    var G = ' filter="url(#' + glowId + ')"';
 
-    function eye(cx, cy) { // olho grande e brilhante
-      return '<ellipse cx="' + cx + '" cy="' + cy + '" rx="6.5" ry="7.5" fill="' + INK + '"/>' +
-             '<circle cx="' + (cx + 2) + '" cy="' + (cy - 3) + '" r="2.4" fill="#fff"/>' +
-             '<circle cx="' + (cx - 2) + '" cy="' + (cy + 3) + '" r="1.1" fill="#fff" opacity=".85"/>';
+    // ---- "Rosto" = visor HUD no casco: olhos viram LEDs retangulares e a
+    // boca vira um medidor segmentado. Nada de olho redondo, brilho de
+    // pupila, bochecha ou sorriso — a expressão é toda angular.
+    function led(x, y, w, h) { // olho-LED retangular com um fio de brilho
+      return '<rect' + G + ' x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="1" fill="' + accent + '"/>' +
+             '<rect x="' + (x + 1.5) + '" y="' + (y + 1.5) + '" width="' + (w - 3) + '" height="1.4" fill="#fff" opacity=".55"/>';
     }
-    function happyEye(cx, cy) { // olho fechado sorrindo ^
-      return '<path d="M' + (cx - 6) + ' ' + (cy + 3) + ' Q' + cx + ' ' + (cy - 7) + ' ' + (cx + 6) + ' ' + (cy + 3) +
-             '" fill="none" stroke="' + INK + '" stroke-width="3" stroke-linecap="round"/>';
+    function poly(d) { // olho em polígono (humores de erro)
+      return '<path' + G + ' d="' + d + '" fill="' + accent + '"/>';
     }
-    function stroke(d, w) {
-      return '<path d="' + d + '" fill="none" stroke="' + INK + '" stroke-width="' + (w || 2.4) + '" stroke-linecap="round" stroke-linejoin="round"/>';
+    function line(d, w, extra) {
+      return '<path d="' + d + '" fill="none" stroke="' + accent + '" stroke-width="' + (w || 2) +
+             '" stroke-linecap="butt" stroke-linejoin="miter"' + (extra || '') + '/>';
     }
 
-    // Expressão do rostinho no casco, por humor
     var face = {
       info:
-        eye(46, 79) + eye(82, 79) + stroke('M57 89 Q64 96 71 89'),
+        led(40, 72, 14, 8) + led(74, 72, 14, 8) +
+        line('M52 86 H76', 2, ' stroke-dasharray="4 2.5" opacity=".85"'),
       success:
-        happyEye(46, 79) + happyEye(82, 79) +
-        '<path d="M56 87 Q64 101 72 87 Z" fill="' + INK + '"/>' +
-        '<path d="M60 94 Q64 98 68 94 Q64 91 60 94 Z" fill="' + BLUSH + '"/>',
+        '<path' + G + ' d="M39 80 L47 72 L55 80" fill="none" stroke="' + accent + '" stroke-width="3.2" stroke-linejoin="miter"/>' +
+        '<path' + G + ' d="M73 80 L81 72 L89 80" fill="none" stroke="' + accent + '" stroke-width="3.2" stroke-linejoin="miter"/>' +
+        '<path' + G + ' d="M48 86 H80" stroke="' + accent + '" stroke-width="2.6"/>',
       error:
-        eye(46, 80) + eye(82, 80) +
-        stroke('M39 68 L53 72', 2.6) + stroke('M89 68 L75 72', 2.6) +
-        stroke('M58 94 Q64 87 70 94') +
-        '<path d="M101 64 Q106 72 101 77 Q96 72 101 64 Z" fill="#7DD3FC" stroke="#38BDF8" stroke-width="1"/>',
+        poly('M39 72 L55 76 V81 H39 Z') + poly('M89 72 L73 76 V81 H89 Z') +
+        line('M50 87 L55 83 L60 87 L65 83 L70 87 L75 83 L79 87', 1.8) +
+        // faixas de "glitch" cortando o visor
+        '<rect x="27" y="79.5" width="24" height="1.6" fill="' + accent + '" opacity=".55"/>' +
+        '<rect x="80" y="70.5" width="21" height="1.2" fill="' + accent + '" opacity=".5"/>',
       notfound:
-        eye(47, 79) + eye(83, 79) +
-        stroke('M39 69 Q46 65 53 69', 2.6) +
-        '<ellipse cx="64" cy="91" rx="3.2" ry="3.8" fill="' + INK + '"/>'
+        led(40, 72, 14, 8) +
+        // olho direito vira mira/retículo, "procurando" o resultado
+        '<circle' + G + ' cx="81" cy="76" r="5.2" fill="none" stroke="' + accent + '" stroke-width="1.8"/>' +
+        '<path d="M81 68 V72 M81 80 V84 M73 76 H77 M85 76 H89" stroke="' + accent + '" stroke-width="1.4"/>' +
+        '<rect x="80" y="75" width="2" height="2" fill="' + accent + '"/>' +
+        line('M58 87 H70', 2.2)
     }[mood];
 
     var flagSymbol = {
       info: '★', error: '!', notfound: '?', success: '✓'
     }[mood];
 
-    // Brilhinhos extras no humor de sucesso (com o mesmo brilho neon do
-    // resto do barco, em vez de um dourado "seco")
+    // Sucesso: marcas de "+" angulares (em vez de brilhinhos de estrela)
     var sparkles = mood === 'success'
-      ? '<path filter="url(#' + glowId + ')" d="M104 22 l2.2 5.8 5.8 2.2 -5.8 2.2 -2.2 5.8 -2.2 -5.8 -5.8 -2.2 5.8 -2.2 Z" fill="' + GOLD + '"/>' +
-        '<path filter="url(#' + glowId + ')" d="M16 34 l1.6 4.2 4.2 1.6 -4.2 1.6 -1.6 4.2 -1.6 -4.2 -4.2 -1.6 4.2 -1.6 Z" fill="' + GOLD + '"/>'
+      ? '<path' + G + ' d="M108 14 v8 M104 18 h8" stroke="' + GOLD + '" stroke-width="1.8"/>' +
+        '<path' + G + ' d="M26 26 v6 M23 29 h6" stroke="' + GOLD + '" stroke-width="1.6"/>'
       : '';
 
     var bob = mood === 'error' ? '' : ' argo-mascot-bob';
@@ -121,63 +128,62 @@
       '<svg class="argo-mascot-icon' + bob + '" width="' + size + '" height="' + size +
       '" viewBox="0 0 130 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">' +
         '<defs>' +
-          // Brilho neon suave, reaproveitado nas antenas, na régua do casco,
-          // no chip da bandeira e (no humor de sucesso) nos brilhinhos —
-          // dá o "ligado"/holográfico ao personagem, sem exagerar.
           '<filter id="' + glowId + '" x="-80%" y="-80%" width="260%" height="260%">' +
             '<feGaussianBlur stdDeviation="1.6" result="argoBlur"/>' +
             '<feMerge><feMergeNode in="argoBlur"/><feMergeNode in="SourceGraphic"/></feMerge>' +
           '</filter>' +
-          // Vela como "tela"/holograma: gradiente do próprio tom do humor,
-          // mais claro (translúcido) no topo e mais denso embaixo.
+          // Vela como tela/holograma
           '<linearGradient id="' + sailGradId + '" x1="0" y1="0" x2="0" y2="1">' +
-            '<stop offset="0%" stop-color="' + accent + '" stop-opacity="0.3"/>' +
-            '<stop offset="100%" stop-color="' + accent + '" stop-opacity="0.78"/>' +
+            '<stop offset="0%" stop-color="' + accent + '" stop-opacity="0.22"/>' +
+            '<stop offset="100%" stop-color="' + accent + '" stop-opacity="0.7"/>' +
           '</linearGradient>' +
-          '<clipPath id="' + sailClipId + '"><path d="M67 20 Q106 28 93 52 Q80 56 67 54 Z"/></clipPath>' +
+          // Casco em metal escuro, mais claro no topo
+          '<linearGradient id="' + hullGradId + '" x1="0" y1="0" x2="0" y2="1">' +
+            '<stop offset="0%" stop-color="#22385F"/>' +
+            '<stop offset="100%" stop-color="#101C36"/>' +
+          '</linearGradient>' +
+          '<clipPath id="' + sailClipId + '"><path d="M67 20 L104 30 L92 52 L67 54 Z"/></clipPath>' +
         '</defs>' +
-        // onda + "pulsos de dados" no lugar das bolhas redondas (mesmo
-        // traçado de sempre, só que pontilhado — lê como sinal/sonar)
-        '<path d="M4 102 Q19 93 34 102 T64 102 T94 102 T126 102" stroke="' + accent + '" stroke-width="5" fill="none" stroke-linecap="round" stroke-dasharray="1 9" opacity="0.5"/>' +
-        '<rect x="15.5" y="108.5" width="3" height="3" fill="' + accent + '" opacity=".4"/><rect x="109.5" y="109.5" width="3" height="3" fill="' + accent + '" opacity=".4"/>' +
-        // chifrinhos dourados de carneirinho (Velocino de Ouro) na proa e na
-        // popa, agora também "antenas": ponta com um LED piscando na cor do
-        // humor, como se cada chifre também captasse sinal.
-        '<path d="M113 60 Q126 56 123 45 Q120 38 113 42" fill="none" stroke="' + GOLD + '" stroke-width="4.5" stroke-linecap="round"/>' +
-        '<path d="M17 60 Q4 56 7 45 Q10 38 17 42" fill="none" stroke="' + GOLD + '" stroke-width="4.5" stroke-linecap="round"/>' +
-        '<circle class="argo-mascot-led" filter="url(#' + glowId + ')" cx="113" cy="42" r="2.1" fill="' + accent + '"/>' +
-        '<circle class="argo-mascot-led" filter="url(#' + glowId + ')" cx="17" cy="42" r="2.1" fill="' + accent + '"/>' +
-        // casco rechonchudo (é o corpinho do personagem)
-        '<path d="M13 66 Q13 58 21 58 H107 Q115 58 115 66 Q113 100 82 101 H46 Q15 100 13 66 Z" fill="#1B3358" stroke="' + accent + '" stroke-width="3.5" stroke-linejoin="round"/>' +
-        // régua/borda do barco, com o mesmo brilho neon das antenas
-        '<rect filter="url(#' + glowId + ')" x="10" y="54" width="108" height="9" rx="4.5" fill="' + accent + '"/>' +
-        // trilha de circuito discreta perto da quilha — o "painel de
-        // instrumentos" do casco, sem disputar espaço com o rosto
-        '<path d="M28 97 H50 M78 97 H100" stroke="' + accent + '" stroke-width="1" stroke-linecap="round" opacity="0.55"/>' +
-        '<rect x="37.5" y="95.5" width="3" height="3" fill="' + accent + '" opacity="0.6"/><rect x="64" y="95.5" width="3" height="3" fill="' + accent + '" opacity="0.6"/><rect x="89.5" y="95.5" width="3" height="3" fill="' + accent + '" opacity="0.6"/>' +
-        // bochechas
-        '<ellipse cx="33" cy="89" rx="6.5" ry="3.8" fill="' + BLUSH + '" opacity=".75"/>' +
-        '<ellipse cx="95" cy="89" rx="6.5" ry="3.8" fill="' + BLUSH + '" opacity=".75"/>' +
+        // linha d'água em pulsos de dados (sonar)
+        '<path d="M4 106 L19 100 L34 106 L49 100 L64 106 L79 100 L94 106 L109 100 L126 106" stroke="' + accent + '" stroke-width="3" fill="none" stroke-dasharray="1 7" opacity="0.5"/>' +
+        // antenas de aço retas com LED na ponta (no lugar dos chifrinhos curvos)
+        '<path d="M112 58 V46 L118 40 V33" fill="none" stroke="' + STEEL + '" stroke-width="3" stroke-linejoin="miter"/>' +
+        '<path d="M18 58 V46 L12 40 V33" fill="none" stroke="' + STEEL + '" stroke-width="3" stroke-linejoin="miter"/>' +
+        '<path d="M110 50 H114 M16 50 H20" stroke="' + GOLD + '" stroke-width="2"/>' +
+        '<rect class="argo-mascot-led"' + G + ' x="115.8" y="28" width="4.4" height="4.4" fill="' + accent + '"/>' +
+        '<rect class="argo-mascot-led"' + G + ' x="9.8" y="28" width="4.4" height="4.4" fill="' + accent + '"/>' +
+        // casco facetado (cantos chanfrados) em metal escuro
+        '<path d="M11 63 L17 57 H111 L117 63 L108 96 L92 102 H38 L22 96 Z" fill="url(#' + hullGradId + ')" stroke="' + accent + '" stroke-width="2.4" stroke-linejoin="bevel"/>' +
+        // costuras e rebites do painel
+        '<path d="M24 66 L28 92 M104 66 L100 92" stroke="' + accent + '" stroke-width="1" opacity="0.3"/>' +
+        '<rect x="19" y="65" width="2.4" height="2.4" fill="' + STEEL + '" opacity=".7"/><rect x="106.6" y="65" width="2.4" height="2.4" fill="' + STEEL + '" opacity=".7"/>' +
+        // régua do casco, com ponta chanfrada e brilho neon
+        '<path' + G + ' d="M9 53 H119 L114 61 H14 Z" fill="' + accent + '"/>' +
+        '<path d="M20 57 H108" stroke="#fff" stroke-opacity=".28" stroke-width="1" stroke-dasharray="6 4"/>' +
+        // visor HUD (o "rosto")
+        '<rect x="26" y="67" width="76" height="24" rx="3" fill="' + VISOR + '" stroke="' + accent + '" stroke-opacity=".65" stroke-width="1.2"/>' +
+        '<path d="M26 72 V67 H31 M102 72 V67 H97 M26 86 V91 H31 M102 86 V91 H97" fill="none" stroke="' + accent + '" stroke-width="1.6"/>' +
+        '<path d="M32 69.5 H96" stroke="#fff" stroke-opacity=".08" stroke-width="1"/>' +
         face +
+        // trilha de circuito perto da quilha
+        '<path d="M32 95 H52 M76 95 H96" stroke="' + accent + '" stroke-width="1" opacity="0.55"/>' +
+        '<rect x="54" y="93.6" width="2.8" height="2.8" fill="' + accent + '" opacity="0.6"/><rect x="71.2" y="93.6" width="2.8" height="2.8" fill="' + accent + '" opacity="0.6"/>' +
         // mastro
-        '<line x1="64" y1="56" x2="64" y2="14" stroke="' + accent + '" stroke-width="4" stroke-linecap="round"/>' +
-        // vela-tela: o mesmo contorno de sempre, mas preenchida com o
-        // gradiente holográfico e riscada por linhas finas de "scanline"
-        // (recortadas para não vazar da forma da vela).
+        '<line x1="64" y1="54" x2="64" y2="14" stroke="' + accent + '" stroke-width="3" stroke-linecap="square"/>' +
+        '<path d="M61 34 H67 M61 44 H67" stroke="' + accent + '" stroke-width="1.4"/>' +
+        // vela-holograma angular, com grade, scanlines e uma linha de varredura
         '<g clip-path="url(#' + sailClipId + ')">' +
-          '<path d="M67 20 Q106 28 93 52 Q80 56 67 54 Z" fill="url(#' + sailGradId + ')"/>' +
-          '<path d="M60 27 H110" stroke="#fff" stroke-width="1" opacity="0.16"/>' +
-          '<path d="M60 34 H110" stroke="#fff" stroke-width="1" opacity="0.13"/>' +
-          '<path d="M60 41 H110" stroke="#fff" stroke-width="1" opacity="0.11"/>' +
-          '<path d="M60 48 H110" stroke="#fff" stroke-width="1" opacity="0.09"/>' +
+          '<path d="M67 20 L104 30 L92 52 L67 54 Z" fill="url(#' + sailGradId + ')"/>' +
+          '<path d="M60 27 H110 M60 34 H110 M60 41 H110 M60 48 H110" stroke="#fff" stroke-width="1" opacity="0.13"/>' +
+          '<path d="M78 16 V58 M91 16 V58" stroke="#fff" stroke-width="1" opacity="0.1"/>' +
+          '<rect class="argo-mascot-scan" x="66" y="20" width="40" height="2" fill="#fff" opacity="0"/>' +
         '</g>' +
-        '<path d="M67 20 Q106 28 93 52 Q80 56 67 54 Z" fill="none" stroke="' + accent + '" stroke-width="2.6" stroke-linejoin="round"/>' +
-        // bandeirinha virou um "chip" digital: badge arredondado com o
-        // símbolo do humor em fonte monoespaçada e um LED piscando no canto.
-        '<rect filter="url(#' + glowId + ')" x="64" y="6" width="26" height="18" rx="4" fill="' + accent + '"/>' +
-        '<rect x="64" y="6" width="26" height="18" rx="4" fill="none" stroke="#fff" stroke-opacity="0.28" stroke-width="1"/>' +
-        '<text x="77" y="19" font-size="11" font-weight="800" fill="#fff" text-anchor="middle" font-family="\'SFMono-Regular\',Consolas,monospace" letter-spacing="0.4">' + flagSymbol + '</text>' +
-        '<circle class="argo-mascot-led" cx="67.5" cy="9.5" r="1.3" fill="#fff"/>' +
+        '<path d="M67 20 L104 30 L92 52 L67 54 Z" fill="none" stroke="' + accent + '" stroke-width="2.2" stroke-linejoin="miter"/>' +
+        // chip da bandeira
+        '<rect' + G + ' x="64" y="5" width="26" height="17" rx="2" fill="' + accent + '"/>' +
+        '<rect x="64" y="5" width="26" height="17" rx="2" fill="none" stroke="#fff" stroke-opacity="0.28" stroke-width="1"/>' +
+        '<text x="78" y="18" font-size="11" font-weight="800" fill="#fff" text-anchor="middle" font-family="\'SFMono-Regular\',Consolas,monospace" letter-spacing="0.4">' + flagSymbol + '</text>' +
+        '<rect class="argo-mascot-led" x="66" y="7" width="2.4" height="2.4" fill="#fff"/>' +
         sparkles +
       '</svg>'
     );
@@ -188,14 +194,16 @@
     var css = '' +
       '.argo-mascot-icon{display:block;overflow:visible}' +
       '.argo-mascot-bob{animation:argoMascotBob 3.2s ease-in-out infinite}' +
-      '@keyframes argoMascotBob{0%,100%{transform:translateY(0) rotate(-1.5deg)}50%{transform:translateY(-3px) rotate(1.5deg)}}' +
+      '@keyframes argoMascotBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}' +
+      '.argo-mascot-scan{animation:argoMascotScan 2.8s linear infinite}' +
+      '@keyframes argoMascotScan{0%{transform:translateY(0);opacity:0}15%{opacity:.7}85%{opacity:.7}100%{transform:translateY(32px);opacity:0}}' +
       // LED das antenas/chip da bandeira: pisca devagar, como um sinal
       // captado — cada instância começa num ponto diferente do ciclo
       // (animation-delay via nth-of-type não é confiável em SVG, então o
       // efeito "dessincronizado" fica por conta da duração levemente ímpar).
       '.argo-mascot-led{animation:argoMascotLed 1.9s ease-in-out infinite}' +
       '@keyframes argoMascotLed{0%,100%{opacity:1}50%{opacity:.25}}' +
-      '@media (prefers-reduced-motion: reduce){.argo-mascot-bob{animation:none}.argo-mascot-led{animation:none}.argo-mascot-toast{transition:none}}' +
+      '@media (prefers-reduced-motion: reduce){.argo-mascot-bob{animation:none}.argo-mascot-led{animation:none}.argo-mascot-scan{animation:none}.argo-mascot-toast{transition:none}}' +
       '@media print{.argo-mascot-toast{display:none!important}}' +
       'body:has(#argoUpdateToast) .argo-mascot-toast{bottom:calc(76px + env(safe-area-inset-bottom,0px))}' +
 
