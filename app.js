@@ -3736,6 +3736,7 @@ function render() {
                <button class="btn-tech btn-primary" onclick="printBpcGuide('${i.id}','es')">📄 Guía del Beneficio (ES)</button>`
             : `<button class="btn-tech btn-primary" onclick="printInformeGuide('${i.id}')">Gerar Guia</button>`
           }
+          ${renderCartaoButton(i)}
         </div>
       </div>
     `;
@@ -4125,7 +4126,16 @@ function renderSecondUnitField(id, name) {
    CEAC = Cesta da Família, Colo de Mãe e Passe Livre; demais unidades (CIAPI, abrigos,
    Casa de Passagem, Casa da Mulher Brasileira, CAI, CAS, SEMADS, SETRABES e Consulta
    CadÚnico) = o que a unidade faz e o que levar. Verso: nome, endereço e contato
-   da unidade, lidos do próprio cadastro (DATA). */
+   da unidade, lidos do próprio cadastro (DATA).
+   A aba RAPS (categoria 'saude') segue o mesmo padrão: CAPS (AD III, III, II e I do
+   interior), UBS, Consultório de Rua, saúde indígena (DSEI/CASAI), urgência e hospital
+   (SAMU, UAA, Ambulatório Coronel Mota, HGRR) e clínicas-escola de psicologia.
+   A aba TEA (categoria 'tea') também: CIAPD, TEAMARR (2 polos), APAE, CIPTEA e os guias
+   do SUS (diagnóstico, tratamento e teleatendimento). Nos guias e no CIPTEA, que não são um
+   endereço fixo, o verso usa 'override' (ou 'dadosDe', que completa o contato com o de outra ficha).
+   A aba Hospitalar e Atenção Básica (categoria 'hospitalar') também: hospitais e pronto
+   atendimento de Boa Vista, SMSA, SESAU, Zoonoses, CERNUTRI, as UBS da capital e as unidades do
+   interior (hospitais, unidades mistas, centros/postos de saúde e UBS), com modelos padrão. */
 // Demais unidades da aba (fora CRAS/CREAS/CEAC): cada id aponta para o tipo
 // de cartão em buildCartaoFrente(). Ficam de fora só os painéis de indicadores
 // (ex.: Vis Data), que não são um lugar para onde encaminhar a pessoa.
@@ -4144,12 +4154,79 @@ const CARTAO_TIPO_POR_ID = {
   'cadunico-consulta': 'cadunico'
 };
 
+// Unidades da aba RAPS (categoria 'saude') que não seguem um prefixo de id
+// (CAPS I do interior = 'caps-i-*' e UBS = 'ubs-*' são tratados em getCartaoTipo).
+const CARTAO_TIPO_RAPS_POR_ID = {
+  'caps-ad-iii': 'caps-ad',
+  'caps-iii': 'caps-iii',
+  'caps-ii': 'caps-ii',
+  'consultorio-rua': 'consultorio-rua',
+  'dsei-leste-roraima': 'dsei',
+  'dsei-yanomami-yekwana': 'dsei',
+  'casai-leste-roraima': 'casai',
+  'casai-yanomami-yekwana': 'casai',
+  'samu': 'samu',
+  'uaa': 'uaa',
+  'ambulatorio-coronel-mota': 'ambulatorio',
+  'hgrr': 'hgrr',
+  'sap-ufrr': 'sap-ufrr',
+  'servico-escola-psicologia-estacio': 'clinica-estacio',
+  'clinica-escola-psicologia-cathedral': 'clinica-cathedral',
+  'clinica-psicologia-faceten': 'clinica-faceten'
+};
+
+// Unidades e guias da aba TEA (categoria 'tea').
+const CARTAO_TIPO_TEA_POR_ID = {
+  'ciapd': 'ciapd',
+  'teamarr': 'teamarr',
+  'teamarr-polo-2': 'teamarr-polo-2',
+  'apae-bv': 'apae',
+  'ciptea-roraima': 'ciptea',
+  'diagnostico-tea-pcd-sus': 'guia-diagnostico',
+  'tratamento-tea-pcd-sus': 'guia-tratamento',
+  'teleatendimento-mulheres-maes-atipicas': 'teleatendimento'
+};
+
+// Unidades da aba Hospitalar e Atenção Básica (categoria 'hospitalar') com cartão próprio.
+// As UBS da capital ('ubs-*') e as unidades do interior usam modelos padrão (ver getCartaoTipo).
+const CARTAO_TIPO_HOSP_POR_ID = {
+  'hospital-crianca-santo-antonio': 'hosp-hcsa',
+  'hospital-coronel-mota': 'hosp-coronel-mota',
+  'hospital-cosme-silva': 'hosp-pacs',
+  'hospital-universitario': 'hosp-hu',
+  'hospital-materno-infantil-hminsn': 'hosp-hminsn',
+  'smsa-bv': 'smsa',
+  'sesau-rr': 'sesau',
+  'centro-zoonoses': 'zoonoses',
+  'cernutri': 'cernutri'
+};
+
 function getCartaoTipo(item) {
-  if (!item || !Array.isArray(item.cat) || !item.cat.includes('social')) return null;
-  if (item.id === 'ceac') return 'ceac';
-  if (/^creas-/.test(item.id)) return 'creas';
-  if (/^cras-/.test(item.id)) return 'cras';
-  return CARTAO_TIPO_POR_ID[item.id] || null;
+  if (!item || !Array.isArray(item.cat)) return null;
+  if (item.cat.includes('social')) {
+    if (item.id === 'ceac') return 'ceac';
+    if (/^creas-/.test(item.id)) return 'creas';
+    if (/^cras-/.test(item.id)) return 'cras';
+    return CARTAO_TIPO_POR_ID[item.id] || null;
+  }
+  if (item.cat.includes('saude')) {
+    if (/^caps-i-/.test(item.id)) return 'caps-i';
+    if (/^ubs-/.test(item.id)) return 'ubs';
+    return CARTAO_TIPO_RAPS_POR_ID[item.id] || null;
+  }
+  if (item.cat.includes('tea')) return CARTAO_TIPO_TEA_POR_ID[item.id] || null;
+  if (item.cat.includes('hospitalar')) {
+    if (CARTAO_TIPO_HOSP_POR_ID[item.id]) return CARTAO_TIPO_HOSP_POR_ID[item.id];
+    if (item.cat.includes('interior')) {
+      if (/^hospital-/.test(item.id)) return 'hosp-interior';
+      if (/^unidade-mista-/.test(item.id)) return 'unidade-mista';
+      if (/^(centro-saude|posto-saude)-/.test(item.id)) return 'saude-estadual';
+      if (/^ubs-/.test(item.id)) return 'ubs-interior';
+      return null;
+    }
+    if (/^ubs-/.test(item.id)) return 'ubs-ab';
+  }
+  return null;
 }
 
 function renderCartaoButton(item) {
@@ -4165,7 +4242,21 @@ function buildCartaoFrente(tipo) {
     ciapi: '#0F766E', cmb: '#BE185D', cai: '#D97706', cas: '#EA580C',
     'abrigo-pedra-pintada': '#7C3AED', 'abrigo-viva-crianca': '#7C3AED',
     'abrigo-fem': '#7C3AED', 'abrigo-masc': '#7C3AED', 'casa-passagem': '#7C3AED',
-    semads: '#334155', setrabes: '#334155', cadunico: '#1E40AF'
+    semads: '#334155', setrabes: '#334155', cadunico: '#1E40AF',
+    // RAPS: roxo da categoria para CAPS/UBS; tons próprios para urgência, saúde indígena e clínicas-escola
+    'caps-ad': '#6D28D9', 'caps-iii': '#7B3FE4', 'caps-ii': '#7B3FE4', 'caps-i': '#7B3FE4',
+    ubs: '#0E7490', 'consultorio-rua': '#B45309',
+    dsei: '#15803D', casai: '#15803D',
+    samu: '#DC2626', uaa: '#6D28D9', ambulatorio: '#9F1239', hgrr: '#9F1239',
+    'sap-ufrr': '#C026D3', 'clinica-estacio': '#C026D3', 'clinica-cathedral': '#C026D3', 'clinica-faceten': '#C026D3',
+    // TEA / Pessoa com Deficiência
+    ciapd: '#0B78A8', teamarr: '#2563EB', 'teamarr-polo-2': '#2563EB', apae: '#B45309',
+    ciptea: '#0F766E', 'guia-diagnostico': '#4F46E5', 'guia-tratamento': '#4F46E5', teleatendimento: '#BE185D',
+    // Hospitalar e Atenção Básica
+    'hosp-hcsa': '#0E7490', 'hosp-coronel-mota': '#B91C1C', 'hosp-pacs': '#DC2626', 'hosp-hu': '#1D4ED8', 'hosp-hminsn': '#BE185D',
+    'hosp-interior': '#B91C1C', 'unidade-mista': '#B91C1C', 'saude-estadual': '#B91C1C',
+    'ubs-ab': '#047857', 'ubs-interior': '#047857', cernutri: '#4D7C0F',
+    smsa: '#334155', sesau: '#334155', zoonoses: '#0F766E'
   }[tipo] || '#0091C2';
   const chk = `<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="${COR}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:0.35mm;" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="${COR}" fill-opacity="0.14" stroke-width="2"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>`;
   const li = (t) => `<li style="display:flex; gap:1.4mm; align-items:flex-start; margin:0 0 1.2mm 0; list-style:none;">${chk}<span>${t}</span></li>`;
@@ -4307,6 +4398,387 @@ function buildCartaoFrente(tipo) {
         ]),
         rodape: 'Funciona de segunda a sábado, das 08:00 às 22:00.'
       },
+      // ---------- RAPS (aba Rede de Atenção Psicossocial) ----------
+      'caps-ad': {
+        sigla: 'CAPS AD III', area: 'Atenção Psicossocial', fs: 7.5,
+        titulo: 'CAPS AD III', sub: 'Álcool e outras drogas · 24 h',
+        corpo: ul([
+          li('Cuidado a pessoas com necessidades decorrentes do <strong>uso de álcool e outras drogas</strong>'),
+          li('<strong>Funciona 24 horas</strong>, inclusive feriados e fins de semana, com até 12 leitos de acolhimento noturno'),
+          li('<strong>Equipe multiprofissional</strong> e Projeto Terapêutico Singular (PTS)')
+        ]),
+        rodape: 'Referência para <strong>todas as macroáreas</strong> (1 a 8). Porta aberta no período diurno.'
+      },
+      'caps-iii': {
+        sigla: 'CAPS III', area: 'Atenção Psicossocial', fs: 7.5,
+        titulo: 'CAPS III', sub: 'Saúde mental · 24 h',
+        corpo: ul([
+          li('Pessoas com <strong>transtornos mentais graves e persistentes</strong>'),
+          li('Acompanhamento intensivo, com <strong>Projeto Terapêutico Singular (PTS)</strong> feito com o usuário e a família'),
+          li('Acolhimento noturno (até 5 leitos) em feriados e fins de semana, para quem já é acompanhado')
+        ]),
+        rodape: 'Referência das macroáreas <strong>4, 5, 7 e 8</strong>. Não é pronto-socorro psiquiátrico: casos novos costumam ser acolhidos de dia.'
+      },
+      'caps-ii': {
+        sigla: 'CAPS II', area: 'Atenção Psicossocial', fs: 7.5,
+        titulo: 'CAPS II', sub: 'Saúde mental',
+        corpo: ul([
+          li('Pessoas com <strong>transtornos mentais graves e persistentes</strong>'),
+          li('Atendimento <strong>intensivo, semi-intensivo e não intensivo</strong>, com Projeto Terapêutico Singular (PTS)'),
+          li('Equipe: psiquiatra, enfermeiro, psicólogo, assistente social e outros profissionais')
+        ]),
+        rodape: 'Atende de <strong>segunda a sexta</strong>. Referência das macroáreas <strong>1, 2, 3 e 6</strong>.'
+      },
+      'caps-i': {
+        sigla: 'CAPS', area: 'Atenção Psicossocial', fs: 7.9,
+        titulo: 'CAPS', sub: 'Saúde mental · Interior',
+        corpo: ul([
+          li('Acompanhamento de <strong>saúde mental</strong> e de transtornos pelo <strong>uso de álcool e outras drogas</strong>'),
+          li('<strong>Atendimento psicossocial</strong> para o município')
+        ]),
+        rodape: 'Atende de <strong>segunda a sexta</strong>. Procure a unidade do seu município.'
+      },
+      'ubs': {
+        sigla: 'UBS', area: 'Atenção Básica', fs: 7.5,
+        titulo: 'UBS', sub: 'Atenção Básica · Saúde mental',
+        corpo: ul([
+          li('<strong>Acolhimento em saúde mental</strong> e atendimento psicológico individual de curto prazo'),
+          li('<strong>Grupos terapêuticos</strong>, grupos operativos e visita domiciliar'),
+          li('<strong>Apoio matricial</strong> e encaminhamento ao CAPS quando necessário')
+        ]),
+        rodape: 'Leve <strong>documento com foto</strong> e <strong>Cartão SUS</strong>. Procure a UBS do seu território.'
+      },
+      'consultorio-rua': {
+        sigla: 'CONSULTÓRIO DE RUA', area: 'Atenção Básica', fs: 7.9,
+        titulo: 'Consultório de Rua', sub: 'Itinerante',
+        corpo: ul([
+          li('<strong>Cuidados básicos de saúde</strong> levados à pessoa em situação de rua'),
+          li('<strong>Redução de danos</strong> para quem tem transtorno mental ou usa álcool e outras drogas'),
+          li('Articulação com <strong>UBS, CAPS</strong> e rede socioassistencial')
+        ]),
+        rodape: 'Equipe <strong>itinerante</strong>, sem endereço fixo (eCR).'
+      },
+      'dsei': {
+        sigla: 'DSEI', area: 'Saúde Indígena', fs: 7.9,
+        titulo: 'DSEI', sub: 'Saúde indígena',
+        corpo: ul([
+          li('<strong>Atenção básica à saúde indígena</strong> (SESAI / Ministério da Saúde)'),
+          li('Coordena os <strong>Polos-Base</strong> e as equipes multidisciplinares de saúde indígena'),
+          li('Articula a <strong>CASAI</strong> de referência')
+        ]),
+        rodape: 'Sede administrativa do Distrito. Horário administrativo, de segunda a sexta.'
+      },
+      'casai': {
+        sigla: 'CASAI', area: 'Saúde Indígena', fs: 7.9,
+        titulo: 'CASAI', sub: 'Saúde indígena · 24 h',
+        corpo: ul([
+          li('<strong>Acolhimento e alojamento</strong> de pacientes indígenas e acompanhantes durante o tratamento em Boa Vista'),
+          li('Retaguarda assistencial com <strong>equipe de enfermagem</strong>'),
+          li('Recebe casos de <strong>média e alta complexidade</strong> vindos dos Polos-Base')
+        ]),
+        rodape: 'Atende indígenas <strong>encaminhados pelos Polos-Base</strong>.'
+      },
+      'samu': {
+        sigla: 'SAMU 192', area: 'Urgência e Emergência', fs: 7.9,
+        titulo: 'SAMU 192', sub: '24 horas',
+        corpo: ul([
+          li('<strong>Atendimento móvel de urgência</strong> em toda Boa Vista'),
+          li('Também atende <strong>urgências em saúde mental</strong>: crise, agitação, intoxicação e abstinência alcoólica')
+        ]),
+        rodape: 'Em situação de urgência: <strong>ligue 192</strong>. O paciente é encaminhado conforme o fluxo da rede.'
+      },
+      'uaa': {
+        sigla: 'UAA', area: 'Acolhimento Transitório', fs: 7.5,
+        titulo: 'UAA', sub: 'Adultos (18+) · 24 h',
+        corpo: ul([
+          li('<strong>Acolhimento residencial transitório</strong> de até 15 adultos'),
+          li('Para quem está em <strong>extrema vulnerabilidade psicossocial</strong> pelo uso de álcool e outras drogas, com vínculos fragilizados'),
+          li('Permanência prevista de <strong>até 6 meses</strong>, conforme o PTS')
+        ]),
+        rodape: 'Acesso <strong>somente por encaminhamento do CAPS</strong> de referência.'
+      },
+      'ambulatorio': {
+        sigla: 'AMBULATÓRIO', area: 'Atenção Hospitalar', fs: 7.9,
+        titulo: 'Coronel Mota', sub: 'Ambulatório psiquiátrico',
+        corpo: ul([
+          li('Cuidados <strong>psiquiátricos e psicológicos</strong> ambulatoriais'),
+          li('Atende usuários de <strong>baixo e médio risco</strong>'),
+          li('Ponto de referência para o <strong>trabalho psicoterapêutico</strong>')
+        ]),
+        rodape: 'Ambulatório do Hospital Coronel Mota. Confirme o fluxo de entrada pelo telefone.'
+      },
+      'hgrr': {
+        sigla: 'HGRR', area: 'Atenção Hospitalar', fs: 7.5,
+        titulo: 'HGRR', sub: 'Hospital Geral de Roraima',
+        corpo: ul([
+          li('<strong>Leitos de saúde mental</strong> em hospital geral, como retaguarda da rede'),
+          li('Atendimento a <strong>situações de crise</strong> e internação de curta permanência (em regra, menos de 90 dias)'),
+          li('Internação <strong>voluntária, involuntária ou compulsória</strong> (Lei n.º 10.216/2001)')
+        ]),
+        rodape: 'Internação involuntária exige <strong>critérios clínicos</strong> e comunicação ao Ministério Público em até 72 h.'
+      },
+      'sap-ufrr': {
+        sigla: 'SAP/UFRR', area: 'Clínica-Escola de Psicologia', fs: 7.5,
+        titulo: 'SAP · UFRR', sub: 'Plantão psicológico',
+        corpo: ul([
+          li('<strong>Plantão Psicológico</strong>: acolhimento pontual de demandas emocionais emergenciais'),
+          li('<strong>Por ordem de chegada</strong>, sem agendamento; a ficha é preenchida no local'),
+          li('Comunidade externa e UFRR. A partir de 12 anos, <strong>com responsável legal</strong>')
+        ]),
+        rodape: 'Estágio clínico do curso de Psicologia, com supervisão docente.'
+      },
+      'clinica-estacio': {
+        sigla: 'ESTÁCIO', area: 'Clínica-Escola de Psicologia', fs: 7.9,
+        titulo: 'Estácio', sub: 'Serviço-Escola de Psicologia',
+        corpo: ul([
+          li('<strong>Atendimento psicológico</strong> com agenda aberta para novos pacientes'),
+          li('<strong>Cadastro pelo formulário online:</strong> forms.gle/ZJaJn6JzjppyNar17')
+        ]),
+        rodape: 'Serviço-Escola de Psicologia do Centro Universitário Estácio da Amazônia.'
+      },
+      'clinica-cathedral': {
+        sigla: 'CATHEDRAL', area: 'Clínica-Escola de Psicologia', fs: 7.5,
+        titulo: 'Cathedral', sub: 'Clínica-Escola de Psicologia',
+        corpo: ul([
+          li('<strong>Escuta qualificada, triagem e psicoterapia</strong> gratuitas'),
+          li('Presencial e virtual, conforme a disponibilidade de vagas'),
+          li('Estudantes sob supervisão de professores. <strong>A partir de 12 anos</strong>')
+        ]),
+        rodape: 'Contato também por WhatsApp e e-mail: clinicapsicologia@cathedral.edu.br'
+      },
+      'clinica-faceten': {
+        sigla: 'FACETEN', area: 'Clínica-Escola de Psicologia', fs: 7.9,
+        titulo: 'FACETEN', sub: 'Clínica de Psicologia',
+        corpo: ul([
+          li('<strong>Atendimento psicológico gratuito</strong> à comunidade'),
+          li('Feito por <strong>estudantes de Psicologia</strong> com supervisão de professores'),
+          li('<strong>A partir de 12 anos</strong>')
+        ]),
+        rodape: 'Vagas e editais: confirme a disponibilidade com a clínica antes de ir.'
+      },
+      // ---------- TEA / Pessoa com Deficiência ----------
+      'ciapd': {
+        sigla: 'CIAPD', area: 'Pessoa com Deficiência', fs: 7.5,
+        titulo: 'CIAPD', sub: 'Pessoa com deficiência',
+        corpo: ul([
+          li('<strong>Reabilitação</strong>: fonoaudiologia, terapia ocupacional e psicologia'),
+          li('<strong>Inclusão produtiva</strong> (Unidade de Capacitação e Produção) e ecoterapia'),
+          li('<strong>Emissão da CIPTEA</strong> (Carteira do Autista)')
+        ]),
+        rodape: 'Para reabilitação, leve o <strong>laudo</strong> e o encaminhamento da rede.'
+      },
+      'teamarr': {
+        sigla: 'TEAMARR', area: 'Transtorno do Espectro Autista', fs: 7.5,
+        titulo: 'TEAMARR', sub: 'Autismo · Gratuito',
+        corpo: ul([
+          li('Atende <strong>gratuitamente</strong> crianças e adolescentes com <strong>TEA</strong>'),
+          li('<strong>Terapia ABA</strong>, psicologia, psicopedagogia, fisioterapia e terapia ocupacional'),
+          li('<strong>Capacitação</strong> de familiares e de profissionais da educação e da saúde')
+        ]),
+        rodape: 'Centro de Acolhimento ao Autista, programa da Assembleia Legislativa (ALE-RR).'
+      },
+      'teamarr-polo-2': {
+        sigla: 'TEAMARR · POLO 2', area: 'Transtorno do Espectro Autista', fs: 7.9,
+        titulo: 'TEAMARR · Polo 2', sub: 'Zona Oeste',
+        corpo: ul([
+          li('Atende crianças e adolescentes com <strong>TEA</strong> na <strong>Zona Oeste</strong> de Boa Vista'),
+          li('<strong>Terapia ABA</strong> (acompanhamento terapêutico), psicologia, pedagogia e psicopedagogia'),
+          li('Fisioterapia e <strong>educação física</strong>')
+        ]),
+        rodape: 'Segunda unidade do TEAMARR (ALE-RR), inaugurada em março de 2026.'
+      },
+      'apae': {
+        sigla: 'APAE', area: 'Deficiência Intelectual e Múltipla', fs: 7.9,
+        titulo: 'APAE', sub: 'Boa Vista',
+        corpo: ul([
+          li('<strong>Educação especial</strong> para pessoas com deficiência intelectual e múltipla'),
+          li('<strong>Fisioterapia</strong> e atendimento clínico/terapêutico'),
+          li('<strong>Esporte inclusivo</strong> (TEAtivo)')
+        ]),
+        rodape: 'Ingresso por <strong>cadastro com documentos</strong> da criança e do responsável (lista de espera).'
+      },
+      'ciptea': {
+        sigla: 'CIPTEA', area: 'Direitos da Pessoa com TEA', fs: 7.1,
+        titulo: 'CIPTEA', sub: 'Carteira do Autista',
+        corpo: ul([
+          li('<strong>Ficha de cadastro</strong> preenchida (modelo no site da SETRABES-RR)'),
+          li('<strong>Relatório médico com o CID</strong> do TEA'),
+          li('<strong>RG e CPF</strong> da pessoa com TEA (originais) e <strong>comprovante de residência</strong>'),
+          li('<strong>Documento do responsável</strong> legal ou cuidador')
+        ]),
+        rodape: 'Emissão <strong>gratuita</strong> no CIAPD. Validade de <strong>5 anos</strong>.',
+        // Mesmo local de emissão do CIAPD: se a ficha do CIPTEA não tem telefone, completa com o do CIAPD.
+        dadosDe: 'ciapd',
+        override: { endereco: 'CIAPD · Av. São Sebastião, 1195 - Santa Tereza, Boa Vista-RR', horario: 'Consulte o CIAPD/SETRABES para dias e horários' }
+      },
+      'guia-diagnostico': {
+        sigla: 'DIAGNÓSTICO PELO SUS', area: 'Guia · Rede SUS', fs: 7.1,
+        titulo: 'Diagnóstico pelo SUS', sub: 'Passo a passo',
+        corpo: ul([
+          li('<strong>1. UBS do bairro:</strong> leve Cartão SUS, documentos e, se for criança, a Caderneta de Saúde'),
+          li('<strong>2. Consulta:</strong> descreva os sinais observados. Não precisa de diagnóstico prévio'),
+          li('<strong>3. Encaminhamento</strong> a especialista (CAPS, neuropediatria, psiquiatria, CER II ou CIAPD)'),
+          li('<strong>4. Laudo com CID</strong>, emitido por médico(a): base para CIPTEA, BPC e apoio escolar')
+        ]),
+        rodape: 'Demora excessiva? Procure a <strong>Defensoria Pública</strong>. Orientações: <strong>136</strong> (Disque Saúde).',
+        override: { endereco: 'UBS ou ESF do bairro de residência', fones: ['Disque Saúde 136'] }
+      },
+      'guia-tratamento': {
+        sigla: 'TRATAMENTO PELO SUS', area: 'Guia · Rede SUS', fs: 7.5,
+        titulo: 'Tratamento pelo SUS', sub: 'Onde buscar',
+        corpo: ul([
+          li('<strong>UBS/ESF:</strong> porta de entrada e continuidade do cuidado'),
+          li('<strong>CAPS/CAPSi</strong> (saúde mental) e <strong>CER II / CIAPD</strong> (reabilitação, com laudo)'),
+          li('<strong>TEAMARR</strong> (terapia ABA) e <strong>APAE</strong> (educação especial)')
+        ]),
+        rodape: 'Se o SUS negar ou atrasar o tratamento, procure a <strong>Defensoria Pública</strong>.',
+        override: { endereco: 'Acesso pela UBS de referência, com encaminhamento', fones: ['Disque Saúde 136'], horario: 'Conforme cada unidade da rede' }
+      },
+      'teleatendimento': {
+        sigla: 'TELEATENDIMENTO', area: 'Saúde Mental · SUS', fs: 7.5,
+        titulo: 'Teleatendimento SUS', sub: 'Mães atípicas',
+        corpo: ul([
+          li('Para <strong>mães atípicas</strong> (e outras familiares cuidadoras) e mulheres em situação de violência'),
+          li('Até <strong>10 sessões</strong> de escuta psicológica por vídeo, <strong>sigilosa</strong>, com psicólogas'),
+          li('Agende pelo app <strong>Meu SUS Digital</strong> (login gov.br) ou por encaminhamento da UBS')
+        ]),
+        rodape: 'Atendimento <strong>100% remoto</strong>. O CAPS também pode ser procurado diretamente.',
+        override: { endereco: 'Aplicativo Meu SUS Digital (login gov.br)', icone: 'globe', fones: [] }
+      },
+      // ---------- Hospitalar e Atenção Básica ----------
+      'hosp-hcsa': {
+        sigla: 'HCSA', area: 'Hospital Municipal', fs: 7.5,
+        titulo: 'HCSA', sub: 'Hospital da Criança',
+        corpo: ul([
+          li('<strong>Pediatria</strong> de média e alta complexidade, para crianças de <strong>29 dias a 12 anos</strong>'),
+          li('<strong>Urgência e emergência infantil 24 h</strong>, internação e cirurgias'),
+          li('Mais de <strong>30 especialidades</strong> pediátricas')
+        ]),
+        rodape: 'Única unidade de média e alta complexidade <strong>exclusiva para crianças</strong> em Roraima. Ambulatórios conforme agenda.'
+      },
+      'hosp-coronel-mota': {
+        sigla: 'CORONEL MOTA', area: 'Hospital Estadual', fs: 7.9,
+        titulo: 'Coronel Mota', sub: 'Hospital estadual',
+        corpo: ul([
+          li('Unidade hospitalar da <strong>rede estadual</strong> (SESAU-RR)'),
+          li('<strong>Especialidades clínicas e cirúrgicas</strong>'),
+          li('Cirurgias <strong>eletivas</strong> e de pequeno porte')
+        ]),
+        rodape: 'Confirme horário e fluxo de atendimento com a unidade.'
+      },
+      'hosp-pacs': {
+        sigla: 'PACS', area: 'Pronto Atendimento', fs: 7.9,
+        titulo: 'PACS', sub: 'Pronto atendimento · 24 h',
+        corpo: ul([
+          li('<strong>Urgência e emergência</strong> geral, 24 horas, todos os dias'),
+          li('Avaliações <strong>médicas e psicológicas</strong>'),
+          li('Exames <strong>de imagem e laboratoriais</strong>')
+        ]),
+        rodape: 'Atende principalmente a <strong>zona Oeste</strong> de Boa Vista. Unidade estadual (SESAU-RR).'
+      },
+      'hosp-hu': {
+        sigla: 'HU-UFRR', area: 'Hospital Universitário', fs: 7.5,
+        titulo: 'HU-UFRR', sub: 'Hospital universitário',
+        corpo: ul([
+          li('Hospital federal (<strong>Ebserh/UFRR</strong>) com foco em assistência, ensino e pesquisa'),
+          li('<strong>Pronto-socorro</strong> e unidades hospitalares para urgência'),
+          li('Inclui <strong>atenção à saúde indígena</strong>')
+        ]),
+        rodape: 'Confirme horário e fluxo de atendimento com a unidade.'
+      },
+      'hosp-hminsn': {
+        sigla: 'MATERNO INFANTIL', area: 'Hospital Estadual', fs: 7.9,
+        titulo: 'Materno Infantil', sub: 'Aberto 24 h',
+        corpo: ul([
+          li('<strong>Maternidade</strong> de risco habitual e de alto risco, com obstetrícia'),
+          li('<strong>Pediatria</strong>, urgência e emergência materno-infantil'),
+          li('Atende <strong>crianças, mulheres e gestantes</strong>')
+        ]),
+        rodape: 'Hospital Nossa Senhora de Nazareth, da rede estadual (SESAU-RR).'
+      },
+      'smsa': {
+        sigla: 'SMSA', area: 'Gestão em Saúde', fs: 8.2,
+        titulo: 'SMSA', sub: 'Gestão municipal',
+        corpo: ul([
+          li('<strong>Secretaria Municipal de Saúde</strong> de Boa Vista'),
+          li('Gestão da <strong>Atenção Primária</strong> (UBS), do Hospital da Criança e do SAMU')
+        ]),
+        rodape: 'Para atendimento, procure a <strong>UBS</strong> do seu bairro. Central <strong>156</strong>.'
+      },
+      'sesau': {
+        sigla: 'SESAU', area: 'Gestão em Saúde', fs: 7.9,
+        titulo: 'SESAU', sub: 'Gestão estadual',
+        corpo: ul([
+          li('<strong>Secretaria de Estado da Saúde</strong> de Roraima'),
+          li('<strong>Regulação</strong> (SISREG) de exames e de hospitais de referência'),
+          li('<strong>Especialidades</strong>, Alto Custo e TFD')
+        ]),
+        rodape: 'Para atendimento de rotina, procure a <strong>UBS</strong> do seu bairro.'
+      },
+      'zoonoses': {
+        sigla: 'ZOONOSES', area: 'Vigilância em Saúde', fs: 7.5,
+        titulo: 'Zoonoses', sub: 'Vigilância e controle',
+        corpo: ul([
+          li('<strong>Vacinação antirrábica</strong> de cães e gatos'),
+          li('Controle e prevenção de <strong>zoonoses</strong> e atendimento a acidentes com animais'),
+          li('Orientação sobre <strong>posse responsável</strong> de animais')
+        ]),
+        rodape: 'Anexo da Secretaria Municipal de Saúde (SMSA).'
+      },
+      'cernutri': {
+        sigla: 'CERNUTRI', area: 'Atenção Básica', fs: 7.9,
+        titulo: 'CERNUTRI', sub: 'Nutrição infantil',
+        corpo: ul([
+          li('<strong>Recuperação e acompanhamento nutricional</strong> infantil'),
+          li('Posto de saúde comunitário da <strong>Atenção Básica</strong> do município')
+        ]),
+        rodape: 'Confirme horário e fluxo de atendimento com a unidade.'
+      },
+      'ubs-ab': {
+        sigla: 'UBS', area: 'Atenção Básica', fs: 7.9,
+        titulo: 'UBS', sub: 'Atenção Básica · Boa Vista',
+        corpo: ul([
+          li('<strong>Porta de entrada do SUS</strong>: acompanhamento clínico geral'),
+          li('Avaliação inicial e <strong>encaminhamento</strong> para especialistas e para a rede')
+        ]),
+        rodape: 'Leve <strong>documento com foto</strong> e <strong>Cartão SUS</strong>. Para criança, leve também a <strong>Caderneta de Saúde</strong>.'
+      },
+      'ubs-interior': {
+        sigla: 'UBS', area: 'Atenção Básica · Interior', fs: 7.9,
+        titulo: 'UBS', sub: 'Atenção Básica · Interior',
+        corpo: ul([
+          li('<strong>Atenção Básica em Saúde</strong>: porta de entrada do SUS no município'),
+          li('Avaliação inicial e <strong>encaminhamento</strong> à rede quando necessário')
+        ]),
+        rodape: 'Leve <strong>documento com foto</strong> e <strong>Cartão SUS</strong>. Confirme o horário com a unidade.'
+      },
+      'hosp-interior': {
+        sigla: 'HOSPITAL', area: 'Rede Estadual · Interior', fs: 7.9,
+        titulo: 'Hospital', sub: 'Rede estadual · Interior',
+        corpo: ul([
+          li('Atendimento <strong>hospitalar estadual</strong> (SESAU-RR)'),
+          li('Hospital de <strong>referência do município</strong>')
+        ]),
+        rodape: 'Leve <strong>documento com foto</strong> e <strong>Cartão SUS</strong>. Confirme o horário com a unidade.'
+      },
+      'unidade-mista': {
+        sigla: 'UNIDADE MISTA', area: 'Rede Estadual · Interior', fs: 7.9,
+        titulo: 'Unidade Mista', sub: 'Rede estadual · Interior',
+        corpo: ul([
+          li('Atendimento <strong>hospitalar</strong> estadual (SESAU-RR)'),
+          li('Unidade de <strong>referência do município</strong>')
+        ]),
+        rodape: 'Leve <strong>documento com foto</strong> e <strong>Cartão SUS</strong>. Confirme o horário com a unidade.'
+      },
+      'saude-estadual': {
+        sigla: 'SAÚDE', area: 'Rede Estadual · Interior', fs: 7.9,
+        titulo: 'Unidade de Saúde', sub: 'Rede estadual · Interior',
+        corpo: ul([
+          li('Atendimento <strong>estadual</strong> de saúde (SESAU-RR)'),
+          li('Unidade de <strong>referência do município</strong>')
+        ]),
+        rodape: 'Leve <strong>documento com foto</strong> e <strong>Cartão SUS</strong>. Confirme o horário com a unidade.'
+      },
       'cadunico': {
         sigla: 'CADÚNICO', area: 'Cadastro Único', fs: 7.1,
         titulo: 'Consultar CadÚnico', sub: 'Pelo app ou site',
@@ -4348,7 +4820,11 @@ function printCartaoFrenteVerso(id) {
   const ov = f.override || {};
   const endereco = ov.endereco !== undefined ? plain(ov.endereco) : plain(cleanPrintField(item.address, ''));
   const horario = ov.horario !== undefined ? plain(ov.horario) : plain(cleanPrintField(item.hours, ''));
-  const fones = (ov.fones || item.phones || []).map(p => plain(cleanPrintField(p, ''))).filter(Boolean);
+  let fones = (ov.fones || item.phones || []).map(p => plain(cleanPrintField(p, ''))).filter(Boolean);
+  if (!fones.length && !ov.fones && f.dadosDe) {
+    const ref = DATA.find(x => x.id === f.dadosDe);
+    if (ref) fones = (ref.phones || []).map(p => plain(cleanPrintField(p, ''))).filter(Boolean);
+  }
 
   const CARD_W = 90, CARD_H = 54;      // mm (cada cartão 9 x 5,4 cm)
   const COLS = 2, ROWS = 5;            // 10 cartões por folha A4
