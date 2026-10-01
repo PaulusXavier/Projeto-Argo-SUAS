@@ -300,6 +300,7 @@ function lockApp() {
   if (appRoot) appRoot.dataset.locked = 'true';
   if (typeof closeTabFocus === 'function') closeTabFocus();
   if (argoAssistantCtrl && typeof argoAssistantCtrl.close === 'function') argoAssistantCtrl.close();
+  if (typeof argoLoginMascotReact === 'function') argoLoginMascotReact('reset');
   if (loginScreen) {
     loginScreen.hidden = false;
     const pwField = document.getElementById('loginPassword');
@@ -378,6 +379,7 @@ function initAuth() {
     errorEl.classList.remove('shake');
     void errorEl.offsetWidth;
     errorEl.classList.add('shake');
+    if (typeof argoLoginMascotReact === 'function') argoLoginMascotReact('error');
   }
 
   function clearError() {
@@ -4136,27 +4138,31 @@ function renderCartaoButton(item) {
 }
 
 function buildCartaoFrente(tipo) {
-  const li = (t) => `<li style="margin:0 0 1.5mm 0;">${t}</li>`;
-  const ul = (items) => `<ul style="margin:0; padding-left:3.6mm; list-style:disc;">${items.join('')}</ul>`;
-  const h = (t) => `<div style="font-weight:800; font-size:7.4pt; text-transform:uppercase; letter-spacing:0.03em; margin:0 0 1.2mm 0;">${t}</div>`;
+  // Cor, sigla e conteúdo de cada tipo de unidade. A cor também pinta os
+  // títulos das seções e os marcadores, para a frente ter hierarquia visual.
+  const COR = { cras: '#0091C2', creas: '#C8102E', ceac: '#009739' }[tipo] || '#0091C2';
+  const chk = `<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="${COR}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:0.35mm;" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="${COR}" fill-opacity="0.14" stroke-width="2"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>`;
+  const li = (t) => `<li style="display:flex; gap:1.4mm; align-items:flex-start; margin:0 0 1.2mm 0; list-style:none;">${chk}<span>${t}</span></li>`;
+  const ul = (items) => `<ul style="margin:0; padding:0; list-style:none;">${items.join('')}</ul>`;
+  const h = (t) => `<div style="display:flex; align-items:center; gap:1.3mm; font-weight:800; font-size:6.6pt; text-transform:uppercase; letter-spacing:0.05em; color:${COR}; margin:0 0 1.3mm 0;"><span style="display:inline-block; width:1.2mm; height:2.6mm; border-radius:0.6mm; background:${COR};"></span>${t}</div>`;
 
   if (tipo === 'cras') {
     return {
-      cor: '#0091C2',
+      cor: COR, sigla: 'CRAS', area: 'Assistência Social', fs: 7.1,
       titulo: 'Cadastro Único',
       sub: 'Documentos necessários',
       corpo: `
         ${h('Responsável familiar (16 anos ou mais)')}
         ${ul([li('<strong>CPF</strong> (de preferência) ou <strong>Título de Eleitor</strong>'), li('<strong>Comprovante de endereço</strong>')])}
-        <div style="height:1mm;"></div>
+        <div style="height:0.8mm;"></div>
         ${h('Demais membros da família')}
         ${ul([li('<strong>CPF</strong> (de preferência) ou outro documento: Certidão de Nascimento ou Casamento, RG, Carteira de Trabalho ou Título de Eleitor')])}`,
-      rodape: 'Leve os documentos originais de todos que moram na casa. Famílias indígenas: RANI.'
+      rodape: 'Leve os documentos <strong>originais</strong> de todos que moram na casa. Famílias indígenas: RANI.'
     };
   }
   if (tipo === 'creas') {
     return {
-      cor: '#C8102E',
+      cor: COR, sigla: 'CREAS', area: 'Assistência Social', fs: 7.9,
       titulo: 'CREAS',
       sub: 'Coordenações e serviços',
       corpo: `
@@ -4169,7 +4175,7 @@ function buildCartaoFrente(tipo) {
     };
   }
   return {
-    cor: '#009739',
+    cor: COR, sigla: 'CEAC', area: 'Assistência Social', fs: 7.9,
     titulo: 'CEAC',
     sub: 'Programas e serviços',
     corpo: `
@@ -4178,7 +4184,7 @@ function buildCartaoFrente(tipo) {
         li('<strong>Colo de Mãe</strong> — kit enxoval e complemento lácteo para gestantes e crianças até 3 anos'),
         li('<strong>Passe Livre</strong> — transporte intermunicipal gratuito para pessoas com deficiência')
       ])}`,
-    rodape: 'Leve RG ou documento com foto, CPF e comprovante de endereço atualizado.'
+    rodape: 'Leve <strong>RG ou documento com foto</strong>, CPF e comprovante de endereço atualizado.'
   };
 }
 
@@ -4209,31 +4215,45 @@ function printCartaoFrenteVerso(id) {
       </div>
     </div>`;
 
-  const frente = cartao(`
-    <div style="background:${f.cor}; color:#fff; padding:1.7mm 3.5mm; display:flex; align-items:baseline; justify-content:space-between; gap:3mm; ${keep}">
-      <span style="font-weight:800; font-size:10.5pt; letter-spacing:0.01em;">${f.titulo}</span>
-      <span style="font-weight:600; font-size:7pt; text-align:right;">${f.sub}</span>
-    </div>
-    <div style="flex:1; padding:1.8mm 3.5mm 0 3.5mm; font-size:7.4pt; line-height:1.26; overflow:hidden;">${f.corpo}</div>
-    <div style="margin:0 3.5mm; padding:1mm 0 1.6mm 0; font-size:5.9pt; line-height:1.22; color:#475569; border-top:0.2mm solid #CBD5E1;">${f.rodape}</div>`);
+  // Fundo bem clarinho da cor do tipo (8 dígitos hex = cor + transparência).
+  const tint = (alpha) => f.cor + alpha;
 
-  const ico = (path) => `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${f.cor}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:0.4mm;" aria-hidden="true">${path}</svg>`;
+  const frente = cartao(`
+    <div style="background:${f.cor}; color:#fff; padding:1.9mm 3.5mm; display:flex; align-items:center; justify-content:space-between; gap:3mm; ${keep}">
+      <span style="font-weight:800; font-size:11pt; letter-spacing:0.01em; line-height:1;">${f.titulo}</span>
+      <span style="font-weight:700; font-size:6.4pt; letter-spacing:0.02em; padding:0.7mm 2.2mm; border-radius:99mm; background:rgba(255,255,255,0.2); border:0.2mm solid rgba(255,255,255,0.45); white-space:nowrap; ${keep}">${f.sub}</span>
+    </div>
+    <div style="flex:1; padding:2.2mm 3.5mm 0 3.5mm; font-size:${f.fs}pt; line-height:1.25; overflow:hidden;">${f.corpo}</div>
+    <div style="padding:1.2mm 3.5mm 1.5mm 3.5mm; font-size:5.8pt; line-height:1.22; color:#334155; background:${tint('14')}; border-top:0.25mm solid ${tint('55')}; ${keep}">${f.rodape}</div>`);
+
+  // Ícone dentro de uma "pastilha" redonda tingida da cor do tipo — dá ritmo
+  // às três linhas de contato e facilita achar endereço/telefone/horário.
+  const ico = (path) => `<span style="flex:0 0 auto; width:5.2mm; height:5.2mm; border-radius:50%; background:${tint('1F')}; display:flex; align-items:center; justify-content:center; ${keep}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="${f.cor}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg></span>`;
   const ICO_PIN = '<path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.6"/>';
   const ICO_TEL = '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>';
   const ICO_REL = '<circle cx="12" cy="12" r="9.5"/><path d="M12 6.5V12l3.8 2.2"/>';
+
+  // Tamanho da letra se ajusta ao tamanho do texto, para endereços longos
+  // não estourarem o cartão nem ficarem minúsculos quando são curtos.
+  const fsNome = nome.length > 34 ? 10.5 : nome.length > 24 ? 12 : 13.5;
+  const fsInfo = (t) => (t || '').length > 105 ? 7.1 : (t || '').length > 70 ? 7.8 : 8.6;
   const linha = (icone, valor) => valor
-    ? `<div style="display:flex; gap:1.6mm; align-items:flex-start; margin-top:2mm;">${ico(icone)}<div style="font-size:9pt; line-height:1.25; font-weight:600;">${valor}</div></div>`
+    ? `<div style="display:flex; gap:2mm; align-items:center; margin-top:1.7mm;">${ico(icone)}<div style="font-size:${fsInfo(valor)}pt; line-height:1.22; font-weight:600; color:#0F172A; min-width:0;">${valor}</div></div>`
     : '';
 
   const verso = cartao(`
-    <div style="background:${f.cor}; height:2.6mm; ${keep}"></div>
-    <div style="flex:1; padding:1.5mm 3.8mm 1.5mm 3.8mm; overflow:hidden; display:flex; flex-direction:column; justify-content:center;">
-      <div style="font-weight:800; font-size:13pt; line-height:1.14;">${nome}</div>
-      ${nomeCompleto && nomeCompleto !== nome ? `<div style="font-size:7pt; color:#475569; margin-top:0.5mm; line-height:1.22;">${nomeCompleto}</div>` : ''}
+    <div style="background:${f.cor}; color:#fff; padding:1.5mm 3.8mm; display:flex; align-items:center; justify-content:space-between; ${keep}">
+      <span style="font-weight:800; font-size:8pt; letter-spacing:0.08em;">${f.sigla}</span>
+      <span style="font-weight:600; font-size:6pt; letter-spacing:0.04em; text-transform:uppercase; opacity:0.92;">${f.area}</span>
+    </div>
+    <div style="flex:1; padding:2mm 3.8mm 1.2mm 3.8mm; overflow:hidden; display:flex; flex-direction:column; justify-content:center;">
+      <div style="font-weight:800; font-size:${fsNome}pt; line-height:1.12; color:#0F172A;">${nome}</div>
+      ${nomeCompleto && nomeCompleto !== nome ? `<div style="font-size:6.6pt; color:#475569; margin-top:0.6mm; line-height:1.2; padding-bottom:1.3mm; border-bottom:0.2mm solid ${tint('55')};">${nomeCompleto}</div>` : `<div style="border-bottom:0.2mm solid ${tint('55')}; margin-top:1.3mm;"></div>`}
       ${linha(ICO_PIN, endereco)}
       ${linha(ICO_TEL, fones.join(' · '))}
       ${linha(ICO_REL, horario)}
-    </div>`);
+    </div>
+    <div style="height:1.6mm; background:${f.cor}; ${keep}"></div>`);
 
   // Marcas de corte nas margens da folha: ligue as marcas opostas com uma régua.
   const markStyle = 'position:absolute; background:#000; -webkit-print-color-adjust:exact; print-color-adjust:exact;';
@@ -8556,6 +8576,34 @@ function initArgoAssistant() {
   });
 }
 
+// Mascote da tela de login: se apresenta e reage quando a senha está errada.
+// argoLoginMascotReact('error') → carinha preocupada por ~4 s e depois volta;
+// argoLoginMascotReact('reset') → volta ao estado de boas-vindas.
+var argoLoginMascotTimer = null; // var (não let): lockApp pode chamar a reação antes desta linha rodar
+function argoLoginMascotReact(kind) {
+  const fig = document.getElementById('loginMascotFigure');
+  const line = document.getElementById('loginMascotLine');
+  if (!fig || !line || typeof ArgoMascot === 'undefined' || typeof ArgoMascot.icon !== 'function') return;
+  clearTimeout(argoLoginMascotTimer);
+  const word = (typeof argoGreetingWord === 'function') ? argoGreetingWord() : 'Olá';
+  const mascotSize = window.matchMedia && window.matchMedia('(max-width: 760px)').matches ? 50 : 88;
+
+  if (kind === 'error') {
+    fig.innerHTML = ArgoMascot.icon('error', mascotSize);
+    line.classList.add('is-error');
+    line.innerHTML = '<strong>Ops!</strong> Essa senha não confere. Tente de novo.';
+    argoLoginMascotTimer = setTimeout(() => argoLoginMascotReact('reset'), 4500);
+    return;
+  }
+  fig.innerHTML = ArgoMascot.icon('success', mascotSize);
+  line.classList.remove('is-error');
+  line.innerHTML = '<strong></strong> Eu sou o Argo, o mascote deste aplicativo.';
+  line.querySelector('strong').textContent = word + '!';
+}
+function initLoginMascot() {
+  argoLoginMascotReact('reset');
+}
+
 function agendaToast(msg, kind) {
   agendaEnsureModals();
   let type = kind === 'error' ? 'error' : 'info';
@@ -10940,3 +10988,4 @@ applyStoredTheme();
 updateHeaderFooterStats();
 syncCategoryToggleLabel();
 initArgoAssistant();
+initLoginMascot();
