@@ -4122,14 +4122,34 @@ function renderSecondUnitField(id, name) {
    (virar na borda longa) e recortar. Como os 10 cartões da folha são idênticos,
    a frente e o verso sempre se alinham, sem precisar espelhar nada.
    Frente: CRAS = documentos do Cadastro Único; CREAS = serviços/coordenações;
-   CEAC = Cesta da Família, Colo de Mãe e Passe Livre. Verso: nome, endereço e contato
+   CEAC = Cesta da Família, Colo de Mãe e Passe Livre; demais unidades (CIAPI, abrigos,
+   Casa de Passagem, Casa da Mulher Brasileira, CAI, CAS, SEMADS, SETRABES e Consulta
+   CadÚnico) = o que a unidade faz e o que levar. Verso: nome, endereço e contato
    da unidade, lidos do próprio cadastro (DATA). */
+// Demais unidades da aba (fora CRAS/CREAS/CEAC): cada id aponta para o tipo
+// de cartão em buildCartaoFrente(). Ficam de fora só os painéis de indicadores
+// (ex.: Vis Data), que não são um lugar para onde encaminhar a pessoa.
+const CARTAO_TIPO_POR_ID = {
+  'ciapi': 'ciapi',
+  'abrigo-pedra-pintada': 'abrigo-pedra-pintada',
+  'casa-acolhimento-infantil-viva-crianca': 'abrigo-viva-crianca',
+  'abrigo-feminino-pastor-josue': 'abrigo-fem',
+  'abrigo-masculino-setrabes': 'abrigo-masc',
+  'casa-de-passagem-setrabes': 'casa-passagem',
+  'casa-da-mulher-brasileira': 'cmb',
+  'cai-18-de-maio': 'cai',
+  'semads': 'semads',
+  'setrabes': 'setrabes',
+  'cas-cidade-satelite': 'cas',
+  'cadunico-consulta': 'cadunico'
+};
+
 function getCartaoTipo(item) {
   if (!item || !Array.isArray(item.cat) || !item.cat.includes('social')) return null;
   if (item.id === 'ceac') return 'ceac';
   if (/^creas-/.test(item.id)) return 'creas';
   if (/^cras-/.test(item.id)) return 'cras';
-  return null;
+  return CARTAO_TIPO_POR_ID[item.id] || null;
 }
 
 function renderCartaoButton(item) {
@@ -4140,7 +4160,13 @@ function renderCartaoButton(item) {
 function buildCartaoFrente(tipo) {
   // Cor, sigla e conteúdo de cada tipo de unidade. A cor também pinta os
   // títulos das seções e os marcadores, para a frente ter hierarquia visual.
-  const COR = { cras: '#0091C2', creas: '#C8102E', ceac: '#009739' }[tipo] || '#0091C2';
+  const COR = {
+    cras: '#0091C2', creas: '#C8102E', ceac: '#009739',
+    ciapi: '#0F766E', cmb: '#BE185D', cai: '#D97706', cas: '#EA580C',
+    'abrigo-pedra-pintada': '#7C3AED', 'abrigo-viva-crianca': '#7C3AED',
+    'abrigo-fem': '#7C3AED', 'abrigo-masc': '#7C3AED', 'casa-passagem': '#7C3AED',
+    semads: '#334155', setrabes: '#334155', cadunico: '#1E40AF'
+  }[tipo] || '#0091C2';
   const chk = `<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="${COR}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:0.35mm;" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="${COR}" fill-opacity="0.14" stroke-width="2"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>`;
   const li = (t) => `<li style="display:flex; gap:1.4mm; align-items:flex-start; margin:0 0 1.2mm 0; list-style:none;">${chk}<span>${t}</span></li>`;
   const ul = (items) => `<ul style="margin:0; padding:0; list-style:none;">${items.join('')}</ul>`;
@@ -4174,6 +4200,128 @@ function buildCartaoFrente(tipo) {
       rodape: 'Atendimento a famílias e pessoas com direitos violados: violência, negligência, abandono, trabalho infantil e situação de rua.'
     };
   }
+  if (tipo !== 'ceac') {
+    const T = {
+      'ciapi': {
+        sigla: 'CIAPI', area: 'Atenção à Pessoa Idosa', fs: 7.5,
+        titulo: 'CIAPI', sub: 'Pessoas com 60 anos ou mais',
+        corpo: ul([
+          li('<strong>Atendimento de saúde:</strong> médico, fisioterapia, enfermagem, terapia ocupacional, serviço social e psicologia'),
+          li('<strong>Convivência e oficinas:</strong> hidroginástica, dança de salão, artesanato, informática, canto coral, horta e alfabetização'),
+          li('<strong>Acolhimento</strong> em vulnerabilidade extrema, após avaliação social')
+        ]),
+        rodape: 'Leve <strong>RG, CPF</strong> e <strong>comprovante de residência</strong>.'
+      },
+      'abrigo-pedra-pintada': {
+        sigla: 'ABRIGO INFANTIL', area: 'Acolhimento Institucional', fs: 8.2,
+        titulo: 'Abrigo Infantil', sub: 'Até 12 anos incompletos',
+        corpo: ul([
+          li('<strong>Acolhimento institucional</strong> para crianças de até 12 anos incompletos'),
+          li('Atende crianças em <strong>situação de vulnerabilidade social</strong>')
+        ]),
+        rodape: 'Unidade: Abrigo Infantil Pedra Pintada. Atendimento direto.'
+      },
+      'abrigo-viva-crianca': {
+        sigla: 'CASA VIVA CRIANÇA', area: 'Acolhimento Institucional', fs: 7.9,
+        titulo: 'Acolhimento Infantil', sub: '0 a 12 anos incompletos',
+        corpo: ul([
+          li('<strong>Acolhimento institucional</strong> de crianças sob medida protetiva, conforme o ECA'),
+          li('Abrigo de gestão estadual (<strong>SETRABES/DPSE</strong>)')
+        ]),
+        rodape: 'Encaminhamento <strong>somente</strong> pela Vara da Infância e Juventude ou Comarcas do interior.'
+      },
+      'abrigo-fem': {
+        sigla: 'ABRIGO FEMININO', area: 'Acolhimento Institucional', fs: 7.9,
+        titulo: 'Abrigo Feminino', sub: '12 a 18 anos incompletos',
+        corpo: ul([
+          li('<strong>Acolhimento institucional</strong> de adolescentes do sexo feminino sob medida protetiva, conforme o ECA'),
+          li('Abrigo de gestão estadual (<strong>SETRABES/DPSE</strong>)')
+        ]),
+        rodape: 'Encaminhamento <strong>somente</strong> pela Vara da Infância e Juventude ou Comarcas do interior.'
+      },
+      'abrigo-masc': {
+        sigla: 'ABRIGO MASCULINO', area: 'Acolhimento Institucional', fs: 7.9,
+        titulo: 'Abrigo Masculino', sub: '12 a 18 anos incompletos',
+        corpo: ul([
+          li('<strong>Acolhimento institucional</strong> de adolescentes do sexo masculino sob medida protetiva, conforme o ECA'),
+          li('Abrigo de gestão estadual (<strong>SETRABES/DPSE</strong>)')
+        ]),
+        rodape: 'Encaminhamento <strong>somente</strong> pela Vara da Infância e Juventude ou Comarcas do interior.'
+      },
+      'casa-passagem': {
+        sigla: 'CASA DE PASSAGEM', area: 'Acolhimento', fs: 7.5,
+        titulo: 'Casa de Passagem', sub: '18 a 60 anos incompletos',
+        corpo: ul([
+          li('<strong>Acolhimento temporário</strong> de adultos em situação de rua ou desabrigo (abandono, migração ou ausência de residência)'),
+          li('Para pessoas em trânsito e sem condições de autossustento'),
+          li('<strong>Documentos:</strong> RG, CPF e antecedentes criminais')
+        ]),
+        rodape: 'Procure a unidade ou o DPSE (bloco 3 da SETRABES — Av. Mário Homem de Melo, 2310, Mecejana).'
+      },
+      'cmb': {
+        sigla: 'CMB', area: 'Proteção à Mulher', fs: 7.5,
+        titulo: 'Casa da Mulher Brasileira', sub: '24 horas',
+        corpo: ul([
+          li('<strong>Acolhimento e triagem</strong>, apoio psicossocial e alojamento de passagem'),
+          li('<strong>DEAM, Juizado, Ministério Público e Defensoria Pública</strong> no mesmo espaço'),
+          li('Autonomia econômica e brinquedoteca para as crianças')
+        ]),
+        rodape: 'Violência contra a mulher: <strong>basta comparecer</strong>, sem agendamento.'
+      },
+      'cai': {
+        sigla: 'CAI 18 DE MAIO', area: 'Proteção à Criança e ao Adolescente', fs: 7.5,
+        titulo: 'CAI 18 de Maio', sub: 'Escuta especializada',
+        corpo: ul([
+          li('Atende <strong>crianças e adolescentes vítimas ou testemunhas de violência sexual</strong>'),
+          li('Escuta especializada, acolhimento humanizado, orientação e encaminhamento'),
+          li('Atendimento integrado com Justiça, Defensoria, MP e Polícia Civil')
+        ]),
+        rodape: 'A vítima <strong>não precisa repetir o relato</strong> em vários órgãos (evita a revitimização).'
+      },
+      'semads': {
+        sigla: 'SEMADS', area: 'Gestão e Coordenação', fs: 8.2,
+        titulo: 'SEMADS', sub: 'Gestão municipal',
+        corpo: ul([
+          li('<strong>Secretaria Municipal de Assistência e Desenvolvimento Social</strong>'),
+          li('Órgão gestor municipal responsável pela política de assistência social')
+        ]),
+        rodape: 'Para atendimento direto, procure o <strong>CRAS</strong> do seu território.'
+      },
+      'setrabes': {
+        sigla: 'SETRABES', area: 'Gestão e Coordenação', fs: 7.5,
+        titulo: 'SETRABES', sub: 'Gestão estadual',
+        corpo: ul([
+          li('<strong>Secretaria de Estado do Trabalho e Bem-Estar Social</strong>'),
+          li('Gestão estadual da assistência social e programas de <strong>trabalho e renda</strong>'),
+          li('Administra unidades como abrigos (DPSE), CIAPI, Casa da Mulher Brasileira e CAI 18 de Maio')
+        ]),
+        rodape: 'Para atendimento direto, procure o <strong>CRAS</strong> ou a unidade de referência.'
+      },
+      'cas': {
+        sigla: 'CAS', area: 'Assistência Social', fs: 7.5,
+        titulo: 'CAS', sub: 'Centro de Atendimento Social',
+        corpo: ul([
+          li('<strong>Esporte e cultura:</strong> desenho e pintura, balé, ginástica rítmica, capoeira, jiu-jitsu, ritbox, futsal e forró'),
+          li('<strong>Cursos</strong> em parceria com o SINE'),
+          li('<strong>Grupos de Convivência</strong> e Fortalecimento de Vínculo')
+        ]),
+        rodape: 'Funciona de segunda a sábado, das 08:00 às 22:00.'
+      },
+      'cadunico': {
+        sigla: 'CADÚNICO', area: 'Cadastro Único', fs: 7.1,
+        titulo: 'Consultar CadÚnico', sub: 'Pelo app ou site',
+        corpo: ul([
+          li('<strong>Consulta simples</strong> (sem login gov.br): nome completo, data de nascimento, nome da mãe e UF/município'),
+          li('<strong>Consulta completa</strong> (formulário, despesas e integrantes): login gov.br nível Bronze, Prata ou Ouro'),
+          li('Emite o <strong>comprovante de inscrição</strong> e localiza postos de atendimento')
+        ]),
+        rodape: 'Dúvidas: Central <strong>121</strong> (ligação gratuita, fixo ou celular).',
+        // Serviço online: no verso entram o site e a central, em vez de endereço e horário.
+        override: { endereco: 'cadunico.dataprev.gov.br', icone: 'globe', fones: ['Central 121 (gratuita)'], horario: '' }
+      }
+    }[tipo];
+    if (T) return Object.assign({ cor: COR }, T);
+  }
   return {
     cor: COR, sigla: 'CEAC', area: 'Assistência Social', fs: 7.9,
     titulo: 'CEAC',
@@ -4197,9 +4345,10 @@ function printCartaoFrenteVerso(id) {
   const plain = (v) => escapeHtml(stripHtml(v || '').replace(/\s+/g, ' ').trim());
   const nome = plain(item.name);
   const nomeCompleto = plain(item.fullName);
-  const endereco = plain(cleanPrintField(item.address, ''));
-  const horario = plain(cleanPrintField(item.hours, ''));
-  const fones = (item.phones || []).map(p => plain(cleanPrintField(p, ''))).filter(Boolean);
+  const ov = f.override || {};
+  const endereco = ov.endereco !== undefined ? plain(ov.endereco) : plain(cleanPrintField(item.address, ''));
+  const horario = ov.horario !== undefined ? plain(ov.horario) : plain(cleanPrintField(item.hours, ''));
+  const fones = (ov.fones || item.phones || []).map(p => plain(cleanPrintField(p, ''))).filter(Boolean);
 
   const CARD_W = 90, CARD_H = 54;      // mm (cada cartão 9 x 5,4 cm)
   const COLS = 2, ROWS = 5;            // 10 cartões por folha A4
@@ -4232,6 +4381,7 @@ function printCartaoFrenteVerso(id) {
   const ICO_PIN = '<path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.6"/>';
   const ICO_TEL = '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>';
   const ICO_REL = '<circle cx="12" cy="12" r="9.5"/><path d="M12 6.5V12l3.8 2.2"/>';
+  const ICO_WEB = '<circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.8 4 6 4 9.5s-1.4 6.7-4 9.5c-2.6-2.8-4-6-4-9.5s1.4-6.7 4-9.5z"/>';
 
   // Tamanho da letra se ajusta ao tamanho do texto, para endereços longos
   // não estourarem o cartão nem ficarem minúsculos quando são curtos.
@@ -4249,7 +4399,7 @@ function printCartaoFrenteVerso(id) {
     <div style="flex:1; padding:2mm 3.8mm 1.2mm 3.8mm; overflow:hidden; display:flex; flex-direction:column; justify-content:center;">
       <div style="font-weight:800; font-size:${fsNome}pt; line-height:1.12; color:#0F172A;">${nome}</div>
       ${nomeCompleto && nomeCompleto !== nome ? `<div style="font-size:6.6pt; color:#475569; margin-top:0.6mm; line-height:1.2; padding-bottom:1.3mm; border-bottom:0.2mm solid ${tint('55')};">${nomeCompleto}</div>` : `<div style="border-bottom:0.2mm solid ${tint('55')}; margin-top:1.3mm;"></div>`}
-      ${linha(ICO_PIN, endereco)}
+      ${linha(ov.icone === 'globe' ? ICO_WEB : ICO_PIN, endereco)}
       ${linha(ICO_TEL, fones.join(' · '))}
       ${linha(ICO_REL, horario)}
     </div>
