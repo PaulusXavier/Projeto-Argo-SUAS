@@ -180,6 +180,10 @@ function rememberSessionLoad() {
       sessionStorage.removeItem(REMEMBER_SESSION_KEY);
       return null;
     }
+    // Registro de "ponte" de recarga (ver rememberHandoffSave): vale para UMA
+    // recarga só — é consumido aqui. Se o app for recarregado de novo, a
+    // ponte é gravada outra vez pelo pagehide; não fica nada sobrando.
+    if (parsed.h) sessionStorage.removeItem(REMEMBER_SESSION_KEY);
     return base64ToBytes(parsed.k);
   } catch (e) {
     return null;
@@ -189,6 +193,57 @@ function rememberSessionLoad() {
 function rememberSessionClear() {
   try { sessionStorage.removeItem(REMEMBER_SESSION_KEY); } catch (e) { /* ignora */ }
 }
+
+/* ---- Ponte de recarga (atualização do app / puxar para recarregar) ---------
+   Sem "Manter-me conectado" marcado, a chave de sessão só vive na memória, e
+   TODA recarga da página (inclusive a que o app faz ao instalar uma versão
+   nova, ou o tablet descartando o app em segundo plano) levava de volta à tela
+   de senha. Para isso não acontecer, quando a página está para ser
+   descarregada ou escondida (pagehide / aba oculta) e o app está destrancado,
+   a chave é guardada em sessionStorage por REMEMBER_HANDOFF_MAX_MS (10 min) e
+   consumida na carga seguinte (rememberSessionLoad). Continua sendo só da aba
+   (sessionStorage), expira rápido, é removida quando a aba volta a ficar
+   visível, e "Sair"/"Apagar dados" a limpam (rememberSessionClear). Se a
+   pessoa marcou "Manter-me conectado", esse registro mais longo é preservado
+   e a ponte não o sobrescreve. */
+const REMEMBER_HANDOFF_MAX_MS = 10 * 60 * 1000;
+
+function rememberHandoffSave() {
+  if (!sessionEncKey) return; // trancado ou ainda sem chave: nada a guardar
+  try {
+    const raw = sessionStorage.getItem(REMEMBER_SESSION_KEY);
+    if (raw) {
+      const cur = JSON.parse(raw);
+      // Já existe um "manter conectado" (mais longo) válido: não encurta.
+      if (cur && !cur.h && Date.now() < Number(cur.exp)) return;
+    }
+    sessionStorage.setItem(REMEMBER_SESSION_KEY, JSON.stringify({
+      k: bytesToBase64(sessionEncKey),
+      exp: Date.now() + REMEMBER_HANDOFF_MAX_MS,
+      h: 1
+    }));
+  } catch (e) { /* sessionStorage indisponível - segue sem ponte */ }
+}
+
+function rememberHandoffDiscard() {
+  try {
+    const raw = sessionStorage.getItem(REMEMBER_SESSION_KEY);
+    if (!raw) return;
+    const cur = JSON.parse(raw);
+    if (cur && cur.h) sessionStorage.removeItem(REMEMBER_SESSION_KEY);
+  } catch (e) { /* ignora */ }
+}
+
+(function setupReloadHandoff() {
+  // Página saindo (recarga, atualização, navegação) ou indo para segundo plano.
+  window.addEventListener('pagehide', rememberHandoffSave);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') rememberHandoffSave();
+    else rememberHandoffDiscard(); // voltou sem recarregar: não deixa a chave sobrando
+  });
+  // Voltou do cache de páginas (bfcache) sem recarregar.
+  window.addEventListener('pageshow', (e) => { if (e.persisted) rememberHandoffDiscard(); });
+})();
 
 // Utilitário de uso único (rodar no console) para gerar o hash de uma nova
 // senha e colar em APP_PASSWORD_HASH acima, em vez de guardar a senha em
@@ -3727,6 +3782,7 @@ function render() {
              <button class="btn-tech btn-primary" onclick="printBpcGuide('${i.id}','es')">📄 Guía del Beneficio (ES)</button>`
           : `<button class="btn-tech btn-primary" onclick="printGuide('${i.id}')">Gerar Guia</button>`
         }
+        ${renderCartaoButton(i)}
       </div>
     </div>
   `;
@@ -4058,6 +4114,165 @@ function renderSecondUnitField(id, name) {
 
 // Botão "WhatsApp" reutilizado em todos os tipos de card (CAS, CRAS,
 // programas/informes e equipamentos), para ficar igual em toda a lista.
+/* ===================== Cartão frente e verso (Assistência Social) =====================
+   Gera uma folha A4 com 10 cartões iguais (2 x 5, cada um 9 x 5,4 cm, com guia de
+   corte) na FRENTE e outra folha com o VERSO, para imprimir em frente e verso
+   (virar na borda longa) e recortar. Como os 10 cartões da folha são idênticos,
+   a frente e o verso sempre se alinham, sem precisar espelhar nada.
+   Frente: CRAS = documentos do Cadastro Único; CREAS = serviços/coordenações;
+   CEAC = Cesta da Família, Colo de Mãe e Passe Livre. Verso: nome, endereço e contato
+   da unidade, lidos do próprio cadastro (DATA). */
+function getCartaoTipo(item) {
+  if (!item || !Array.isArray(item.cat) || !item.cat.includes('social')) return null;
+  if (item.id === 'ceac') return 'ceac';
+  if (/^creas-/.test(item.id)) return 'creas';
+  if (/^cras-/.test(item.id)) return 'cras';
+  return null;
+}
+
+function renderCartaoButton(item) {
+  if (!getCartaoTipo(item)) return '';
+  return `<button type="button" class="btn-tech btn-secondary" style="grid-column:1 / -1;" onclick="printCartaoFrenteVerso('${item.id}')" title="Imprimir cartão frente e verso desta unidade" aria-label="Imprimir cartão frente e verso de ${escapeHtml(item.name)}">🪪 Cartão frente e verso</button>`;
+}
+
+function buildCartaoFrente(tipo) {
+  const li = (t) => `<li style="margin:0 0 1.5mm 0;">${t}</li>`;
+  const ul = (items) => `<ul style="margin:0; padding-left:3.6mm; list-style:disc;">${items.join('')}</ul>`;
+  const h = (t) => `<div style="font-weight:800; font-size:7.4pt; text-transform:uppercase; letter-spacing:0.03em; margin:0 0 1.2mm 0;">${t}</div>`;
+
+  if (tipo === 'cras') {
+    return {
+      cor: '#0091C2',
+      titulo: 'Cadastro Único',
+      sub: 'Documentos necessários',
+      corpo: `
+        ${h('Responsável familiar (16 anos ou mais)')}
+        ${ul([li('<strong>CPF</strong> (de preferência) ou <strong>Título de Eleitor</strong>'), li('<strong>Comprovante de endereço</strong>')])}
+        <div style="height:1mm;"></div>
+        ${h('Demais membros da família')}
+        ${ul([li('<strong>CPF</strong> (de preferência) ou outro documento: Certidão de Nascimento ou Casamento, RG, Carteira de Trabalho ou Título de Eleitor')])}`,
+      rodape: 'Leve os documentos originais de todos que moram na casa. Famílias indígenas: RANI.'
+    };
+  }
+  if (tipo === 'creas') {
+    return {
+      cor: '#C8102E',
+      titulo: 'CREAS',
+      sub: 'Coordenações e serviços',
+      corpo: `
+        ${ul([
+          li('<strong>PAEFI</strong> — Proteção e Atendimento Especializado a Famílias e Indivíduos'),
+          li('<strong>Medidas Socioeducativas em Meio Aberto</strong> — Liberdade Assistida (LA) e Prestação de Serviços à Comunidade (PSC)'),
+          li('<strong>Abordagem Social</strong> — Serviço Especializado')
+        ])}`,
+      rodape: 'Atendimento a famílias e pessoas com direitos violados: violência, negligência, abandono, trabalho infantil e situação de rua.'
+    };
+  }
+  return {
+    cor: '#009739',
+    titulo: 'CEAC',
+    sub: 'Programas e serviços',
+    corpo: `
+      ${ul([
+        li('<strong>Cesta da Família</strong> — cesta básica ou crédito de R$ 200 no Cartão Alimentação, para renda per capita de até ½ salário mínimo'),
+        li('<strong>Colo de Mãe</strong> — kit enxoval e complemento lácteo para gestantes e crianças até 3 anos'),
+        li('<strong>Passe Livre</strong> — transporte intermunicipal gratuito para pessoas com deficiência')
+      ])}`,
+    rodape: 'Leve RG ou documento com foto, CPF e comprovante de endereço atualizado.'
+  };
+}
+
+function printCartaoFrenteVerso(id) {
+  const item = DATA.find(x => x.id === id);
+  const tipo = getCartaoTipo(item);
+  if (!item || !tipo) return;
+
+  const f = buildCartaoFrente(tipo);
+  const plain = (v) => escapeHtml(stripHtml(v || '').replace(/\s+/g, ' ').trim());
+  const nome = plain(item.name);
+  const nomeCompleto = plain(item.fullName);
+  const endereco = plain(cleanPrintField(item.address, ''));
+  const horario = plain(cleanPrintField(item.hours, ''));
+  const fones = (item.phones || []).map(p => plain(cleanPrintField(p, ''))).filter(Boolean);
+
+  const CARD_W = 90, CARD_H = 54;      // mm (cada cartão 9 x 5,4 cm)
+  const COLS = 2, ROWS = 5;            // 10 cartões por folha A4
+  const GRID_W = CARD_W * COLS, GRID_H = CARD_H * ROWS;
+  const keep = '-webkit-print-color-adjust:exact; print-color-adjust:exact;';
+
+  // Cartão = área de corte (sem nenhuma linha impressa) + margem branca de 2,5 mm
+  // + moldura arredondada. Se o corte sair torto até ~2 mm, só aparece branco.
+  const cartao = (conteudo) => `
+    <div style="width:${CARD_W}mm; height:${CARD_H}mm; box-sizing:border-box; padding:2.5mm; background:#fff; font-family:'Inter', sans-serif; color:#0F172A; ${keep}">
+      <div style="height:100%; box-sizing:border-box; border:0.35mm solid ${f.cor}; border-radius:2.5mm; overflow:hidden; display:flex; flex-direction:column; ${keep}">
+        ${conteudo}
+      </div>
+    </div>`;
+
+  const frente = cartao(`
+    <div style="background:${f.cor}; color:#fff; padding:1.7mm 3.5mm; display:flex; align-items:baseline; justify-content:space-between; gap:3mm; ${keep}">
+      <span style="font-weight:800; font-size:10.5pt; letter-spacing:0.01em;">${f.titulo}</span>
+      <span style="font-weight:600; font-size:7pt; text-align:right;">${f.sub}</span>
+    </div>
+    <div style="flex:1; padding:1.8mm 3.5mm 0 3.5mm; font-size:7.4pt; line-height:1.26; overflow:hidden;">${f.corpo}</div>
+    <div style="margin:0 3.5mm; padding:1mm 0 1.6mm 0; font-size:5.9pt; line-height:1.22; color:#475569; border-top:0.2mm solid #CBD5E1;">${f.rodape}</div>`);
+
+  const ico = (path) => `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${f.cor}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:0.4mm;" aria-hidden="true">${path}</svg>`;
+  const ICO_PIN = '<path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.6"/>';
+  const ICO_TEL = '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>';
+  const ICO_REL = '<circle cx="12" cy="12" r="9.5"/><path d="M12 6.5V12l3.8 2.2"/>';
+  const linha = (icone, valor) => valor
+    ? `<div style="display:flex; gap:1.6mm; align-items:flex-start; margin-top:2mm;">${ico(icone)}<div style="font-size:9pt; line-height:1.25; font-weight:600;">${valor}</div></div>`
+    : '';
+
+  const verso = cartao(`
+    <div style="background:${f.cor}; height:2.6mm; ${keep}"></div>
+    <div style="flex:1; padding:1.5mm 3.8mm 1.5mm 3.8mm; overflow:hidden; display:flex; flex-direction:column; justify-content:center;">
+      <div style="font-weight:800; font-size:13pt; line-height:1.14;">${nome}</div>
+      ${nomeCompleto && nomeCompleto !== nome ? `<div style="font-size:7pt; color:#475569; margin-top:0.5mm; line-height:1.22;">${nomeCompleto}</div>` : ''}
+      ${linha(ICO_PIN, endereco)}
+      ${linha(ICO_TEL, fones.join(' · '))}
+      ${linha(ICO_REL, horario)}
+    </div>`);
+
+  // Marcas de corte nas margens da folha: ligue as marcas opostas com uma régua.
+  const markStyle = 'position:absolute; background:#000; -webkit-print-color-adjust:exact; print-color-adjust:exact;';
+  const MG = 2, ML = 5, T = 0.2; // folga (mm), comprimento (mm), espessura (mm)
+  let marks = '';
+  for (let r = 0; r <= ROWS; r++) {
+    const y = r * CARD_H - T / 2;
+    marks += `<div style="${markStyle} left:${-(MG + ML)}mm; top:${y}mm; width:${ML}mm; height:${T}mm;"></div>`;
+    marks += `<div style="${markStyle} left:${GRID_W + MG}mm; top:${y}mm; width:${ML}mm; height:${T}mm;"></div>`;
+  }
+  for (let c = 0; c <= COLS; c++) {
+    const x = c * CARD_W - T / 2;
+    marks += `<div style="${markStyle} top:${-(MG + ML)}mm; left:${x}mm; height:${ML}mm; width:${T}mm;"></div>`;
+    marks += `<div style="${markStyle} top:${GRID_H + MG}mm; left:${x}mm; height:${ML}mm; width:${T}mm;"></div>`;
+  }
+
+  // Folha A4 inteira, sem margem de impressão: grade centralizada, idêntica na
+  // frente e no verso, então os dois lados se alinham ao imprimir em frente e
+  // verso (virar na borda longa).
+  const folha = (conteudo) => `
+    <div class="print-page" style="width:21cm; height:29.6cm; padding:0; border:none; box-sizing:border-box; display:flex; align-items:center; justify-content:center; background:#fff; overflow:hidden;">
+      <div style="position:relative; display:grid; grid-template-columns:repeat(${COLS}, ${CARD_W}mm); grid-auto-rows:${CARD_H}mm;">
+        ${Array.from({ length: COLS * ROWS }, () => conteudo).join('')}
+        ${marks}
+      </div>
+    </div>`;
+
+  const printArea = document.getElementById('print-area');
+  printArea.innerHTML = folha(frente) + folha(verso);
+
+  setTempPageOrientation('A4 portrait', '0');
+  window.addEventListener('afterprint', function clearOrientation() {
+    setTempPageOrientation(null);
+    window.removeEventListener('afterprint', clearOrientation);
+  });
+
+  window.print();
+}
+
 function renderWhatsappButton(id, name) {
   const safeName = escapeHtml(name || '');
   return `<button type="button" class="btn-tech btn-whatsapp" onclick="share('${id}')" title="Enviar os dados desta unidade por WhatsApp" aria-label="Enviar os dados de ${safeName} por WhatsApp">${ICONS.whatsapp} WhatsApp</button>`;
@@ -6483,14 +6698,14 @@ function buildPrintWatermark() {
    troca temporariamente a regra @page antes de chamar window.print() e
    desfaz a troca depois (evento 'afterprint'). Pode ser gerado em português
    ou espanhol, conforme o parâmetro lang. */
-function setTempPageOrientation(size) {
+function setTempPageOrientation(size, margin) {
   let styleTag = document.getElementById('tempPageOrientation');
   if (!styleTag) {
     styleTag = document.createElement('style');
     styleTag.id = 'tempPageOrientation';
     document.head.appendChild(styleTag);
   }
-  styleTag.textContent = size ? `@media print { @page { size: ${size}; margin: 1cm; } }` : '';
+  styleTag.textContent = size ? `@media print { @page { size: ${size}; margin: ${margin || '1cm'}; } }` : '';
 }
 
 /* Realça termos-chave que a pessoa precisa localizar rapidamente na folha
