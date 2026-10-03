@@ -427,83 +427,6 @@
     .hero-stat-divider { display: none; }
   }
 
-  /* Destaque do site do autor (Vita), no canto inferior direito do painel
-     de início. Posicionado em relação ao .container do cabeçalho; abaixo de
-     760px deixa de ser flutuante e vira uma faixa no fluxo, para não
-     cobrir os números do painel. */
-  .hero-vita {
-    position: absolute;
-    right: 1.5rem;
-    bottom: -4.5rem;                 /* dentro da folga extra do rodapé do painel (ver abaixo) */
-    z-index: 2;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.6rem 0.9rem 0.6rem 0.65rem;
-    max-width: calc(100% - 3rem);
-    color: #fff;
-    text-decoration: none;
-    background: linear-gradient(135deg, rgba(232, 172, 61, 0.24), rgba(255, 255, 255, 0.07));
-    border: 1px solid var(--hero-gold);
-    border-radius: 14px;
-    box-shadow: 0 10px 26px -10px rgba(0, 0, 0, 0.6), 0 0 0 4px rgba(232, 172, 61, 0.10);
-    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
-  }
-  .hero-vita:hover,
-  .hero-vita:focus-visible {
-    transform: translateY(-2px);
-    background: linear-gradient(135deg, rgba(232, 172, 61, 0.38), rgba(255, 255, 255, 0.10));
-    box-shadow: 0 14px 30px -10px rgba(0, 0, 0, 0.7), 0 0 0 5px rgba(232, 172, 61, 0.20);
-  }
-  .hero-vita:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
-  .hero-vita-mark {
-    flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.4rem;
-    height: 2.4rem;
-    border-radius: 10px;
-    font-family: var(--font-serif);
-    font-size: 1.5rem;
-    font-weight: 700;
-    line-height: 1;
-    color: #0B3C35;
-    background: linear-gradient(145deg, var(--hero-gold-soft), var(--hero-gold));
-  }
-  .hero-vita-text { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
-  .hero-vita-eyebrow {
-    font-size: 0.64rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    color: var(--hero-gold-soft);
-  }
-  .hero-vita-title { font-size: 0.92rem; font-weight: 700; line-height: 1.25; }
-  .hero-vita-arrow { flex: 0 0 auto; font-size: 1.1rem; color: var(--hero-gold-soft); }
-
-  @media (min-width: 761px) {
-    header.hero { padding-bottom: 5.25rem; }   /* folga para o cartão do Vita não encostar nos números */
-  }
-
-  @media (max-width: 760px) {
-    .hero-vita {
-      position: relative;
-      right: auto;
-      bottom: auto;
-      display: flex;
-      width: 100%;
-      max-width: 100%;
-      margin-top: 1rem;
-    }
-    .hero-vita-text { flex: 1; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .hero-vita { transition: none; }
-    .hero-vita:hover, .hero-vita:focus-visible { transform: none; }
-  }
-
   .controls {
     position: sticky;
     top: 0;
@@ -4684,30 +4607,27 @@
     color: #CBD5E1;
   }
 
-  /* ---- Mascote Argo apresentando o aplicativo (lado esquerdo do login) ---- */
-  /* Fixo no canto inferior esquerdo da tela de login (sobre as ondas). */
+  /* ---- Mascote Argo apresentando o aplicativo (painel esquerdo do login) ---- */
+  /* Fica dentro do painel esquerdo, acima da marca: apresenta o app e
+     recomenda o site do autor, cujo atalho (.login-vita) está no painel de
+     acesso, à direita. */
   .login-mascot {
-    position: fixed;
-    left: 1.25rem;
-    bottom: 1rem;
+    position: relative;
     z-index: 1;
     display: flex;
     align-items: flex-end;
-    gap: 0.9rem;
-    max-width: min(340px, calc(100vw - 2.5rem));
-    pointer-events: none;
+    gap: 0.85rem;
   }
 
   .login-mascot-figure {
     flex: 0 0 auto;
-    width: 100px;
-    height: 100px;
-    margin-top: 0.1rem;
+    width: 84px;
+    height: 84px;
     border-radius: 50%;
     /* Halo claro atrás do mascote: o casco é azul-marinho e sumia no fundo escuro. */
     background:
       radial-gradient(circle at 50% 55%, rgba(125, 211, 192, 0.30) 0%, rgba(41, 171, 226, 0.20) 45%, transparent 72%);
-    padding: 6px;
+    padding: 5px;
     filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.45));
   }
 
@@ -4717,7 +4637,7 @@
     position: relative;
     flex: 1;
     min-width: 0;
-    padding: 0.85rem 1rem 0.9rem;
+    padding: 0.8rem 0.95rem 0.85rem;
     border-radius: 4px 16px 16px 16px;
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.16);
@@ -4730,12 +4650,11 @@
   .login-mascot-bubble::before {
     content: "";
     position: absolute;
-    top: 50%;
-    margin-top: -6px;
+    bottom: 1.5rem;
     left: -7px;
     width: 12px;
     height: 12px;
-    background: rgba(255, 255, 255, 0.08);
+    background: #1b2638;
     border-left: 1px solid rgba(255, 255, 255, 0.16);
     border-bottom: 1px solid rgba(255, 255, 255, 0.16);
     transform: rotate(45deg);
@@ -4748,75 +4667,106 @@
 
   .login-mascot-line {
     margin: 0 0 0.35rem;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     font-weight: 600;
     line-height: 1.4;
     color: #fff;
   }
 
   .login-mascot-line strong { color: #FFD400; font-weight: 800; }
-
   .login-mascot-line.is-error strong { color: #FCA5A5; }
 
   .login-mascot-text {
-    margin: 0 0 0.5rem;
-    font-size: 0.78rem;
+    margin: 0 0 0.55rem;
+    font-size: 0.76rem;
     line-height: 1.5;
     color: #CBD5E1;
   }
 
-  .login-mascot-features {
-    list-style: none;
+  /* Recomendação do site do autor */
+  .login-mascot-tip {
     margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-  }
-
-  .login-mascot-features li {
-    position: relative;
-    padding-left: 1.05rem;
-    font-size: 0.74rem;
-    line-height: 1.4;
+    padding-top: 0.55rem;
+    border-top: 1px dashed rgba(242, 203, 126, 0.45);
+    font-size: 0.76rem;
+    line-height: 1.5;
     color: #E2E8F0;
   }
-
-  .login-mascot-features li::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 0.42em;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #29ABE2;
-    box-shadow: 0 0 6px rgba(41, 171, 226, 0.7);
+  .login-mascot-tip span {
+    display: inline-block;
+    margin-right: 0.2rem;
+    font-family: var(--font-serif);
+    font-weight: 700;
+    color: #F2CB7E;
   }
-
-  /* No canto da tela só a frase de apresentação — a lista cobriria o cartão. */
-  .login-mascot-text, .login-mascot-features { display: none; }
-
-  /* O balão só aparece quando sobra margem ao lado do cartão (telas largas);
-     nas demais fica apenas o mascote no canto, que ainda reage à senha errada. */
-  .login-mascot-bubble { display: none; }
-  @media (min-width: 1700px) {
-    .login-mascot-bubble { display: block; width: 240px; }
-  }
+  .login-mascot-tip strong { color: #F2CB7E; }
 
   @media (prefers-reduced-motion: reduce) {
     .login-mascot-bubble { animation: none; }
   }
 
-  /* Celular: o painel vira uma faixa no topo — mascote pequeno com só a
-     frase de apresentação, sem a lista, para o formulário aparecer logo. */
+  /* Celular: o painel vira uma faixa no topo — mascote pequeno, só com a
+     frase de apresentação e a recomendação, sem o texto longo. */
   @media (max-width: 760px) {
-    .login-mascot { align-items: center; gap: 0.6rem; left: 0.9rem; bottom: 0.75rem; }
-    #loginScreen { padding-bottom: 5.25rem; }
-    .login-mascot-figure { width: 56px; height: 56px; margin-top: 0; padding: 3px; }
-    .login-mascot-bubble { padding: 0.6rem 0.8rem; }
-    .login-mascot-line { margin: 0; font-size: 0.8rem; }
-    .login-mascot-text, .login-mascot-features { display: none; }
+    .login-mascot { align-items: center; gap: 0.6rem; }
+    .login-mascot-figure { width: 52px; height: 52px; padding: 3px; }
+    .login-mascot-bubble { padding: 0.55rem 0.75rem; }
+    .login-mascot-bubble::before { bottom: auto; top: 50%; margin-top: -6px; }
+    .login-mascot-line { margin: 0 0 0.25rem; font-size: 0.8rem; }
+    .login-mascot-text { display: none; }
+    .login-mascot-tip { padding-top: 0.3rem; font-size: 0.72rem; }
+  }
+
+  /* ---- Atalho do site do autor (Vita) no painel de acesso ---- */
+  .login-vita {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+    padding: 0.6rem 0.9rem 0.6rem 0.65rem;
+    color: var(--text-main);
+    text-decoration: none;
+    background: color-mix(in srgb, #E8AC3D 13%, transparent);
+    border: 1px solid color-mix(in srgb, #E8AC3D 60%, transparent);
+    border-radius: 14px;
+    transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+  }
+  .login-vita:hover,
+  .login-vita:focus-visible {
+    transform: translateY(-2px);
+    background: color-mix(in srgb, #E8AC3D 22%, transparent);
+    box-shadow: 0 10px 22px -12px rgba(0, 0, 0, 0.45);
+  }
+  .login-vita:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 3px; }
+  .login-vita-mark {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 10px;
+    font-family: var(--font-serif);
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #0B3C35;
+    background: linear-gradient(145deg, #F2CB7E, #E8AC3D);
+  }
+  .login-vita-text { flex: 1; display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+  .login-vita-eyebrow {
+    font-size: 0.64rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+  }
+  .login-vita-title { font-size: 0.92rem; font-weight: 700; line-height: 1.25; }
+  .login-vita-arrow { flex: 0 0 auto; font-size: 1.1rem; color: #B8841F; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .login-vita { transition: none; }
+    .login-vita:hover, .login-vita:focus-visible { transform: none; }
   }
 
   .login-story-content { position: relative; z-index: 1; }
