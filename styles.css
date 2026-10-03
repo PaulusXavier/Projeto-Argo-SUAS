@@ -427,6 +427,83 @@
     .hero-stat-divider { display: none; }
   }
 
+  /* Destaque do site do autor (Vita), no canto inferior direito do painel
+     de início. Posicionado em relação ao .container do cabeçalho; abaixo de
+     760px deixa de ser flutuante e vira uma faixa no fluxo, para não
+     cobrir os números do painel. */
+  .hero-vita {
+    position: absolute;
+    right: 1.5rem;
+    bottom: -4.5rem;                 /* dentro da folga extra do rodapé do painel (ver abaixo) */
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.9rem 0.6rem 0.65rem;
+    max-width: calc(100% - 3rem);
+    color: #fff;
+    text-decoration: none;
+    background: linear-gradient(135deg, rgba(232, 172, 61, 0.24), rgba(255, 255, 255, 0.07));
+    border: 1px solid var(--hero-gold);
+    border-radius: 14px;
+    box-shadow: 0 10px 26px -10px rgba(0, 0, 0, 0.6), 0 0 0 4px rgba(232, 172, 61, 0.10);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  }
+  .hero-vita:hover,
+  .hero-vita:focus-visible {
+    transform: translateY(-2px);
+    background: linear-gradient(135deg, rgba(232, 172, 61, 0.38), rgba(255, 255, 255, 0.10));
+    box-shadow: 0 14px 30px -10px rgba(0, 0, 0, 0.7), 0 0 0 5px rgba(232, 172, 61, 0.20);
+  }
+  .hero-vita:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+  .hero-vita-mark {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 10px;
+    font-family: var(--font-serif);
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #0B3C35;
+    background: linear-gradient(145deg, var(--hero-gold-soft), var(--hero-gold));
+  }
+  .hero-vita-text { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+  .hero-vita-eyebrow {
+    font-size: 0.64rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--hero-gold-soft);
+  }
+  .hero-vita-title { font-size: 0.92rem; font-weight: 700; line-height: 1.25; }
+  .hero-vita-arrow { flex: 0 0 auto; font-size: 1.1rem; color: var(--hero-gold-soft); }
+
+  @media (min-width: 761px) {
+    header.hero { padding-bottom: 5.25rem; }   /* folga para o cartão do Vita não encostar nos números */
+  }
+
+  @media (max-width: 760px) {
+    .hero-vita {
+      position: relative;
+      right: auto;
+      bottom: auto;
+      display: flex;
+      width: 100%;
+      max-width: 100%;
+      margin-top: 1rem;
+    }
+    .hero-vita-text { flex: 1; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-vita { transition: none; }
+    .hero-vita:hover, .hero-vita:focus-visible { transform: none; }
+  }
+
   .controls {
     position: sticky;
     top: 0;
