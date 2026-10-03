@@ -987,11 +987,12 @@ function argoGreetingWeekHtml() {
     `</div>`;
 
   if (rest.length) {
-    const rows = rest.slice(0, 3).map(e => {
+    const rows = rest.slice(0, 4).map(e => {
       const days = Math.round((e.date - today0) / 86400000);
-      return `<li><span class="argo-week-day">${escapeHtml(argoDayLabel(e.date, days))}</span>${argoEntryHtml(e.info, e.note)}</li>`;
+      const when = days === 1 ? 'amanhã' : `em ${days} dias`;
+      return `<li><span class="argo-week-day">${escapeHtml(argoDayLabel(e.date, days))}</span><div class="argo-entry">${argoChipHtml(e.info)}<span class="argo-when">${when}</span>${e.note ? `<div class="argo-note">${escapeHtml(e.note)}</div>` : ''}</div></li>`;
     }).join('');
-    const more = rest.length > 3 ? `<li class="argo-week-more">+ ${rest.length - 3} na agenda</li>` : '';
+    const more = rest.length > 4 ? `<li class="argo-week-more">+ ${rest.length - 4} na agenda</li>` : '';
     html += `<div class="argo-week-label">Próximos dias</div><ul class="argo-week-list">${rows}${more}</ul>`;
   } else {
     const next = argoNextMilestone(now);
@@ -1097,6 +1098,24 @@ function argoGreetingPersistMuteChoice() {
 
 // Mostra o cartão. Chamada uma vez a cada desbloqueio bem-sucedido (ver
 // submit do loginForm, em initAuth).
+// Título da notificação de abertura: na 1ª vez apresenta o Argo; depois diz
+// o que é hoje (feriado, pagamento ou anotação) para o essencial aparecer
+// já na primeira linha.
+function argoGreetingHeadline() {
+  const word = argoGreetingWord();
+  if (!argoIntroAlreadySeen()) return word + '! Eu sou o Argo';
+  try {
+    const s = (typeof agendaBuildWeekSummary === 'function') ? agendaBuildWeekSummary(new Date()) : null;
+    const te = s && s.todayEntry;
+    if (te && te.info) {
+      const name = ARGO_AGENDA_LABEL_NAMES[te.info.label] || te.info.label;
+      return word + '! Hoje: ' + name;
+    }
+    if (te && te.note) return word + '! Você tem anotação para hoje';
+  } catch (e) { /* cai no título padrão */ }
+  return word + '! Eu sou o Argo';
+}
+
 function argoShowGreeting() {
   // Se o app foi trancado no intervalo entre o login e a abertura do cartão
   // (ex.: "Sair" logo em seguida), não mostra a notificação por cima do login.
@@ -1108,7 +1127,7 @@ function argoShowGreeting() {
   const dateEl = document.getElementById('argoGreetingDate');
   if (!modal || !title) return;
 
-  title.textContent = argoGreetingWord() + '! Eu sou o Argo';
+  title.textContent = argoGreetingHeadline();
   if (dateEl) {
     const d = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
     dateEl.textContent = d.charAt(0).toUpperCase() + d.slice(1);
@@ -1138,6 +1157,12 @@ function argoShowGreeting() {
   const yes = document.getElementById('argoGreetingYes');
   if (yes) setTimeout(() => yes.focus(), 60);
 }
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const m = document.getElementById('argoGreetingModal');
+  if (m && m.classList.contains('visible')) argoDismissGreeting();
+});
 
 function argoDismissGreeting() {
   argoGreetingPersistMuteChoice();
@@ -9367,7 +9392,7 @@ function argoLoginMascotReact(kind) {
   if (!fig || !line || typeof ArgoMascot === 'undefined' || typeof ArgoMascot.icon !== 'function') return;
   clearTimeout(argoLoginMascotTimer);
   const word = (typeof argoGreetingWord === 'function') ? argoGreetingWord() : 'Olá';
-  const mascotSize = window.matchMedia && window.matchMedia('(max-width: 760px)').matches ? 50 : 88;
+  const mascotSize = window.matchMedia && window.matchMedia('(max-width: 760px)').matches ? 46 : 74;
 
   if (kind === 'error') {
     fig.innerHTML = ArgoMascot.icon('error', mascotSize);
@@ -9586,6 +9611,12 @@ function renderAgendaCard() {
           .agenda-day-cell { transition: none; }
           .agenda-day-cell:hover { transform: none; }
         }
+        .agenda-next-strip { display:none; align-items:center; flex-wrap:wrap; gap:8px; margin:0 14px 8px 14px; padding:7px 12px; border-radius:10px; font-size:13px; background:rgba(184,137,79,0.14); border:1px dashed var(--gold); color:var(--ink); }
+        .agenda-next-strip.on { display:flex; }
+        .agenda-next-strip strong { font-weight:700; }
+        .agenda-next-days { margin-left:auto; padding:1px 9px; border-radius:999px; background:var(--cover); color:#fff; font-size:11px; font-weight:700; }
+        .agenda-next-btn { border:0; background:none; color:var(--blue-ink); font:inherit; font-weight:700; text-decoration:underline; cursor:pointer; padding:0; }
+        @media print { .agenda-next-strip, .agenda-tools, .agenda-today-banner, .agenda-nav-btn, .agenda-today-btn { display:none !important; } }
       </style>
       <div class="card-top">
         <div style="display:flex; align-items:center; gap:0.55rem;">
@@ -9619,6 +9650,7 @@ function renderAgendaCard() {
               <button type="button" id="agendaNotifyBtn" class="agenda-sync-btn" title="Notificar sobre a semana" aria-label="Notificar sobre a semana" onclick="agendaToggleNotify()">
                 🔔<span id="agendaNotifyDot" class="agenda-sync-dot agenda-sync-off"></span>
               </button>
+              <button type="button" class="agenda-sync-btn" title="Imprimir este mês" aria-label="Imprimir este mês" onclick="window.print()">🖨️</button>
               <button type="button" id="agendaSyncBtn" class="agenda-sync-btn" title="Sincronização entre aparelhos" aria-label="Sincronização entre aparelhos" onclick="agendaOpenSyncModal()">
                 🔄<span id="agendaSyncDot" class="agenda-sync-dot agenda-sync-off"></span>
               </button>
@@ -9634,6 +9666,8 @@ function renderAgendaCard() {
             </div>
             <div id="agendaTodayText" class="agenda-today-text"></div>
           </div>
+
+          <div id="agendaNextStrip" class="agenda-next-strip" role="status"></div>
 
           <div class="agenda-spread">
             <div class="agenda-cal">
@@ -9766,7 +9800,32 @@ function agendaRenderCalendar() {
   }
 
   agendaRenderMonthList();
+  agendaRenderNextStrip();
 }
+
+// Faixa acima do calendário: próximo feriado/pagamento com contagem de dias.
+function agendaRenderNextStrip() {
+  const el = document.getElementById('agendaNextStrip');
+  if (!el) return;
+  const next = (typeof argoNextMilestone === 'function') ? argoNextMilestone(new Date()) : null;
+  if (!next || next.date.getFullYear() !== AGENDA_YEAR) { el.classList.remove('on'); return; }
+  const name = ARGO_AGENDA_LABEL_NAMES[next.info.label] || next.info.label;
+  const when = next.days === 1 ? 'amanhã' : 'em ' + next.days + ' dias';
+  el.innerHTML = 'Próximo marco: <strong>' + escapeHtml(name) + '</strong> <button type="button" class="agenda-next-btn" onclick="agendaJumpTo(' + next.date.getMonth() + ')">' + String(next.date.getDate()).padStart(2, '0') + '/' + String(next.date.getMonth() + 1).padStart(2, '0') + '</button><span class="agenda-next-days">' + when + '</span>';
+  el.classList.add('on');
+}
+function agendaJumpTo(month) { agendaCurrentMonth = month; agendaFocusDay = 0; agendaRenderCalendar(); }
+
+// Atalhos (só com a agenda visível e fora de campos de texto): T = hoje,
+// PageUp/PageDown = mês anterior/seguinte.
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey || e.altKey || !document.getElementById('agendaBook')) return;
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test((e.target.tagName || '')) || e.target.isContentEditable) return;
+  if (document.querySelector('.agenda-modal-overlay.visible, .argo-greeting-overlay.visible')) return;
+  if (e.key === 't' || e.key === 'T') { agendaGoToday(); }
+  else if (e.key === 'PageUp') { e.preventDefault(); agendaChangeMonth(-1); }
+  else if (e.key === 'PageDown') { e.preventDefault(); agendaChangeMonth(1); }
+});
 
 // Página ao lado do calendário: cada data marcada do mês com nome completo,
 // e cada anotação inteira (a grade só mostra o começo dela).
