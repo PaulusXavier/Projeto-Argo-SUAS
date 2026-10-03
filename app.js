@@ -4135,7 +4135,13 @@ function renderSecondUnitField(id, name) {
    endereço fixo, o verso usa 'override' (ou 'dadosDe', que completa o contato com o de outra ficha).
    A aba Hospitalar e Atenção Básica (categoria 'hospitalar') também: hospitais e pronto
    atendimento de Boa Vista, SMSA, SESAU, Zoonoses, CERNUTRI, as UBS da capital e as unidades do
-   interior (hospitais, unidades mistas, centros/postos de saúde e UBS), com modelos padrão. */
+   interior (hospitais, unidades mistas, centros/postos de saúde e UBS), com modelos padrão. 
+   A aba Segurança Alimentar e Nutricional (categoria 'alimentar') também: Restaurantes Cidadão
+   (modelo único para as 6 unidades), PAA, Feira do Produtor Rural, Feira do Passarão e Mercado Municipal.
+   A aba Conselho Tutelar (categoria 'conselho') também: as 3 unidades por território, com os bairros
+   atendidos lidos da própria ficha (buildCartaoFrente recebe o item).
+   A aba Habitação e Moradia (categoria 'habitacao') também: CODESAIMA, Coordenação do MCMV e o guia do
+   programa federal (que no verso usa 'override' com o site da Caixa e as centrais 111 e 121). */
 // Demais unidades da aba (fora CRAS/CREAS/CEAC): cada id aponta para o tipo
 // de cartão em buildCartaoFrente(). Ficam de fora só os painéis de indicadores
 // (ex.: Vis Data), que não são um lugar para onde encaminhar a pessoa.
@@ -4201,6 +4207,22 @@ const CARTAO_TIPO_HOSP_POR_ID = {
   'cernutri': 'cernutri'
 };
 
+// Unidades da aba Segurança Alimentar e Nutricional (categoria 'alimentar'): os seis Restaurantes
+// Cidadão ('restaurante-cidadao-*') compartilham um modelo; PAA, feiras e mercado têm cartão próprio.
+// Unidades da aba Habitação e Moradia (categoria 'habitacao').
+const CARTAO_TIPO_HABITACAO_POR_ID = {
+  'codesaima': 'codesaima',
+  'mcmv-coordenacao': 'mcmv-coordenacao',
+  'mcmv-programa-federal': 'mcmv-federal'
+};
+
+const CARTAO_TIPO_ALIMENTAR_POR_ID = {
+  'paa-smaai': 'paa',
+  'feira-do-produtor-rural': 'feira-produtor',
+  'feira-do-passarao': 'feira-passarao',
+  'mercado-municipal-romeu-caldas': 'mercado-municipal'
+};
+
 function getCartaoTipo(item) {
   if (!item || !Array.isArray(item.cat)) return null;
   if (item.cat.includes('social')) {
@@ -4215,6 +4237,12 @@ function getCartaoTipo(item) {
     return CARTAO_TIPO_RAPS_POR_ID[item.id] || null;
   }
   if (item.cat.includes('tea')) return CARTAO_TIPO_TEA_POR_ID[item.id] || null;
+  if (item.cat.includes('conselho')) return /^ct-territorio-/.test(item.id) ? 'conselho-tutelar' : null;
+  if (item.cat.includes('habitacao')) return CARTAO_TIPO_HABITACAO_POR_ID[item.id] || null;
+  if (item.cat.includes('alimentar')) {
+    if (/^restaurante-cidadao-/.test(item.id)) return 'restaurante-cidadao';
+    return CARTAO_TIPO_ALIMENTAR_POR_ID[item.id] || null;
+  }
   if (item.cat.includes('hospitalar')) {
     if (CARTAO_TIPO_HOSP_POR_ID[item.id]) return CARTAO_TIPO_HOSP_POR_ID[item.id];
     if (item.cat.includes('interior')) {
@@ -4234,7 +4262,7 @@ function renderCartaoButton(item) {
   return `<button type="button" class="btn-tech btn-secondary" style="grid-column:1 / -1;" onclick="printCartaoFrenteVerso('${item.id}')" title="Imprimir cartão frente e verso desta unidade" aria-label="Imprimir cartão frente e verso de ${escapeHtml(item.name)}">🪪 Cartão frente e verso</button>`;
 }
 
-function buildCartaoFrente(tipo) {
+function buildCartaoFrente(tipo, item) {
   // Cor, sigla e conteúdo de cada tipo de unidade. A cor também pinta os
   // títulos das seções e os marcadores, para a frente ter hierarquia visual.
   const COR = {
@@ -4256,7 +4284,14 @@ function buildCartaoFrente(tipo) {
     'hosp-hcsa': '#0E7490', 'hosp-coronel-mota': '#B91C1C', 'hosp-pacs': '#DC2626', 'hosp-hu': '#1D4ED8', 'hosp-hminsn': '#BE185D',
     'hosp-interior': '#B91C1C', 'unidade-mista': '#B91C1C', 'saude-estadual': '#B91C1C',
     'ubs-ab': '#047857', 'ubs-interior': '#047857', cernutri: '#4D7C0F',
-    smsa: '#334155', sesau: '#334155', zoonoses: '#0F766E'
+    smsa: '#334155', sesau: '#334155', zoonoses: '#0F766E',
+    // Segurança Alimentar e Nutricional
+    // Habitação e Moradia
+    codesaima: '#6A4C93', 'mcmv-coordenacao': '#0E7490', 'mcmv-federal': '#0E7490',
+    // Conselho Tutelar (Proteção à Criança e ao Adolescente)
+    'conselho-tutelar': '#4F46E5',
+    'restaurante-cidadao': '#D9680A', paa: '#15803D',
+    'feira-produtor': '#4D7C0F', 'feira-passarao': '#4D7C0F', 'mercado-municipal': '#4D7C0F'
   }[tipo] || '#0091C2';
   const chk = `<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="${COR}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:0.35mm;" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="${COR}" fill-opacity="0.14" stroke-width="2"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>`;
   const li = (t) => `<li style="display:flex; gap:1.4mm; align-items:flex-start; margin:0 0 1.2mm 0; list-style:none;">${chk}<span>${t}</span></li>`;
@@ -4779,6 +4814,104 @@ function buildCartaoFrente(tipo) {
         ]),
         rodape: 'Leve <strong>documento com foto</strong> e <strong>Cartão SUS</strong>. Confirme o horário com a unidade.'
       },
+      'codesaima': {
+        sigla: 'CODESAIMA', area: 'Habitação e Moradia', fs: 7.3,
+        titulo: 'CODESAIMA', sub: 'Política habitacional de RR',
+        corpo: ul([
+          li('<strong>Minha Casa, Minha Vida</strong> no Estado'),
+          li('<strong>Morar Melhor:</strong> construção e reforma de moradias'),
+          li('<strong>Aqui Tem Dono:</strong> regularização fundiária de conjuntos habitacionais'),
+          li('<strong>Assistência Técnica Habitacional</strong>')
+        ]),
+        rodape: 'Empresa pública estadual (fundada em 1979). Confirme critérios e documentos com a unidade.'
+      },
+      'mcmv-coordenacao': {
+        sigla: 'MINHA CASA, MINHA VIDA', area: 'Habitação e Moradia', fs: 7.9,
+        titulo: 'Minha Casa Minha Vida', sub: 'Coord. municipal',
+        corpo: ul([
+          li('<strong>Coordenação municipal</strong> do programa habitacional Minha Casa, Minha Vida'),
+          li('Casa própria com <strong>financiamento e subsídio</strong>, por faixas de renda familiar')
+        ]),
+        rodape: 'As faixas de renda e os valores são reajustados pelo Governo Federal: confirme as regras vigentes.'
+      },
+      'mcmv-federal': {
+        sigla: 'MCMV', area: 'Programa Federal', fs: 7.3,
+        titulo: 'Minha Casa, Minha Vida', sub: 'Programa federal',
+        corpo: ul([
+          li('<strong>Financiamento com subsídio</strong> para comprar imóvel novo ou usado, construir ou reformar'),
+          li('Para famílias de <strong>baixa e média renda</strong>, organizado em faixas de renda (Lei n.º 14.620/2023)'),
+          li('Operacionalizado pela <strong>Caixa Econômica Federal</strong>')
+        ]),
+        rodape: 'Valores e regras mudam: antes de orientar, confirme os <strong>vigentes</strong> no site da Caixa ou em uma agência.',
+        // Programa nacional, sem endereço fixo: no verso entram o site e as centrais.
+        override: { endereco: 'caixa.gov.br (informações e simulação)', icone: 'globe' }
+      },
+      'conselho-tutelar': (() => {
+        // Cada unidade atende um território diferente: os bairros vêm da própria ficha (DATA).
+        const terr = stripHtml((item && item.desc) || '').replace(/^\s*Território:\s*/i, '').replace(/\.\s*$/, '').replace(/\s*;\s*/g, ', ').replace(/\s+/g, ' ').trim();
+        const num = (item && item.name || '').replace(/^Conselho Tutelar\s*/i, '').trim();
+        return {
+          sigla: 'CONSELHO TUTELAR ' + num, area: 'Criança e Adolescente', fs: 7.3,
+          titulo: 'Conselho Tutelar', sub: num ? 'Território ' + num : 'Criança e adolescente',
+          corpo: ul([
+            li('<strong>Atende crianças e adolescentes</strong> com direitos ameaçados ou violados: violência, negligência, abandono, trabalho infantil, evasão escolar'),
+            li('<strong>Plantão 24h</strong> para casos urgentes. Denúncia também pelo <strong>Disque 100</strong>')
+          ]) + (terr ? `<div style="margin-top:1.1mm; font-size:6pt; line-height:1.22; color:#334155;"><strong style="color:${COR};">Bairros atendidos:</strong> ${escapeHtml(terr)}</div>` : ''),
+          rodape: 'Atendimento gratuito. Procure a unidade do <strong>território onde a criança ou o adolescente mora</strong>.'
+        };
+      })(),
+      'restaurante-cidadao': {
+        sigla: 'RESTAURANTE CIDADÃO', area: 'Segurança Alimentar', fs: 7.5,
+        titulo: 'Restaurante Cidadão', sub: 'Almoço gratuito',
+        corpo: ul([
+          li('<strong>Almoço gratuito</strong>, de segunda a sexta, das <strong>11h às 13h30</strong> (encerra quando as refeições do dia acabam)'),
+          li('Para <strong>famílias previamente cadastradas na SETRABES</strong>, em situação de vulnerabilidade social'),
+          li('<strong>Cadastro e informações:</strong> (95) 3627-7995 (SETRABES)')
+        ]),
+        rodape: 'Programa estadual (SETRABES). O CRAS orienta a família e, se preciso, contata a coordenação.',
+        // Horário resumido no verso (o detalhe "encerra quando esgotam" já está na frente).
+        override: { horario: 'Segunda a sexta, das 11h às 13h30' }
+      },
+      'paa': {
+        sigla: 'PAA', area: 'Segurança Alimentar', fs: 7.1,
+        titulo: 'PAA', sub: 'Aquisição de Alimentos',
+        corpo: ul([
+          li('<strong>Compra alimentos da agricultura familiar</strong> e doa a entidades que atendem famílias em insegurança alimentar'),
+          li('<strong>Quem recebe:</strong> instituições socioassistenciais cadastradas (abrigos, associações comunitárias)'),
+          li('<strong>Quem fornece:</strong> agricultores familiares, indígenas, assentados, extrativistas, quilombolas e pescadores artesanais')
+        ]),
+        rodape: 'Não é atendimento de balcão ao cidadão. O CRAS orienta as entidades sobre o cadastro (Semges / Conselho Municipal de Assistência Social).'
+      },
+      'feira-produtor': {
+        sigla: 'FEIRA DO PRODUTOR', area: 'Abastecimento Popular', fs: 7.5,
+        titulo: 'Feira do Produtor', sub: 'Alimentos frescos',
+        corpo: ul([
+          li('<strong>Venda direta</strong> de frutas, verduras, legumes, farinha de mandioca, castanhas, molhos e óleos regionais'),
+          li('Produtores rurais e <strong>agricultores familiares</strong>, a preços acessíveis'),
+          li('Referência para famílias em <strong>insegurança alimentar leve ou moderada</strong>')
+        ]),
+        rodape: 'Equipamento de abastecimento popular. Confirme o horário de cada box no local.'
+      },
+      'feira-passarao': {
+        sigla: 'FEIRA DO PASSARÃO', area: 'Abastecimento Popular', fs: 7.9,
+        titulo: 'Feira do Passarão', sub: 'Zona oeste',
+        corpo: ul([
+          li('<strong>Mais de 120 boxes</strong> de hortifrúti e alimentos'),
+          li('Alternativa de <strong>menor custo</strong> em relação aos supermercados'),
+          li('Referência para famílias em <strong>insegurança alimentar leve ou moderada</strong>')
+        ]),
+        rodape: 'Equipamento de abastecimento popular. Confirme o horário de funcionamento no local.'
+      },
+      'mercado-municipal': {
+        sigla: 'MERCADO MUNICIPAL', area: 'Abastecimento Popular', fs: 7.9,
+        titulo: 'Mercado Municipal', sub: 'Mecejana',
+        corpo: ul([
+          li('Bancas de <strong>hortifrúti, farinha e produtos regionais</strong>, além de refeições populares'),
+          li('Mercado histórico, com <strong>mais de 40 anos</strong>, administrado pela Prefeitura de Boa Vista'),
+          li('Referência para famílias em <strong>insegurança alimentar leve ou moderada</strong>')
+        ]),
+        rodape: 'Equipamento de abastecimento popular. Confirme o horário atualizado no local.'
+      },
       'cadunico': {
         sigla: 'CADÚNICO', area: 'Cadastro Único', fs: 7.1,
         titulo: 'Consultar CadÚnico', sub: 'Pelo app ou site',
@@ -4813,7 +4946,7 @@ function printCartaoFrenteVerso(id) {
   const tipo = getCartaoTipo(item);
   if (!item || !tipo) return;
 
-  const f = buildCartaoFrente(tipo);
+  const f = buildCartaoFrente(tipo, item);
   const plain = (v) => escapeHtml(stripHtml(v || '').replace(/\s+/g, ' ').trim());
   const nome = plain(item.name);
   const nomeCompleto = plain(item.fullName);
@@ -4843,12 +4976,16 @@ function printCartaoFrenteVerso(id) {
   // Fundo bem clarinho da cor do tipo (8 dígitos hex = cor + transparência).
   const tint = (alpha) => f.cor + alpha;
 
+  // Título da frente: encolhe um pouco quando é longo, para ficar sempre numa linha.
+  const tituloLen = stripHtml(f.titulo || '').length;
+  const fsTitulo = tituloLen > 22 ? 9 : tituloLen > 17 ? 10 : 11;
+
   const frente = cartao(`
     <div style="background:${f.cor}; color:#fff; padding:1.9mm 3.5mm; display:flex; align-items:center; justify-content:space-between; gap:3mm; ${keep}">
-      <span style="font-weight:800; font-size:11pt; letter-spacing:0.01em; line-height:1;">${f.titulo}</span>
+      <span style="font-weight:800; font-size:${fsTitulo}pt; letter-spacing:0.01em; line-height:1.05; min-width:0;">${f.titulo}</span>
       <span style="font-weight:700; font-size:6.4pt; letter-spacing:0.02em; padding:0.7mm 2.2mm; border-radius:99mm; background:rgba(255,255,255,0.2); border:0.2mm solid rgba(255,255,255,0.45); white-space:nowrap; ${keep}">${f.sub}</span>
     </div>
-    <div style="flex:1; padding:2.2mm 3.5mm 0 3.5mm; font-size:${f.fs}pt; line-height:1.25; overflow:hidden;">${f.corpo}</div>
+    <div style="flex:1; display:flex; flex-direction:column; padding:1.4mm 3.5mm 0.6mm 3.5mm; font-size:${f.fs}pt; line-height:1.27; overflow:hidden;"><div style="margin:auto 0;">${f.corpo}</div></div>
     <div style="padding:1.2mm 3.5mm 1.5mm 3.5mm; font-size:5.8pt; line-height:1.22; color:#334155; background:${tint('14')}; border-top:0.25mm solid ${tint('55')}; ${keep}">${f.rodape}</div>`);
 
   // Ícone dentro de uma "pastilha" redonda tingida da cor do tipo — dá ritmo
@@ -4863,8 +5000,16 @@ function printCartaoFrenteVerso(id) {
   // não estourarem o cartão nem ficarem minúsculos quando são curtos.
   const fsNome = nome.length > 34 ? 10.5 : nome.length > 24 ? 12 : 13.5;
   const fsInfo = (t) => (t || '').length > 105 ? 7.1 : (t || '').length > 70 ? 7.8 : 8.6;
-  const linha = (icone, valor) => valor
-    ? `<div style="display:flex; gap:2mm; align-items:center; margin-top:1.7mm;">${ico(icone)}<div style="font-size:${fsInfo(valor)}pt; line-height:1.22; font-weight:600; color:#0F172A; min-width:0;">${valor}</div></div>`
+  // Telefone no formato "(95) 3627-7995 (Setor)": número em destaque e o rótulo mais leve ao lado.
+  const fmtFone = (p) => {
+    const m = p.match(/^(\(?\d{2}\)?\s?\d{4,5}[-\s]?\d{4})\s*\(([^()]+)\)\s*$/);
+    return m
+      ? `<span style="white-space:nowrap;">${m[1]}</span> <span style="font-weight:500; color:#475569; font-size:0.84em;">${m[2]}</span>`
+      : p;
+  };
+  // peso: endereço e telefone em destaque; horário (texto mais longo) mais leve.
+  const linha = (icone, valor, peso, cor, plano) => valor
+    ? `<div style="display:flex; gap:2mm; align-items:center; margin-top:1.4mm;">${ico(icone)}<div style="font-size:${fsInfo(plano !== undefined ? plano : valor)}pt; line-height:1.22; font-weight:${peso || 700}; color:${cor || '#0F172A'}; min-width:0;">${valor}</div></div>`
     : '';
 
   const verso = cartao(`
@@ -4872,14 +5017,14 @@ function printCartaoFrenteVerso(id) {
       <span style="font-weight:800; font-size:8pt; letter-spacing:0.08em;">${f.sigla}</span>
       <span style="font-weight:600; font-size:6pt; letter-spacing:0.04em; text-transform:uppercase; opacity:0.92;">${f.area}</span>
     </div>
-    <div style="flex:1; padding:2mm 3.8mm 1.2mm 3.8mm; overflow:hidden; display:flex; flex-direction:column; justify-content:center;">
+    <div style="flex:1; padding:1.6mm 3.8mm 1mm 3.8mm; overflow:hidden; display:flex; flex-direction:column; justify-content:center;">
       <div style="font-weight:800; font-size:${fsNome}pt; line-height:1.12; color:#0F172A;">${nome}</div>
       ${nomeCompleto && nomeCompleto !== nome ? `<div style="font-size:6.6pt; color:#475569; margin-top:0.6mm; line-height:1.2; padding-bottom:1.3mm; border-bottom:0.2mm solid ${tint('55')};">${nomeCompleto}</div>` : `<div style="border-bottom:0.2mm solid ${tint('55')}; margin-top:1.3mm;"></div>`}
-      ${linha(ov.icone === 'globe' ? ICO_WEB : ICO_PIN, endereco)}
-      ${linha(ICO_TEL, fones.join(' · '))}
-      ${linha(ICO_REL, horario)}
+      ${linha(ov.icone === 'globe' ? ICO_WEB : ICO_PIN, endereco, 700)}
+      ${linha(ICO_TEL, fones.map(fmtFone).join(' · '), 700, '#0F172A', fones.join(' · '))}
+      ${linha(ICO_REL, horario, 500, '#334155')}
     </div>
-    <div style="height:1.6mm; background:${f.cor}; ${keep}"></div>`);
+    <div style="height:2.4mm; background:${f.cor}; color:rgba(255,255,255,0.85); font-size:4.2pt; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; display:flex; align-items:center; justify-content:center; ${keep}">Argo SUAS · Rede de Políticas Públicas de Roraima</div>`);
 
   // Marcas de corte nas margens da folha: ligue as marcas opostas com uma régua.
   const markStyle = 'position:absolute; background:#000; -webkit-print-color-adjust:exact; print-color-adjust:exact;';
