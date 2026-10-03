@@ -5549,6 +5549,16 @@ const EXTERNAL_APPS = [
     tag: 'Notas',
     accent: '#DB2777',
     accentBg: 'rgba(219, 39, 119, 0.12)'
+  },
+  {
+    name: 'Vita — Site de Paulo Xavier',
+    img: 'icon-app-vita.png',
+    desc: 'Site do autor: currículo, produção acadêmica, áreas de interesse, panorama da Psicologia em Roraima, leituras e fontes indicadas e contatos.',
+    url: 'https://paulusxavier.github.io/Vita/',
+    icon: 'info',
+    tag: 'Site do autor',
+    accent: '#B7791F',
+    accentBg: 'rgba(183, 121, 31, 0.14)'
   }
 ];
 
@@ -5595,7 +5605,7 @@ function renderExternalAppsCard() {
       <div class="card-body">
         <div class="appsext-privacy">
           ${ICONS.info}
-          <span>Estes aplicativos são projetos independentes do mesmo autor, hospedados fora do Argo SUAS. Cada um abre em uma nova aba, com login e sincronização próprios.</span>
+          <span>Estes aplicativos e o site do autor são projetos independentes, hospedados fora do Argo SUAS. Cada um abre em uma nova aba; os aplicativos têm login e sincronização próprios.</span>
         </div>
         <div class="appsext-grid">
           ${tiles}
