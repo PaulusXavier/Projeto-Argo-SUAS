@@ -86,6 +86,8 @@
       </svg>
       <p class="login-sub">Use a senha compartilhada da equipe para acessar o diretório de equipamentos.</p>
 
+      <p class="login-notice" id="loginNotice" role="status" hidden></p>
+
       <form id="loginForm" autocomplete="off" novalidate>
         <div class="login-field">
           <label for="loginPassword">Senha de acesso</label>
@@ -106,7 +108,7 @@
         <div class="login-options-row">
           <label class="login-remember" for="loginRemember">
             <input type="checkbox" id="loginRemember">
-            <span>Manter-me conectado nesta aba</span>
+            <span>Manter-me conectado nesta aba <small class="login-remember-hint">use só em aparelho seu</small></span>
           </label>
           <button type="button" id="loginForgotBtn" class="login-forgot-link" aria-expanded="false" aria-controls="loginForgotPanel">Esqueci a senha</button>
         </div>
@@ -150,10 +152,17 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
         <span>Acesso destinado à <strong>equipe técnica do SUAS</strong> em Boa Vista - RR. Em caso de dúvida sobre a senha, contate a coordenação.</span>
       </p>
-      <p class="login-footnote">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <span>Nomes, endereços, NIS, anotações e anexos salvos neste navegador ficam cifrados com esta senha — quem não souber a senha não consegue lê-los, mesmo acessando o arquivo do site ou o armazenamento do navegador. Ainda assim, o código do app pode ser visto por qualquer pessoa com a URL. Antes de emprestar ou devolver um computador compartilhado, use "Apagar dados salvos neste dispositivo" no rodapé para remover nomes, anotações e anexos de atendidos.</span>
-      </p>
+      <details class="login-details">
+        <summary>Privacidade e uso em computador compartilhado</summary>
+        <p>Nomes, endereços, NIS, anotações e anexos salvos neste navegador ficam cifrados com esta senha — quem não souber a senha não consegue lê-los, mesmo acessando o arquivo do site ou o armazenamento do navegador. Ainda assim, o código do app pode ser visto por qualquer pessoa com a URL. Antes de emprestar ou devolver um computador compartilhado, use "Apagar dados salvos neste dispositivo" no rodapé para remover nomes, anotações e anexos de atendidos.</p>
+      </details>
+
+      <div class="login-status" id="loginStatus" role="status" aria-live="polite">
+        <span class="login-status-dot" aria-hidden="true"></span>
+        <span id="loginStatusText">Verificando conexão…</span>
+        <span class="login-status-sep" aria-hidden="true">·</span>
+        <span id="loginVersion"></span>
+      </div>
     </div>
 
   </div>
@@ -613,6 +622,10 @@
       <span id="counter">0</span> registros localizados
     </div>
   </div>
+
+  <!-- Painel inicial: só aparece na visão "Rede Intersetorial de Serviços" sem busca.
+       Montado por renderHomePanel() em app.js (atalhos por categoria, seu espaço e links oficiais). -->
+  <section class="home-panel" id="homePanel" aria-label="Painel inicial" hidden></section>
 
   <div class="external-resource-card">
     <div class="external-resource-text">
