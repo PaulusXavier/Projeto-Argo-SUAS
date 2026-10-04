@@ -4038,6 +4038,9 @@ function render() {
     const isInforme = i.cat.includes('informes');
     const isPolice = i.cat.includes('delegacias');
     const isInterior = i.cat.includes('interior');
+    // Seção "Registro técnico" abre sozinha se já houver nota ou anexo salvo.
+    const foldOpen = !!attach || !!String(safeStorage.get('note_' + i.id, '') || '').trim();
+    const foldStart = `<details class="card-fold"${foldOpen ? ' open' : ''}><summary>Registro técnico <span class="card-fold-hint">anotações · dados · anexo</span></summary>`;
 
     if (isInforme) {
       const metaRows = [
@@ -4055,6 +4058,7 @@ function render() {
           </div>
           <span class="subtitle">📋 Programa/Serviço · ${argoHighlight(i.fullName, activeQuery)}</span>
           ${renderDistanceBadge(i.id)}
+          ${renderCardQuickActions(i)}
         </div>
         <div class="card-body">
           ${metaRows}
@@ -4064,6 +4068,7 @@ function render() {
             ${formatInformeDesc(i.desc)}
             ${i.cat.includes('educacao') ? BF_HIGHLIGHT_HTML : ''}
           </div>
+          ${foldStart}
           ${renderUserDataFields(i.id)}
           <div class="notes-box">
             <label for="notes-${i.id}" class="label-tech">Anotações Técnicas / Conduta</label>
@@ -4074,6 +4079,7 @@ function render() {
             ${imageBlock}
             <div class="image-error-msg" id="img-error-${i.id}" role="alert" style="display:none;"></div>
           </div>
+          </details>
         </div>
         <div class="card-actions" ${(i.website || BPC_GUIDE_IDS.includes(i.id)) ? 'style="grid-template-columns: 1fr 1fr 1fr;"' : ''}>
           ${i.website ? `<a class="btn-tech btn-secondary btn-link" href="${i.website}" target="_blank" rel="noopener noreferrer">Site Oficial</a>` : ''}
@@ -4101,6 +4107,7 @@ function render() {
         ${isPolice && i.group ? `<span class="police-group-tag">${ICONS.shield} ${i.group}</span>` : ''}
         ${isInterior && i.group ? `<span class="interior-group-tag">${ICONS.home} Município: ${i.group}</span>` : ''}
         ${renderDistanceBadge(i.id)}
+        ${renderCardQuickActions(i)}
       </div>
       <div class="card-body">
         <div class="info-group"><span class="info-icon">${ICONS.map}</span><div><span class="label-tech">Localização</span>${argoHighlight(i.address, activeQuery)}</div></div>
@@ -4112,6 +4119,7 @@ function render() {
           <div style="margin-top:0.5rem; font-weight:600; color:var(--brand-primary); font-size:0.75rem;">SERVIÇOS: ${Array.isArray(i.services) ? i.services.join(', ') : i.services}</div>
           ${i.cat.includes('educacao') ? BF_HIGHLIGHT_HTML : ''}
         </div>
+        ${foldStart}
         ${BPC_GUIDE_IDS.includes(i.id) ? '' : renderUserDataFields(i.id)}
         ${BPC_GUIDE_IDS.includes(i.id) ? '' : `
         <div class="notes-box">
@@ -4123,6 +4131,7 @@ function render() {
           ${imageBlock}
           <div class="image-error-msg" id="img-error-${i.id}" role="alert" style="display:none;"></div>
         </div>
+        </details>
       </div>
       <div class="card-actions" ${(i.website || BPC_GUIDE_IDS.includes(i.id)) ? 'style="grid-template-columns: 1fr 1fr 1fr;"' : ''}>
         ${i.website ? `<a class="btn-tech btn-secondary btn-link" href="${i.website}" target="_blank" rel="noopener noreferrer">Site Oficial</a>` : ''}
@@ -5411,6 +5420,48 @@ function printCartaoFrenteVerso(id) {
   window.print();
 }
 
+// Link do Google Maps para a unidade: usa as coordenadas já guardadas no
+// cache de geocodificação, quando existirem; senão, busca pelo endereço.
+// route=true abre direto como rota (botão "Rota" do card).
+function getUnitMapLink(i, route) {
+  const cached = getGeocodeCache()[i.id];
+  const q = (cached && isFinite(cached.lat) && isFinite(cached.lon))
+    ? `${cached.lat},${cached.lon}`
+    : encodeURIComponent((stripHtml(i.address || '') + ', Boa Vista, Roraima').replace(/\s+/g, ' ').trim());
+  return route
+    ? `https://www.google.com/maps/dir/?api=1&destination=${q}`
+    : `https://www.google.com/maps/search/?api=1&query=${q}`;
+}
+
+// Primeiro telefone "ligável" da unidade (fixo/celular com ou sem DDD, ou
+// número curto de 3 dígitos como 190/192/180). Devolve o href tel: ou ''.
+function getUnitTelHref(i) {
+  const list = Array.isArray(i.phones) ? i.phones : [];
+  for (const raw of list) {
+    const txt = stripHtml(String(raw || ''));
+    const m = txt.match(/(?:\(?\d{2}\)?\s?)?\d{4,5}[-\s]?\d{4}/) || txt.match(/\b1\d{2}\b/);
+    if (!m) continue;
+    const d = m[0].replace(/\D/g, '');
+    if (d.length === 3) return `tel:${d}`;
+    if (d.length === 8 || d.length === 9) return `tel:+5595${d}`;
+    if (d.length === 10 || d.length === 11) return `tel:+55${d}`;
+  }
+  return '';
+}
+
+// Faixa de atalhos no topo do card: ligar e abrir a rota no mapa.
+function renderCardQuickActions(i) {
+  const tel = getUnitTelHref(i);
+  const hasAddr = !!stripHtml(i.address || '').trim();
+  if (!tel && !hasAddr) return '';
+  const stop = 'onclick="event.stopPropagation()"';
+  return `<div class="card-quick">
+    ${tel ? `<a class="card-quick-btn" href="${tel}" ${stop} title="Ligar para esta unidade">${ICONS.phone} Ligar</a>` : ''}
+    ${hasAddr ? `<a class="card-quick-btn" href="${getUnitMapLink(i, true)}" target="_blank" rel="noopener noreferrer" ${stop} title="Abrir a rota até esta unidade no Google Maps">${ICONS.map} Rota</a>` : ''}
+  </div>`;
+}
+
+
 function renderWhatsappButton(id, name) {
   const safeName = escapeHtml(name || '');
   return `<button type="button" class="btn-tech btn-whatsapp" onclick="share('${id}')" title="Enviar os dados desta unidade por WhatsApp" aria-label="Enviar os dados de ${safeName} por WhatsApp">${ICONS.whatsapp} WhatsApp</button>`;
@@ -5419,7 +5470,8 @@ function renderWhatsappButton(id, name) {
 function share(id) {
   const i = DATA.find(x => x.id === id);
   if (!i) return; // segurança: item não encontrado (ex.: dado alterado entre a renderização e o clique)
-  const t = `*UNIDADE:* ${i.fullName || i.name}\n*ENDEREÇO:* ${stripHtml(i.address)}\n*HORÁRIO:* ${stripHtml(i.hours || 'Não informado')}\n*CONTATO:* ${stripHtml((i.phones || []).join(' / ') || 'Não informado')}${i.website ? `\n*SITE:* ${i.website}` : ''}`;
+  const mapLink = getUnitMapLink(i);
+  const t = `*UNIDADE:* ${i.fullName || i.name}\n*ENDEREÇO:* ${stripHtml(i.address)}\n*LOCALIZAÇÃO:* ${mapLink}\n*HORÁRIO:* ${stripHtml(i.hours || 'Não informado')}\n*CONTATO:* ${stripHtml((i.phones || []).join(' / ') || 'Não informado')}${i.website ? `\n*SITE:* ${i.website}` : ''}`;
   window.open(`https://wa.me/?text=${encodeURIComponent(t)}`, '_blank', 'noopener,noreferrer');
 }
 
