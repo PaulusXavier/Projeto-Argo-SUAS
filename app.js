@@ -9378,6 +9378,7 @@ function appIsUnlocked() {
     const q = navNorm(input.value);
     let anyVisible = false;
     navAllChips().forEach(chip => {
+      if (chip.closest('[data-quick-only]')) return; // não aparecem na grade lateral
       const group = chip.closest('.filter-group');
       const groupName = group ? navNorm((group.querySelector('.filter-group-label') || {}).textContent) : '';
       const hay = navNorm(navChipName(chip)) + ' ' + groupName;
@@ -9395,7 +9396,7 @@ function appIsUnlocked() {
   input.addEventListener('input', apply);
   input.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
-      const first = document.querySelector('#filterBar .filter-chip:not(.nav-hidden)');
+      const first = Array.from(document.querySelectorAll('#filterBar .filter-chip:not(.nav-hidden)')).find(c => !c.closest('[data-quick-only]'));
       if (first) { e.preventDefault(); first.click(); input.value = ''; apply(); }
     } else if (e.key === 'Escape' && input.value) {
       e.stopPropagation();
@@ -9412,13 +9413,13 @@ function scrollActiveChipIntoView() {
 
 /* ---- 2) acesso rápido: recentes + padrão ---- */
 const NAV_RECENT_KEY = 'argo_recent_tabs_v1';
-const NAV_DEFAULT_SHORTCUTS = ['agenda', 'noticias', 'mapa', 'pdftools', 'tradutor', 'anotacoes', 'favoritos', 'appsext'];
+// Acesso rápido fixo: são as ferramentas que saíram da grade lateral.
+const NAV_DEFAULT_SHORTCUTS = ['agenda', 'mapa', 'tradutor', 'pdftools', 'appsext', 'noticias'];
 const NAV_SHORT_LABELS = {
-  agenda: 'Agenda', noticias: 'Notícias', mapa: 'Mapa', pdftools: 'PDF', tradutor: 'Tradutor',
-  anotacoes: 'Anotações', favoritos: 'Favoritos', appsext: 'Aplicativos', cas: 'CAS', cras: 'CRAS',
-  saude: 'RAPS', hospitalar: 'Hospitais', social: 'SUAS', informes: 'Programas'
+  agenda: 'Agenda Argo', mapa: 'Mapa dos Equipamentos', tradutor: 'Tradutor (Es / En / Fr)',
+  pdftools: 'Unificar / Converter PDF', appsext: 'Aplicativos', noticias: 'Notícias do MDS, MEC e Saúde'
 };
-const NAV_QUICK_MAX = 8;
+const NAV_QUICK_MAX = 6;
 
 function navReadRecent() {
   try {
@@ -9438,9 +9439,8 @@ function navRememberTab(cat) {
 function renderQuickNav() {
   const host = document.getElementById('quickNav');
   if (!host) return;
-  const recents = navReadRecent();
-  const order = [];
-  recents.concat(NAV_DEFAULT_SHORTCUTS).forEach(c => { if (!order.includes(c)) order.push(c); });
+  const recents = [];
+  const order = NAV_DEFAULT_SHORTCUTS.slice();
   const chips = {};
   navAllChips().forEach(c => { chips[c.dataset.cat] = c; });
   const items = order.filter(c => chips[c]).slice(0, NAV_QUICK_MAX);
