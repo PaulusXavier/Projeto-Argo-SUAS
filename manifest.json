@@ -8,7 +8,11 @@
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "categories": ["government", "utilities", "productivity"],
+  "categories": [
+    "government",
+    "utilities",
+    "productivity"
+  ],
   "background_color": "#F8FAFC",
   "theme_color": "#0F4A41",
   "icons": [
@@ -27,6 +31,68 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Notícias",
+      "short_name": "Notícias",
+      "url": "./index.html#aba=noticias",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Agenda",
+      "short_name": "Agenda",
+      "url": "./index.html#aba=agenda",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Mapa da Rede",
+      "short_name": "Mapa da Rede",
+      "url": "./index.html#aba=mapa",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Unificar PDF",
+      "short_name": "Unificar PDF",
+      "url": "./index.html#aba=pdftools",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Favoritos",
+      "short_name": "Favoritos",
+      "url": "./index.html#aba=favoritos",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }
