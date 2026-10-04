@@ -326,6 +326,8 @@ function finishUnlockAfterRender() {
     requestAnimationFrame(() => {
       if (typeof render === 'function') render();
       if (typeof syncCategoryToggleLabel === 'function') syncCategoryToggleLabel();
+      if (typeof renderQuickNav === 'function') renderQuickNav();
+      if (typeof applyHashRoute === 'function') applyHashRoute();
       setTimeout(() => {
         const alreadyMutedToday = (typeof argoGreetingMutedToday === 'function') && argoGreetingMutedToday();
         if (!alreadyMutedToday && typeof argoShowGreeting === 'function') argoShowGreeting();
@@ -755,8 +757,8 @@ let argoGreetingSlowTimer = null;
 // quem está vendo o Argo pela primeira vez); nas próximas vezes, troca por
 // uma frase mais curta — só um lembrete do que o app é, sem repetir a
 // apresentação inteira toda santo dia.
-const ARGO_INTRO_FIRST_TIME = 'Sou o Argo, guia da Rede de Políticas Públicas de Roraima. Aqui você encontra equipamentos de Assistência Social, Saúde, Educação e outras áreas, monta a ficha de encaminhamento técnico para imprimir e acompanha a agenda da semana — tudo direto do navegador, mesmo sem internet.';
-const ARGO_INTRO_RETURNING = 'Diretório técnico da Rede de Políticas Públicas de Roraima: equipamentos, ficha de encaminhamento e agenda, em um só lugar.';
+const ARGO_INTRO_FIRST_TIME = 'Sou o Argo, seu guia a bordo da Rede de Políticas Públicas de Roraima. Aqui você encontra equipamentos de Assistência Social, Saúde, Educação e outras áreas, monta a ficha de encaminhamento para imprimir e acompanha a agenda da semana — tudo no navegador, até sem internet. Dica: use o campo de busca do menu ou tecle / para chegar mais rápido.';
+const ARGO_INTRO_RETURNING = 'Bom te ver de volta a bordo! Equipamentos, ficha de encaminhamento e agenda estão a um toque — e se precisar de ajuda, tecle ? para me chamar.';
 
 function argoIntroAlreadySeen() {
   try {
@@ -6679,8 +6681,9 @@ const NEWS_SOURCES = [
     siteUrl: 'https://www.gov.br/saude/pt-br'
   }
 ];
-const NEWS_CACHE_KEY = 'argo_noticias_mds_v2';
-const NEWS_MAX_ITEMS = 45;
+const NEWS_CACHE_KEY = 'argo_noticias_mds_v3';
+const NEWS_MAX_ITEMS = 120;     // total mantido na lista
+const NEWS_MAX_PER_FEED = 40;   // por feed, para um ministério não engolir os outros
 
 // Repassadores tentados em ordem (o primeiro é a tentativa direta, que quase
 // sempre falha por CORS — o portal gov.br não libera leitura por outros
@@ -6795,7 +6798,7 @@ function newsParseFeed(xmlText, sourceId) {
     // "Image"), que não interessam aqui. Ficam só os conteúdos editoriais
     // (notícias, instruções normativas, portarias) com título preenchido.
     .filter(it => it.title && it.link && it.type !== 'File' && it.type !== 'Image')
-    .slice(0, NEWS_MAX_ITEMS);
+    .slice(0, NEWS_MAX_PER_FEED);
 }
 
 // Busca UM feed, tentando o acesso direto e depois os repassadores (o que
@@ -6910,6 +6913,8 @@ function newsKind(item) {
   return 'Notícia';
 }
 
+function newsIsNormative(item) { return newsKind(item) !== 'Notícia'; }
+
 // Cor de destaque por ministério, só para diferenciar rapidamente a
 // etiqueta de origem de cada publicação na lista.
 const NEWS_SOURCE_COLORS = {
@@ -6922,20 +6927,88 @@ function newsSourceInfo(sourceId) {
   return NEWS_SOURCES.find(s => s.id === sourceId) || NEWS_SOURCES[0];
 }
 
+// Temas de atalho (um toque preenche o filtro de palavra).
+const NEWS_TOPICS = ['Bolsa Família', 'CadÚnico', 'BPC', 'SUAS', 'Criança', 'Idoso', 'Pessoa com deficiência', 'Saúde mental'];
+
+const NEWS_PAGE_SIZE = 15;
+const NEWS_SAVED_KEY = 'argo_noticias_saved_v1';
+const NEWS_READ_KEY = 'argo_noticias_read_v1';
+
+// Preferências da tela (não persistem de propósito: cada visita começa limpa).
+const newsUi = { kind: 'all', period: 'all', savedOnly: false, limit: NEWS_PAGE_SIZE };
+
+function newsLoadJson(key) {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) { return []; }
+}
+function newsSaveJson(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* sem espaço: ignora */ }
+}
+
+let newsSaved = newsLoadJson(NEWS_SAVED_KEY);              // itens completos
+let newsReadSet = new Set(newsLoadJson(NEWS_READ_KEY));    // só os links
+
+// Sem acento e minúsculo, para a busca achar "familia" em "Família".
+function newsNorm(s) {
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+function newsTerms(filter) {
+  return newsNorm(filter).split(/\s+/).filter(Boolean);
+}
+
+// Destaca os termos buscados no texto (já escapando o HTML), ignorando acentos.
+function newsHighlight(text, terms) {
+  const raw = String(text || '');
+  if (!terms.length) return escapeHtml(raw);
+  const cls = { a: 'aáàâãä', e: 'eéèêë', i: 'iíìîï', o: 'oóòôõö', u: 'uúùûü', c: 'cç', n: 'nñ' };
+  const pattern = terms.map(t => Array.from(t).map(ch => {
+    if (cls[ch]) return '[' + cls[ch] + cls[ch].toUpperCase() + ']';
+    return ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }).join('')).join('|');
+  let re;
+  try { re = new RegExp(pattern, 'gi'); } catch (e) { return escapeHtml(raw); }
+  let out = '', last = 0, m;
+  while ((m = re.exec(raw)) !== null) {
+    if (!m[0]) { re.lastIndex++; continue; }
+    out += escapeHtml(raw.slice(last, m.index)) + '<mark>' + escapeHtml(m[0]) + '</mark>';
+    last = m.index + m[0].length;
+  }
+  return out + escapeHtml(raw.slice(last));
+}
+
+function newsGroupLabel(iso) {
+  const d = new Date(iso);
+  if (!iso || isNaN(d)) return 'Sem data';
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const day = new Date(d); day.setHours(0, 0, 0, 0);
+  const diff = Math.round((today - day) / 86400000);
+  if (diff <= 0) return 'Hoje';
+  if (diff === 1) return 'Ontem';
+  if (diff <= 7) return 'Últimos 7 dias';
+  if (diff <= 30) return 'Últimos 30 dias';
+  return 'Mais antigas';
+}
+
 function renderNewsCard() {
   const sourceChips = NEWS_SOURCES.map(s => `
     <label class="noticias-source-chip" title="${escapeHtml(s.fullLabel)}">
-      <input type="checkbox" class="noticias-source-checkbox" value="${s.id}" checked onchange="renderNewsList()">
+      <input type="checkbox" class="noticias-source-checkbox" value="${s.id}" checked onchange="newsResetAndRender()">
       <span>${escapeHtml(s.label)}</span>
       <span class="noticias-source-count" id="noticiasCount-${s.id}"></span>
     </label>
   `).join('');
 
   const siteLinks = NEWS_SOURCES.map(s => `
-    <a class="tradutor-btn-ghost" href="${s.siteUrl}" target="_blank" rel="noopener noreferrer"
-       style="text-decoration:none; display:inline-flex; align-items:center; gap:0.4rem;">
+    <a class="noticias-site-link" href="${s.siteUrl}" target="_blank" rel="noopener noreferrer">
       ${ICONS.external} ${escapeHtml(s.label)}
     </a>
+  `).join('');
+
+  const topicChips = NEWS_TOPICS.map(t => `
+    <button type="button" class="noticias-topic" onclick="newsPickTopic(this.textContent)">${escapeHtml(t)}</button>
   `).join('');
 
   return `
@@ -6945,33 +7018,50 @@ function renderNewsCard() {
           <span class="tradutor-badge">${ICONS.form}</span>
           <h2 style="margin:0;">Notícias do MDS, MEC e Saúde</h2>
         </div>
-        <span class="subtitle">📰 Últimas publicações do Ministério do Desenvolvimento e Assistência Social, do Ministério da Educação e do Ministério da Saúde</span>
+        <span class="subtitle">📰 Últimas publicações dos três ministérios, com normativos separados das notícias</span>
       </div>
       <div class="card-body">
-        <div class="tradutor-privacy">
-          ${ICONS.info}
-          <span>A lista vem dos feeds públicos dos três ministérios (gov.br/mds, gov.br/mec e gov.br/saude). Como o portal não libera leitura direta por outros sites, o app pode buscar o mesmo endereço por um repassador público (allorigins, corsproxy ou codetabs, nessa ordem de tentativa) — só o endereço do feed é enviado, nenhum dado de atendido. A última lista baixada fica salva neste navegador e continua visível offline.</span>
-        </div>
-
-        <div class="noticias-source-filter" role="group" aria-label="Filtrar por ministério">
-          ${sourceChips}
-        </div>
-
-        <div style="display:flex; flex-wrap:wrap; gap:0.6rem; align-items:center; margin:0.85rem 0;">
-          <input type="search" id="noticiasFilter" placeholder="Filtrar por palavra (ex.: Bolsa Família, CadÚnico, SUAS)…"
-                 aria-label="Filtrar notícias por palavra"
-                 oninput="renderNewsList()"
-                 style="flex:1; min-width:220px; padding:0.55rem 0.75rem; border-radius:8px; border:1px solid #dbe3ea; font:inherit;">
+        <div class="noticias-toolbar">
+          <input type="search" id="noticiasFilter" class="noticias-search"
+                 placeholder="Buscar (ex.: Bolsa Família, CadÚnico, SUAS)…"
+                 aria-label="Buscar nas notícias" autocomplete="off"
+                 oninput="newsResetAndRender()">
           <button type="button" class="tradutor-btn" id="noticiasRefreshBtn" onclick="refreshNews()">
             ${ICONS.cloud} Atualizar
           </button>
         </div>
-        <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.85rem;">
-          ${siteLinks}
+
+        <div class="noticias-topics" aria-label="Temas rápidos">${topicChips}</div>
+
+        <div class="noticias-filters-row">
+          <div class="noticias-source-filter" role="group" aria-label="Filtrar por ministério">${sourceChips}</div>
+          <div class="noticias-seg" role="group" aria-label="Tipo de publicação">
+            <button type="button" data-kind="all" class="is-active" onclick="newsSetKind('all')">Tudo</button>
+            <button type="button" data-kind="news" onclick="newsSetKind('news')">Notícias</button>
+            <button type="button" data-kind="norm" onclick="newsSetKind('norm')">Normativos</button>
+          </div>
+          <select id="noticiasPeriod" class="noticias-select" aria-label="Período" onchange="newsSetPeriod(this.value)">
+            <option value="all">Qualquer data</option>
+            <option value="7">Últimos 7 dias</option>
+            <option value="30">Últimos 30 dias</option>
+          </select>
+          <button type="button" class="noticias-saved-toggle" id="noticiasSavedBtn" aria-pressed="false" onclick="newsToggleSavedOnly()">
+            ${ICONS.star} <span>Salvas</span> <span id="noticiasSavedCount"></span>
+          </button>
         </div>
 
-        <div id="noticiasStatus" style="font-size:0.85rem; color:var(--text-muted, #64748b); margin-bottom:0.6rem;"></div>
+        <div id="noticiasStatus" class="noticias-status" role="status" aria-live="polite"></div>
         <div id="noticiasList"></div>
+        <div id="noticiasMore" class="noticias-more"></div>
+
+        <div class="noticias-sites">
+          <span>Abrir o site:</span> ${siteLinks}
+        </div>
+
+        <details class="noticias-privacy">
+          <summary>Como esta lista é carregada</summary>
+          <p>A lista vem dos feeds públicos dos três ministérios (gov.br/mds, gov.br/mec e gov.br/saude). Como o portal não libera leitura direta por outros sites, o app pode buscar o mesmo endereço por um repassador público (allorigins, corsproxy ou codetabs) — só o endereço do feed é enviado, nenhum dado de atendido. A última lista baixada, as publicações salvas e as já lidas ficam guardadas apenas neste navegador.</p>
+        </details>
       </div>
     </div>
   `;
@@ -6981,8 +7071,7 @@ function renderNewsCard() {
 let newsState = { items: [], ts: 0, loading: false };
 
 // Guarda quando a aba foi vista pela última vez, só para destacar com a
-// etiqueta "Novo" as publicações mais recentes que essa marca. Atualizada
-// no fim de initNewsPanel, depois que a lista já foi lida/renderizada.
+// etiqueta "Novo" as publicações mais recentes que essa marca.
 const NEWS_LAST_SEEN_KEY = 'argo_noticias_last_seen_v1';
 let newsLastSeenTs = 0;
 
@@ -6997,9 +7086,6 @@ function newsSelectedSources() {
   return new Set(Array.from(boxes).filter(b => b.checked).map(b => b.value));
 }
 
-// Atualiza o numerozinho de publicações ao lado de cada chip de ministério,
-// sempre com base na lista completa (não no filtro de palavra atual), para
-// o usuário saber de onde vêm as publicações antes mesmo de marcar/desmarcar.
 function newsUpdateSourceCounts() {
   NEWS_SOURCES.forEach(s => {
     const el = document.getElementById(`noticiasCount-${s.id}`);
@@ -7007,13 +7093,84 @@ function newsUpdateSourceCounts() {
     const n = newsState.items.filter(it => it.source === s.id).length;
     el.textContent = n ? `(${n})` : '';
   });
+  const sc = document.getElementById('noticiasSavedCount');
+  if (sc) sc.textContent = newsSaved.length ? `(${newsSaved.length})` : '';
 }
+
+function newsResetAndRender() { newsUi.limit = NEWS_PAGE_SIZE; renderNewsList(); }
+
+function newsSetKind(kind) {
+  newsUi.kind = kind;
+  document.querySelectorAll('.noticias-seg button').forEach(b => b.classList.toggle('is-active', b.dataset.kind === kind));
+  newsResetAndRender();
+}
+
+function newsSetPeriod(v) { newsUi.period = v; newsResetAndRender(); }
+
+function newsToggleSavedOnly() {
+  newsUi.savedOnly = !newsUi.savedOnly;
+  const btn = document.getElementById('noticiasSavedBtn');
+  if (btn) { btn.classList.toggle('is-active', newsUi.savedOnly); btn.setAttribute('aria-pressed', String(newsUi.savedOnly)); }
+  newsResetAndRender();
+}
+
+function newsPickTopic(topic) {
+  const el = document.getElementById('noticiasFilter');
+  if (!el) return;
+  el.value = newsNorm(el.value.trim()) === newsNorm(topic) ? '' : topic; // segundo toque limpa
+  newsResetAndRender();
+}
+
+function newsShowMore() { newsUi.limit += NEWS_PAGE_SIZE; renderNewsList(); }
 
 function newsClearFilters() {
   const filterEl = document.getElementById('noticiasFilter');
   if (filterEl) filterEl.value = '';
   document.querySelectorAll('.noticias-source-checkbox').forEach(b => { b.checked = true; });
+  const p = document.getElementById('noticiasPeriod'); if (p) p.value = 'all';
+  newsUi.kind = 'all'; newsUi.period = 'all'; newsUi.savedOnly = false;
+  document.querySelectorAll('.noticias-seg button').forEach(b => b.classList.toggle('is-active', b.dataset.kind === 'all'));
+  const btn = document.getElementById('noticiasSavedBtn');
+  if (btn) { btn.classList.remove('is-active'); btn.setAttribute('aria-pressed', 'false'); }
+  newsResetAndRender();
+}
+
+function newsFindItem(link) {
+  return newsState.items.find(i => i.link === link) || newsSaved.find(i => i.link === link);
+}
+
+function newsToggleSaved(btn) {
+  const link = btn.dataset.link;
+  const idx = newsSaved.findIndex(i => i.link === link);
+  if (idx >= 0) newsSaved.splice(idx, 1);
+  else {
+    const it = newsFindItem(link);
+    if (it) newsSaved.unshift(it);
+    newsSaved = newsSaved.slice(0, 100);
+  }
+  newsSaveJson(NEWS_SAVED_KEY, newsSaved);
   renderNewsList();
+}
+
+function newsMarkRead(a) {
+  const link = a.dataset.link;
+  if (!link || newsReadSet.has(link)) return;
+  newsReadSet.add(link);
+  newsSaveJson(NEWS_READ_KEY, Array.from(newsReadSet).slice(-400));
+  const art = a.closest('.noticias-item');
+  if (art) art.classList.add('is-read');
+}
+
+async function newsShareItem(btn) {
+  const it = newsFindItem(btn.dataset.link);
+  if (!it) return;
+  try {
+    if (navigator.share) { await navigator.share({ title: it.title, url: it.link }); return; }
+    await navigator.clipboard.writeText(`${it.title}\n${it.link}`);
+    const old = btn.innerHTML;
+    btn.innerHTML = ICONS.check + ' Copiado';
+    setTimeout(() => { btn.innerHTML = old; }, 1500);
+  } catch (e) { /* cancelado pelo usuário */ }
 }
 
 function newsSkeletonHtml() {
@@ -7026,43 +7183,38 @@ function newsSkeletonHtml() {
   `).join('');
 }
 
-function renderNewsList() {
-  const list = document.getElementById('noticiasList');
-  if (!list) return;
-
-  newsUpdateSourceCounts();
-
-  const filterEl = document.getElementById('noticiasFilter');
-  const filter = filterEl ? filterEl.value.trim().toLowerCase() : '';
+function newsFilteredItems() {
+  const terms = newsTerms((document.getElementById('noticiasFilter') || {}).value || '');
   const selectedSources = newsSelectedSources();
+  let items = newsUi.savedOnly ? newsSaved.slice() : newsState.items;
 
-  let items = newsState.items;
   if (selectedSources) items = items.filter(it => selectedSources.has(it.source));
-  if (filter) items = items.filter(it => (it.title + ' ' + it.desc).toLowerCase().includes(filter));
-
-  if (!items.length) {
-    if (newsState.loading && !newsState.items.length) {
-      list.innerHTML = newsSkeletonHtml();
-      return;
-    }
-    const hasActiveFilter = !!filter || (selectedSources && selectedSources.size < NEWS_SOURCES.length);
-    list.innerHTML = `
-      <div class="noticias-empty">
-        <p>${newsState.items.length
-          ? 'Nenhuma publicação corresponde a esse filtro.'
-          : 'Nenhuma publicação carregada ainda.'}</p>
-        ${hasActiveFilter ? `<button type="button" class="tradutor-btn-ghost" onclick="newsClearFilters()">Limpar filtros</button>` : ''}
-      </div>`;
-    return;
+  if (newsUi.kind === 'news') items = items.filter(it => !newsIsNormative(it));
+  if (newsUi.kind === 'norm') items = items.filter(newsIsNormative);
+  if (newsUi.period !== 'all') {
+    const limit = Date.now() - Number(newsUi.period) * 86400000;
+    items = items.filter(it => it.date && new Date(it.date).getTime() >= limit);
   }
+  if (terms.length) {
+    items = items.filter(it => {
+      const hay = newsNorm(it.title + ' ' + it.desc);
+      return terms.every(t => hay.includes(t));
+    });
+  }
+  return { items, terms, selectedSources };
+}
 
-  list.innerHTML = items.map(it => {
-    const src = newsSourceInfo(it.source);
-    const color = NEWS_SOURCE_COLORS[it.source] || NEWS_SOURCE_COLORS.mds;
-    const isNew = newsLastSeenTs && it.date && new Date(it.date).getTime() > newsLastSeenTs;
-    const rel = newsRelativeTime(it.date);
-    return `
-    <article class="noticias-item">
+function newsItemHtml(it, terms) {
+  const src = newsSourceInfo(it.source);
+  const color = NEWS_SOURCE_COLORS[it.source] || NEWS_SOURCE_COLORS.mds;
+  const isNew = newsLastSeenTs && it.date && new Date(it.date).getTime() > newsLastSeenTs;
+  const rel = newsRelativeTime(it.date);
+  const isRead = newsReadSet.has(it.link);
+  const isSaved = newsSaved.some(s => s.link === it.link);
+  const link = escapeHtml(it.link);
+  const normative = newsIsNormative(it);
+  return `
+    <article class="noticias-item${isRead ? ' is-read' : ''}${normative ? ' is-normative' : ''}">
       <div class="noticias-item-tags">
         <span class="noticias-tag" title="${escapeHtml(src.fullLabel)}" style="--tag-bg:${color.bg}; --tag-fg:${color.fg};">${escapeHtml(src.label)}</span>
         <span class="noticias-tag noticias-tag-kind">${escapeHtml(newsKind(it))}</span>
@@ -7070,12 +7222,58 @@ function renderNewsList() {
         <span class="noticias-date">${escapeHtml(newsFormatDate(it.date))}${rel ? ` · ${escapeHtml(rel)}` : ''}</span>
       </div>
       <h3 class="noticias-title">
-        <a href="${escapeHtml(it.link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(it.title)} ${ICONS.external}</a>
+        <a href="${link}" data-link="${link}" target="_blank" rel="noopener noreferrer" onclick="newsMarkRead(this)">${newsHighlight(it.title, terms)} ${ICONS.external}</a>
       </h3>
-      ${it.desc ? `<p class="noticias-desc">${escapeHtml(it.desc)}</p>` : ''}
-    </article>
-  `;
-  }).join('');
+      ${it.desc ? `<p class="noticias-desc">${newsHighlight(it.desc, terms)}</p>` : ''}
+      <div class="noticias-actions">
+        <button type="button" class="noticias-act${isSaved ? ' is-on' : ''}" data-link="${link}" onclick="newsToggleSaved(this)" aria-pressed="${isSaved}" title="${isSaved ? 'Remover das salvas' : 'Salvar para ler depois'}">${ICONS.star} ${isSaved ? 'Salva' : 'Salvar'}</button>
+        <button type="button" class="noticias-act" data-link="${link}" onclick="newsShareItem(this)" title="Compartilhar ou copiar o link">${ICONS.copy} Compartilhar</button>
+      </div>
+    </article>`;
+}
+
+function renderNewsList() {
+  const list = document.getElementById('noticiasList');
+  if (!list) return;
+  const more = document.getElementById('noticiasMore');
+
+  newsUpdateSourceCounts();
+  const { items, terms, selectedSources } = newsFilteredItems();
+
+  if (!items.length) {
+    if (more) more.innerHTML = '';
+    if (newsState.loading && !newsState.items.length) {
+      list.innerHTML = newsSkeletonHtml();
+      return;
+    }
+    const hasActiveFilter = terms.length || newsUi.kind !== 'all' || newsUi.period !== 'all' || newsUi.savedOnly
+      || (selectedSources && selectedSources.size < NEWS_SOURCES.length);
+    const msg = newsUi.savedOnly && !newsSaved.length
+      ? 'Você ainda não salvou nenhuma publicação. Toque em “Salvar” em qualquer item para guardá-lo aqui.'
+      : newsState.items.length ? 'Nenhuma publicação corresponde a esses filtros.' : 'Nenhuma publicação carregada ainda.';
+    list.innerHTML = `
+      <div class="noticias-empty">
+        <p>${msg}</p>
+        ${hasActiveFilter ? `<button type="button" class="tradutor-btn-ghost" onclick="newsClearFilters()">Limpar filtros</button>` : ''}
+      </div>`;
+    return;
+  }
+
+  const visible = items.slice(0, newsUi.limit);
+  let html = '', lastGroup = '';
+  visible.forEach(it => {
+    const g = newsGroupLabel(it.date);
+    if (g !== lastGroup) { html += `<h4 class="noticias-group">${escapeHtml(g)}</h4>`; lastGroup = g; }
+    html += newsItemHtml(it, terms);
+  });
+  list.innerHTML = html;
+
+  if (more) {
+    const rest = items.length - visible.length;
+    more.innerHTML = rest > 0
+      ? `<button type="button" class="tradutor-btn-ghost" onclick="newsShowMore()">Mostrar mais (${rest})</button>`
+      : (items.length > NEWS_PAGE_SIZE ? `<span>Fim da lista · ${items.length} publicações</span>` : '');
+  }
 }
 
 async function refreshNews() {
@@ -7087,10 +7285,13 @@ async function refreshNews() {
 
   try {
     const { items, failedSources } = await newsFetchFeed();
+    const before = new Set(newsState.items.map(i => i.link));
+    const added = newsState.items.length ? items.filter(i => !before.has(i.link)).length : 0;
     newsState.items = items;
     newsState.ts = Date.now();
     newsWriteCache(items);
-    const base = `${items.length} publicações · atualizado em ${escapeHtml(newsFormatUpdated(newsState.ts))}`;
+    let base = `${items.length} publicações · atualizado em ${escapeHtml(newsFormatUpdated(newsState.ts))}`;
+    if (added) base += ` · ${added} nova${added > 1 ? 's' : ''}`;
     newsSetStatus(failedSources.length
       ? `${base} — não foi possível buscar: ${escapeHtml(failedSources.join(', '))}.`
       : base);
@@ -7098,7 +7299,7 @@ async function refreshNews() {
     if (newsState.items.length) {
       newsSetStatus(`Não foi possível atualizar agora. Mostrando a lista salva em ${escapeHtml(newsFormatUpdated(newsState.ts))}.`);
     } else {
-      newsSetStatus('Não foi possível carregar as publicações. Verifique a conexão e toque em “Atualizar”, ou abra o site de um dos ministérios acima direto no navegador.');
+      newsSetStatus('Não foi possível carregar as publicações. Verifique a conexão e toque em “Atualizar”, ou abra o site de um dos ministérios abaixo direto no navegador.');
     }
   } finally {
     newsState.loading = false;
@@ -7108,8 +7309,12 @@ async function refreshNews() {
 }
 
 function initNewsPanel() {
-  // Lê a marca de "última vez visto" ANTES de sobrescrevê-la, para que as
-  // publicações mais novas que a visita anterior ganhem a etiqueta "Novo".
+  // Reinicia os filtros de tela (o painel é remontado a cada abertura).
+  newsUi.kind = 'all'; newsUi.period = 'all'; newsUi.savedOnly = false; newsUi.limit = NEWS_PAGE_SIZE;
+  newsSaved = newsLoadJson(NEWS_SAVED_KEY);
+  newsReadSet = new Set(newsLoadJson(NEWS_READ_KEY));
+
+  // Lê a marca de "última vez visto" ANTES de sobrescrevê-la.
   newsLastSeenTs = Number(localStorage.getItem(NEWS_LAST_SEEN_KEY)) || 0;
   try { localStorage.setItem(NEWS_LAST_SEEN_KEY, String(Date.now())); } catch (e) { /* ignora */ }
 
@@ -7118,22 +7323,18 @@ function initNewsPanel() {
     newsState.items = cached.items;
     newsState.ts = cached.ts;
     newsSetStatus(`${cached.items.length} publicações · lista salva em ${escapeHtml(newsFormatUpdated(cached.ts))}`);
-    renderNewsList();
   }
+  renderNewsList();
 
   // Sem internet: fica só com o que estiver salvo.
   if (navigator.onLine === false) {
     if (!cached) newsSetStatus('Você está offline e ainda não há publicações salvas neste aparelho.');
-    renderNewsList();
     return;
   }
 
   // Com cache recente (menos de 2 horas), não refaz a busca automaticamente.
   const TWO_HOURS = 2 * 60 * 60 * 1000;
-  if (cached && Date.now() - cached.ts < TWO_HOURS) {
-    renderNewsList();
-    return;
-  }
+  if (cached && Date.now() - cached.ts < TWO_HOURS) return;
 
   refreshNews();
 }
@@ -8890,6 +9091,7 @@ function openCategorySidebar() {
   sidebarBackdrop.classList.add('is-visible');
   document.body.classList.add('sidebar-open');
   if (categoryToggleBtn) categoryToggleBtn.setAttribute('aria-expanded', 'true');
+  if (typeof scrollActiveChipIntoView === 'function') setTimeout(scrollActiveChipIntoView, 60);
 }
 
 function closeCategorySidebar() {
@@ -8998,13 +9200,19 @@ function openTabFocus(chip) {
     setTabFocusInert(true);
     // Uma entrada no histórico faz o botão "voltar" do celular fechar o
     // destaque (em vez de sair do app).
+    // O endereço ganha "#aba=<categoria>": dá para copiar/guardar o link da
+    // aba e o atalho do app instalado abre direto nela (ver applyHashRoute).
     try {
-      history.pushState({ argoTabFocus: true }, '');
+      history.pushState({ argoTabFocus: true }, '', '#aba=' + encodeURIComponent(chip.dataset.cat || ''));
       tabFocusHistoryPushed = true;
     } catch (e) {
       tabFocusHistoryPushed = false;
     }
+  } else {
+    // Troca de aba dentro do modo destaque: só atualiza o endereço.
+    try { history.replaceState(history.state, '', '#aba=' + encodeURIComponent(chip.dataset.cat || '')); } catch (e) { /* ignora */ }
   }
+  if (typeof syncTabFocusJump === 'function') syncTabFocusJump(chip.dataset.cat);
 
   main.scrollTop = 0;
   refreshMapSizeAfterFocusChange();
@@ -9125,6 +9333,237 @@ window.addEventListener('scroll', () => {
 backToTopBtn.addEventListener('click', () => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
   document.getElementById('mainSearch').focus();
+});
+
+
+/* ======================= Navegação ampliada =======================
+   1) Busca dentro do menu de categorias (filtra os ~30 itens).
+   2) Faixa de "Acesso rápido": recentes + ferramentas mais usadas.
+   3) Links diretos: #aba=<categoria> (também usado pelos atalhos do app
+      instalado, ver manifest.json) e botão "voltar" coerente.
+   4) Barra do modo destaque com seletor "Ir para…" e setas ‹ ›.
+   5) Teclado: "/" foca a busca, Ctrl/⌘+K troca de aba. */
+function navNorm(s) {
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+function navChipName(chip) {
+  const el = chip && chip.querySelector('span:not(.chip-icon):not(.chip-count)');
+  return el ? el.textContent.trim() : '';
+}
+
+function navAllChips() {
+  return Array.from(document.querySelectorAll('#filterBar .filter-chip[data-cat]'));
+}
+
+function goToTab(cat) {
+  const chip = document.querySelector('#filterBar .filter-chip[data-cat="' + String(cat).replace(/"/g, '') + '"]');
+  if (!chip) return false;
+  chip.click();
+  return true;
+}
+
+function appIsUnlocked() {
+  const root = document.getElementById('appRoot');
+  return !!root && root.dataset.locked === 'false';
+}
+
+/* ---- 1) filtro do menu lateral ---- */
+(function initSidebarFilter() {
+  const input = document.getElementById('sidebarFilter');
+  const empty = document.getElementById('sidebarFilterEmpty');
+  if (!input) return;
+
+  function apply() {
+    const q = navNorm(input.value);
+    let anyVisible = false;
+    navAllChips().forEach(chip => {
+      const group = chip.closest('.filter-group');
+      const groupName = group ? navNorm((group.querySelector('.filter-group-label') || {}).textContent) : '';
+      const hay = navNorm(navChipName(chip)) + ' ' + groupName;
+      const match = !q || q.split(/\s+/).every(t => hay.includes(t));
+      chip.classList.toggle('nav-hidden', !match);
+      if (match) anyVisible = true;
+    });
+    document.querySelectorAll('#filterBar .filter-group').forEach(g => {
+      const has = g.querySelector('.filter-chip:not(.nav-hidden)');
+      g.classList.toggle('nav-hidden', !has);
+    });
+    if (empty) empty.hidden = anyVisible;
+  }
+
+  input.addEventListener('input', apply);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const first = document.querySelector('#filterBar .filter-chip:not(.nav-hidden)');
+      if (first) { e.preventDefault(); first.click(); input.value = ''; apply(); }
+    } else if (e.key === 'Escape' && input.value) {
+      e.stopPropagation();
+      input.value = '';
+      apply();
+    }
+  });
+})();
+
+function scrollActiveChipIntoView() {
+  const a = document.querySelector('#filterBar .filter-chip.active');
+  if (a && a.scrollIntoView) { try { a.scrollIntoView({ block: 'center' }); } catch (e) { /* ignora */ } }
+}
+
+/* ---- 2) acesso rápido: recentes + padrão ---- */
+const NAV_RECENT_KEY = 'argo_recent_tabs_v1';
+const NAV_DEFAULT_SHORTCUTS = ['agenda', 'noticias', 'mapa', 'pdftools', 'tradutor', 'anotacoes', 'favoritos', 'appsext'];
+const NAV_SHORT_LABELS = {
+  agenda: 'Agenda', noticias: 'Notícias', mapa: 'Mapa', pdftools: 'PDF', tradutor: 'Tradutor',
+  anotacoes: 'Anotações', favoritos: 'Favoritos', appsext: 'Aplicativos', cas: 'CAS', cras: 'CRAS',
+  saude: 'RAPS', hospitalar: 'Hospitais', social: 'SUAS', informes: 'Programas'
+};
+const NAV_QUICK_MAX = 8;
+
+function navReadRecent() {
+  try {
+    const arr = JSON.parse(localStorage.getItem(NAV_RECENT_KEY) || '[]');
+    return Array.isArray(arr) ? arr.filter(x => typeof x === 'string') : [];
+  } catch (e) { return []; }
+}
+
+function navRememberTab(cat) {
+  if (!cat || cat === 'all') return;
+  try {
+    const list = [cat].concat(navReadRecent().filter(c => c !== cat)).slice(0, 4);
+    localStorage.setItem(NAV_RECENT_KEY, JSON.stringify(list));
+  } catch (e) { /* sem espaço: só não guarda */ }
+}
+
+function renderQuickNav() {
+  const host = document.getElementById('quickNav');
+  if (!host) return;
+  const recents = navReadRecent();
+  const order = [];
+  recents.concat(NAV_DEFAULT_SHORTCUTS).forEach(c => { if (!order.includes(c)) order.push(c); });
+  const chips = {};
+  navAllChips().forEach(c => { chips[c.dataset.cat] = c; });
+  const items = order.filter(c => chips[c]).slice(0, NAV_QUICK_MAX);
+  const active = document.querySelector('#filterBar .filter-chip.active');
+  const activeCat = active ? active.dataset.cat : '';
+
+  host.innerHTML = '<span class="quick-nav-label">Acesso rápido</span>' + items.map(cat => {
+    const chip = chips[cat];
+    const icon = chip.querySelector('.chip-icon');
+    const label = NAV_SHORT_LABELS[cat] || navChipName(chip);
+    const isRecent = recents.includes(cat);
+    return '<button type="button" class="quick-nav-btn' + (cat === activeCat ? ' is-active' : '') + '" data-goto="' + escapeHtml(cat) + '"'
+      + ' title="' + escapeHtml(navChipName(chip)) + (isRecent ? ' (usada recentemente)' : '') + '">'
+      + '<span class="quick-nav-icon" aria-hidden="true">' + (icon ? icon.innerHTML : '') + '</span>'
+      + '<span>' + escapeHtml(label) + '</span></button>';
+  }).join('');
+}
+
+(function initQuickNav() {
+  const host = document.getElementById('quickNav');
+  if (host) host.addEventListener('click', e => {
+    const b = e.target.closest ? e.target.closest('[data-goto]') : null;
+    if (b) goToTab(b.dataset.goto);
+  });
+  navAllChips().forEach(chip => chip.addEventListener('click', () => {
+    navRememberTab(chip.dataset.cat);
+    renderQuickNav();
+  }));
+  renderQuickNav();
+})();
+
+/* ---- 3) links diretos (#aba=...) ---- */
+function navHashCat() {
+  const m = /^#aba=([^&]+)/.exec(location.hash || '');
+  if (!m) return '';
+  try { return decodeURIComponent(m[1]); } catch (e) { return ''; }
+}
+
+function applyHashRoute() {
+  const cat = navHashCat();
+  if (!cat || !appIsUnlocked()) return;
+  const chip = document.querySelector('#filterBar .filter-chip[data-cat="' + cat.replace(/"/g, '') + '"]');
+  // Troca a entrada atual por um endereço limpo; o clique abaixo cria a entrada
+  // com "#aba=..." (assim "voltar" fecha a aba em vez de sair do app).
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* ignora */ }
+  if (!chip || cat === 'all') return;
+  if (isTabFocusOpen() && document.querySelector('#filterBar .filter-chip.active') === chip) return;
+  chip.click();
+}
+
+window.addEventListener('hashchange', () => { if (navHashCat()) applyHashRoute(); });
+
+/* ---- 4) seletor "ir para" no modo destaque ---- */
+(function initTabFocusJump() {
+  const sel = document.getElementById('tabFocusJump');
+  if (!sel) return;
+  const general = [];
+  const groups = [];
+  navAllChips().forEach(chip => {
+    const g = chip.closest('.filter-group');
+    const entry = { cat: chip.dataset.cat, name: navChipName(chip) };
+    if (!g) { general.push(entry); return; }
+    const label = ((g.querySelector('.filter-group-label') || {}).textContent || '').trim();
+    let grp = groups.find(x => x.label === label);
+    if (!grp) { grp = { label, items: [] }; groups.push(grp); }
+    grp.items.push(entry);
+  });
+  const opt = e => '<option value="' + escapeHtml(e.cat) + '">' + escapeHtml(e.name) + '</option>';
+  sel.innerHTML =
+    (general.length ? '<optgroup label="Geral">' + general.map(opt).join('') + '</optgroup>' : '') +
+    groups.map(g => '<optgroup label="' + escapeHtml(g.label) + '">' + g.items.map(opt).join('') + '</optgroup>').join('');
+
+  sel.addEventListener('change', () => { if (sel.value) goToTab(sel.value); });
+  function step(delta) {
+    const values = Array.from(sel.options).map(o => o.value);
+    const i = values.indexOf(sel.value);
+    if (i < 0) return;
+    goToTab(values[(i + delta + values.length) % values.length]);
+  }
+  document.getElementById('tabFocusPrev').addEventListener('click', () => step(-1));
+  document.getElementById('tabFocusNext').addEventListener('click', () => step(1));
+})();
+
+function syncTabFocusJump(cat) {
+  const sel = document.getElementById('tabFocusJump');
+  if (sel && cat && sel.value !== cat) sel.value = cat;
+}
+
+/* ---- 5) atalhos de teclado ---- */
+document.addEventListener('keydown', e => {
+  if (!appIsUnlocked()) return;
+  if (document.querySelector('.agenda-modal-overlay.visible, .argo-greeting-overlay.visible')) return;
+  const t = e.target;
+  const typing = t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || '') || t.isContentEditable);
+
+  // Ctrl/⌘ + K: ir para outra aba.
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'k' || e.key === 'K')) {
+    e.preventDefault();
+    if (isTabFocusOpen()) {
+      const sel = document.getElementById('tabFocusJump');
+      if (sel) { sel.focus(); try { sel.showPicker && sel.showPicker(); } catch (err) { /* ignora */ } }
+    } else {
+      const f = document.getElementById('sidebarFilter');
+      if (mobileSidebarQuery.matches) openCategorySidebar();
+      if (f) { f.focus(); f.select(); }
+    }
+    return;
+  }
+
+  // "/": focar a busca disponível.
+  if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey && !typing) {
+    const main = document.getElementById('mainSearch');
+    const focusSearch = document.getElementById('tabFocusSearch');
+    const wrap = document.getElementById('tabFocusSearchWrap');
+    let target = null;
+    if (isTabFocusOpen()) {
+      if (wrap && wrap.style.display !== 'none' && focusSearch) target = focusSearch;
+      else if (document.getElementById('noticiasFilter')) target = document.getElementById('noticiasFilter');
+      else target = document.getElementById('tabFocusJump');
+    } else if (main && !main.disabled) target = main;
+    else target = document.getElementById('sidebarFilter');
+    if (target) { e.preventDefault(); target.focus(); if (target.select) target.select(); }
+  }
 });
 
 function updateHeaderFooterStats() {
@@ -9517,122 +9956,249 @@ function argoAssistantFocusSearch() {
 // (navega até a aba certa e confirma com uma segunda mensagem).
 const ARGO_ASSISTANT_INTENTS = [
   {
-    keys: ['bom dia', 'boa tarde', 'boa noite', 'oi', 'ola', 'opa', 'eae'],
+    keys: ['bom dia', 'boa tarde', 'boa noite', 'oi', 'ola', 'opa', 'eae', 'e ai'],
     mood: 'success',
-    reply: () => (typeof argoGreetingWord === 'function' ? argoGreetingWord() : 'Olá') +
-      '! Em que posso ajudar? Pergunte sobre busca, ficha de encaminhamento, PDF, agenda, mapa, tradutor, backup ou tema.'
+    reply: () => argoGreetingWord() + '! Que bom ter você a bordo. Me diga o que procura — um serviço, um bairro, uma ferramenta — ou escolha um atalho abaixo.'
   },
   {
-    keys: ['quem e voce', 'quem e vc', 'o que voce faz', 'o que vc faz', 'para que serve', 'ajuda'],
+    keys: ['obrigado', 'obrigada', 'valeu', 'brigado', 'agradeco'],
     mood: 'success',
-    reply: 'Sou o Argo, o mascote-barquinho do app! Posso apontar o caminho mais rápido pro que você precisa — é só perguntar ou tocar num botão abaixo.'
+    reply: () => argoPick(['Por nada! Qualquer coisa, é só chamar.', 'Disponha! Bom atendimento.', 'Foi um prazer ajudar. Boa navegação!'])
   },
   {
-    keys: ['buscar', 'busca', 'pesquisar', 'pesquisa', 'procurar', 'procura', 'achar', 'encontrar', 'bairro'],
-    reply: 'Digite o nome do bairro, do serviço ou da unidade na barra de pesquisa lá em cima — busco em todas as categorias de uma vez, mesmo com erro de digitação.',
-    action: { label: 'Ir para a busca', run: argoAssistantFocusSearch, reply: 'Prontinho, é só digitar ali em cima 🔍', mood: 'success' }
+    keys: ['tchau', 'ate logo', 'ate mais'],
+    mood: 'info',
+    reply: 'Até logo! Se precisar, estarei por aqui — é só tocar no barquinho ou teclar ?.'
   },
   {
-    keys: ['encaminhamento', 'ficha', 'imprimir', 'impressao', 'encaminhar'],
-    reply: 'Abra o card da unidade para onde você quer encaminhar e clique em "Gerar Guia" — isso monta a Ficha de Encaminhamento Técnico, com espaço para anexar fotos e PDFs antes de imprimir.',
-    action: { label: 'Ir para a busca', run: argoAssistantFocusSearch, reply: 'Beleza! Encontre a unidade na busca e abra o card dela.', mood: 'info' }
+    keys: ['quem e voce', 'quem e vc', 'o que voce faz', 'o que vc faz', 'para que serve', 'ajuda', 'socorro', 'como usar', 'como funciona', 'nao sei'],
+    mood: 'success',
+    reply: 'Sou o Argo, o barquinho-guia do app. Conheço cada aba: encontro equipamentos da rede, abro a ferramenta certa, explico como gerar a ficha e leio as dicas de cada tela. Diga o que você quer fazer.'
+  },
+  {
+    keys: ['dica', 'dicas', 'o que posso fazer aqui', 'o que da pra fazer', 'nesta aba', 'nessa aba', 'esta tela', 'essa tela'],
+    mood: 'info',
+    reply: () => argoCurrentTabTip().text,
+    actions: () => argoCurrentTabTip().actions
+  },
+  {
+    keys: ['atalho', 'atalhos', 'teclado', 'tecla', 'navegar', 'navegacao', 'rapido'],
+    mood: 'info',
+    reply: 'Atalhos úteis:\n• /  vai para a busca da tela\n• Ctrl+K (⌘+K)  troca de aba\n• ?  abre este assistente\n• Esc  fecha a tela cheia ou o painel\nNa tela cheia, use também as setas ‹ › e o seletor "Ir para…" da barra de cima.'
+  },
+  {
+    keys: ['buscar', 'busca', 'pesquisar', 'pesquisa', 'procurar', 'procura', 'achar', 'encontrar', 'bairro', 'unidade', 'servico'],
+    reply: 'Digite o nome do bairro, do serviço ou da unidade na barra de pesquisa — busco em todas as categorias de uma vez, mesmo com erro de digitação. Se preferir, diga aqui o que procura (ex.: "CAPS", "conselho tutelar") que eu busco para você.',
+    action: { label: 'Ir para a busca', run: () => argoAssistantFocusSearch(), reply: 'Pronto! O cursor já está na busca. É só digitar 🔍', mood: 'success' }
+  },
+  {
+    keys: ['encaminhamento', 'ficha', 'imprimir', 'impressao', 'encaminhar', 'guia'],
+    reply: 'Para encaminhar: ache a unidade, abra o card dela e clique em "Gerar Guia". Isso monta a Ficha de Encaminhamento Técnico, com espaço para anexar fotos e PDFs antes de imprimir.',
+    action: { label: 'Ir para a busca', run: () => argoAssistantFocusSearch(), reply: 'Certo! Encontre a unidade na busca e abra o card dela.', mood: 'info' }
   },
   {
     keys: ['pdf', 'unir', 'juntar', 'unificar', 'converter', 'word', 'jpg'],
-    reply: 'Na aba "Unificar / Converter PDF" você une até 20 arquivos entre PDFs e fotos, gira páginas e converte PDF ⇄ Word/JPG — tudo no navegador, sem subir nada pra internet.',
-    action: { label: 'Abrir Unificar/Converter PDF', run: () => argoAssistantGoTo('pdftools'), reply: 'Prontinho, abri a aba de PDF pra você.', mood: 'success' }
+    reply: 'Em "Unificar / Converter PDF" você une até 20 arquivos (PDFs e fotos), escolhe as páginas, gira e converte PDF ⇄ Word/JPG. Tudo acontece no seu navegador — nada é enviado para a internet.',
+    action: { label: 'Abrir Unificar / Converter PDF', run: () => argoAssistantGoTo('pdftools'), reply: 'Abri a aba de PDF para você.', mood: 'success' }
   },
   {
-    keys: ['agenda', 'calendario', 'lembrete'],
-    reply: 'A Agenda Argo é um calendário do dia a dia e pode sincronizar entre aparelhos, se você configurar um código de sincronização.',
-    action: { label: 'Abrir Agenda', run: () => argoAssistantGoTo('agenda'), reply: 'Prontinho, abri a Agenda Argo.', mood: 'success' }
+    keys: ['agenda', 'calendario', 'lembrete', 'pagamento', 'feriado', 'hoje'],
+    reply: 'A Agenda Argo mostra feriados, datas de pagamento e as suas anotações do dia, e pode sincronizar entre aparelhos com um código de sincronização.',
+    action: { label: 'Abrir Agenda', run: () => argoAssistantGoTo('agenda'), reply: 'Abri a Agenda Argo.', mood: 'success' }
+  },
+  {
+    keys: ['noticia', 'noticias', 'portaria', 'instrucao normativa', 'mds', 'mec', 'novidade', 'novidades', 'normativo', 'normativos'],
+    reply: 'Em "Notícias do MDS, MEC e Saúde" você busca por assunto, filtra por ministério, separa notícias de normativos, escolhe o período e salva as publicações para ler depois.',
+    action: { label: 'Abrir Notícias', run: () => argoAssistantGoTo('noticias'), reply: 'Abri as Notícias. Tente os temas rápidos no topo, como Bolsa Família ou CadÚnico.', mood: 'success' }
+  },
+  {
+    keys: ['favorito', 'favoritos', 'salvos', 'estrela'],
+    reply: 'Marque a estrela de uma unidade para guardá-la em "Favoritos" — assim os serviços que você mais usa ficam a um toque.',
+    action: { label: 'Abrir Favoritos', run: () => argoAssistantGoTo('favoritos'), reply: 'Abri seus Favoritos.', mood: 'success' }
   },
   {
     keys: ['anotacao', 'anotacoes', 'minhas anotacoes', 'novo caso'],
-    reply: 'Na aba "Minhas Anotações" você cria quantas anotações precisar (uma por caso ou atendimento), com os dados de quem foi atendido, e pode gerar a guia e enviar por WhatsApp.',
-    action: { label: 'Abrir Minhas Anotações', run: () => argoAssistantGoTo('anotacoes'), reply: 'Prontinho, abri Minhas Anotações.', mood: 'success' }
+    reply: 'Em "Minhas Anotações" você cria uma anotação por caso ou atendimento, registra os dados de quem foi atendido (ficam cifrados neste aparelho) e pode gerar a guia ou enviar por WhatsApp.',
+    action: { label: 'Abrir Minhas Anotações', run: () => argoAssistantGoTo('anotacoes'), reply: 'Abri Minhas Anotações.', mood: 'success' }
   },
   {
-    keys: ['mapa', 'territorio', 'localizacao', 'onde fica', 'proximidade', 'perto de mim'],
-    reply: 'O Mapa dos Equipamentos mostra as unidades no território, e o botão "Ordenar por proximidade" ordena a lista pela sua localização atual.',
-    action: { label: 'Abrir Mapa', run: () => argoAssistantGoTo('mapa'), reply: 'Prontinho, abri o Mapa dos Equipamentos.', mood: 'success' }
+    keys: ['mapa', 'territorio', 'localizacao', 'onde fica', 'proximidade', 'perto de mim', 'mais perto', 'rota'],
+    reply: 'O Mapa dos Equipamentos mostra as unidades no território. O botão "Ordenar por proximidade" organiza a lista pela sua localização atual.',
+    action: { label: 'Abrir Mapa', run: () => argoAssistantGoTo('mapa'), reply: 'Abri o Mapa dos Equipamentos.', mood: 'success' }
   },
   {
-    keys: ['tradutor', 'traduzir', 'traducao', 'estrangeiro', 'migrante', 'idioma', 'espanhol', 'ingles', 'frances'],
+    keys: ['tradutor', 'traduzir', 'traducao', 'estrangeiro', 'migrante', 'imigrante', 'idioma', 'espanhol', 'ingles', 'frances', 'venezuelano'],
     reply: 'A aba de tradução ajuda no atendimento a pessoas estrangeiras, com texto e voz em espanhol, inglês e francês.',
-    action: { label: 'Abrir Tradutor', run: () => argoAssistantGoTo('tradutor'), reply: 'Prontinho, abri o Tradutor.', mood: 'success' }
+    action: { label: 'Abrir Tradutor', run: () => argoAssistantGoTo('tradutor'), reply: 'Abri o Tradutor.', mood: 'success' }
   },
   {
-    keys: ['equipe tecnica', 'tecnico de referencia', 'quem atende', 'meu bairro', 'equipe volante'],
-    reply: 'Na categoria "Registro de Atendimento (CRAS)" tem um link para a consulta em tela cheia da equipe técnica por bairro.',
-    action: { label: 'Abrir CRAS', run: () => argoAssistantGoTo('cras'), reply: 'Prontinho, abri o painel do CRAS.', mood: 'success' }
+    keys: ['equipe tecnica', 'tecnico de referencia', 'quem atende', 'meu bairro', 'equipe volante', 'cras'],
+    reply: 'Em "Registro de Atendimento (CRAS)" há um link para consultar, em tela cheia, a equipe técnica de referência por bairro.',
+    action: { label: 'Abrir CRAS', run: () => argoAssistantGoTo('cras'), reply: 'Abri o painel do CRAS.', mood: 'success' }
   },
   {
-    keys: ['toth', 'umbrela', 'anona', 'outros aplicativos', 'outros apps', 'bloco de notas'],
-    reply: 'Na aba "Aplicativos" tem atalhos pros outros apps do autor (Toth, Umbrela, Anona e Bloco de Notas), cada um com login e sincronização próprios.',
-    action: { label: 'Abrir Aplicativos', run: () => argoAssistantGoTo('appsext'), reply: 'Prontinho, abri a aba de Aplicativos.', mood: 'success' }
+    keys: ['toth', 'umbrela', 'anona', 'vita', 'outros aplicativos', 'outros apps', 'bloco de notas'],
+    reply: 'Na aba "Aplicativos" ficam os atalhos para os outros apps do autor (Toth, Umbrela, Anona e Bloco de Notas) e para o site Vita. Cada um tem login e sincronização próprios.',
+    action: { label: 'Abrir Aplicativos', run: () => argoAssistantGoTo('appsext'), reply: 'Abri a aba de Aplicativos.', mood: 'success' }
   },
   {
-    keys: ['backup', 'exportar'],
-    reply: 'Posso gerar o arquivo de backup com suas anotações agora mesmo, se quiser.',
+    keys: ['backup', 'exportar', 'salvar tudo'],
+    reply: 'Posso gerar agora o arquivo de backup com as suas anotações. Guarde-o em lugar seguro: ele contém dados sensíveis.',
     action: { label: 'Baixar backup agora', run: () => { if (typeof exportData === 'function') exportData(); }, reply: 'Backup gerado! Confira os downloads do seu navegador.', mood: 'success' }
   },
   {
     keys: ['restaurar', 'importar backup', 'importar dados'],
     mood: 'info',
-    reply: 'No rodapé da página tem "Importar backup" — escolha o arquivo .json que você baixou antes para restaurar.'
+    reply: 'No rodapé da página há "Importar backup": escolha o arquivo .json que você baixou antes e eu restauro tudo.'
   },
   {
     keys: ['apagar dados', 'apagar tudo', 'limpar dados', 'limpar dispositivo'],
     mood: 'notfound',
-    reply: 'Isso fica no rodapé da página, em "Apagar dados salvos neste dispositivo" — apaga nome, endereço, NIS, anotações e anexos deste navegador. Bom usar antes de emprestar ou devolver um computador compartilhado.'
+    reply: 'Fica no rodapé, em "Apagar dados salvos neste dispositivo": remove nome, endereço, NIS, anotações e anexos deste navegador. Vale usar antes de devolver ou emprestar um computador compartilhado.'
   },
   {
     keys: ['tema', 'modo escuro', 'modo claro', 'escuro', 'claro', 'dark'],
-    reply: 'É só clicar no ícone de sol/lua ali em cima. Posso trocar agora, se quiser.',
+    reply: 'É o ícone de sol/lua no topo. Se quiser, troco agora.',
     action: { label: 'Alternar tema agora', run: () => { if (typeof toggleTheme === 'function') toggleTheme(); }, reply: 'Tema alternado ✨', mood: 'success' }
   },
   {
-    keys: ['instalar', 'tela inicial', 'sem internet', 'offline'],
+    keys: ['instalar', 'tela inicial', 'sem internet', 'offline', 'celular'],
     mood: 'info',
-    reply: 'No navegador do celular, use "Adicionar à tela de início" para instalar o Argo SUAS. Depois de aberto uma vez, ele funciona offline, guardado neste aparelho.'
+    reply: 'No celular, use "Adicionar à tela de início" no menu do navegador para instalar o Argo SUAS. Depois de aberto uma vez, ele funciona offline. Com o app instalado, segure o ícone para abrir direto Notícias, Agenda, Mapa ou PDF.'
   },
   {
-    keys: ['senha', 'esqueci'],
+    keys: ['senha', 'esqueci', 'login', 'entrar'],
     mood: 'info',
-    reply: 'A senha de acesso é única e compartilhada por toda a equipe técnica. Se você esqueceu, procure a coordenação da sua unidade — não existe recuperação automática.'
+    reply: 'A senha é única e compartilhada pela equipe técnica. Se você esqueceu, procure a coordenação da sua unidade — não existe recuperação automática.'
   }
 ];
 
-function argoAssistantDefaultQuickActions() {
-  return [
-    { label: 'Buscar equipamento', run: argoAssistantFocusSearch, reply: 'Prontinho, é só digitar ali em cima 🔍', mood: 'success' },
-    { label: 'Unificar/Converter PDF', run: () => argoAssistantGoTo('pdftools'), reply: 'Prontinho, abri a aba de PDF pra você.', mood: 'success' },
-    { label: 'Agenda Argo', run: () => argoAssistantGoTo('agenda'), reply: 'Prontinho, abri a Agenda Argo.', mood: 'success' },
-    { label: 'Mapa dos Equipamentos', run: () => argoAssistantGoTo('mapa'), reply: 'Prontinho, abri o Mapa dos Equipamentos.', mood: 'success' },
-    { label: 'Tradutor', run: () => argoAssistantGoTo('tradutor'), reply: 'Prontinho, abri o Tradutor.', mood: 'success' }
-  ];
+function argoPick(list) { return list[Math.floor(Math.random() * list.length)]; }
+
+// Dicas por aba (usadas pela intenção "dicas" e pelo primeiro botão do menu,
+// que muda conforme a aba aberta no momento).
+const ARGO_TAB_TIPS = {
+  all: 'Na busca, escreva bairro, serviço ou nome da unidade. Cada card tem "Gerar Guia" (ficha de encaminhamento), mapa e a estrela de favoritos.',
+  favoritos: 'Aqui ficam as unidades marcadas com estrela. Para tirar uma, toque na estrela de novo no card.',
+  agenda: 'Use "Hoje" para voltar ao dia atual. Em PageUp/PageDown você troca de mês. Para ver as anotações em outros aparelhos, configure o código de sincronização.',
+  mapa: 'Toque num pino para ver a unidade. Use "Ordenar por proximidade" para ver primeiro as mais perto de você.',
+  tradutor: 'Escreva ou fale em português e escolha o idioma. Dá para salvar frases próprias para usar de novo.',
+  pdftools: 'Arraste até 20 arquivos, escolha as páginas de cada PDF e gire o que estiver torto. Nada sai do seu navegador.',
+  appsext: 'Cada atalho abre um app do autor em nova aba, com login e sincronização independentes.',
+  anotacoes: 'Crie uma anotação por caso. Os dados pessoais ficam cifrados neste aparelho — faça backup de vez em quando.',
+  noticias: 'Toque num tema rápido (Bolsa Família, CadÚnico…), filtre por Normativos ou por período e use a estrela para salvar o que quer ler depois.',
+  cras: 'Procure por bairro para saber qual equipe de referência atende. A planilha de atendimentos abre em tela cheia.',
+  cas: 'Aqui ficam os registros de atendimento do CAS. Use a busca para localizar um registro.',
+  saude: 'A RAPS reúne CAPS, urgência, acolhimento e hospitais. Abra o texto "base legal" no topo para rever o fluxo de encaminhamento.',
+  hospitalar: 'Veja o fluxo do SUS no quadro "base legal" e use a busca por bairro para achar a UBS de referência.',
+  social: 'Proteção Social Básica e Especial: busque pelo território para encontrar o CRAS ou CREAS responsável.',
+  educacao: 'O quadro no topo resume as condicionalidades de educação do Bolsa Família e como o acompanhamento funciona.'
+};
+
+function argoCurrentTabTip() {
+  const active = document.querySelector('#filterBar .filter-chip.active');
+  const cat = active ? active.dataset.cat : 'all';
+  const name = active ? (active.querySelector('span:not(.chip-icon):not(.chip-count)') || {}).textContent : '';
+  const text = ARGO_TAB_TIPS[cat]
+    || 'Use a busca da tela para filtrar a lista. Em qualquer lugar, ' + '/ leva ao campo de busca e Ctrl+K troca de aba.';
+  return {
+    text: (name ? 'Você está em "' + name.trim() + '". ' : '') + text,
+    actions: [{ label: 'Ver atalhos de teclado', run: () => argoAssistantAskInline('atalhos') }]
+  };
 }
 
-// Casamento por palavra-chave, não é IA: cada intenção é testada em ordem
-// e a primeira que aparecer (como palavra inteira, cercada de espaços)
-// dentro do que a pessoa escreveu vence. Sem correspondência, o painel
-// devolve null e quem chamou (argo-mascot.js) mostra a resposta padrão de
-// "não captei" com os atalhos mais usados.
+// Abre o painel já com uma pergunta (usado por botões internos).
+function argoAssistantAskInline(text) {
+  if (argoAssistantCtrl && argoAssistantCtrl.ask) argoAssistantCtrl.ask(text);
+}
+
+function argoAssistantDefaultQuickActions() {
+  const active = document.querySelector('#filterBar .filter-chip.active');
+  const cat = active ? active.dataset.cat : 'all';
+  const list = [];
+  if (cat !== 'all') list.push({ label: 'Dicas desta aba', run: () => argoAssistantAskInline('dicas') });
+  list.push(
+    { label: 'Buscar equipamento', run: () => argoAssistantFocusSearch(), reply: 'Pronto! O cursor já está na busca 🔍', mood: 'success' },
+    { label: 'Notícias', run: () => argoAssistantGoTo('noticias'), reply: 'Abri as Notícias.', mood: 'success' },
+    { label: 'Agenda Argo', run: () => argoAssistantGoTo('agenda'), reply: 'Abri a Agenda Argo.', mood: 'success' },
+    { label: 'Mapa', run: () => argoAssistantGoTo('mapa'), reply: 'Abri o Mapa dos Equipamentos.', mood: 'success' },
+    { label: 'Unificar PDF', run: () => argoAssistantGoTo('pdftools'), reply: 'Abri a aba de PDF.', mood: 'success' },
+    { label: 'Atalhos do teclado', run: () => argoAssistantAskInline('atalhos') }
+  );
+  return list.slice(0, 6);
+}
+
+// Casamento por palavra-chave (não é IA). Cada intenção pontua pelas
+// palavras-chave encontradas (inteiras ou como início de palavra, para
+// aceitar plurais e conjugações); a de maior pontuação vence e, em empate,
+// a primeira da lista. Sem correspondência, tenta casar o texto com o nome
+// de uma aba/categoria e, por fim, oferece buscar o termo nos equipamentos.
 function argoAssistantAsk(rawText) {
   const norm = argoNorm(rawText);
   if (!norm) return null;
   const padded = ' ' + norm + ' ';
+  const tokens = norm.split(' ');
+
+  let best = null, bestScore = 0;
   for (const intent of ARGO_ASSISTANT_INTENTS) {
-    const hit = intent.keys.some(k => padded.indexOf(' ' + k + ' ') > -1);
-    if (!hit) continue;
+    let score = 0;
+    for (const k of intent.keys) {
+      if (padded.indexOf(' ' + k + ' ') > -1) score += k.indexOf(' ') > -1 ? 3 : 2;
+      else if (k.length >= 5 && !k.includes(' ') && tokens.some(t => t.length >= 5 && (t.startsWith(k) || k.startsWith(t)))) score += 1;
+    }
+    if (score > bestScore) { best = intent; bestScore = score; }
+  }
+  if (best) {
+    const acts = typeof best.actions === 'function' ? best.actions() : (best.action ? [best.action] : null);
     return {
-      reply: typeof intent.reply === 'function' ? intent.reply() : intent.reply,
-      mood: intent.mood || 'info',
-      quickActions: intent.action ? [intent.action] : argoAssistantDefaultQuickActions()
+      reply: typeof best.reply === 'function' ? best.reply() : best.reply,
+      mood: best.mood || 'info',
+      quickActions: acts
     };
   }
-  return null;
+
+  // Sem intenção: o texto lembra o nome de alguma aba/categoria?
+  const stop = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'a', 'o', 'as', 'os', 'em', 'um', 'uma', 'para', 'por', 'quero', 'preciso', 'ver', 'abrir', 'abre', 'mostrar', 'mostra', 'onde', 'tem']);
+  const words = tokens.filter(t => t.length > 2 && !stop.has(t));
+  const matches = [];
+  if (words.length) {
+    document.querySelectorAll('#filterBar .filter-chip[data-cat]').forEach(chip => {
+      const nm = (chip.querySelector('span:not(.chip-icon):not(.chip-count)') || {}).textContent || '';
+      const hay = ' ' + argoNorm(nm) + ' ';
+      if (words.every(w => hay.indexOf(w) > -1)) matches.push({ cat: chip.dataset.cat, name: nm.trim() });
+    });
+  }
+  const acts = matches.slice(0, 3).map(m => ({
+    label: 'Abrir: ' + (m.name.length > 30 ? m.name.slice(0, 29) + '…' : m.name),
+    run: () => argoAssistantGoTo(m.cat),
+    reply: 'Pronto, abri "' + m.name + '".',
+    mood: 'success'
+  }));
+  acts.push({
+    label: 'Buscar "' + (rawText.length > 22 ? rawText.trim().slice(0, 21) + '…' : rawText.trim()) + '" nos equipamentos',
+    run: () => argoAssistantSearch(rawText.trim()),
+    reply: 'Pronto! Joguei essa busca no diretório. Se não aparecer nada, tente uma palavra mais curta.',
+    mood: 'success'
+  });
+  return {
+    reply: matches.length
+      ? 'Achei ' + (matches.length === 1 ? 'uma aba que combina' : 'algumas abas que combinam') + ' com isso. Quer abrir? Se preferir, posso procurar o termo nos equipamentos.'
+      : 'Não tenho uma resposta pronta para isso, mas posso procurar "' + rawText.trim() + '" direto nos equipamentos da rede.',
+    mood: matches.length ? 'info' : 'notfound',
+    quickActions: acts
+  };
+}
+
+// Leva o texto para a busca principal (abrindo a lista geral) e dispara a busca.
+function argoAssistantSearch(text) {
+  argoAssistantGoTo('all');
+  requestAnimationFrame(() => {
+    const el = document.getElementById('mainSearch');
+    if (!el || el.disabled) return;
+    el.value = text;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.focus();
+  });
 }
 
 // Guardado para poder fechar o painel ao trancar o app (ver lockApp).
@@ -9640,8 +10206,7 @@ let argoAssistantCtrl = null;
 function initArgoAssistant() {
   if (typeof ArgoMascot === 'undefined' || typeof ArgoMascot.mountAssistant !== 'function') return;
   argoAssistantCtrl = ArgoMascot.mountAssistant({
-    greeting: () => (typeof argoGreetingWord === 'function' ? argoGreetingWord() : 'Olá') +
-      '! Eu sou o Argo. Posso ajudar a achar uma função rapidinho — pergunte ou toque num botão abaixo.',
+    greeting: () => argoGreetingWord() + '! Eu sou o Argo, seu guia a bordo. Posso abrir uma aba, buscar uma unidade ou explicar como algo funciona. Pergunte do seu jeito ou toque num atalho.',
     ask: argoAssistantAsk,
     defaultQuickActions: argoAssistantDefaultQuickActions
   });
@@ -9650,6 +10215,7 @@ function initArgoAssistant() {
 // Mascote da tela de login: se apresenta e reage quando a senha está errada.
 // argoLoginMascotReact('error') → carinha preocupada por ~4 s e depois volta;
 // argoLoginMascotReact('reset') → volta ao estado de boas-vindas.
+var argoLoginErrors = 0;
 var argoLoginMascotTimer = null; // var (não let): lockApp pode chamar a reação antes desta linha rodar
 function argoLoginMascotReact(kind) {
   const fig = document.getElementById('loginMascotFigure');
@@ -9662,14 +10228,18 @@ function argoLoginMascotReact(kind) {
   if (kind === 'error') {
     fig.innerHTML = ArgoMascot.icon('error', mascotSize);
     line.classList.add('is-error');
-    line.innerHTML = '<strong>Ops!</strong> Essa senha não confere. Tente de novo.';
-    argoLoginMascotTimer = setTimeout(() => argoLoginMascotReact('reset'), 4500);
+    argoLoginErrors = (argoLoginErrors || 0) + 1;
+    line.innerHTML = argoLoginErrors >= 3
+      ? '<strong>Ainda não deu.</strong> Confira o Caps Lock e o idioma do teclado. Se esqueceu a senha, a coordenação pode ajudar.'
+      : '<strong>Ops!</strong> Essa senha não confere. Confira o Caps Lock e tente de novo.';
+    argoLoginMascotTimer = setTimeout(() => argoLoginMascotReact('idle'), 4500);
     return;
   }
   fig.innerHTML = ArgoMascot.icon('success', mascotSize);
   line.classList.remove('is-error');
-  line.innerHTML = '<strong></strong> Eu sou o Argo, o mascote deste aplicativo.';
+  line.innerHTML = '<strong></strong> Eu sou o Argo, seu guia a bordo.';
   line.querySelector('strong').textContent = word + '!';
+  if (kind === 'reset' && typeof argoLoginErrors !== 'undefined') argoLoginErrors = 0;
 }
 function initLoginMascot() {
   argoLoginMascotReact('reset');
