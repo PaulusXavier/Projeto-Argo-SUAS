@@ -4608,21 +4608,25 @@
   }
 
   /* ---- Mascote Argo apresentando o aplicativo (painel esquerdo do login) ---- */
-  /* Fica dentro do painel esquerdo, acima da marca: apresenta o app e
-     recomenda o site do autor, cujo atalho (.login-vita) está no painel de
-     acesso, à direita. */
+  /* Fica fixo no canto inferior esquerdo da tela de login (filho direto de
+     #loginScreen). Só o mascote aparece em telas comuns; o balão de
+     apresentação entra em telas largas (ver @media abaixo), onde há espaço
+     fora do cartão de login. */
   .login-mascot {
-    position: relative;
-    z-index: 1;
+    position: fixed;
+    left: max(16px, env(safe-area-inset-left));
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    z-index: 2;
     display: flex;
     align-items: flex-end;
     gap: 0.85rem;
+    pointer-events: none;
   }
 
   .login-mascot-figure {
     flex: 0 0 auto;
-    width: 84px;
-    height: 84px;
+    width: 72px;
+    height: 72px;
     border-radius: 50%;
     /* Halo claro atrás do mascote: o casco é azul-marinho e sumia no fundo escuro. */
     background:
@@ -4635,7 +4639,8 @@
 
   .login-mascot-bubble {
     position: relative;
-    flex: 1;
+    display: none;
+    width: 320px;
     min-width: 0;
     padding: 0.8rem 0.95rem 0.85rem;
     border-radius: 4px 16px 16px 16px;
@@ -4705,16 +4710,19 @@
     .login-mascot-bubble { animation: none; }
   }
 
-  /* Celular: o painel vira uma faixa no topo — mascote pequeno, só com a
-     frase de apresentação e a recomendação, sem o texto longo. */
+  /* Telas largas (>= 1700px): sobra espaço à esquerda do cartão de login,
+     então o balão de apresentação aparece ao lado do mascote. */
+  @media (min-width: 1700px) {
+    .login-mascot-bubble { display: block; }
+  }
+
+  /* Reserva uma faixa livre embaixo da tela de login para o mascote nunca
+     cobrir o cartão (a tela rola quando o cartão não cabe). */
+  #loginScreen { padding-bottom: calc(1.5rem + 76px + env(safe-area-inset-bottom)); }
+
   @media (max-width: 760px) {
-    .login-mascot { align-items: center; gap: 0.6rem; }
-    .login-mascot-figure { width: 52px; height: 52px; padding: 3px; }
-    .login-mascot-bubble { padding: 0.55rem 0.75rem; }
-    .login-mascot-bubble::before { bottom: auto; top: 50%; margin-top: -6px; }
-    .login-mascot-line { margin: 0 0 0.25rem; font-size: 0.8rem; }
-    .login-mascot-text { display: none; }
-    .login-mascot-tip { padding-top: 0.3rem; font-size: 0.72rem; }
+    .login-mascot-figure { width: 56px; height: 56px; padding: 3px; }
+    #loginScreen { padding-bottom: calc(1rem + 62px + env(safe-area-inset-bottom)); }
   }
 
   /* ---- Atalho do site do autor (Vita) no painel de acesso ---- */
