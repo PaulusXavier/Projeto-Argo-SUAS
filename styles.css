@@ -5519,3 +5519,87 @@
   @media (max-width: 640px) {
     .tab-focus-jump { flex: 1 1 100%; order: 3; }
   }
+
+/* ---- Painel inicial (visão "Rede Intersetorial de Serviços") ---- */
+.home-panel {
+  margin-top: 1.25rem; padding: 1.25rem 1.4rem; background: var(--bg-card);
+  border: 1px solid var(--border-ui); border-left: 4px solid var(--brand-primary);
+  border-radius: var(--radius-ui); box-shadow: var(--shadow-xs);
+}
+.home-panel[hidden] { display: none; }
+body.tab-focus .home-panel, body.home-view .external-resource-card { display: none !important; }
+.home-panel-title { margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--brand-primary); }
+.home-panel-sub { margin: 0.25rem 0 0; font-size: 0.85rem; color: var(--text-muted); }
+.home-block { margin-top: 1.1rem; }
+.home-block-title {
+  margin: 0 0 0.55rem; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.home-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.6rem; }
+.home-tile {
+  display: flex; align-items: center; gap: 0.6rem; min-height: 56px; padding: 0.55rem 0.8rem; text-align: left;
+  border: 1.5px solid var(--border-ui); border-radius: 12px; background: var(--bg-main); color: var(--text-main);
+  font: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+.home-tile:hover { border-color: var(--brand-primary); transform: translateY(-1px); box-shadow: var(--shadow-xs); }
+.home-tile:focus-visible, .home-pill:focus-visible { outline: 3px solid var(--brand-primary); outline-offset: 2px; }
+.home-tile-icon { display: inline-flex; flex: 0 0 auto; color: var(--brand-primary); }
+.home-tile-icon svg { width: 20px; height: 20px; }
+.home-tile-name { flex: 1 1 auto; min-width: 0; line-height: 1.25; }
+.home-tile-count {
+  flex: 0 0 auto; min-width: 1.8rem; padding: 0.1rem 0.5rem; border-radius: 999px; text-align: center;
+  font-size: 0.72rem; font-weight: 800; color: var(--brand-primary); background: var(--bg-card); border: 1px solid var(--border-ui);
+}
+.home-pills { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.home-pill {
+  display: inline-flex; align-items: center; gap: 0.45rem; min-height: 40px; padding: 0.3rem 0.85rem;
+  border: 1.5px solid var(--border-ui); border-radius: 999px; background: var(--bg-card); color: var(--text-main);
+  font: inherit; font-size: 0.82rem; font-weight: 700; text-decoration: none; cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.home-pill:hover { border-color: var(--brand-primary); background: var(--bg-main); }
+.home-pill-icon { display: inline-flex; color: var(--brand-primary); }
+.home-pill-icon svg { width: 16px; height: 16px; }
+.home-pill-count { font-size: 0.72rem; font-weight: 800; color: var(--brand-primary); }
+.home-pill-tag { font-size: 0.66rem; font-weight: 700; color: var(--text-muted); }
+@media (max-width: 600px) {
+  .home-panel { padding: 1rem; }
+  .home-tiles { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+}
+
+/* ---- Painel de login: toque mais fácil e rodapé recolhível ---- */
+.login-remember { min-height: 44px; gap: 0.6rem; }
+.login-remember input[type="checkbox"] { width: 20px; height: 20px; flex: 0 0 auto; }
+.login-remember-hint { display: block; font-size: 0.68rem; font-weight: 500; opacity: 0.85; }
+.login-forgot-link { min-height: 44px; padding: 0 0.25rem; }
+.login-details { margin: 0.9rem 0 0; font-size: 0.72rem; line-height: 1.5; color: var(--text-muted); text-align: left; }
+.login-details summary {
+  cursor: pointer; min-height: 36px; display: flex; align-items: center; font-weight: 700;
+  color: var(--text-muted); text-decoration: underline; text-underline-offset: 2px;
+}
+.login-details summary:focus-visible { outline: 3px solid var(--brand-primary); outline-offset: 2px; border-radius: 4px; }
+.login-details p { margin: 0.25rem 0 0; }
+.login-footnote { margin-top: 1rem; }
+
+/* ---- Painel de login: faixa de estado (conexão + versão) ---- */
+.login-status {
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0.4rem;
+  margin: 1rem 0 0; font-size: 0.68rem; color: var(--text-muted);
+}
+.login-status-dot { width: 8px; height: 8px; border-radius: 50%; background: #16A34A; flex: 0 0 auto; }
+.login-status.is-offline .login-status-dot { background: #D97706; }
+.login-status-sep, #loginVersion:empty { display: none; }
+#loginVersion:not(:empty) + .login-status-sep { display: none; }
+#loginVersion:not(:empty) { display: inline; }
+.login-status:has(#loginVersion:not(:empty)) .login-status-sep { display: inline; }
+
+/* ---- Painel de login: aviso de bloqueio e botão do olho maior ---- */
+.login-notice {
+  margin: -0.9rem 0 1.1rem; padding: 0.65rem 0.85rem; text-align: left; font-size: 0.8rem; line-height: 1.45;
+  color: var(--text-main); background: color-mix(in srgb, var(--brand-primary) 9%, transparent);
+  border: 1px solid color-mix(in srgb, var(--brand-primary) 28%, transparent); border-radius: 10px;
+}
+.login-notice[hidden] { display: none; }
+.login-toggle-visibility { right: 0.3rem; width: 44px; height: 44px; border-radius: 10px; }
+#loginPassword { padding-right: 3.4rem; }
