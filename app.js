@@ -16,12 +16,13 @@
    desbloqueado; ela nunca é salva em disco e é apagada ao trancar/sair.
 
    Limitações importantes, para quem for avaliar isso com espírito crítico:
-   - Não é criptografia de nível bancário/auditado (não usa WebCrypto/AES,
-     para poder cifrar e decifrar de forma síncrona durante a renderização
-     dos cards); é um cifrador de fluxo (stream cipher) próprio, com chave
-     de 256 bits derivada por SHA-256 da senha. Ainda assim é uma cifra de
-     verdade (dados diferentes a cada vez, nonce aleatório por valor), não
-     apenas ofuscação/base64.
+   - Com a senha forte ativada (ver auth-config.js e gerar-senha-forte.html), os
+     dados novos usam ChaCha20-Poly1305 (RFC 8439) com chave de 256 bits
+     derivada da senha por PBKDF2 (formato "enc2:"), e a senha em si é
+     conferida por PBKDF2. Sem isso (modo antigo), a cifra é um cifrador de
+     fluxo caseiro cuja semente tem só 32 bits — impede só a leitura
+     casual, NÃO resiste a quem copiar o localStorage. Tudo em enc1 é
+     migrado sozinho para enc2 no primeiro login depois de ativar o modo forte.
    - Qualquer pessoa que souber a senha da equipe também consegue decifrar
      os dados — a proteção é contra quem NÃO tem a senha (ex.: alguém que
      só tenha acesso ao arquivo do site ou a um HD/backup do navegador).
@@ -53,18 +54,15 @@
    mais que um SHA-256 simples. Enquanto APP_PASSWORD_STRONG estiver vazio
    (null), o app continua aceitando o formato antigo em APP_PASSWORD_HASH
    normalmente — a migração é opcional e não quebra nada. */
-const APP_PASSWORD_HASH = '0a94e7ea0d2d585c64b206eeadaf4327045bc5398774fe04d8b9605b299e7431'; // formato ANTIGO (SHA-256 simples); usado só se APP_PASSWORD_STRONG estiver vazio
-
-// Formato NOVO e recomendado. Para migrar: abra o app, digite a senha ATUAL
-// para desbloquear, abra o console (F12) e rode:
-//   await setAppPassword('sua-senha-atual')
-// Cole aqui o objeto impresso (ele substitui, na prática, APP_PASSWORD_HASH
-// — pode deixar a linha antiga como está, ela só volta a ser usada se você
-// apagar/zerar este valor). Para trocar a senha, é a mesma coisa: rode
-// setAppPassword('a-senha-nova') e cole o resultado aqui.
-// Exemplo de formato, depois de migrar (ver setAppPassword() mais abaixo):
-// const APP_PASSWORD_STRONG = { salt: 'a1b2c3...', hash: 'd4e5f6...', iterations: 300000 };
-const APP_PASSWORD_STRONG = null;
+// A senha agora vem do arquivo auth-config.js (carregado antes deste), para
+// poder ser trocada sem mexer neste arquivo gigante. Duas formas:
+//   • strong  — PBKDF2-HMAC-SHA256 (salt + iterações), a forma recomendada;
+//   • legacyHash — SHA-256 simples, FRACO, usado só enquanto strong for null.
+// Se o arquivo faltar, nenhuma senha é aceita (falha fechada).
+const _ARGO_AUTH_CFG = (typeof window !== 'undefined' && window.ARGO_AUTH_CONFIG) || {};
+const APP_PASSWORD_HASH = typeof _ARGO_AUTH_CFG.legacyHash === 'string' ? _ARGO_AUTH_CFG.legacyHash : '';
+const APP_PASSWORD_STRONG = _ARGO_AUTH_CFG.strong || null;
+const STRONG_AUTH = !!APP_PASSWORD_STRONG;
 
 const AUTH_MAX_ATTEMPTS = 5;
 // A espera após 5 tentativas erradas agora dobra a cada novo "ciclo" de
@@ -124,10 +122,50 @@ let authLockoutLevel = 0;
 // decryptFromStorage() não consegue ler os dados sensíveis salvos.
 let sessionEncKey = null;
 
+// Só no modo forte: chave "antiga" (SHA-256 da senha), mantida na memória para
+// ler dados salvos no formato enc1 antes da migração para enc2. Some ao trancar.
+let sessionLegacyKey = null;
+
 async function sha256Hex(text) {
   const enc = new TextEncoder().encode(text);
   const digest = await crypto.subtle.digest('SHA-256', enc);
   return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function bytesToHex(bytes) {
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function hexToBytes(hex) {
+  if (typeof hex !== 'string' || hex.length % 2 || /[^0-9a-f]/i.test(hex)) throw new Error('hex inválido');
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i * 2, 2), 16);
+  return out;
+}
+
+// Comparação sem "saída antecipada" (não vaza em qual caractere divergiu).
+function constantTimeEqualHex(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+// Modo forte. Uma única derivação PBKDF2 (lenta de propósito) gera um "mestre";
+// dele saem, por HMAC com rótulos diferentes, (1) o verificador, que fica no
+// auth-config.js, e (2) a chave de cifragem dos dados. Quem tiver só o
+// verificador não consegue a chave de cifragem, e testar cada palavra-passe
+// custa o PBKDF2 inteiro.
+async function strongDerive(password, cfg) {
+  if (!cfg || !Number.isInteger(cfg.iterations) || cfg.iterations < 100000) throw new Error('configuração de senha inválida');
+  const te = new TextEncoder();
+  const base = await crypto.subtle.importKey('raw', te.encode(password), 'PBKDF2', false, ['deriveBits']);
+  const master = new Uint8Array(await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', hash: 'SHA-256', salt: hexToBytes(cfg.salt), iterations: cfg.iterations }, base, 256));
+  const hk = await crypto.subtle.importKey('raw', master, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const verifier = new Uint8Array(await crypto.subtle.sign('HMAC', hk, te.encode('argo-suas-verify-v1')));
+  const encKey = new Uint8Array(await crypto.subtle.sign('HMAC', hk, te.encode('argo-suas-enc-v2')));
+  return { verifierHex: bytesToHex(verifier), encKey: encKey };
 }
 
 // Deriva a chave de cifragem dos dados sensíveis a partir da senha digitada
@@ -162,12 +200,19 @@ const REMEMBER_SESSION_MAX_MS = 12 * 60 * 60 * 1000; // 12h
 // para usar aqui mesmo estando definidas depois. Reaproveitá-las evita ter
 // duas versões da mesma função no arquivo (uma delas ficaria "morta" e só
 // confundiria quem for ler o código depois).
+// Registro guardado em sessionStorage. "s" marca o modo (forte/antigo): se o
+// site foi atualizado para outro modo no meio da sessão, o registro é
+// descartado e a senha é pedida de novo (as chaves não são intercambiáveis).
+function rememberRecord(exp, handoff) {
+  const rec = { k: bytesToBase64(sessionEncKey), exp: exp, s: STRONG_AUTH ? 1 : 0 };
+  if (STRONG_AUTH && sessionLegacyKey) rec.l = bytesToBase64(sessionLegacyKey);
+  if (handoff) rec.h = 1;
+  return JSON.stringify(rec);
+}
+
 function rememberSessionSave(key) {
   try {
-    sessionStorage.setItem(REMEMBER_SESSION_KEY, JSON.stringify({
-      k: bytesToBase64(key),
-      exp: Date.now() + REMEMBER_SESSION_MAX_MS
-    }));
+    sessionStorage.setItem(REMEMBER_SESSION_KEY, rememberRecord(Date.now() + REMEMBER_SESSION_MAX_MS, false));
   } catch (e) { /* sessionStorage indisponível (modo privado) - segue sem lembrar */ }
 }
 
@@ -180,6 +225,8 @@ function rememberSessionLoad() {
       sessionStorage.removeItem(REMEMBER_SESSION_KEY);
       return null;
     }
+    if (!!parsed.s !== STRONG_AUTH) { sessionStorage.removeItem(REMEMBER_SESSION_KEY); return null; }
+    sessionLegacyKey = (STRONG_AUTH && parsed.l) ? base64ToBytes(parsed.l) : null;
     // Registro de "ponte" de recarga (ver rememberHandoffSave): vale para UMA
     // recarga só — é consumido aqui. Se o app for recarregado de novo, a
     // ponte é gravada outra vez pelo pagehide; não fica nada sobrando.
@@ -217,11 +264,7 @@ function rememberHandoffSave() {
       // Já existe um "manter conectado" (mais longo) válido: não encurta.
       if (cur && !cur.h && Date.now() < Number(cur.exp)) return;
     }
-    sessionStorage.setItem(REMEMBER_SESSION_KEY, JSON.stringify({
-      k: bytesToBase64(sessionEncKey),
-      exp: Date.now() + REMEMBER_HANDOFF_MAX_MS,
-      h: 1
-    }));
+    sessionStorage.setItem(REMEMBER_SESSION_KEY, rememberRecord(Date.now() + REMEMBER_HANDOFF_MAX_MS, true));
   } catch (e) { /* sessionStorage indisponível - segue sem ponte */ }
 }
 
@@ -245,13 +288,15 @@ function rememberHandoffDiscard() {
   window.addEventListener('pageshow', (e) => { if (e.persisted) rememberHandoffDiscard(); });
 })();
 
-// Utilitário de uso único (rodar no console) para gerar o hash de uma nova
-// senha e colar em APP_PASSWORD_HASH acima, em vez de guardar a senha em
-// texto puro no arquivo.
-async function setAppPassword(newPassword) {
-  const hash = await sha256Hex(newPassword);
-  console.log('Cole isto em APP_PASSWORD_HASH:', hash);
-  return hash;
+// Utilitário para o console (F12). O jeito mais fácil, porém, é abrir
+// gerar-senha-forte.html: ele faz a mesma coisa e já entrega o arquivo
+// auth-config.js pronto. Aqui imprime o conteúdo completo desse arquivo.
+async function setAppPassword(newPassword, iterations) {
+  const cfg = { salt: bytesToHex(crypto.getRandomValues(new Uint8Array(16))), iterations: iterations || 600000, hash: '' };
+  cfg.hash = (await strongDerive(String(newPassword).trim(), cfg)).verifierHex;
+  const text = "window.ARGO_AUTH_CONFIG = {\n  legacyHash: '',\n  strong: " + JSON.stringify(cfg) + "\n};\n";
+  console.log('Substitua o conteúdo de auth-config.js por:\n\n' + text);
+  return cfg;
 }
 
 function unlockApp() {
@@ -294,6 +339,7 @@ function lockApp() {
   // cifragem sai da memória — os dados sensíveis salvos ficam ilegíveis até
   // a senha correta ser digitada de novo.
   sessionEncKey = null;
+  sessionLegacyKey = null;
   _attachCache.clear();
   const appRoot = document.getElementById('appRoot');
   const loginScreen = document.getElementById('loginScreen');
@@ -499,9 +545,20 @@ function initAuth() {
       if (!value) return;
 
       setLoading(true);
-      const valueHash = await sha256Hex(value);
+      let strongKeys = null;
+      let passwordOk = false;
+      if (STRONG_AUTH) {
+        try {
+          strongKeys = await strongDerive(value, APP_PASSWORD_STRONG);
+          passwordOk = constantTimeEqualHex(strongKeys.verifierHex, String(APP_PASSWORD_STRONG.hash || ''));
+        } catch (err) {
+          console.error('Argo SUAS: configuração de senha forte inválida em auth-config.js', err);
+        }
+      } else {
+        passwordOk = !!APP_PASSWORD_HASH && constantTimeEqualHex(await sha256Hex(value), APP_PASSWORD_HASH);
+      }
 
-      if (valueHash === APP_PASSWORD_HASH) {
+      if (passwordOk) {
         authFailedAttempts = 0;
         authLockoutLevel = 0;
         writeAuthState(0, 0);
@@ -509,7 +566,14 @@ function initAuth() {
         if (errorCountdownEl) errorCountdownEl.textContent = '';
         pwField.setAttribute('aria-invalid', 'false');
         if (capsHintEl) capsHintEl.classList.remove('visible');
-        sessionEncKey = await deriveSessionKey(value);
+        if (STRONG_AUTH) {
+          sessionEncKey = strongKeys.encKey;
+          sessionLegacyKey = await deriveSessionKey(value);
+          migrateLegacyEncryption();
+        } else {
+          sessionEncKey = await deriveSessionKey(value);
+          sessionLegacyKey = null;
+        }
         // Grava (ou limpa) o "manter conectado" de acordo com a caixinha no
         // momento do login — assim, desmarcá-la também derruba um "lembrar"
         // de uma sessão anterior nesta mesma aba.
@@ -610,6 +674,58 @@ function logout() {
   rememberSessionClear();
   lockApp();
 }
+
+/* ---- Bloqueio automático por inatividade ------------------------------------
+   Se ninguém tocar/digitar/rolar por AUTO_LOCK_IDLE_MS, o app tranca sozinho
+   (mesmo efeito de "Sair": a chave de cifragem sai da memória e o "manter
+   conectado" é apagado). Protege o caso de alguém sair do posto com o app
+   aberto. Também tranca ao voltar de uma aba escondida por mais tempo que o
+   limite (celular bloqueado, aba em segundo plano). */
+const AUTO_LOCK_IDLE_MS = 15 * 60 * 1000; // 15 min
+let _autoLockTimer = null;
+let _autoLockHiddenAt = 0;
+
+function _appIsUnlocked() {
+  const root = document.getElementById('appRoot');
+  return !!root && root.dataset.locked === 'false';
+}
+
+function _autoLockNow() {
+  if (!_appIsUnlocked()) return;
+  logout();
+  if (typeof ArgoMascot !== 'undefined' && ArgoMascot.notify) {
+    ArgoMascot.notify('O app foi trancado por inatividade. Digite a senha para continuar.', { type: 'info' });
+  }
+}
+
+function _autoLockReset() {
+  clearTimeout(_autoLockTimer);
+  if (!_appIsUnlocked()) return;
+  _autoLockTimer = setTimeout(_autoLockNow, AUTO_LOCK_IDLE_MS);
+}
+
+(function setupAutoLock() {
+  let lastBump = 0;
+  const bump = () => {
+    const now = Date.now();
+    if (now - lastBump < 1000) return; // evita reagendar a cada movimento do mouse
+    lastBump = now;
+    _autoLockReset();
+  };
+  ['pointerdown', 'keydown', 'scroll', 'touchstart', 'wheel'].forEach(ev =>
+    window.addEventListener(ev, bump, { passive: true, capture: true }));
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      _autoLockHiddenAt = Date.now();
+    } else {
+      if (_autoLockHiddenAt && Date.now() - _autoLockHiddenAt >= AUTO_LOCK_IDLE_MS) _autoLockNow();
+      _autoLockHiddenAt = 0;
+      _autoLockReset();
+    }
+  });
+  // Liga o relógio assim que o app destranca (login manual ou "manter conectado").
+  setInterval(() => { if (_appIsUnlocked() && !_autoLockTimer) _autoLockReset(); }, 5000);
+})();
 
 /* ===================== Notificação de Abertura (Argo) =====================
    Ao desbloquear o app, o Argo aparece num cartão de boas-vindas com:
@@ -1546,6 +1662,88 @@ function xorBytes(a, b) {
   return out;
 }
 
+/* ---- Cifra forte (modo senha forte): ChaCha20-Poly1305, RFC 8439 ----------
+   Síncrona (o app precisa ler os dados durante a renderização, e WebCrypto
+   é assíncrono), com chave de 256 bits vinda do PBKDF2 e nonce aleatório de
+   96 bits por valor. Poly1305 autentica: chave errada ou dado adulterado é
+   DETECTADO (devolve null) em vez de virar lixo. Conferida byte a byte
+   contra a implementação do Node/OpenSSL. Formato: "enc2:<nonce>:<cifrado+tag>". */
+/* ChaCha20-Poly1305 (RFC 8439), síncrono, em JS puro. */
+function argoChaChaBlock(key32, counter, nonce12) {
+  const s = new Uint32Array(16);
+  s[0] = 0x61707865; s[1] = 0x3320646e; s[2] = 0x79622d32; s[3] = 0x6b206574;
+  const kv = new DataView(key32.buffer, key32.byteOffset, 32);
+  for (let i = 0; i < 8; i++) s[4 + i] = kv.getUint32(i * 4, true);
+  s[12] = counter >>> 0;
+  const nv = new DataView(nonce12.buffer, nonce12.byteOffset, 12);
+  s[13] = nv.getUint32(0, true); s[14] = nv.getUint32(4, true); s[15] = nv.getUint32(8, true);
+  const x = new Uint32Array(s);
+  const qr = (a, b, c, d) => {
+    x[a] = (x[a] + x[b]) >>> 0; x[d] ^= x[a]; x[d] = (x[d] << 16) | (x[d] >>> 16);
+    x[c] = (x[c] + x[d]) >>> 0; x[b] ^= x[c]; x[b] = (x[b] << 12) | (x[b] >>> 20);
+    x[a] = (x[a] + x[b]) >>> 0; x[d] ^= x[a]; x[d] = (x[d] << 8) | (x[d] >>> 24);
+    x[c] = (x[c] + x[d]) >>> 0; x[b] ^= x[c]; x[b] = (x[b] << 7) | (x[b] >>> 25);
+  };
+  for (let r = 0; r < 10; r++) {
+    qr(0, 4, 8, 12); qr(1, 5, 9, 13); qr(2, 6, 10, 14); qr(3, 7, 11, 15);
+    qr(0, 5, 10, 15); qr(1, 6, 11, 12); qr(2, 7, 8, 13); qr(3, 4, 9, 14);
+  }
+  const out = new Uint8Array(64), ov = new DataView(out.buffer);
+  for (let i = 0; i < 16; i++) ov.setUint32(i * 4, (x[i] + s[i]) >>> 0, true);
+  return out;
+}
+function argoChaChaXor(key32, counter, nonce12, data) {
+  const out = new Uint8Array(data.length);
+  for (let off = 0; off < data.length; off += 64, counter++) {
+    const ks = argoChaChaBlock(key32, counter, nonce12);
+    const n = Math.min(64, data.length - off);
+    for (let i = 0; i < n; i++) out[off + i] = data[off + i] ^ ks[i];
+  }
+  return out;
+}
+function argoPoly1305(key32, msg) {
+  const le = (b, o, n) => { let v = 0n; for (let i = n - 1; i >= 0; i--) v = (v << 8n) | BigInt(b[o + i]); return v; };
+  const P = (1n << 130n) - 5n;
+  const clamp = 0x0ffffffc0ffffffc0ffffffc0fffffffn;
+  const r = le(key32, 0, 16) & clamp, sKey = le(key32, 16, 16);
+  let acc = 0n;
+  for (let off = 0; off < msg.length; off += 16) {
+    const n = Math.min(16, msg.length - off);
+    const blk = le(msg, off, n) | (1n << BigInt(8 * n));
+    acc = ((acc + blk) * r) % P;
+  }
+  let tag = (acc + sKey) & ((1n << 128n) - 1n);
+  const out = new Uint8Array(16);
+  for (let i = 0; i < 16; i++) { out[i] = Number(tag & 0xffn); tag >>= 8n; }
+  return out;
+}
+function argoAeadMacData(ct) {
+  const pad = (16 - (ct.length % 16)) % 16;
+  const m = new Uint8Array(ct.length + pad + 16);
+  m.set(ct, 0);
+  const dv = new DataView(m.buffer);
+  dv.setUint32(ct.length + pad + 8, ct.length >>> 0, true); // aad=0 | len(ct) 64-bit LE
+  dv.setUint32(ct.length + pad + 12, Math.floor(ct.length / 4294967296), true);
+  return m;
+}
+function argoAeadSeal(key32, nonce12, plain) {
+  const polyKey = argoChaChaBlock(key32, 0, nonce12).subarray(0, 32);
+  const ct = argoChaChaXor(key32, 1, nonce12, plain);
+  const tag = argoPoly1305(polyKey, argoAeadMacData(ct));
+  const out = new Uint8Array(ct.length + 16);
+  out.set(ct, 0); out.set(tag, ct.length);
+  return out;
+}
+function argoAeadOpen(key32, nonce12, sealed) {
+  if (sealed.length < 16) return null;
+  const ct = sealed.subarray(0, sealed.length - 16), tag = sealed.subarray(sealed.length - 16);
+  const polyKey = argoChaChaBlock(key32, 0, nonce12).subarray(0, 32);
+  const exp = argoPoly1305(polyKey, argoAeadMacData(ct));
+  let diff = 0; for (let i = 0; i < 16; i++) diff |= exp[i] ^ tag[i];
+  if (diff !== 0) return null;
+  return argoChaChaXor(key32, 1, nonce12, ct);
+}
+
 // Cifra um texto para guardar no localStorage. Formato salvo:
 // "enc1:<nonce em base64>:<texto cifrado em base64>".
 function encryptForStorage(plainText) {
@@ -1553,8 +1751,14 @@ function encryptForStorage(plainText) {
     console.warn('Argo SUAS: tentativa de salvar dado sensível sem chave de sessão (app trancado?). Dado NÃO foi cifrado.');
     return plainText;
   }
-  const nonce = crypto.getRandomValues(new Uint8Array(16));
   const plainBytes = new TextEncoder().encode(plainText == null ? '' : String(plainText));
+  if (STRONG_AUTH) {
+    const nonce12 = crypto.getRandomValues(new Uint8Array(12));
+    return 'enc2:' + bytesToBase64(nonce12) + ':' + bytesToBase64(argoAeadSeal(sessionEncKey, nonce12, plainBytes));
+  }
+  // Formato antigo (enc1): FRACO — semente de só 32 bits. Só é gravado enquanto
+  // a senha forte não estiver ativada em auth-config.js.
+  const nonce = crypto.getRandomValues(new Uint8Array(16));
   const cipherBytes = xorBytes(plainBytes, keystream(plainBytes.length, sessionEncKey, nonce));
   return 'enc1:' + bytesToBase64(nonce) + ':' + bytesToBase64(cipherBytes);
 }
@@ -1564,18 +1768,71 @@ function encryptForStorage(plainText) {
 // isso permite migrar dados antigos automaticamente: eles continuam sendo
 // lidos normalmente e passam a ser salvos já cifrados na próxima edição.
 function decryptFromStorage(stored) {
-  if (typeof stored !== 'string' || !stored.startsWith('enc1:')) return stored;
-  if (!sessionEncKey) return ''; // trancado: sem a senha, não dá para decifrar
+  if (typeof stored !== 'string') return stored;
+  if (stored.startsWith('enc2:')) {
+    if (!STRONG_AUTH || !sessionEncKey) return ''; // trancado (ou formato novo sem senha forte ativa)
+    const p2 = stored.split(':');
+    if (p2.length !== 3) return '';
+    try {
+      const plain = argoAeadOpen(sessionEncKey, base64ToBytes(p2[1]), base64ToBytes(p2[2]));
+      return plain ? new TextDecoder().decode(plain) : ''; // null = chave errada ou dado adulterado
+    } catch (e) {
+      return '';
+    }
+  }
+  if (!stored.startsWith('enc1:')) return stored;
+  // enc1 (formato antigo): no modo forte a chave dele é a "legada" (SHA-256 da
+  // senha), e a leitura é estrita — lixo (senha trocada) vira '' e não texto torto.
+  const key = STRONG_AUTH ? sessionLegacyKey : sessionEncKey;
+  if (!key) return ''; // trancado: sem a senha, não dá para decifrar
   const parts = stored.split(':');
   if (parts.length !== 3) return '';
   try {
     const nonce = base64ToBytes(parts[1]);
     const cipherBytes = base64ToBytes(parts[2]);
-    const plainBytes = xorBytes(cipherBytes, keystream(cipherBytes.length, sessionEncKey, nonce));
-    return new TextDecoder().decode(plainBytes);
+    const plainBytes = xorBytes(cipherBytes, keystream(cipherBytes.length, key, nonce));
+    return new TextDecoder('utf-8', { fatal: STRONG_AUTH }).decode(plainBytes);
   } catch (e) {
     return '';
   }
+}
+
+// Migração automática (modo forte): no login, regrava como enc2 tudo o que
+// ainda está em enc1. É "tudo ou nada": primeiro decifra e confere todos os
+// valores na memória; se QUALQUER um não decifrar direito (ex.: a senha foi
+// trocada e os dados são da senha antiga), não altera nada — assim nunca
+// destrói dado por engano. Se uma gravação falhar no meio, o que sobrou
+// continua legível como enc1 (ver decryptFromStorage).
+function migrateLegacyEncryption() {
+  const result = { migrated: 0, failed: 0, aborted: false };
+  if (!STRONG_AUTH || !sessionEncKey || !sessionLegacyKey) return result;
+  try {
+    const items = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k || !isSensitiveDataKey(k)) continue;
+      const v = localStorage.getItem(k);
+      if (typeof v === 'string' && v.startsWith('enc1:')) items.push([k, v]);
+    }
+    if (!items.length) return result;
+    const plains = [];
+    for (const [k, v] of items) {
+      const parts = v.split(':');
+      const p = decryptFromStorage(v);
+      if (p === '' && !(parts.length === 3 && parts[2] === '')) {
+        result.aborted = true;
+        result.failed = items.length;
+        console.warn('Argo SUAS: dados antigos não decifraram com esta senha; migração cancelada sem alterar nada.');
+        return result;
+      }
+      plains.push([k, p]);
+    }
+    for (const [k, p] of plains) {
+      try { localStorage.setItem(k, encryptForStorage(p)); result.migrated++; }
+      catch (e) { result.failed++; }
+    }
+  } catch (e) { console.warn('Argo SUAS: falha na migração da cifra', e); }
+  return result;
 }
 
 // Anexos (fotos/PDFs de até 3,5 MB) eram lidos e DECIFRADOS de novo, um por
@@ -9182,10 +9439,18 @@ function agendaJoinPt(parts) {
 // anotações já sincronizadas por outros aparelhos não somem.
 function agendaEntriesFromDocData(data) {
   if (!data) return [];
-  if (Array.isArray(data.entries)) return data.entries.filter(e => e && e.text);
+  // Textos novos chegam cifrados ("enc1:...", ver agendaCommitEntries); textos
+  // antigos em claro passam direto por decryptFromStorage e continuam legíveis.
+  if (Array.isArray(data.entries)) {
+    return data.entries
+      .filter(e => e && e.text)
+      .map(e => Object.assign({}, e, { text: decryptFromStorage(e.text) }))
+      .filter(e => e.text);
+  }
   if (data.text) {
     const ts = (data.updatedAt && typeof data.updatedAt.toMillis === 'function') ? data.updatedAt.toMillis() : null;
-    return [{ text: data.text, createdAt: ts }];
+    const t = decryptFromStorage(data.text);
+    return t ? [{ text: t, createdAt: ts }] : [];
   }
   return [];
 }
@@ -10224,9 +10489,20 @@ function agendaCloseNoteModal() {
 // confirmação do servidor por até 7s; o Firestore já atualiza a tela na
 // hora, mesmo sem internet, e se a confirmação demorar, avisa que o envio
 // fica na fila.
+let agendaUndecryptableDays = new Set();
+
 async function agendaCommitEntries(key, entries) {
+  if (agendaUndecryptableDays.has(key)) throw new Error('dia-com-notas-de-outra-senha'); // não sobrescreve o que não conseguimos ler
   const ref = agendaDb.collection('agendas').doc(agendaSyncCode).collection('notes').doc(key);
-  const op = (entries && entries.length) ? ref.set({ entries: entries }) : ref.delete();
+  // As anotações vão para a nuvem CIFRADAS com a chave derivada da senha do
+  // app (a mesma em todos os aparelhos da equipe). Sem chave (app trancado),
+  // não envia nada em claro.
+  if (entries && entries.length && !sessionEncKey) {
+    throw new Error('app-trancado'); // os chamadores já mostram o aviso de erro
+  }
+  const op = (entries && entries.length)
+    ? ref.set({ entries: entries.map(e => Object.assign({}, e, { text: encryptForStorage(e.text) })) })
+    : ref.delete();
   op.catch(() => { /* tratado abaixo ou depois do prazo */ });
   const outcome = await Promise.race([
     op.then(() => 'ok'),
@@ -10372,9 +10648,16 @@ async function agendaConnectSync(code, force) {
 
   agendaUnsubscribe = agendaDb.collection('agendas').doc(agendaSyncCode).collection('notes')
     .onSnapshot(snapshot => {
+      if (!sessionEncKey) return; // trancado: não decifra nem mexe no cache
       agendaNotesCache = {};
+      agendaUndecryptableDays = new Set();
       snapshot.forEach(doc => {
-        const entries = agendaEntriesFromDocData(doc.data());
+        const d = doc.data();
+        const entries = agendaEntriesFromDocData(d);
+        const rawCount = d ? (Array.isArray(d.entries) ? d.entries.filter(e => e && e.text).length : (d.text ? 1 : 0)) : 0;
+        // Anotações que não decifram (ex.: feitas com outra senha) não aparecem; o
+        // dia fica protegido contra regravação para elas não serem apagadas.
+        if (rawCount > entries.length) agendaUndecryptableDays.add(doc.id);
         if (entries.length) agendaNotesCache[doc.id] = entries;
       });
       agendaUpdateSyncIndicator(true);
