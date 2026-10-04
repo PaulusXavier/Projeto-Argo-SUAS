@@ -5555,3 +5555,39 @@
 .login-notice[hidden] { display: none; }
 .login-toggle-visibility { right: 0.3rem; width: 44px; height: 44px; border-radius: 10px; }
 #loginPassword { padding-right: 3.4rem; }
+
+/* ---- Cards: atalhos rápidos (Ligar / Rota) e seção recolhível "Registro técnico" ---- */
+.card-quick { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.85rem; }
+.card-quick-btn {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.45rem 0.85rem; border-radius: 999px;
+  font-size: 0.78rem; font-weight: 700; text-decoration: none;
+  color: var(--brand-primary); background: var(--bg-card);
+  border: 1px solid var(--border-ui);
+  transition: background 0.2s, border-color 0.2s, transform 0.12s;
+}
+.card-quick-btn svg { width: 15px; height: 15px; }
+.card-quick-btn:hover { background: rgba(0, 145, 194, 0.1); border-color: var(--brand-primary); }
+.card-quick-btn:active { transform: scale(0.96); }
+.card-quick-btn:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 2px; }
+
+details.card-fold {
+  border: 1px solid var(--border-ui); border-radius: 12px;
+  background: var(--bg-main); margin-top: 0.25rem;
+}
+details.card-fold > summary {
+  cursor: pointer; list-style: none; user-select: none;
+  display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+  padding: 0.8rem 1rem; font-size: 0.82rem; font-weight: 800;
+  color: var(--text-main);
+}
+details.card-fold > summary::-webkit-details-marker { display: none; }
+details.card-fold > summary::before {
+  content: "▸"; color: var(--brand-primary); transition: transform 0.2s;
+}
+details.card-fold[open] > summary::before { transform: rotate(90deg); }
+details.card-fold > summary:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 2px; border-radius: 12px; }
+.card-fold-hint { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); }
+details.card-fold[open] { padding-bottom: 1rem; }
+details.card-fold[open] > *:not(summary) { margin-left: 1rem; margin-right: 1rem; }
+details.card-fold[open] > *:not(summary) + *:not(summary) { margin-top: 1rem; }
