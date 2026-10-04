@@ -43,3 +43,15 @@ HTML, CSS e JavaScript puros (vanilla), com uso pontual de Tailwind CSS, Lucide 
 
 **Paulo Xavier** — Psicólogo, CRP-20/09816
  SUAS · Boa Vista/RR
+
+## Senha forte (segurança)
+
+O app abre com uma senha da equipe. Por padrão ele ainda usa o formato **antigo** (SHA-256 simples), que é fraco: quem baixar o site pode testar bilhões de senhas por segundo. Para ativar o formato **forte**:
+
+1. Abra `gerar-senha-forte.html` direto da sua pasta (funciona offline; não acessa a internet).
+2. Digite a senha (12+ caracteres) duas vezes e clique em **Gerar**.
+3. Substitua o arquivo `auth-config.js` da raiz pelo gerado, e publique.
+
+Com isso, a senha passa a ser conferida por PBKDF2 (600.000 iterações) e os dados salvos passam a usar ChaCha20-Poly1305, migrando sozinhos no primeiro login. A senha não pode ser recuperada; se for trocada, os dados salvos com a antiga ficam ilegíveis (faça o "Backup de anotações" antes).
+
+Observação: o hash antigo continua no histórico do Git. Se a senha atual for curta ou comum, prefira trocá-la por uma nova ao ativar o modo forte.
