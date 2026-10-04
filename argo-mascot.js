@@ -55,68 +55,117 @@
 
   var mascotUid = 0;
 
+  // ---------------------------------------------------------------------
+  // PERSONALIZAÇÃO DO COMANDANTE (o "eu dentro do barco")
+  // Troque as cores abaixo para ajustar o personagem. Se tiver uma ilustração
+  // pronta do mascote (PNG/SVG/WebP), coloque o arquivo na pasta do app, inclua
+  // o nome dele em sw.js (lista de arquivos) e preencha CUSTOM_IMAGE_SRC —
+  // o desenho abaixo passa a ser substituído pela sua imagem.
+  // ---------------------------------------------------------------------
+  var PILOT = { skin: '#C98E5F', skinDk: '#A8703F', hair: '#2B1B12', shirt: '#0F4A41', shirtLt: '#1C6A5C', capTop: '#FBF3DC' };
+  var CUSTOM_IMAGE_SRC = ''; // ex.: 'argo-mascote.png'
+
   function boatSVG(mood, size) {
     mood = normalizeType(mood);
     size = size || 40;
     var accent = THEME[mood].color;
+    var flagSymbol = { info: '★', error: '!', notfound: '?', success: '✓' }[mood];
+
+    // Imagem própria (opcional): mantém só uma bolinha de humor no canto.
+    if (CUSTOM_IMAGE_SRC) {
+      return '<span class="argo-mascot-icon argo-mascot-bob" style="position:relative;width:' + size + 'px;height:' + size + 'px" aria-hidden="true">' +
+        '<img src="' + CUSTOM_IMAGE_SRC + '" alt="" style="width:100%;height:100%;object-fit:contain;display:block">' +
+        '<span style="position:absolute;right:-2px;top:-2px;min-width:38%;height:38%;border-radius:50%;background:' + accent +
+        ';color:#fff;font:800 ' + Math.max(8, Math.round(size * 0.22)) + 'px/1 sans-serif;display:flex;align-items:center;justify-content:center">' + flagSymbol + '</span></span>';
+    }
 
     // Paleta "de livro antigo": madeira quente, pergaminho, ouro envelhecido
     // e contornos em marrom-escuro (nada de neon, metal ou ângulos retos).
     var INK = '#5A3118', WOOD = '#C98A4B', WOOD_DK = '#8A5128', WOOD_LT = '#E0A767',
         GOLD = '#F2B84B', GOLD_DK = '#B9801F', PARCH = '#F8EACB', PARCH_DK = '#EBD3A0',
-        BLUSH = '#FF8FA3', SEA = '#6EC1E4', EYE = '#3B2314';
+        BLUSH = '#FF8FA3', SEA = '#6EC1E4', EYE = '#3B2314', MOUTH = '#8E3B3B';
 
-    // IDs únicos por chamada: dois mascotes na mesma página (toast + estado
-    // vazio) não podem compartilhar o mesmo id de gradiente.
+    // IDs únicos por chamada: dois mascotes na mesma página não podem
+    // compartilhar o mesmo id de gradiente.
     mascotUid += 1;
     var hullGradId = 'argoMascot' + mascotUid + 'Hull';
 
-    // ---- Rosto fofinho: olhos redondos com brilho, bochechas rosadas e
-    // sorrisinho. A expressão muda conforme o humor.
+    function stroke(d, w, col) {
+      return '<path d="' + d + '" fill="none" stroke="' + (col || EYE) + '" stroke-width="' + (w || 2.2) + '" stroke-linecap="round" stroke-linejoin="round"/>';
+    }
     function eye(cx, cy, r) {
       return '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + EYE + '"/>' +
-             '<circle cx="' + (cx + r * 0.35) + '" cy="' + (cy - r * 0.38) + '" r="' + (r * 0.36) + '" fill="#fff"/>' +
-             '<circle cx="' + (cx - r * 0.38) + '" cy="' + (cy + r * 0.4) + '" r="' + (r * 0.16) + '" fill="#fff" opacity=".85"/>';
+             '<circle cx="' + (cx + r * 0.35) + '" cy="' + (cy - r * 0.38) + '" r="' + (r * 0.36) + '" fill="#fff"/>';
     }
-    function stroke(d, w) {
-      return '<path d="' + d + '" fill="none" stroke="' + EYE + '" stroke-width="' + (w || 2.4) + '" stroke-linecap="round" stroke-linejoin="round"/>';
+    function hand(cx, cy) {
+      return '<circle cx="' + cx + '" cy="' + cy + '" r="4.6" fill="' + PILOT.skin + '" stroke="' + INK + '" stroke-width="1.8"/>';
     }
+    // Braço: contorno escuro + manga da camisa, do ombro até a mão.
+    function arm(x1, y1, x2, y2) {
+      var d = 'M' + x1 + ' ' + y1 + ' L' + x2 + ' ' + y2;
+      return '<path d="' + d + '" stroke="' + INK + '" stroke-width="9" stroke-linecap="round" fill="none"/>' +
+             '<path d="' + d + '" stroke="' + PILOT.shirt + '" stroke-width="5.6" stroke-linecap="round" fill="none"/>' +
+             hand(x2, y2);
+    }
+
+    // ---- Rosto e pose por humor ----
     var cheeks =
-      '<ellipse cx="34" cy="87" rx="5.6" ry="3.4" fill="' + BLUSH + '" opacity=".7"/>' +
-      '<ellipse cx="96" cy="87" rx="5.6" ry="3.4" fill="' + BLUSH + '" opacity=".7"/>';
+      '<ellipse cx="31.5" cy="44.2" rx="3.4" ry="2.2" fill="' + BLUSH + '" opacity=".7"/>' +
+      '<ellipse cx="52.5" cy="44.2" rx="3.4" ry="2.2" fill="' + BLUSH + '" opacity=".7"/>';
+    var face, arms, extra = '';
 
-    var face = {
-      info:
-        eye(47, 78, 5.4) + eye(83, 78, 5.4) +
-        stroke('M58 86 Q65 93 72 86', 2.4),
-      success:
-        stroke('M41 80 Q47 71 53 80', 3) + stroke('M77 80 Q83 71 89 80', 3) +
-        '<path d="M57 85 Q65 99 73 85 Z" fill="#8E3B3B" stroke="' + EYE + '" stroke-width="2" stroke-linejoin="round"/>' +
-        '<path d="M61 92 Q65 88.5 69 92 Q65 96 61 92 Z" fill="' + BLUSH + '"/>',
-      error:
-        eye(47, 79, 5.2) + eye(83, 79, 5.2) +
-        stroke('M39 72 L53 67.5', 2.2) + stroke('M77 67.5 L91 72', 2.2) +
-        stroke('M58 92 Q65 84.5 72 92', 2.4) +
-        // lagriminha
-        '<path d="M42 86 Q38.5 91 42 94 Q45.5 91 42 86 Z" fill="#8FD3F4" stroke="' + EYE + '" stroke-width="1" stroke-opacity=".5"/>',
-      notfound:
-        eye(47, 79, 4.6) + eye(83, 78, 6.2) +
-        stroke('M76 68.5 Q83 63 90 68.5', 2.2) +
-        '<ellipse cx="65" cy="89" rx="3" ry="3.6" fill="#8E3B3B" stroke="' + EYE + '" stroke-width="2"/>'
-    }[mood];
+    if (mood === 'success') {
+      face = stroke('M33.2 39.6 Q36.5 34.4 39.8 39.6', 2.2) + stroke('M44.2 39.6 Q47.5 34.4 50.8 39.6', 2.2) +
+        '<path d="M36.8 43.6 Q42 54 47.2 43.6 Z" fill="' + MOUTH + '" stroke="' + EYE + '" stroke-width="1.8" stroke-linejoin="round"/>' +
+        '<path d="M39.6 48.6 Q42 46.2 44.4 48.6 Q42 51 39.6 48.6 Z" fill="' + BLUSH + '"/>';
+      arms = '<g class="argo-mascot-wave2">' + arm(24, 62, 13, 41) + '</g>' +
+             '<g class="argo-mascot-wave">' + arm(60, 62, 71, 41) + '</g>';
+      extra =
+        '<path d="M14 18 Q15 23 20 24 Q15 25 14 30 Q13 25 8 24 Q13 23 14 18 Z" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width="1" stroke-linejoin="round"/>' +
+        '<path d="M78 5 Q79 9 83 10 Q79 11 78 15 Q77 11 73 10 Q77 9 78 5 Z" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width="1" stroke-linejoin="round"/>';
+    } else if (mood === 'error') {
+      face = '<g class="argo-mascot-blink">' + eye(36.5, 39, 2.6) + eye(47.5, 39, 2.6) + '</g>' +
+        stroke('M32 33.6 L39.6 35.8', 2) + stroke('M52 33.6 L44.4 35.8', 2) +
+        stroke('M38 48.2 Q42 43.6 46 48.2', 2.2) +
+        '<path d="M33 43.4 Q30.4 47 33 49.4 Q35.6 47 33 43.4 Z" fill="#8FD3F4" stroke="' + EYE + '" stroke-width="1" stroke-opacity=".5"/>';
+      arms = arm(23, 63, 21, 61) + arm(61, 63, 63, 61);
+      extra = '<path d="M58 22 Q55.6 26 58 28.6 Q60.4 26 58 22 Z" fill="#8FD3F4" stroke="' + EYE + '" stroke-width="1" stroke-opacity=".5"/>';
+    } else if (mood === 'notfound') {
+      face = '<g class="argo-mascot-blink">' + eye(36.5, 39, 2.3) + eye(47.5, 38.6, 3.2) + '</g>' +
+        stroke('M44 32.6 Q47.6 29.4 51.6 32.6', 2) +
+        '<ellipse cx="42" cy="46.4" rx="2.3" ry="2.9" fill="' + MOUTH + '" stroke="' + EYE + '" stroke-width="1.8"/>';
+      arms = arm(23, 63, 21, 61) + arm(61, 62, 53.5, 50.5);
+    } else { // info
+      face = '<g class="argo-mascot-blink">' + eye(36.5, 39, 2.7) + eye(47.5, 39, 2.7) + '</g>' +
+        stroke('M37.4 44.4 Q42 49.2 46.6 44.4', 2.2);
+      arms = arm(23, 63, 21, 61) + '<g class="argo-mascot-wave">' + arm(60, 62, 70.5, 43) + '</g>';
+    }
 
-    var flagSymbol = { info: '★', error: '!', notfound: '?', success: '✓' }[mood];
-
-    // Sucesso: estrelinhas douradas de 4 pontas
-    var sparkles = mood === 'success'
-      ? '<path d="M112 16 Q113 22 119 23 Q113 24 112 30 Q111 24 105 23 Q111 22 112 16 Z" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width="1" stroke-linejoin="round"/>' +
-        '<path d="M20 26 Q21 30 25 31 Q21 32 20 36 Q19 32 15 31 Q19 30 20 26 Z" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width="1" stroke-linejoin="round"/>'
-      : '';
+    // ---- Comandante: orelhas, cabeça, cabelo, rosto, boné com Ψ ----
+    var pilot =
+      // camisa (a parte de baixo fica escondida atrás do casco)
+      '<path d="M18 74 Q18 53 42 52 Q66 53 66 74 Z" fill="' + PILOT.shirt + '" stroke="' + INK + '" stroke-width="2.4" stroke-linejoin="round"/>' +
+      '<path d="M34 52.6 Q42 60 50 52.6" fill="none" stroke="' + PILOT.shirtLt + '" stroke-width="3" stroke-linecap="round"/>' +
+      // pescoço, orelhas e cabeça
+      '<rect x="37.5" y="47" width="9" height="8" rx="3" fill="' + PILOT.skinDk + '"/>' +
+      '<ellipse cx="27" cy="39.5" rx="2.6" ry="3.6" fill="' + PILOT.skin + '" stroke="' + INK + '" stroke-width="1.6"/>' +
+      '<ellipse cx="57" cy="39.5" rx="2.6" ry="3.6" fill="' + PILOT.skin + '" stroke="' + INK + '" stroke-width="1.6"/>' +
+      '<circle cx="42" cy="37" r="15" fill="' + PILOT.skin + '" stroke="' + INK + '" stroke-width="2.4"/>' +
+      // costeletas sob o boné
+      '<path d="M27.6 30 Q26.2 38 29.4 41 Q29.8 35 31.6 29.6 Z" fill="' + PILOT.hair + '"/>' +
+      '<path d="M56.4 30 Q57.8 38 54.6 41 Q54.2 35 52.4 29.6 Z" fill="' + PILOT.hair + '"/>' +
+      cheeks + face +
+      // boné de comandante: copa clara, faixa, viseira e emblema Ψ dourado
+      '<path d="M26 30 Q25.5 11 42 10 Q58.5 11 58 30 Q42 25.5 26 30 Z" fill="' + PILOT.capTop + '" stroke="' + INK + '" stroke-width="2.4" stroke-linejoin="round"/>' +
+      '<path d="M26.2 27.6 Q42 23.4 57.8 27.6 L58 30.6 Q42 26.6 26 30.6 Z" fill="' + PILOT.shirt + '" stroke="' + INK + '" stroke-width="1.8" stroke-linejoin="round"/>' +
+      '<path d="M26.5 31 Q42 36 57.5 31 Q58.5 28.6 56 28.4 Q42 24.6 28 28.4 Q25.5 28.6 26.5 31 Z" fill="' + WOOD_DK + '" stroke="' + INK + '" stroke-width="1.8" stroke-linejoin="round"/>' +
+      '<circle cx="42" cy="18.4" r="5.4" fill="' + GOLD + '" stroke="' + INK + '" stroke-width="1.6"/>' +
+      '<path d="M39.2 14.6 Q39.2 20.6 42 20.6 Q44.8 20.6 44.8 14.6 M42 13.8 V22.6" fill="none" stroke="' + INK + '" stroke-width="1.35" stroke-linecap="round"/>' +
+      arms;
 
     var bob = mood === 'error' ? '' : ' argo-mascot-bob';
-
-    // Ondinhas (a da frente cobre a base do casco)
     var wave = 'q7.5 -5 15 0 t15 0 t15 0 t15 0 t15 0 t15 0 t15 0 t15 0';
+    var HULL_DY = 8; // casco um pouco mais baixo: o comandante aparece da cintura para cima
 
     return (
       '<svg class="argo-mascot-icon' + bob + '" width="' + size + '" height="' + size +
@@ -128,47 +177,44 @@
           '</linearGradient>' +
         '</defs>' +
         // ondinha de fundo
-        '<path d="M5 103 ' + wave + '" fill="none" stroke="' + SEA + '" stroke-width="3" stroke-linecap="round" opacity=".55"/>' +
-        // popa e proa enroladinhas, com bolinha dourada
-        '<path d="M14 60 Q2 58 4 44" fill="none" stroke="' + INK + '" stroke-width="7" stroke-linecap="round"/>' +
-        '<path d="M14 60 Q2 58 4 44" fill="none" stroke="' + WOOD + '" stroke-width="3.6" stroke-linecap="round"/>' +
-        '<path d="M116 60 Q128 58 126 44" fill="none" stroke="' + INK + '" stroke-width="7" stroke-linecap="round"/>' +
-        '<path d="M116 60 Q128 58 126 44" fill="none" stroke="' + WOOD + '" stroke-width="3.6" stroke-linecap="round"/>' +
-        '<circle cx="4" cy="42" r="3.6" fill="' + GOLD + '" stroke="' + INK + '" stroke-width="1.6"/>' +
-        '<circle cx="126" cy="42" r="3.6" fill="' + GOLD + '" stroke="' + INK + '" stroke-width="1.6"/>' +
-        // mastro com bolinha no topo
-        '<line x1="65" y1="58" x2="65" y2="6" stroke="' + INK + '" stroke-width="5.4" stroke-linecap="round"/>' +
-        '<line x1="65" y1="58" x2="65" y2="6" stroke="' + WOOD_DK + '" stroke-width="2.6" stroke-linecap="round"/>' +
-        // vela menor (esquerda) e vela grande (direita), de pano de pergaminho remendado
-        '<path d="M61 24 Q44 35 37 52 L61 52 Z" fill="' + PARCH_DK + '" stroke="' + INK + '" stroke-width="2.4" stroke-linejoin="round"/>' +
-        '<path d="M56 36 Q48 42 44 49" fill="none" stroke="' + WOOD_DK + '" stroke-width="1.2" stroke-dasharray="2 3" stroke-linecap="round" opacity=".7"/>' +
-        '<path d="M69 17 C93 19 108 32 103 52 Q86 57 69 53 Z" fill="' + PARCH + '" stroke="' + INK + '" stroke-width="2.4" stroke-linejoin="round"/>' +
-        '<path d="M72 30 Q90 31 98 41" fill="none" stroke="' + WOOD_DK + '" stroke-width="1.2" stroke-dasharray="2 3" stroke-linecap="round" opacity=".6"/>' +
-        '<path d="M72 44 Q86 46 96 49" fill="none" stroke="' + WOOD_DK + '" stroke-width="1.2" stroke-dasharray="2 3" stroke-linecap="round" opacity=".6"/>' +
+        '<path d="M5 105 ' + wave + '" fill="none" stroke="' + SEA + '" stroke-width="3" stroke-linecap="round" opacity=".55"/>' +
+        // mastro à direita, com bolinha dourada no topo
+        '<line x1="104" y1="68" x2="104" y2="6" stroke="' + INK + '" stroke-width="5.4" stroke-linecap="round"/>' +
+        '<line x1="104" y1="68" x2="104" y2="6" stroke="' + WOOD_DK + '" stroke-width="2.6" stroke-linecap="round"/>' +
+        // vela grande (atrás do comandante) e vela pequena, de pergaminho remendado
+        '<path d="M100 14 C82 16 70 30 72 54 Q87 59 100 55 Z" fill="' + PARCH + '" stroke="' + INK + '" stroke-width="2.4" stroke-linejoin="round"/>' +
+        '<path d="M96 28 Q84 30 77 38" fill="none" stroke="' + WOOD_DK + '" stroke-width="1.2" stroke-dasharray="2 3" stroke-linecap="round" opacity=".6"/>' +
+        '<path d="M108 18 Q119 32 121 52 L108 52 Z" fill="' + PARCH_DK + '" stroke="' + INK + '" stroke-width="2.2" stroke-linejoin="round"/>' +
         // remendo costurado na cor do humor
-        '<rect x="80" y="29" width="13" height="13" rx="3" fill="' + accent + '" transform="rotate(-8 86.5 35.5)"/>' +
-        '<rect x="81.6" y="30.6" width="9.8" height="9.8" rx="2" fill="none" stroke="#fff" stroke-width="1" stroke-dasharray="1.6 1.6" opacity=".85" transform="rotate(-8 86.5 35.5)"/>' +
-        // casco arredondado de madeira
-        '<path d="M11 60 H119 C118 82 106 99 86 101 H44 C24 99 12 82 11 60 Z" fill="url(#' + hullGradId + ')" stroke="' + INK + '" stroke-width="2.8" stroke-linejoin="round"/>' +
-        '<path d="M15 71 H115 M20 82 H110 M30 92 H100" stroke="' + WOOD_DK + '" stroke-width="1.3" stroke-linecap="round" opacity=".55"/>' +
-        // friso dourado com rebites
-        '<rect x="8" y="54" width="114" height="10" rx="5" fill="' + GOLD + '" stroke="' + INK + '" stroke-width="2.4"/>' +
-        '<path d="M16 57.4 H114" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".45"/>' +
-        '<circle cx="22" cy="60" r="1.3" fill="' + GOLD_DK + '"/><circle cx="43" cy="60" r="1.3" fill="' + GOLD_DK + '"/>' +
-        '<circle cx="87" cy="60" r="1.3" fill="' + GOLD_DK + '"/><circle cx="108" cy="60" r="1.3" fill="' + GOLD_DK + '"/>' +
-        // rostinho
-        cheeks +
-        face +
+        '<rect x="82" y="34" width="12" height="12" rx="3" fill="' + accent + '" transform="rotate(-8 88 40)"/>' +
+        '<rect x="83.6" y="35.6" width="8.8" height="8.8" rx="2" fill="none" stroke="#fff" stroke-width="1" stroke-dasharray="1.6 1.6" opacity=".85" transform="rotate(-8 88 40)"/>' +
+        // o comandante
+        pilot +
+        // casco (proa/popa enroladinhas, madeira, friso dourado), deslocado para baixo
+        '<g transform="translate(0 ' + HULL_DY + ')">' +
+          '<path d="M14 60 Q2 58 4 44" fill="none" stroke="' + INK + '" stroke-width="7" stroke-linecap="round"/>' +
+          '<path d="M14 60 Q2 58 4 44" fill="none" stroke="' + WOOD + '" stroke-width="3.6" stroke-linecap="round"/>' +
+          '<path d="M116 60 Q128 58 126 44" fill="none" stroke="' + INK + '" stroke-width="7" stroke-linecap="round"/>' +
+          '<path d="M116 60 Q128 58 126 44" fill="none" stroke="' + WOOD + '" stroke-width="3.6" stroke-linecap="round"/>' +
+          '<circle cx="4" cy="42" r="3.6" fill="' + GOLD + '" stroke="' + INK + '" stroke-width="1.6"/>' +
+          '<circle cx="126" cy="42" r="3.6" fill="' + GOLD + '" stroke="' + INK + '" stroke-width="1.6"/>' +
+          '<path d="M11 60 H119 C118 82 106 99 86 101 H44 C24 99 12 82 11 60 Z" fill="url(#' + hullGradId + ')" stroke="' + INK + '" stroke-width="2.8" stroke-linejoin="round"/>' +
+          '<path d="M15 71 H115 M20 82 H110 M30 92 H100" stroke="' + WOOD_DK + '" stroke-width="1.3" stroke-linecap="round" opacity=".55"/>' +
+          '<rect x="8" y="54" width="114" height="10" rx="5" fill="' + GOLD + '" stroke="' + INK + '" stroke-width="2.4"/>' +
+          '<path d="M16 57.4 H114" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".45"/>' +
+          '<circle cx="22" cy="60" r="1.3" fill="' + GOLD_DK + '"/><circle cx="43" cy="60" r="1.3" fill="' + GOLD_DK + '"/>' +
+          '<circle cx="87" cy="60" r="1.3" fill="' + GOLD_DK + '"/><circle cx="108" cy="60" r="1.3" fill="' + GOLD_DK + '"/>' +
+        '</g>' +
         // ondinhas da frente com espuma
-        '<path d="M5 104 ' + wave + ' C125 112 100 115 65 115 C30 115 5 112 5 104 Z" fill="' + SEA + '" stroke="' + INK + '" stroke-width="2" stroke-linejoin="round" opacity=".95"/>' +
-        '<path d="M10 106.6 q5 -3 10 0 M52 106.6 q5 -3 10 0 M96 106.6 q5 -3 10 0" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>' +
+        '<path d="M5 106 ' + wave + ' C125 113 100 116 65 116 C30 116 5 113 5 106 Z" fill="' + SEA + '" stroke="' + INK + '" stroke-width="2" stroke-linejoin="round" opacity=".92"/>' +
+        '<path d="M10 108.4 q5 -3 10 0 M52 108.4 q5 -3 10 0 M96 108.4 q5 -3 10 0" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>' +
         // bandeirinha de ponta, balançando
         '<g class="argo-mascot-flag">' +
-          '<path d="M67 3 H95 L88.5 9.5 L95 16 H67 Z" fill="' + accent + '" stroke="' + INK + '" stroke-width="2" stroke-linejoin="round"/>' +
-          '<text x="78" y="13.8" font-size="10" font-weight="800" fill="#fff" text-anchor="middle" font-family="Trebuchet MS,Verdana,sans-serif">' + flagSymbol + '</text>' +
+          '<path d="M106 3 H126 L121.5 8.5 L126 14 H106 Z" fill="' + accent + '" stroke="' + INK + '" stroke-width="1.8" stroke-linejoin="round"/>' +
+          '<text x="114.5" y="11.6" font-size="8.5" font-weight="800" fill="#fff" text-anchor="middle" font-family="Trebuchet MS,Verdana,sans-serif">' + flagSymbol + '</text>' +
         '</g>' +
-        '<circle cx="65" cy="5" r="3.2" fill="' + GOLD + '" stroke="' + INK + '" stroke-width="1.6"/>' +
-        sparkles +
+        '<circle cx="104" cy="6" r="3.2" fill="' + GOLD + '" stroke="' + INK + '" stroke-width="1.6"/>' +
+        extra +
       '</svg>'
     );
   }
@@ -179,9 +225,15 @@
       '.argo-mascot-icon{display:block;overflow:visible}' +
       '.argo-mascot-bob{animation:argoMascotBob 3.2s ease-in-out infinite}' +
       '@keyframes argoMascotBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}' +
-      '.argo-mascot-flag{transform-origin:67px 9.5px;animation:argoMascotFlag 2.4s ease-in-out infinite}' +
+      '.argo-mascot-flag{transform-origin:106px 8.5px;animation:argoMascotFlag 2.4s ease-in-out infinite}' +
+      '.argo-mascot-wave{transform-origin:60px 62px;animation:argoMascotWave 1.8s ease-in-out infinite}' +
+      '.argo-mascot-wave2{transform-origin:24px 62px;animation:argoMascotWave2 1.8s ease-in-out infinite .25s}' +
+      '@keyframes argoMascotWave{0%,100%{transform:rotate(0)}50%{transform:rotate(-14deg)}}' +
+      '@keyframes argoMascotWave2{0%,100%{transform:rotate(0)}50%{transform:rotate(14deg)}}' +
+      '.argo-mascot-blink{transform-origin:42px 39px;animation:argoMascotBlink 5s infinite}' +
+      '@keyframes argoMascotBlink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.1)}}' +
       '@keyframes argoMascotFlag{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}' +
-      '@media (prefers-reduced-motion: reduce){.argo-mascot-bob{animation:none}.argo-mascot-flag{animation:none}.argo-mascot-toast{transition:none}}' +
+      '@media (prefers-reduced-motion: reduce){.argo-mascot-bob,.argo-mascot-flag,.argo-mascot-wave,.argo-mascot-wave2,.argo-mascot-blink{animation:none}.argo-mascot-toast{transition:none}}' +
       '@media print{.argo-mascot-toast{display:none!important}}' +
       'body:has(#argoUpdateToast) .argo-mascot-toast{bottom:calc(76px + env(safe-area-inset-bottom,0px))}' +
 
@@ -290,7 +342,13 @@
       '@keyframes argoAssistantTyping{0%,60%,100%{opacity:.3}30%{opacity:1}}' +
       '@media (max-width:480px){.argo-assistant-panel{left:12px;right:12px;width:auto}}' +
       '@media print{.argo-assistant-fab,.argo-assistant-hint,.argo-assistant-panel{display:none!important}}' +
-      'body.tab-focus .argo-assistant-fab,body.tab-focus .argo-assistant-hint,body.tab-focus .argo-assistant-panel{display:none}' +
+      'body.tab-focus .argo-assistant-hint{display:none}' +
+      'body.tab-focus .argo-assistant-fab{width:48px;height:48px}' +
+      'body.tab-focus .argo-assistant-fab .argo-mascot-icon{width:30px;height:30px}' +
+      'body.tab-focus .content-area{padding-bottom:calc(5.5rem + env(safe-area-inset-bottom))!important}' +
+      '.argo-assistant-fab:focus-visible,.argo-assistant-chip:focus-visible,.argo-assistant-close:focus-visible{outline:3px solid var(--brand-primary,#0091C2);outline-offset:2px}' +
+      '.argo-assistant-chip-menu{opacity:.85;border-style:dashed}' +
+      '.argo-assistant-kbd{display:inline-block;border:1px solid rgba(127,127,127,.45);border-radius:5px;padding:0 5px;font-size:11px;font-weight:700;margin:0 1px}' +
       'body:has(#appRoot[data-locked="true"]) .argo-assistant-fab,'+
       'body:has(#appRoot[data-locked="true"]) .argo-assistant-hint,'+
       'body:has(#appRoot[data-locked="true"]) .argo-assistant-panel{display:none}' +
@@ -462,7 +520,7 @@
         boatSVG('info', 30) +
       '</button>' +
       '<div id="argoAssistantHint" class="argo-assistant-hint" hidden>' +
-        '<span>Oi! Sou o Argo — clique aqui se precisar de ajuda 👋</span>' +
+        '<span>Oi! Sou o Argo. Precisando achar algo, é só me chamar — ou tecle <b class="argo-assistant-kbd">?</b></span>' +
         '<button type="button" class="argo-assistant-hint-x" aria-label="Fechar dica">✕</button>' +
       '</div>' +
       '<div id="argoAssistantPanel" class="argo-assistant-panel" role="dialog" aria-modal="false" ' +
@@ -470,7 +528,7 @@
         '<div class="argo-assistant-head">' +
           boatSVG('info', 32) +
           '<div class="argo-assistant-head-text"><strong id="argoAssistantTitle">Argo</strong>' +
-            '<span>assistente do Argo SUAS</span></div>' +
+            '<span>seu guia a bordo do Argo SUAS</span></div>' +
           '<button type="button" class="argo-assistant-close" id="argoAssistantCloseBtn" aria-label="Fechar assistente">✕</button>' +
         '</div>' +
         '<div class="argo-assistant-log" id="argoAssistantLog" role="log" aria-live="polite"></div>' +
@@ -548,9 +606,12 @@
         if (!a || !a.label) return;
         var btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'argo-assistant-chip';
+        btn.className = 'argo-assistant-chip' + (a.menu ? ' argo-assistant-chip-menu' : '');
         btn.textContent = a.label;
-        btn.addEventListener('click', function () { runAction(a); });
+        btn.addEventListener('click', function () {
+          if (a.menu) { addMsg('Claro! Por onde quer seguir?', 'bot', 'info'); renderQuick(defaultQuick()); return; }
+          runAction(a);
+        });
         quick.appendChild(btn);
       });
     }
@@ -589,9 +650,12 @@
       typingThen(function () {
         if (result && result.reply) {
           addMsg(result.reply, 'bot', result.mood);
-          renderQuick(result.quickActions || defaultQuick());
+          var acts = (result.quickActions || defaultQuick()).slice();
+          // Quando a resposta trouxe um atalho específico, oferece voltar ao menu.
+          if (result.quickActions && result.quickActions.length) acts.push({ label: 'Mais assuntos', menu: true });
+          renderQuick(acts);
         } else {
-          addMsg('Não captei essa — mas posso ajudar com um destes assuntos:', 'bot', 'notfound');
+          addMsg('Hmm, essa eu não entendi bem. Tente com outras palavras ou escolha um destes caminhos:', 'bot', 'notfound');
           renderQuick(defaultQuick());
         }
       });
@@ -622,7 +686,7 @@
     }
 
     fab.addEventListener('click', function () { isOpen ? close() : open(); });
-    closeBtn.addEventListener('click', function (e) { e.stopPropagation(); close(); });
+    closeBtn.addEventListener('click', function (e) { e.stopPropagation(); close(); try { fab.focus(); } catch (err) { /* ignora */ } });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && isOpen) { close(); fab.focus(); }
     });
@@ -635,11 +699,30 @@
       if (panel.contains(e.target) || fab.contains(e.target)) return;
       close();
     });
+    var history = [], histPos = 0;
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       var v = input.value;
       input.value = '';
+      if (v.trim()) { history.push(v); histPos = history.length; }
       ask(v);
+    });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowUp' && history.length) {
+        e.preventDefault(); histPos = Math.max(0, histPos - 1); input.value = history[histPos];
+      } else if (e.key === 'ArrowDown' && history.length) {
+        e.preventDefault(); histPos = Math.min(history.length, histPos + 1); input.value = history[histPos] || '';
+      }
+    });
+    // Atalho "?" (fora de campos de texto) abre/fecha o assistente.
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== '?' || e.ctrlKey || e.metaKey || e.altKey) return;
+      var t = e.target;
+      if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || '') || t.isContentEditable)) return;
+      var r = document.getElementById('appRoot');
+      if (r && r.dataset.locked === 'true') return;
+      e.preventDefault();
+      isOpen ? close() : open();
     });
 
     assistantController = {
