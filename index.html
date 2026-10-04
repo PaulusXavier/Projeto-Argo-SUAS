@@ -163,9 +163,9 @@
   <div class="login-mascot" id="loginMascot" aria-hidden="true">
     <div class="login-mascot-figure" id="loginMascotFigure"></div>
     <div class="login-mascot-bubble">
-      <p class="login-mascot-line" id="loginMascotLine"><strong id="loginMascotHello">Olá!</strong> Eu sou o Argo, o mascote deste aplicativo.</p>
-      <p class="login-mascot-text">Sou o guia da Rede de Políticas Públicas de Roraima: equipamentos, ficha de encaminhamento e ferramentas de PDF, até sem internet.</p>
-      <p class="login-mascot-tip"><span aria-hidden="true">Ψ</span> Recomendo conhecer o site do autor, o <strong>Vita</strong>. O atalho está no painel de acesso.</p>
+      <p class="login-mascot-line" id="loginMascotLine"><strong id="loginMascotHello">Olá!</strong> Eu sou o Argo, seu guia a bordo.</p>
+      <p class="login-mascot-text">Levo você até a Rede de Políticas Públicas de Roraima: equipamentos, ficha de encaminhamento, notícias e ferramentas de PDF — até sem internet.</p>
+      <p class="login-mascot-tip"><span aria-hidden="true">Ψ</span> Quer conhecer quem está no leme? Visite o site do autor, o <strong>Vita</strong>. O atalho está no painel de acesso.</p>
     </div>
   </div>
 </div>
@@ -261,6 +261,11 @@
       <button class="sidebar-close-btn" id="sidebarCloseBtn" type="button" aria-label="Fechar categorias">✕</button>
     </div>
     <div class="filter-bar-wrapper">
+      <div class="sidebar-filter" role="search">
+        <label for="sidebarFilter" class="sr-only">Buscar categoria ou ferramenta</label>
+        <input type="search" id="sidebarFilter" class="sidebar-filter-input" placeholder="Buscar categoria ou ferramenta…" autocomplete="off" enterkeyhint="go">
+        <p class="sidebar-filter-empty" id="sidebarFilterEmpty" hidden>Nenhuma categoria encontrada.</p>
+      </div>
       <div class="filter-bar" id="filterBar" role="tablist" aria-label="Filtrar por categoria de equipamento">
         <!-- Seção: Agenda 2026 -->
         <div class="filter-group">
@@ -577,6 +582,12 @@
       <span class="tab-focus-icon" id="tabFocusIcon" aria-hidden="true"></span>
       <h2 class="tab-focus-name" id="tabFocusName"></h2>
     </div>
+    <div class="tab-focus-jump" id="tabFocusJumpWrap">
+      <button type="button" class="tab-focus-step" id="tabFocusPrev" aria-label="Aba anterior" title="Aba anterior">‹</button>
+      <label for="tabFocusJump" class="sr-only">Ir para outra aba</label>
+      <select id="tabFocusJump" class="tab-focus-select" title="Ir para outra aba (Ctrl+K)"></select>
+      <button type="button" class="tab-focus-step" id="tabFocusNext" aria-label="Próxima aba" title="Próxima aba">›</button>
+    </div>
     <div class="tab-focus-search" id="tabFocusSearchWrap">
       <label for="tabFocusSearch" class="sr-only">Pesquisar unidade, bairro ou serviço</label>
       <input type="search" id="tabFocusSearch" class="search-input" placeholder="Pesquisar nesta aba..." autocomplete="off">
@@ -586,6 +597,7 @@
       <span>Fechar</span>
     </button>
   </div>
+  <nav class="quick-nav" id="quickNav" aria-label="Acesso rápido às ferramentas"></nav>
   <div style="margin-top: 1.5rem; display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
     <button class="category-toggle-btn" id="categoryToggleBtn" type="button" aria-expanded="false" aria-controls="categorySidebar">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/></svg>
