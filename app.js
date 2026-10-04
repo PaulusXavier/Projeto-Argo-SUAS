@@ -336,7 +336,7 @@ function finishUnlockAfterRender() {
   });
 }
 
-function lockApp() {
+function lockApp(reason) {
   // Ao trancar (inclusive ao carregar a página, antes do login), a chave de
   // cifragem sai da memória — os dados sensíveis salvos ficam ilegíveis até
   // a senha correta ser digitada de novo.
@@ -356,6 +356,14 @@ function lockApp() {
       pwField.value = '';
       pwField.setAttribute('aria-invalid', 'false');
       setTimeout(() => pwField.focus(), 50);
+    }
+    // Aviso do motivo do bloqueio (hoje: só inatividade). "Sair" manual não precisa de aviso.
+    const loginNotice = document.getElementById('loginNotice');
+    if (loginNotice) {
+      loginNotice.textContent = reason === 'inatividade'
+        ? 'Sessão bloqueada após ' + Math.round(AUTO_LOCK_IDLE_MS / 60000) + ' minutos sem uso, para proteger os dados dos atendidos. Digite a senha para continuar.'
+        : '';
+      loginNotice.hidden = !loginNotice.textContent;
     }
     // Limpa um erro/contagem de bloqueio que tivesse ficado visível de uma
     // sessão anterior (ex.: "Sair" logo depois de um lockout), para a tela
@@ -544,7 +552,11 @@ function initAuth() {
       }
 
       const value = (pwField.value || '').trim();
-      if (!value) return;
+      if (!value) {
+        showError('Digite a senha da equipe para entrar.');
+        pwField.focus();
+        return;
+      }
 
       setLoading(true);
       let strongKeys = null;
@@ -614,7 +626,11 @@ function initAuth() {
           startLockoutCountdown();
         } else {
           writeAuthState(authFailedAttempts, 0);
-          showError('Senha incorreta. Tente novamente.');
+          // Avisa quando faltam poucas tentativas, para o bloqueio temporário não vir de surpresa.
+          const remaining = AUTH_MAX_ATTEMPTS - authFailedAttempts;
+          showError(remaining <= 2
+            ? 'Senha incorreta. Restam ' + remaining + (remaining === 1 ? ' tentativa' : ' tentativas') + ' antes de um bloqueio temporário.'
+            : 'Senha incorreta. Tente novamente.');
         }
         pwField.value = '';
         pwField.focus();
@@ -655,26 +671,73 @@ function initAuth() {
   if (toggleBtn && pwField) {
     const eyeIcon = toggleBtn.querySelector('.icon-eye');
     const eyeOffIcon = toggleBtn.querySelector('.icon-eye-off');
-    toggleBtn.addEventListener('click', function() {
-      const isPassword = pwField.type === 'password';
-      pwField.type = isPassword ? 'text' : 'password';
-      toggleBtn.setAttribute('aria-label', isPassword ? 'Ocultar senha' : 'Mostrar senha');
-      toggleBtn.setAttribute('aria-pressed', String(isPassword));
+    let revealTimer = null;
+
+    function setRevealed(show) {
+      pwField.type = show ? 'text' : 'password';
+      toggleBtn.setAttribute('aria-label', show ? 'Ocultar senha' : 'Mostrar senha');
+      toggleBtn.setAttribute('aria-pressed', String(show));
       if (eyeIcon && eyeOffIcon) {
-        eyeIcon.hidden = isPassword;
-        eyeOffIcon.hidden = !isPassword;
+        eyeIcon.hidden = show;
+        eyeOffIcon.hidden = !show;
       }
+      if (revealTimer) { clearTimeout(revealTimer); revealTimer = null; }
+      // Senha à mostra não fica assim para sempre: some sozinha em 20 s.
+      if (show) revealTimer = setTimeout(function() { setRevealed(false); }, 20000);
+    }
+
+    toggleBtn.addEventListener('click', function() {
+      setRevealed(pwField.type === 'password');
       pwField.focus();
     });
+    // Esconde de novo ao enviar o formulário ou ao sair da tela (aba em segundo plano).
+    if (form) form.addEventListener('submit', function() { setRevealed(false); });
+    document.addEventListener('visibilitychange', function() { if (document.hidden) setRevealed(false); });
+  }
+
+  // "Manter-me conectado": lembra a ÚLTIMA ESCOLHA da caixinha neste aparelho
+  // (só a preferência — a sessão em si continua só na aba, após login com sucesso).
+  if (rememberEl) {
+    const REMEMBER_PREF_KEY = 'argo_login_remember_pref_v1';
+    try { rememberEl.checked = localStorage.getItem(REMEMBER_PREF_KEY) === '1'; } catch (e) { /* ignora */ }
+    rememberEl.addEventListener('change', function() {
+      try { localStorage.setItem(REMEMBER_PREF_KEY, rememberEl.checked ? '1' : '0'); } catch (e) { /* ignora */ }
+    });
+  }
+
+  // Faixa de estado no rodapé do painel: conexão + versão instalada (útil para
+  // conferir, no tablet, se a atualização do app realmente chegou).
+  const statusEl = document.getElementById('loginStatus');
+  const statusTextEl = document.getElementById('loginStatusText');
+  const versionEl = document.getElementById('loginVersion');
+  if (statusEl && statusTextEl) {
+    const paintStatus = function() {
+      const online = navigator.onLine !== false;
+      statusEl.classList.toggle('is-offline', !online);
+      statusTextEl.textContent = online ? 'Conectado' : 'Sem internet — o app funciona offline';
+    };
+    paintStatus();
+    window.addEventListener('online', paintStatus);
+    window.addEventListener('offline', paintStatus);
+  }
+  if (versionEl && window.caches && typeof caches.keys === 'function') {
+    caches.keys().then(function(keys) {
+      let best = 0;
+      keys.forEach(function(k) {
+        const m = /^rede-apoio-bv-v(\d+)$/.exec(k);
+        if (m && Number(m[1]) > best) best = Number(m[1]);
+      });
+      if (best) versionEl.textContent = 'Versão v' + best;
+    }).catch(function() { /* sem cache: não mostra versão */ });
   }
 }
 
-function logout() {
+function logout(reason) {
   // "Sair" sempre exige a senha de novo, mesmo com "manter conectado"
   // marcado numa sessão anterior — sem isso, o botão Sair não sairia de
   // verdade enquanto a aba permanecesse aberta.
   rememberSessionClear();
-  lockApp();
+  lockApp(reason);
 }
 
 /* ---- Bloqueio automático por inatividade ------------------------------------
@@ -694,7 +757,7 @@ function _appIsUnlocked() {
 
 function _autoLockNow() {
   if (!_appIsUnlocked()) return;
-  logout();
+  logout('inatividade');
   if (typeof ArgoMascot !== 'undefined' && ArgoMascot.notify) {
     ArgoMascot.notify('O app foi trancado por inatividade. Digite a senha para continuar.', { type: 'info' });
   }
@@ -3428,6 +3491,7 @@ function render() {
   const resultsInfo = document.getElementById('resultsInfo');
 
   updateChipCounts();
+  if (typeof renderHomePanel === 'function') renderHomePanel(cat, query);
 
   const clearBtn = document.getElementById('searchClearBtn');
   if (clearBtn) clearBtn.classList.toggle('visible', query.length > 0);
@@ -9417,7 +9481,8 @@ const NAV_RECENT_KEY = 'argo_recent_tabs_v1';
 const NAV_DEFAULT_SHORTCUTS = ['agenda', 'mapa', 'tradutor', 'pdftools', 'appsext', 'noticias'];
 const NAV_SHORT_LABELS = {
   agenda: 'Agenda Argo', mapa: 'Mapa dos Equipamentos', tradutor: 'Tradutor (Es / En / Fr)',
-  pdftools: 'Unificar / Converter PDF', appsext: 'Aplicativos', noticias: 'Notícias do MDS, MEC e Saúde'
+  pdftools: 'Unificar / Converter PDF', appsext: 'Aplicativos', noticias: 'Notícias do MDS, MEC e Saúde',
+  saude: 'RAPS', hospitalar: 'Hospitais', social: 'SUAS', informes: 'Programas', cas: 'CAS', cras: 'CRAS'
 };
 const NAV_QUICK_MAX = 6;
 
@@ -9470,6 +9535,85 @@ function renderQuickNav() {
     renderQuickNav();
   }));
   renderQuickNav();
+})();
+
+/* ---- 5) painel inicial (visão "Rede Intersetorial de Serviços", sem busca) ---- */
+const HOME_TILES = [
+  ['social', 'Proteção Social (SUAS)'], ['saude', 'RAPS · Saúde mental'], ['hospitalar', 'Hospitais e Atenção Básica'],
+  ['tea', 'Pessoa com Deficiência e TEA'], ['educacao', 'Educação'], ['conselho', 'Conselho Tutelar'],
+  ['mulher', 'Proteção à Mulher'], ['juridico', 'Justiça'], ['previdencia', 'Previdência (INSS)'],
+  ['documentacao', 'Documentação'], ['trabalho', 'Trabalho e Renda'], ['informes', 'Programas e Serviços']
+];
+const HOME_SPACE = [['favoritos', 'Favoritos'], ['anotacoes', 'Minhas Anotações']];
+let homePanelLastHtml = null;
+
+function homeChipInfo(chips, cat) {
+  const chip = chips[cat];
+  if (!chip) return null;
+  const icon = chip.querySelector('.chip-icon');
+  const countEl = chip.querySelector('.chip-count');
+  return {
+    icon: icon ? icon.innerHTML : '',
+    count: countEl ? (countEl.textContent || '').trim() : '',
+    name: navChipName(chip)
+  };
+}
+
+function renderHomePanel(cat, query) {
+  const host = document.getElementById('homePanel');
+  if (!host) return;
+  const show = cat === 'all' && !String(query || '').trim();
+  document.body.classList.toggle('home-view', show);
+  if (!show) { host.hidden = true; return; }
+
+  const chips = {};
+  navAllChips().forEach(c => { chips[c.dataset.cat] = c; });
+
+  const tiles = HOME_TILES.map(([c, label]) => {
+    const info = homeChipInfo(chips, c);
+    if (!info) return '';
+    return '<button type="button" class="home-tile" data-goto="' + escapeHtml(c) + '" title="' + escapeHtml(info.name) + '">'
+      + '<span class="home-tile-icon" aria-hidden="true">' + info.icon + '</span>'
+      + '<span class="home-tile-name">' + escapeHtml(label) + '</span>'
+      + (info.count && info.count !== '0' ? '<span class="home-tile-count">' + escapeHtml(info.count) + '</span>' : '')
+      + '</button>';
+  }).join('');
+
+  const spaceCats = HOME_SPACE.map(x => x[0]);
+  const recents = navReadRecent().filter(c => chips[c] && !spaceCats.includes(c) && c !== 'all').slice(0, 4);
+  const pills = HOME_SPACE.map(([c, label]) => [c, label]).concat(recents.map(c => [c, NAV_SHORT_LABELS[c] || navChipName(chips[c])]))
+    .map(([c, label], i) => {
+      const info = homeChipInfo(chips, c);
+      if (!info) return '';
+      const isRecent = i >= HOME_SPACE.length;
+      return '<button type="button" class="home-pill" data-goto="' + escapeHtml(c) + '">'
+        + '<span class="home-pill-icon" aria-hidden="true">' + info.icon + '</span>'
+        + '<span>' + escapeHtml(label) + '</span>'
+        + (!isRecent && info.count && info.count !== '0' ? '<span class="home-pill-count">' + escapeHtml(info.count) + '</span>' : '')
+        + (isRecent ? '<span class="home-pill-tag">recente</span>' : '')
+        + '</button>';
+    }).join('');
+
+  const html = '<div class="home-panel-head"><h2 class="home-panel-title">Painel inicial</h2>'
+    + '<p class="home-panel-sub">Escolha uma categoria ou use a busca acima para encontrar uma unidade, bairro ou serviço.</p></div>'
+    + '<div class="home-block"><h3 class="home-block-title">Categorias principais</h3><div class="home-tiles">' + tiles + '</div></div>'
+    + '<div class="home-block"><h3 class="home-block-title">Seu espaço</h3><div class="home-pills">' + pills + '</div></div>'
+    + '<div class="home-block"><h3 class="home-block-title">Links oficiais</h3><div class="home-pills">'
+    + '<a class="home-pill home-pill-link" href="https://mapa-social.mds.gov.br/" target="_blank" rel="noopener noreferrer"><span>Mapa Social (MDS)</span><span class="home-pill-tag">abre em nova aba</span></a>'
+    + '<a class="home-pill home-pill-link" href="https://novasage.saude.gov.br/politicas-programas-projetos-estrategias-e-acoes/rede-de-atencao-psicossocial-raps?tab=687a89d328fcb500017d5966" target="_blank" rel="noopener noreferrer"><span>RAPS (Ministério da Saúde)</span><span class="home-pill-tag">abre em nova aba</span></a>'
+    + '</div></div>';
+
+  if (html !== homePanelLastHtml) { host.innerHTML = html; homePanelLastHtml = html; }
+  host.hidden = false;
+}
+
+(function initHomePanel() {
+  const host = document.getElementById('homePanel');
+  if (!host) return;
+  host.addEventListener('click', e => {
+    const b = e.target.closest ? e.target.closest('[data-goto]') : null;
+    if (b) goToTab(b.dataset.goto);
+  });
 })();
 
 /* ---- 3) links diretos (#aba=...) ---- */
