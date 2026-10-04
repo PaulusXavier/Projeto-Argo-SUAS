@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Página 100% local: a política abaixo PROÍBE qualquer conexão de rede. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; img-src data:; form-action 'none'; base-uri 'none';">
+<meta name="robots" content="noindex, nofollow">
+<title>Gerar senha forte · Argo SUAS</title>
+<style>
+  :root { --brand:#0F4A41; --bg:#f4f7f6; --ink:#15211f; --muted:#5b6b68; --line:#dbe4e1; --ok:#127a4b; --warn:#a16207; --bad:#b42318; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--ink); line-height:1.5; }
+  header { background:var(--brand); color:#fff; padding:20px; }
+  header h1 { margin:0; font-size:1.2rem; } header p { margin:4px 0 0; opacity:.85; font-size:.9rem; }
+  main { max-width:720px; margin:0 auto; padding:16px 16px 60px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px; margin:14px 0; }
+  .alert { border-radius:12px; padding:12px 14px; font-size:.92rem; margin:12px 0; }
+  .alert.info { background:#eef6ff; border:1px solid #c7defa; }
+  .alert.warn { background:#fff7e6; border:1px solid #f1d59a; }
+  .alert.done { background:#eaf7ef; border:1px solid #b5e0c6; }
+  label { display:block; font-weight:600; font-size:.92rem; margin:12px 0 4px; }
+  input[type=password], input[type=text] { width:100%; padding:11px 12px; border:1px solid #b9c7c3; border-radius:10px; font-size:1rem; }
+  input:focus, textarea:focus { outline:3px solid #b8dfd5; }
+  button { font:inherit; cursor:pointer; border-radius:10px; border:1px solid #b9c7c3; background:#fff; padding:10px 14px; }
+  button.primary { background:var(--brand); color:#fff; border-color:var(--brand); font-weight:700; width:100%; padding:13px; font-size:1.02rem; margin-top:14px; }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .meter { height:8px; border-radius:6px; background:#e4ece9; margin-top:10px; overflow:hidden; }
+  .meter i { display:block; height:100%; width:0; background:var(--bad); transition:width .2s, background .2s; }
+  #hint { font-size:.88rem; margin:6px 0 0; color:var(--muted); }
+  textarea { width:100%; min-height:150px; padding:10px; border:1px solid #b9c7c3; border-radius:10px; font:.84rem ui-monospace,Menlo,Consolas,monospace; }
+  .row { display:flex; gap:8px; margin-top:10px; } .row button { flex:1; }
+  ol { padding-left:20px; } li { margin:6px 0; } code { background:#eef3f1; padding:1px 6px; border-radius:5px; font-size:.86em; }
+  #result { display:none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🔐 Gerar senha forte — Argo SUAS</h1>
+  <p>Cria o arquivo <code>auth-config.js</code> com a senha protegida por PBKDF2 (600.000 iterações).</p>
+</header>
+<main>
+  <div class="alert info"><strong>100% local.</strong> A senha não sai deste computador: esta página não tem permissão de acessar a internet. Abra o arquivo direto da sua pasta, não do site publicado.</div>
+
+  <div class="alert warn"><strong>Antes de começar:</strong> se você usar a <strong>mesma senha de hoje</strong>, os dados já salvos (anotações, anexos) são migrados sozinhos no primeiro login. Se usar uma <strong>senha diferente</strong>, os dados salvos com a senha antiga ficam ilegíveis — nesse caso, faça o "Backup de anotações" no app antes e confira o resultado depois.</div>
+
+  <div class="card">
+    <label for="pw1">Senha</label>
+    <input type="password" id="pw1" autocomplete="new-password">
+    <div class="meter"><i id="bar"></i></div>
+    <p id="hint">Use 12 caracteres ou mais — de preferência uma frase com várias palavras.</p>
+    <label for="pw2">Repita a senha</label>
+    <input type="password" id="pw2" autocomplete="new-password">
+    <button class="primary" id="go" disabled>Gerar auth-config.js</button>
+  </div>
+
+  <div class="card" id="result">
+    <div class="alert done"><strong>Pronto.</strong> Agora:</div>
+    <ol>
+      <li>Baixe o arquivo (ou copie o texto abaixo) e <strong>substitua</strong> o <code>auth-config.js</code> que está na raiz do repositório.</li>
+      <li>Publique (commit e push). Na primeira entrada, digite a senha e aguarde 1–2 segundos.</li>
+      <li>Guarde a senha em lugar seguro. <strong>Não há como recuperá-la</strong>: sem ela, os dados cifrados não abrem.</li>
+    </ol>
+    <textarea id="out" readonly></textarea>
+    <div class="row"><button id="dl">⬇ Baixar auth-config.js</button><button id="cp">Copiar texto</button></div>
+  </div>
+</main>
+
+<script>
+(function () {
+  var ITER = 600000;
+  var pw1 = document.getElementById('pw1'), pw2 = document.getElementById('pw2');
+  var go = document.getElementById('go'), bar = document.getElementById('bar'), hint = document.getElementById('hint');
+  var out = document.getElementById('out'), result = document.getElementById('result');
+
+  function bytesToHex(b) { return Array.prototype.map.call(b, function (x) { return x.toString(16).padStart(2, '0'); }).join(''); }
+  function hexToBytes(h) { var o = new Uint8Array(h.length / 2); for (var i = 0; i < o.length; i++) o[i] = parseInt(h.substr(i * 2, 2), 16); return o; }
+
+  // MESMO algoritmo de strongDerive() em app.js — não altere um sem o outro.
+  async function strongDerive(password, cfg) {
+    var te = new TextEncoder();
+    var base = await crypto.subtle.importKey('raw', te.encode(password), 'PBKDF2', false, ['deriveBits']);
+    var master = new Uint8Array(await crypto.subtle.deriveBits(
+      { name: 'PBKDF2', hash: 'SHA-256', salt: hexToBytes(cfg.salt), iterations: cfg.iterations }, base, 256));
+    var hk = await crypto.subtle.importKey('raw', master, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    var verifier = new Uint8Array(await crypto.subtle.sign('HMAC', hk, te.encode('argo-suas-verify-v1')));
+    return bytesToHex(verifier);
+  }
+
+  function score(p) {
+    var s = Math.min(p.length, 20) * 4;
+    if (/[a-z]/.test(p) && /[A-Z]/.test(p)) s += 8;
+    if (/\d/.test(p)) s += 6;
+    if (/[^A-Za-z0-9]/.test(p)) s += 6;
+    if (/\s/.test(p) && p.split(/\s+/).length >= 3) s += 10;
+    return Math.min(s, 100);
+  }
+
+  function refresh() {
+    var p = pw1.value.trim(), s = score(p);
+    bar.style.width = s + '%';
+    bar.style.background = s < 50 ? 'var(--bad)' : s < 75 ? 'var(--warn)' : 'var(--ok)';
+    hint.textContent = !p ? 'Use 12 caracteres ou mais — de preferência uma frase com várias palavras.'
+      : p.length < 10 ? 'Curta demais: quem baixar o site consegue testar muitas senhas por segundo. Use 12+ caracteres.'
+      : p.length < 12 ? 'Quase lá — acrescente mais algumas letras ou palavras.'
+      : 'Boa.';
+    go.disabled = !(p.length >= 8 && p === pw2.value.trim());
+  }
+  pw1.addEventListener('input', refresh); pw2.addEventListener('input', refresh);
+
+  go.addEventListener('click', async function () {
+    go.disabled = true; go.textContent = 'Gerando… (1–2 segundos)';
+    try {
+      // O app confere a senha com .trim(); aqui é igual.
+      var cfg = { salt: bytesToHex(crypto.getRandomValues(new Uint8Array(16))), iterations: ITER, hash: '' };
+      cfg.hash = await strongDerive(pw1.value.trim(), cfg);
+      out.value = "/* auth-config.js — gerado por gerar-senha-forte.html em " + new Date().toLocaleDateString('pt-BR') + ".\n   Substitui o arquivo de mesmo nome na raiz do repositório. */\n" +
+        "window.ARGO_AUTH_CONFIG = {\n  legacyHash: '',\n  strong: { salt: '" + cfg.salt + "', hash: '" + cfg.hash + "', iterations: " + cfg.iterations + " }\n};\n";
+      result.style.display = 'block'; result.scrollIntoView({ behavior: 'smooth' });
+    } catch (e) {
+      alert('Não foi possível gerar: ' + e.message);
+    }
+    go.textContent = 'Gerar auth-config.js'; refresh();
+  });
+
+  document.getElementById('dl').addEventListener('click', function () {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([out.value], { type: 'text/javascript' }));
+    a.download = 'auth-config.js'; document.body.appendChild(a); a.click(); a.remove();
+  });
+  document.getElementById('cp').addEventListener('click', function () {
+    out.select();
+    try { navigator.clipboard.writeText(out.value); } catch (e) { document.execCommand('copy'); }
+    this.textContent = 'Copiado ✔';
+  });
+})();
+</script>
+</body>
+</html>

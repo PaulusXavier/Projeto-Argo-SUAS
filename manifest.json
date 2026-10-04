@@ -1,0 +1,98 @@
+{
+  "id": "./index.html",
+  "name": "Argo SUAS",
+  "short_name": "Argo SUAS",
+  "description": "Diretório técnico de equipamentos de Políticas Públicas do estado de Roraima: Assistência Social, Saúde/RAPS, Educação, Justiça, Previdência e mais, com ficha de encaminhamento técnico para impressão.",
+  "lang": "pt-BR",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "categories": [
+    "government",
+    "utilities",
+    "productivity"
+  ],
+  "background_color": "#F8FAFC",
+  "theme_color": "#0F4A41",
+  "icons": [
+    {
+      "src": "assets/img/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/img/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/img/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Notícias",
+      "short_name": "Notícias",
+      "url": "./index.html#aba=noticias",
+      "icons": [
+        {
+          "src": "assets/img/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Agenda",
+      "short_name": "Agenda",
+      "url": "./index.html#aba=agenda",
+      "icons": [
+        {
+          "src": "assets/img/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Mapa da Rede",
+      "short_name": "Mapa da Rede",
+      "url": "./index.html#aba=mapa",
+      "icons": [
+        {
+          "src": "assets/img/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Unificar PDF",
+      "short_name": "Unificar PDF",
+      "url": "./index.html#aba=pdftools",
+      "icons": [
+        {
+          "src": "assets/img/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Favoritos",
+      "short_name": "Favoritos",
+      "url": "./index.html#aba=favoritos",
+      "icons": [
+        {
+          "src": "assets/img/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}
