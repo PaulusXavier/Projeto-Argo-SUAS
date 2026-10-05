@@ -9693,7 +9693,7 @@ function renderQuickNav() {
   const active = document.querySelector('#filterBar .filter-chip.active');
   const activeCat = active ? active.dataset.cat : '';
 
-  host.innerHTML = '<span class="quick-nav-label">Acesso rápido</span>' + items.map(cat => {
+  host.innerHTML = items.map(cat => {
     const chip = chips[cat];
     const icon = chip.querySelector('.chip-icon');
     const label = NAV_SHORT_LABELS[cat] || navChipName(chip);
