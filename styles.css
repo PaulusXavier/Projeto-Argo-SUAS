@@ -5615,3 +5615,23 @@ body.home-view .external-resource-card { display: none; }
 .home-space-btn.is-recent { color: var(--brand-primary); }
 .home-all { margin: 1.5rem 0 0; text-align: center; }
 .home-back { background: none; border: 0; font: inherit; font-weight: 700; color: var(--brand-primary); cursor: pointer; min-height: 32px; }
+
+/* ===== Ferramentas ===== */
+.tools-wrap { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; align-items: start; }
+.tools-card { padding: 1.1rem; }
+.tools-card h2 { margin: 0 0 0.7rem; font-size: 1rem; color: var(--brand-primary); }
+.tools-notes { grid-column: 1 / -1; }
+.tools-time { font-size: 2.4rem; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--text-main); }
+.tools-date { font-size: 0.85rem; color: var(--text-muted); text-transform: capitalize; }
+.tools-hint { margin: 0.3rem 0 0; font-size: 0.8rem; color: var(--text-muted); }
+.calc-hist { min-height: 1.1rem; text-align: right; font-size: 0.85rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+#calcBox:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 2px; }
+.calc-display { min-height: 3rem; margin-top: 0.1rem; padding: 0.5rem 0.8rem; margin-bottom: 0.6rem; text-align: right; font-size: 1.8rem; font-weight: 700; font-variant-numeric: tabular-nums; overflow-x: auto; background: var(--bg-main); border: 1px solid var(--border-ui); border-radius: 10px; color: var(--text-main); }
+.calc-keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; }
+.calc-k { min-height: 48px; font: inherit; font-size: 1.1rem; font-weight: 700; color: var(--text-main); background: var(--bg-card); border: 1px solid var(--border-ui); border-radius: 10px; cursor: pointer; }
+.calc-k:hover, .calc-k:focus-visible { border-color: var(--brand-primary); }
+.calc-k.is-op { color: var(--brand-primary); }
+.calc-k.is-eq { color: #fff; background: var(--brand-primary); }
+.tools-pad { width: 100%; min-height: 220px; padding: 0.7rem; resize: vertical; font: inherit; font-size: 1rem; line-height: 1.5; color: var(--text-main); background: var(--bg-main); border: 1px solid var(--border-ui); border-radius: 10px; box-sizing: border-box; }
+.tools-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0.6rem 0; }
+.tools-bar .tools-hint { margin: 0 auto 0 0; }
