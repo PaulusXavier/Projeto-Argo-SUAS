@@ -4410,38 +4410,56 @@
     overflow-x: hidden;
   }
 
-  /* Ondas amplas e discretas no canto inferior esquerdo. O mesmo traçado
-     (viewBox 720x150) é reaproveitado, em mosaico, no fundo do app no modo
-     escuro (ver "body" no topo deste arquivo) — por isso as duas telas usam
-     o mesmo motivo de ondas, sem estrelas. */
-  #loginScreen::before {
-    content: "";
+  /* Ondas animadas no canto inferior esquerdo da tela de login. São três
+     linhas (mesmo traçado de antes, viewBox 720x150) em camadas separadas:
+     cada uma desliza na horizontal, em velocidade e sentido próprios, e
+     também sobe e desce de leve — dá a sensação de mar sem pesar. Usa só
+     transform/translate (composição na GPU, sem repintar). Cada camada tem
+     largura = área visível + 1 tile e anda exatamente 1 tile por volta,
+     então o laço é contínuo, sem "pulo". Desliga com "reduzir movimento". */
+  .login-waves {
+    --t: 760px;
     position: fixed;
     inset: 48% 58% 0 0;
     z-index: 0;
-    background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20720%20150%22%20width%3D%22720%22%20height%3D%22150%22%3E%3Cpath%20d%3D%22M0%20102%20C45%2072%2045%20132%2090%20102%20C135%2072%20135%20132%20180%20102%20C225%2072%20225%20132%20270%20102%20C315%2072%20315%20132%20360%20102%20C405%2072%20405%20132%20450%20102%20C495%2072%20495%20132%20540%20102%20C585%2072%20585%20132%20630%20102%20C675%2072%20675%20132%20720%20102%22%20fill%3D%22none%22%20stroke%3D%22%2329ABE2%22%20stroke-width%3D%222.4%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.25%22%2F%3E%3Cpath%20d%3D%22M0%2070%20C45%2042%2045%2096%2090%2070%20C135%2042%20135%2096%20180%2070%20C225%2042%20225%2096%20270%2070%20C315%2042%20315%2096%20360%2070%20C405%2042%20405%2096%20450%2070%20C495%2042%20495%2096%20540%2070%20C585%2042%20585%2096%20630%2070%20C675%2042%20675%2096%20720%2070%22%20fill%3D%22none%22%20stroke%3D%22%230091C2%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.18%22%2F%3E%3Cpath%20d%3D%22M0%20126%20C45%20108%2045%20142%2090%20126%20C135%20108%20135%20142%20180%20126%20C225%20108%20225%20142%20270%20126%20C315%20108%20315%20142%20360%20126%20C405%20108%20405%20142%20450%20126%20C495%20108%20495%20142%20540%20126%20C585%20108%20585%20142%20630%20126%20C675%20108%20675%20142%20720%20126%22%20fill%3D%22none%22%20stroke%3D%22%23E8AC3D%22%20stroke-width%3D%221.3%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.14%22%2F%3E%3C%2Fsvg%3E");
-    background-repeat: no-repeat;
-    background-position: left bottom;
-    background-size: 760px 158px;
-    opacity: 1;
+    overflow: hidden;
     pointer-events: none;
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 14%, #000 78%, transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0%, #000 14%, #000 78%, transparent 100%);
   }
+  .login-wave {
+    position: absolute;
+    left: 0; bottom: 0;
+    width: calc(100% + var(--t));
+    height: calc(var(--t) * 150 / 720);
+    background-repeat: repeat-x;
+    background-position: left bottom;
+    background-size: var(--t) 100%;
+    will-change: transform;
+  }
+  .login-wave-a { background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20720%20150%22%20width%3D%22720%22%20height%3D%22150%22%3E%3Cpath%20d%3D%22M0%20102%20C45%2072%2045%20132%2090%20102%20C135%2072%20135%20132%20180%20102%20C225%2072%20225%20132%20270%20102%20C315%2072%20315%20132%20360%20102%20C405%2072%20405%20132%20450%20102%20C495%2072%20495%20132%20540%20102%20C585%2072%20585%20132%20630%20102%20C675%2072%20675%20132%20720%20102%22%20fill%3D%22none%22%20stroke%3D%22%2329ABE2%22%20stroke-width%3D%222.4%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.34%22%2F%3E%3C%2Fsvg%3E"); }
+  .login-wave-b { background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20720%20150%22%20width%3D%22720%22%20height%3D%22150%22%3E%3Cpath%20d%3D%22M0%2070%20C45%2042%2045%2096%2090%2070%20C135%2042%20135%2096%20180%2070%20C225%2042%20225%2096%20270%2070%20C315%2042%20315%2096%20360%2070%20C405%2042%20405%2096%20450%2070%20C495%2042%20495%2096%20540%2070%20C585%2042%20585%2096%20630%2070%20C675%2042%20675%2096%20720%2070%22%20fill%3D%22none%22%20stroke%3D%22%230091C2%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.26%22%2F%3E%3C%2Fsvg%3E"); }
+  .login-wave-c { background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20720%20150%22%20width%3D%22720%22%20height%3D%22150%22%3E%3Cpath%20d%3D%22M0%20126%20C45%20108%2045%20142%2090%20126%20C135%20108%20135%20142%20180%20126%20C225%20108%20225%20142%20270%20126%20C315%20108%20315%20142%20360%20126%20C405%20108%20405%20142%20450%20126%20C495%20108%20495%20142%20540%20126%20C585%20108%20585%20142%20630%20126%20C675%20108%20675%20142%20720%20126%22%20fill%3D%22none%22%20stroke%3D%22%23E8AC3D%22%20stroke-width%3D%221.3%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.22%22%2F%3E%3C%2Fsvg%3E"); }
+  .login-wave-a { animation: loginWaveL 26s linear infinite, loginWaveBob 6s ease-in-out infinite alternate; }
+  .login-wave-b { --t: 600px; animation: loginWaveR 19s linear infinite, loginWaveBob 5s ease-in-out -2s infinite alternate; }
+  .login-wave-c { --t: 940px; animation: loginWaveL 34s linear infinite, loginWaveBob 7s ease-in-out -4s infinite alternate; }
 
-  @media (prefers-color-scheme: dark) {
-    html:not([data-theme="light"]) #loginScreen::before {
-      filter: brightness(1.06) saturate(1.04);
-    }
-  }
-
-  html[data-theme="dark"] #loginScreen::before {
-    filter: brightness(1.06) saturate(1.04);
-  }
+  @keyframes loginWaveL { from { transform: translateX(0); } to { transform: translateX(calc(var(--t) * -1)); } }
+  @keyframes loginWaveR { from { transform: translateX(calc(var(--t) * -1)); } to { transform: translateX(0); } }
+  @keyframes loginWaveBob { from { translate: 0 -7px; } to { translate: 0 9px; } }
 
   @media (max-width: 760px) {
-    #loginScreen::before {
-      inset: 62% 42% 0 0;
-      background-size: min(560px, 100%) auto;
-    }
+    .login-waves { --t: 560px; inset: 62% 42% 0 0; }
+    .login-wave-b { --t: 440px; }
+    .login-wave-c { --t: 700px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .login-wave { animation: none; }
+  }
+
+  @media print {
+    .login-waves { display: none; }
   }
 
   #loginScreen[hidden] { display: none; }
@@ -5488,10 +5506,6 @@
     overflow-x: auto; padding-bottom: 0.25rem; scrollbar-width: thin;
   }
   .quick-nav:empty { display: none; }
-  .quick-nav-label {
-    flex: 0 0 auto; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em;
-    text-transform: uppercase; color: var(--text-muted); margin-right: 0.2rem;
-  }
   .quick-nav-btn {
     flex: 0 0 auto; display: inline-flex; align-items: center; gap: 0.4rem; min-height: 40px;
     padding: 0.3rem 0.8rem; border-radius: 999px; border: 1.5px solid var(--border-ui);
