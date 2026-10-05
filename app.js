@@ -1380,7 +1380,7 @@ function argoOpenAgendaFromGreeting() {
 // (nome, endereço, NIS, fotos e PDFs anexados, anotações de encaminhamento).
 // Usada tanto para apagar quanto para fazer backup/restaurar esses dados —
 // mantendo as duas operações sempre em sincronia.
-const SENSITIVE_DATA_PREFIXES = ['attach_', 'img_', 'note_', 'userdata_', 'gnote_'];
+const SENSITIVE_DATA_PREFIXES = ['attach_', 'img_', 'note_', 'userdata_', 'gnote_', 'toolpad_'];
 const SENSITIVE_DATA_EXACT_KEYS = ['nota_geral_encaminhamento', 'gnotes_index'];
 
 function isSensitiveDataKey(key) {
@@ -3509,8 +3509,8 @@ function renderHomePanel() {
     + '<span class="home-tile-count">' + (counts[cat] || 0) + '</span><span class="home-tile-label">' + label + '</span></button>';
   const chipOf = (cat) => document.querySelector('#filterBar .filter-chip[data-cat="' + cat + '"]');
   const recents = navReadRecent().filter(c => c !== 'all' && chipOf(c)).slice(0, 4);
-  const space = [['favoritos', 'Favoritos', counts.favoritos || 0], ['anotacoes', 'Minhas Anotações', counts.anotacoes || 0]]
-    .map(([c, l, n]) => '<button type="button" class="home-space-btn" ' + go(c) + '><strong>' + n + '</strong> ' + l + '</button>').join('')
+  const space = [['favoritos', 'Favoritos', counts.favoritos || 0], ['ferramentas', 'Ferramentas', '']]
+    .map(([c, l, n]) => '<button type="button" class="home-space-btn" ' + go(c) + '>' + (n === '' ? '' : '<strong>' + n + '</strong> ') + l + '</button>').join('')
     + recents.map(c => '<button type="button" class="home-space-btn is-recent" ' + go(c) + '>↺ '
       + escapeHtml(NAV_SHORT_LABELS[c] || navChipName(chipOf(c))) + '</button>').join('');
   return '<section id="homePanel" class="home-panel" aria-labelledby="homeTitle">'
@@ -3526,6 +3526,135 @@ function renderHomePanel() {
     + '<a class="home-space-btn" href="https://novasage.saude.gov.br/politicas-programas-projetos-estrategias-e-acoes/rede-de-atencao-psicossocial-raps?tab=687a89d328fcb500017d5966" target="_blank" rel="noopener noreferrer">RAPS (Ministério da Saúde) ↗</a></div>'
     + '<p class="home-all"><button type="button" class="btn-tech btn-secondary" onclick="homeShowAllList()">Ver todos os ' + DATA.length + ' registros</button></p>'
     + '</section>';
+}
+
+// --- Ferramentas: calculadora, relógio e bloco de notas ----------------------
+// O bloco de notas usa a chave "toolpad_*" (ver SENSITIVE_DATA_PREFIXES): fica
+// cifrado, entra no backup e some em "Apagar dados salvos neste dispositivo".
+const TOOLPAD_KEY = 'toolpad_v1';
+const TOOLPAD_OLD_KEY = 'argo_toolpad_v1'; // versão anterior (sem cifra)
+
+function renderToolsCard() {
+  const keys = ['C','⌫','%','÷','7','8','9','×','4','5','6','−','1','2','3','+','±','0',',','='];
+  const names = { 'C': 'Limpar tudo', '⌫': 'Apagar último dígito', '%': 'Porcentagem', '÷': 'Dividir', '×': 'Multiplicar', '−': 'Subtrair', '+': 'Somar', '±': 'Trocar sinal', ',': 'Vírgula', '=': 'Igual' };
+  const btns = keys.map(k => '<button type="button" class="calc-k' + (/[÷×−+]/.test(k) ? ' is-op' : '') + (k === '=' ? ' is-eq' : '')
+    + '" data-k="' + k + '"' + (names[k] ? ' aria-label="' + names[k] + '"' : '') + '>' + k + '</button>').join('');
+  return '<div id="toolsRoot" class="tools-wrap">'
+    + '<section class="tech-card tools-card" aria-label="Relógio"><h2>Relógio</h2>'
+    + '<div id="toolsClock" class="tools-time" role="timer" aria-live="off">--:--:--</div><div id="toolsDate" class="tools-date"></div>'
+    + '<div class="tools-hint">Horário de Boa Vista (RR)</div></section>'
+    + '<section id="calcBox" class="tech-card tools-card" aria-label="Calculadora" tabindex="0"><h2>Calculadora</h2>'
+    + '<div id="calcHist" class="calc-hist" aria-hidden="true">&nbsp;</div>'
+    + '<div id="calcDisplay" class="calc-display" role="status" aria-live="polite">0</div><div id="calcKeys" class="calc-keys">' + btns + '</div></section>'
+    + '<section class="tech-card tools-card tools-notes" aria-label="Bloco de notas"><h2>Bloco de notas</h2>'
+    + '<textarea id="toolPad" class="tools-pad" aria-label="Texto do bloco de notas" placeholder="Escreva aqui. O texto é salvo automaticamente, cifrado, neste aparelho."></textarea>'
+    + '<div class="tools-bar"><span id="toolPadInfo" class="tools-hint" role="status"></span>'
+    + '<button type="button" class="btn-tech btn-secondary" id="toolPadCopy">Copiar</button>'
+    + '<button type="button" class="btn-tech btn-secondary" id="toolPadSave">Baixar .txt</button>'
+    + '<button type="button" class="btn-tech btn-secondary" id="toolPadClear">Limpar</button></div>'
+    + '<p class="tools-hint">Fica cifrado com a senha do app e some em “Apagar dados salvos neste dispositivo”. Ao baixar o .txt, o arquivo sai sem cifra.</p></section></div>';
+}
+
+function initToolsPanel() {
+  // ---- Relógio (para sozinho quando a aba some; pausa com a página oculta)
+  const dateEl = document.getElementById('toolsDate');
+  const tz = { timeZone: 'America/Boa_Vista' };
+  const safe = (fn, opt) => { try { return fn(opt); } catch (e) { return fn(); } };
+  const tick = () => {
+    const c = document.getElementById('toolsClock');
+    if (!c) { clearInterval(timer); return; }
+    if (document.hidden) return;
+    const d = new Date();
+    c.textContent = safe(o => d.toLocaleTimeString('pt-BR', o), Object.assign({ hour12: false }, tz));
+    dateEl.textContent = safe(o => d.toLocaleDateString('pt-BR', o), Object.assign({ weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }, tz));
+  };
+  const timer = setInterval(tick, 1000); tick();
+  document.addEventListener('visibilitychange', tick);
+
+  // ---- Calculadora (sem eval)
+  const disp = document.getElementById('calcDisplay'), hist = document.getElementById('calcHist');
+  const S = { cur: '0', prev: null, op: null, fresh: true };
+  const val = s => parseFloat(String(s).replace(',', '.'));
+  const fmt = n => !isFinite(n) ? 'Erro' : String(parseFloat(n.toPrecision(12))).replace('.', ',');
+  const calc = () => {
+    const a = val(S.prev), b = val(S.cur);
+    return S.op === '+' ? a + b : S.op === '−' ? a - b : S.op === '×' ? a * b : b === 0 ? NaN : a / b;
+  };
+  const show = () => { disp.textContent = S.cur; hist.innerHTML = S.op ? S.prev + ' ' + S.op : '&nbsp;'; };
+  const press = k => {
+    if (S.cur === 'Erro' && k !== 'C') return;
+    if (/^\d$/.test(k)) {
+      if (!S.fresh && S.cur.replace(/[-,]/g, '').length >= 15) return;
+      S.cur = (S.fresh || S.cur === '0') ? k : S.cur + k; S.fresh = false;
+    } else if (k === ',') {
+      if (S.fresh) { S.cur = '0,'; S.fresh = false; } else if (!S.cur.includes(',')) S.cur += ',';
+    } else if (k === 'C') { S.cur = '0'; S.prev = null; S.op = null; S.fresh = true; }
+    else if (k === '⌫') {
+      if (!S.fresh) S.cur = (S.cur.length <= 1 || (S.cur.length === 2 && S.cur[0] === '-')) ? '0' : S.cur.slice(0, -1);
+    } else if (k === '±') { if (S.cur !== '0' && S.cur !== '0,') S.cur = S.cur[0] === '-' ? S.cur.slice(1) : '-' + S.cur; }
+    else if (k === '%') {
+      // 200 + 10 % mostra 20 (10% de 200) e "=" dá 220; sem operação pendente, divide por 100.
+      const x = val(S.cur);
+      S.cur = fmt((S.op === '+' || S.op === '−') && S.prev !== null ? val(S.prev) * x / 100 : x / 100); S.fresh = true;
+    } else if (k === '=') {
+      if (S.op && S.prev !== null) { const r = fmt(calc()); hist.textContent = S.prev + ' ' + S.op + ' ' + S.cur + ' ='; S.cur = r; S.op = null; S.prev = null; S.fresh = true; disp.textContent = S.cur; return; }
+    } else { // operador
+      if (S.op && S.prev !== null && !S.fresh) S.cur = fmt(calc());
+      S.prev = S.cur; S.op = k; S.fresh = true;
+    }
+    show();
+  };
+  document.getElementById('calcKeys').addEventListener('click', e => {
+    const b = e.target.closest('[data-k]'); if (b) press(b.dataset.k);
+  });
+  const keyMap = { '*': '×', '/': '÷', '-': '−', '.': ',', Enter: '=', Backspace: '⌫', Escape: 'C', Delete: 'C' };
+  document.getElementById('calcBox').addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.target.tagName === 'BUTTON' && (e.key === 'Enter' || e.key === ' ')) return; // deixa o botão focado agir
+    const k = keyMap[e.key] || e.key;
+    if (/^[0-9+,=%]$/.test(k) || ['×', '÷', '−', '⌫', 'C'].includes(k)) {
+      e.preventDefault(); e.stopPropagation(); // evita que atalhos globais (ex.: "/") peguem a tecla
+      press(k);
+    }
+  });
+
+  // ---- Bloco de notas (cifrado via safeStorage, com salvamento adiado)
+  const pad = document.getElementById('toolPad'), info = document.getElementById('toolPadInfo');
+  try { // migra o texto da versão anterior, que ficava sem cifra
+    const old = localStorage.getItem(TOOLPAD_OLD_KEY);
+    if (old !== null) { if (safeStorage.get(TOOLPAD_KEY) === null) safeStorage.set(TOOLPAD_KEY, old); localStorage.removeItem(TOOLPAD_OLD_KEY); }
+  } catch (e) { /* ignora */ }
+  pad.value = safeStorage.get(TOOLPAD_KEY) || '';
+  const counts = () => {
+    const w = (pad.value.trim().match(/\S+/g) || []).length;
+    return w + (w === 1 ? ' palavra' : ' palavras') + ' · ' + pad.value.length + ' caracteres';
+  };
+  info.textContent = counts();
+  let saveT = null;
+  const saveNow = () => {
+    clearTimeout(saveT); saveT = null;
+    const ok = pad.value ? safeStorage.set(TOOLPAD_KEY, pad.value) : (safeStorage.remove(TOOLPAD_KEY), true);
+    info.textContent = ok ? 'Salvo às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + ' · ' + counts()
+                          : 'Não foi possível salvar (armazenamento cheio ou bloqueado). Copie o texto.';
+  };
+  pad.addEventListener('input', () => { info.textContent = counts(); clearTimeout(saveT); saveT = setTimeout(saveNow, 400); });
+  pad.addEventListener('blur', () => { if (saveT) saveNow(); });
+  window.addEventListener('pagehide', () => { if (saveT) saveNow(); });
+  document.getElementById('toolPadCopy').addEventListener('click', () => {
+    const done = () => { info.textContent = 'Texto copiado.'; };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(pad.value).then(done).catch(() => { pad.select(); });
+    else { pad.select(); try { document.execCommand('copy'); done(); } catch (e) { /* seleção fica para copiar à mão */ } }
+  });
+  document.getElementById('toolPadSave').addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([pad.value], { type: 'text/plain;charset=utf-8' }));
+    a.download = 'bloco-de-notas.txt'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+  document.getElementById('toolPadClear').addEventListener('click', () => {
+    if (pad.value && !confirm('Apagar todo o texto do bloco de notas? Isso não pode ser desfeito.')) return;
+    pad.value = ''; saveNow(); pad.focus();
+  });
 }
 
 function render() {
@@ -3572,7 +3701,8 @@ function render() {
     noticias: { rootId: 'noticiasList',      render: renderNewsCard,       init: initNewsPanel },
     mapa:     { rootId: 'mapaRedeMapContainer', render: renderMapCard,     init: initMapPanel },
     agenda:   { rootId: 'agendaCalendarGrid', render: renderAgendaCard,    init: initAgendaPanel },
-    appsext:  { rootId: 'appsExternosGrid',  render: renderExternalAppsCard, init: initExternalAppsPanel }
+    appsext:  { rootId: 'appsExternosGrid',  render: renderExternalAppsCard, init: initExternalAppsPanel },
+    ferramentas: { rootId: 'toolsRoot', render: renderToolsCard, init: initToolsPanel }
   };
 
   if (PANEL_TABS[cat]) {
@@ -9592,7 +9722,7 @@ const NAV_RECENT_KEY = 'argo_recent_tabs_v1';
 const NAV_DEFAULT_SHORTCUTS = ['agenda', 'mapa', 'tradutor', 'pdftools', 'appsext', 'noticias'];
 const NAV_SHORT_LABELS = {
   agenda: 'Agenda Argo', mapa: 'Mapa dos Equipamentos', tradutor: 'Tradutor (Es / En / Fr)',
-  pdftools: 'Unificar / Converter PDF', appsext: 'Aplicativos', noticias: 'Notícias do MDS, MEC e Saúde',
+  pdftools: 'Unificar / Converter PDF', appsext: 'Aplicativos', ferramentas: 'Ferramentas', noticias: 'Notícias do MDS, MEC e Saúde',
   saude: 'RAPS', hospitalar: 'Hospitais', social: 'SUAS', informes: 'Programas', cas: 'CAS', cras: 'CRAS'
 };
 const NAV_QUICK_MAX = 6;
@@ -10193,9 +10323,9 @@ const ARGO_ASSISTANT_INTENTS = [
     action: { label: 'Abrir Favoritos', run: () => argoAssistantGoTo('favoritos'), reply: 'Abri seus Favoritos.', mood: 'success' }
   },
   {
-    keys: ['anotacao', 'anotacoes', 'minhas anotacoes', 'novo caso'],
+    keys: ['anotacao', 'anotacoes', 'bloco de notas', 'calculadora', 'relogio', 'ferramentas', 'novo caso'],
     reply: 'Em "Minhas Anotações" você cria uma anotação por caso ou atendimento, registra os dados de quem foi atendido (ficam cifrados neste aparelho) e pode gerar a guia ou enviar por WhatsApp.',
-    action: { label: 'Abrir Minhas Anotações', run: () => argoAssistantGoTo('anotacoes'), reply: 'Abri Minhas Anotações.', mood: 'success' }
+    action: { label: 'Abrir Ferramentas', run: () => argoAssistantGoTo('ferramentas'), reply: 'Abri as Ferramentas (calculadora, relógio e bloco de notas).', mood: 'success' }
   },
   {
     keys: ['mapa', 'territorio', 'localizacao', 'onde fica', 'proximidade', 'perto de mim', 'mais perto', 'rota'],
@@ -10261,7 +10391,7 @@ const ARGO_TAB_TIPS = {
   tradutor: 'Escreva ou fale em português e escolha o idioma. Dá para salvar frases próprias para usar de novo.',
   pdftools: 'Arraste até 20 arquivos, escolha as páginas de cada PDF e gire o que estiver torto. Nada sai do seu navegador.',
   appsext: 'Cada atalho abre um app do autor em nova aba, com login e sincronização independentes.',
-  anotacoes: 'Crie uma anotação por caso. Os dados pessoais ficam cifrados neste aparelho — faça backup de vez em quando.',
+  ferramentas: 'Relógio de Boa Vista, calculadora (aceita o teclado) e um bloco de notas cifrado neste aparelho.',
   noticias: 'Toque num tema rápido (Bolsa Família, CadÚnico…), filtre por Normativos ou por período e use a estrela para salvar o que quer ler depois.',
   cras: 'Procure por bairro para saber qual equipe de referência atende. A planilha de atendimentos abre em tela cheia.',
   cas: 'Aqui ficam os registros de atendimento do CAS. Use a busca para localizar um registro.',
