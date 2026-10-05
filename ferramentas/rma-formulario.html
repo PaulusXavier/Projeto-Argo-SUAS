@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <title>RMA - Registro Mensal de Atendimentos</title>
+    <style>
+        /* Reset para evitar textos automáticos de data/link do navegador */
+        @page { 
+            size: A4 portrait; 
+            margin: 0; 
+        }
+
+        * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
+
+        body { 
+            font-family: Arial, sans-serif; 
+            font-size: 12px; /* Fonte compacta para caber tudo */
+            line-height: 1.1; 
+            margin: 0; 
+            padding: 0; 
+            background-color: #fff;
+        }
+
+        /* Container centralizado com margem de segurança para não vazar */
+        .page-wrapper {
+            width: 190mm;
+            margin: 5mm auto;
+            padding: 5mm;
+            border: 1px solid #eee; /* Apenas visual na tela */
+        }
+
+        .no-print { 
+            text-align: right; 
+            padding: 12px; 
+            background: #f4f4f4; 
+            border-bottom: 1px solid #ccc;
+        }
+        
+        .btn-print { 
+            padding: 10px 23px; 
+            background-color: #007bff; 
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+            font-weight: bold; 
+            border-radius: 4px;
+        }
+
+        .header-box { 
+            text-align: center; 
+            font-weight: bold; 
+            border: 2px solid #000; 
+            padding: 6px; 
+            font-size: 13px; 
+            margin-bottom: 8px; 
+            text-transform: uppercase;
+        }
+
+        .section-header { 
+            background-color: #ddd !important; 
+            font-weight: bold; 
+            padding: 4px; 
+            border: 1px solid #000; 
+            margin-top: 6px; 
+            font-size: 12px; 
+            text-transform: uppercase;
+        }
+
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            table-layout: fixed;
+            margin-bottom: 2px;
+        }
+        
+        th, td { 
+            border: 1px solid #000; 
+            padding: 3px 5px; 
+            text-align: left; 
+            vertical-align: middle;
+        }
+
+        /* Campos de cabeçalho (Nome da Unidade, Endereço, Município, etc.)
+           ficam em células próprias com o rótulo em cima e o campo
+           logo abaixo, dando mais espaço horizontal ao valor. */
+        td.campo-cabecalho { vertical-align: top; }
+        
+        .col-val { width: 50px; text-align: center; font-weight: bold; background-color: #fcfcfc !important; }
+        
+        /* Inputs para edição na tela: Arial 10pt com espaçamento de linha
+           1,5, conforme pedido. Na impressão (regra abaixo em @media print)
+           o tamanho volta a 12px para manter o layout do papel já ajustado. */
+        input { 
+            border: none; 
+            background: transparent; 
+            font-family: Arial, Helvetica, sans-serif; 
+            font-size: 10pt; 
+            line-height: 1.5; 
+            width: 100%; 
+            outline: none; 
+        }
+
+        input.qtd-input { text-align: center; font-weight: bold; }
+
+        /* Campos longos de cabeçalho: textarea que cresce em altura e
+           quebra a linha automaticamente, em vez de cortar o texto. */
+        textarea.campo-longo {
+            border: none;
+            background: transparent;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10pt;
+            line-height: 1.4;
+            width: 100%;
+            outline: none;
+            resize: none;
+            overflow: hidden;
+            padding: 0;
+            margin-top: 2px;
+            display: block;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .obs-box { 
+            font-size: 7px; 
+            margin: 2px 0 6px 0; 
+            text-align: justify; 
+            border: 1px solid #000; 
+            padding: 4px; 
+            line-height: 1.2;
+        }
+
+        @media print {
+            .no-print { display: none !important; }
+            .page-wrapper { 
+                margin: 0 auto; 
+                border: none; 
+                width: 190mm;
+            }
+            input, textarea.campo-longo {
+                font-size: 12px;
+                line-height: 1.15;
+            }
+            /* Remove definitivamente data/hora e URL do rodapé */
+            body { margin: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="no-print">
+    <button class="btn-print" style="background-color: #28a745;" onclick="saveData()">💾 SALVAR DADOS</button>
+    <button class="btn-print" style="background-color: #17a2b8;" onclick="exportRmaBackup()" title="Baixa um arquivo .json com os dados preenchidos, para guardar em outro lugar">⬇️ BACKUP</button>
+    <button class="btn-print" style="background-color: #6f42c1;" onclick="document.getElementById('rmaImportInput').click()" title="Restaura um arquivo de backup gerado por este formulário">⬆️ RESTAURAR BACKUP</button>
+    <input type="file" id="rmaImportInput" accept="application/json,.json" hidden onchange="importRmaBackup(this)">
+    <button class="btn-print" style="background-color: #dc3545;" onclick="clearData()">🗑️ APAGAR TUDO</button>
+    <button class="btn-print" onclick="window.print()">🖨️ IMPRIMIR RMA</button>
+</div>
+
+<div class="page-wrapper">
+    <div class="header-box">
+        FORMULÁRIO DE REGISTRO MENSAL DE ATENDIMENTOS DO CRAS &nbsp;&nbsp; MÊS: <input type="text" name="mes" aria-label="Mês de referência" style="width: 90px; border-bottom: 1px solid #000;">
+    </div>
+    <table>
+        <tr>
+            <td class="campo-cabecalho" style="width: 62%;">
+                <strong>Nome da Unidade</strong>
+                <textarea class="campo-longo autogrow" name="unidade_nome" aria-label="Nome da Unidade" rows="1"></textarea>
+            </td>
+            <td class="campo-cabecalho" style="width: 38%;">
+                <strong>Nº da Unidade</strong>
+                <textarea class="campo-longo autogrow" name="unidade_numero" aria-label="Número da Unidade" rows="1"></textarea>
+            </td>
+        </tr>
+        <tr>
+            <td class="campo-cabecalho" colspan="2">
+                <strong>Endereço</strong>
+                <textarea class="campo-longo autogrow" name="endereco" aria-label="Endereço" rows="1"></textarea>
+            </td>
+        </tr>
+        <tr>
+            <td class="campo-cabecalho" style="width: 75%;">
+                <strong>Município</strong>
+                <textarea class="campo-longo autogrow" name="municipio" aria-label="Município" rows="1"></textarea>
+            </td>
+            <td class="campo-cabecalho" style="width: 25%;">
+                <strong>UF</strong>
+                <input type="text" name="uf" aria-label="UF" maxlength="2" style="width: 60px;">
+            </td>
+        </tr>
+    </table>
+
+    <div class="section-header">Bloco 1 - Famílias em acompanhamento pelo PAIF</div>
+    <table>
+        <tr style="background:#eee;">
+            <th>A. Volume de famílias em acompanhamento pelo PAIF no mês de referência</th>
+            <th class="col-val">Total</th>
+        </tr>
+        <tr><td>A.1. Total de famílias em acompanhamento pelo PAIF</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="a1" aria-label="A.1. Total de famílias em acompanhamento pelo PAIF"></td></tr>
+        <tr><td>A.2. Novas famílias inseridas no acompanhamento do PAIF durante o mês de referência</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="a2" aria-label="A.2. Novas famílias inseridas no acompanhamento do PAIF durante o mês de referência"></td></tr>
+    </table>
+
+    <table>
+        <tr style="background:#eee;">
+            <th>B. Perfil das novas famílias inseridas em acompanhamento no PAIF no mês de referência</th>
+            <th class="col-val">Total</th>
+        </tr>
+        <tr><td>B.1. Famílias em situação de extrema pobreza</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="b1" aria-label="B.1. Famílias em situação de extrema pobreza"></td></tr>
+        <tr><td>B.2. Famílias beneficiárias do Programa Bolsa Família</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="b2" aria-label="B.2. Famílias beneficiárias do Programa Bolsa Família"></td></tr>
+        <tr><td>B.3. Famílias em descumprimento de condicionalidades do PBF</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="b3" aria-label="B.3. Famílias em descumprimento de condicionalidades do PBF"></td></tr>
+        <tr><td>B.4. Famílias com membros beneficiários do BPC</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="b4" aria-label="B.4. Famílias com membros beneficiários do BPC"></td></tr>
+        <tr><td>B.5. Famílias com crianças ou adolescentes em situação de trabalho infantil</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="b5" aria-label="B.5. Famílias com crianças ou adolescentes em situação de trabalho infantil"></td></tr>
+        <tr><td>B.6. Famílias com crianças ou adolescentes em Serviço de Acolhimento</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="b6" aria-label="B.6. Famílias com crianças ou adolescentes em Serviço de Acolhimento"></td></tr>
+    </table>
+    <div class="obs-box">
+        <strong>Atenção!</strong> Os itens B1 a B6 identificam apenas alguns perfis de famílias. É normal que algumas famílias contadas no item A2 não se enquadrem em nenhuma das condições acima, enquanto
+outras podem se enquadrar simultaneamente em mais de uma condição. Portanto, a soma de B1 a B6 não terá, necessariamente, o mesmo valor relatado em A2.
+    </div>
+
+    <div class="section-header">Bloco 2 - Atendimentos particularizados realizados no CRAS</div>
+    <table>
+        <tr style="background:#eee;">
+            <th>C. Volume de atendimentos particularizados realizados no CRAS no mês de referência</th>
+            <th class="col-val">Quant.</th>
+        </tr>
+        <tr><td>C.1. Total de atendimentos particularizados realizados no mês de referência</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="c1" aria-label="C.1. Total de atendimentos particularizados realizados no mês de referência"></td></tr>
+        <tr><td>C.2. Famílias encaminhadas para inclusão no Cadastro Único</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="c2" aria-label="C.2. Famílias encaminhadas para inclusão no Cadastro Único"></td></tr>
+        <tr><td>C.3. Famílias encaminhadas para atualização cadastral no Cadastro Único</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="c3" aria-label="C.3. Famílias encaminhadas para atualização cadastral no Cadastro Único"></td></tr>
+        <tr><td>C.4. Indivíduos encaminhados para acesso ao BPC</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="c4" aria-label="C.4. Indivíduos encaminhados para acesso ao BPC"></td></tr>
+        <tr><td>C.5. Famílias encaminhadas para o CREAS</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="c5" aria-label="C.5. Famílias encaminhadas para o CREAS"></td></tr>
+        <tr><td>C.6. Visitas domiciliares realizadas</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="c6" aria-label="C.6. Visitas domiciliares realizadas"></td></tr>
+        <tr><td>C.7. Total de auxílios-natalidade concedidos/entregues no mês</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="c7" aria-label="C.7. Total de auxílios-natalidade concedidos/entregues no mês"></td></tr>
+        <tr><td>C.8. Total de auxílios-funeral concedidos/entregues no mês</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="c8" aria-label="C.8. Total de auxílios-funeral concedidos/entregues no mês"></td></tr>
+        <tr><td>C.9. Outros benefícios eventuais concedidos/entregues no mês</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="c9" aria-label="C.9. Outros benefícios eventuais concedidos/entregues no mês"></td></tr>
+    </table>
+    <div class="obs-box">
+        <strong>Atenção!</strong> Nos campos C1 a C6 devem ser contabilizadas todas as famílias/indivíduos, independente de estarem, ou não, em acompanhamento sistemático do PAIF. Nos campos C7, C8 e C9,
+considere os auxílios e os benefícios eventuais concedidos e /ou entregues no CRAS. Caso o CRAS não conceda nem entregue auxílios ou benefícios eventuais marque 0 (zero) nos respectivos
+campos.
+    </div>
+
+    <div class="section-header">Bloco 3 - Atendimentos coletivos realizados no CRAS</div>
+    <table>
+        <tr style="background:#eee;">
+            <th>D. Volume de atendimentos coletivos realizados CRAS durante o mês de referência</th>
+            <th class="col-val">Quant.</th>
+        </tr>
+        <tr><td>D.1. Famílias participando regularmente de grupos no âmbito do PAIF</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="d1" aria-label="D.1. Famílias participando regularmente de grupos no âmbito do PAIF"></td></tr>
+        <tr><td>D.2. Crianças de 0 a 6 anos em Serviços de Convivência e Fortalecimento de Vínculos</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="d2" aria-label="D.2. Crianças de 0 a 6 anos em Serviços de Convivência e Fortalecimento de Vínculos"></td></tr>
+        <tr><td>D.3. Crianças/adolescentes de 7 a 14 anos em Serviços de Convivência e Fortalecimento de Vínculos</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="d3" aria-label="D.3. Crianças/adolescentes de 7 a 14 anos em Serviços de Convivência e Fortalecimento de Vínculos"></td></tr>
+        <tr><td>D.4. Adolescentes de 15 a 17 anos em Serviços de Convivência e Fortalecimento de Vínculos</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="d4" aria-label="D.4. Adolescentes de 15 a 17 anos em Serviços de Convivência e Fortalecimento de Vínculos"></td></tr>
+        <tr><td>D.8. Adultos entre 18 e 59 anos em Serviços de Convivência e Fortalecimento de Vínculos</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="d8" aria-label="D.8. Adultos entre 18 e 59 anos em Serviços de Convivência e Fortalecimento de Vínculos"></td></tr>
+        <tr><td>D.5. Idosos em Serviços de Convivência e Fortalecimento de Vínculos para idosos</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="d5" aria-label="D.5. Idosos em Serviços de Convivência e Fortalecimento de Vínculos para idosos"></td></tr>
+        <tr><td>D.6. Pessoas participantes em palestras, oficinas e outras atividades coletivas de caráter não continuado</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="d6" aria-label="D.6. Pessoas participantes em palestras, oficinas e outras atividades coletivas de caráter não continuado"></td></tr>
+        <tr><td>D.7. Pessoas com deficiência, participando dos Serviço de Convivência ou dos grupos do PAIF</td><td class="col-val"><input type="text" inputmode="numeric" pattern="[0-9]*" class="qtd-input" name="d7" aria-label="D.7. Pessoas com deficiência, participando dos Serviço de Convivência ou dos grupos do PAIF"></td></tr>
+    </table>
+    <div class="obs-box">
+        * Apesar dos serviços de convivência não estar em mais vinculados a faixas etárias, para facilidade de registro, os usuários devem ser contabilizados de acordo com a sua idade, independente de
+estarem, ou não, no mesmo grupo
+    </div>
+
+    <div style="margin-top: 10px; border-top: 2px solid #000; padding-top: 5px; font-weight: bold;">
+        Nome e cargo da pessoa responsável no CRAS pelas informações: 
+    </div>
+        Equipe Volante 
+<input type="text" name="responsavel" aria-label="Nome e cargo da pessoa responsável no CRAS pelas informações" style="width: 60%; border-bottom: 1px solid #000;">
+</div>
+<script>
+    // Ajusta a altura de um textarea "autogrow" ao conteúdo atual,
+    // para que o texto sempre fique visível, quebrando linha em vez
+    // de ser cortado.
+    function autoGrow(el) {
+        el.style.height = 'auto';
+        el.style.height = (el.scrollHeight) + 'px';
+    }
+
+    document.querySelectorAll('textarea.autogrow').forEach(function (ta) {
+        autoGrow(ta);
+        ta.addEventListener('input', function () { autoGrow(ta); });
+    });
+
+    // Restringe os campos numéricos a dígitos, permitindo apenas o
+    // traço "-" que o próprio script insere na hora de imprimir.
+    document.querySelectorAll('input.qtd-input').forEach(function (input) {
+        input.addEventListener('input', function () {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+    });
+
+    // Salva os dados no navegador toda vez que o botão é clicado.
+    // Usa o atributo "name" de cada campo como chave, em vez da posição
+    // (índice) do campo — assim, se um campo for adicionado, removido ou
+    // reordenado no futuro, os dados salvos de cada campo continuam
+    // batendo com o campo certo, em vez de "escorregar" para o campo
+    // vizinho. Abrange tanto <input> quanto <textarea>.
+    function saveData() {
+        const campos = document.querySelectorAll('input[name], textarea[name]');
+        const data = {};
+        campos.forEach(campo => {
+            data[campo.name] = campo.value;
+        });
+        localStorage.setItem('rma_backup', JSON.stringify(data));
+        alert('Dados salvos com sucesso!');
+    }
+
+    // Baixa os dados atualmente salvos (rma_backup) como um arquivo .json,
+    // para guardar em outro lugar ou levar para outro computador.
+    function exportRmaBackup() {
+        const savedData = localStorage.getItem('rma_backup');
+        if (!savedData) {
+            alert('Não há dados salvos ainda. Clique em "SALVAR DADOS" antes de fazer o backup.');
+            return;
+        }
+        const payload = {
+            app: 'RMA CRAS - Paulo Xavier',
+            tipo: 'backup-rma',
+            geradoEm: new Date().toISOString(),
+            dados: JSON.parse(savedData)
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `rma_backup_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+
+    // Restaura um arquivo de backup gerado por exportRmaBackup(), preenchendo
+    // os campos do formulário e salvando de volta no navegador.
+    function importRmaBackup(fileInput) {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            try {
+                const payload = JSON.parse(e.target.result);
+                const dados = payload && typeof payload.dados === 'object' ? payload.dados : null;
+                if (!dados) throw new Error('formato inválido');
+                const ok = confirm('Importar este backup vai SOBRESCREVER os dados atualmente preenchidos neste formulário. Deseja continuar?');
+                if (!ok) return;
+                localStorage.setItem('rma_backup', JSON.stringify(dados));
+                const campos = document.querySelectorAll('input[name], textarea[name]');
+                campos.forEach(campo => {
+                    if (dados[campo.name] !== undefined) campo.value = dados[campo.name];
+                });
+                document.querySelectorAll('textarea.autogrow').forEach(autoGrow);
+                alert('Backup importado com sucesso!');
+            } catch (err) {
+                alert('Não foi possível importar este arquivo. Verifique se é um backup gerado por este próprio formulário.');
+            } finally {
+                fileInput.value = '';
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    // Carrega os dados automaticamente quando você abre a página.
+    // Também migra, de forma transparente, dados salvos por uma versão
+    // anterior deste formulário (que gravava por posição do campo,
+    // "field_0", "field_1"...) para o novo formato por nome de campo.
+    window.onload = function() {
+        const savedData = localStorage.getItem('rma_backup');
+        const campos = document.querySelectorAll('input[name], textarea[name]');
+        if (savedData) {
+            const data = JSON.parse(savedData);
+            const isFormatoAntigo = data['field_0'] !== undefined && data[campos[0]?.name] === undefined;
+            campos.forEach((campo, index) => {
+                if (isFormatoAntigo) {
+                    if (data['field_' + index] !== undefined) {
+                        campo.value = data['field_' + index];
+                    }
+                } else if (data[campo.name] !== undefined) {
+                    campo.value = data[campo.name];
+                }
+            });
+        }
+        // Depois de carregar os valores salvos, reajusta a altura de
+        // cada textarea para caber o texto restaurado.
+        document.querySelectorAll('textarea.autogrow').forEach(autoGrow);
+    };
+
+    // Limpa todos os campos e a memória do navegador
+    function clearData() {
+        if (confirm('Deseja realmente apagar todos os campos?')) {
+            document.querySelectorAll('input, textarea').forEach(campo => campo.value = '');
+            document.querySelectorAll('textarea.autogrow').forEach(autoGrow);
+            localStorage.removeItem('rma_backup');
+        }
+    }
+
+    // Ao imprimir: qualquer campo de quantidade que estiver vazio OU cujo
+    // valor digitado seja "0" passa a exibir um traço "-" em vez de ficar
+    // em branco ou mostrar "0". O usuário continua podendo digitar um
+    // número normalmente nos campos. O valor original de cada campo é
+    // guardado para poder ser restaurado depois de imprimir (inclusive
+    // quando o valor original era "0").
+    function marcarTracosParaImpressao() {
+        document.querySelectorAll('input.qtd-input').forEach(function (input) {
+            const valor = input.value.trim();
+            const ehVazioOuZero = (valor === '' || Number(valor) === 0);
+            input.dataset.valorOriginal = input.value;
+            input.dataset.eraVazioOuZero = ehVazioOuZero ? 'true' : 'false';
+            if (ehVazioOuZero) {
+                input.value = '-';
+            }
+        });
+    }
+
+    // Depois de imprimir, o traço é removido e o valor original (vazio
+    // ou "0") é restaurado, para que você possa continuar editando/
+    // preenchendo o formulário normalmente.
+    function restaurarAposImpressao() {
+        document.querySelectorAll('input.qtd-input').forEach(function (input) {
+            if (input.dataset.eraVazioOuZero === 'true') {
+                input.value = input.dataset.valorOriginal || '';
+            }
+            delete input.dataset.eraVazioOuZero;
+            delete input.dataset.valorOriginal;
+        });
+    }
+
+    window.addEventListener('beforeprint', marcarTracosParaImpressao);
+    window.addEventListener('afterprint', restaurarAposImpressao);
+</script>
+</body>
+</html>
