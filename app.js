@@ -3482,6 +3482,52 @@ function hydrateAttachImages(root) {
   });
 }
 
+// --- Painel inicial -----------------------------------------------------------
+let homeShowAll = false;
+const HOME_MAIN_CATS = [
+  ['social', 'Proteção Social (SUAS)'], ['saude', 'RAPS · Saúde mental'],
+  ['hospitalar', 'Hospitais e Atenção Básica'], ['tea', 'Pessoa com Deficiência e TEA'],
+  ['educacao', 'Educação'], ['conselho', 'Conselho Tutelar'], ['mulher', 'Proteção à Mulher'],
+  ['juridico', 'Justiça'], ['previdencia', 'Previdência (INSS)'], ['documentacao', 'Documentação'],
+  ['trabalho', 'Trabalho e Renda'], ['informes', 'Programas e Serviços']
+];
+const HOME_MORE_CATS = [
+  ['delegacias', 'Segurança Pública'], ['alimentar', 'Segurança Alimentar'], ['conselhosdireitos', 'Conselhos de Direitos'],
+  ['bancos', 'Rede Bancária'], ['migracao', 'Migração'], ['habitacao', 'Habitação'],
+  ['mobilidade', 'Mobilidade'], ['cultura', 'Cultura, Esporte e Lazer'], ['defesacivil', 'Defesa Civil']
+];
+const HOME_EMERGENCY = [['190', 'PM'], ['192', 'SAMU'], ['193', 'Bombeiros'], ['180', 'Mulher'], ['181', 'Disque-Denúncia']];
+
+function homeShowAllList() { homeShowAll = true; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+function homeBack() { homeShowAll = false; render(); }
+function homeFocusSearch() { const el = document.getElementById('mainSearch'); if (el && !el.disabled) el.focus(); }
+
+function renderHomePanel() {
+  const counts = _staticChipCounts || {};
+  const go = (cat) => 'onclick="argoAssistantGoTo(\'' + cat + '\')"';
+  const tile = ([cat, label]) => '<button type="button" class="home-tile" ' + go(cat) + '>'
+    + '<span class="home-tile-count">' + (counts[cat] || 0) + '</span><span class="home-tile-label">' + label + '</span></button>';
+  const chipOf = (cat) => document.querySelector('#filterBar .filter-chip[data-cat="' + cat + '"]');
+  const recents = navReadRecent().filter(c => c !== 'all' && chipOf(c)).slice(0, 4);
+  const space = [['favoritos', 'Favoritos', counts.favoritos || 0], ['anotacoes', 'Minhas Anotações', counts.anotacoes || 0]]
+    .map(([c, l, n]) => '<button type="button" class="home-space-btn" ' + go(c) + '><strong>' + n + '</strong> ' + l + '</button>').join('')
+    + recents.map(c => '<button type="button" class="home-space-btn is-recent" ' + go(c) + '>↺ '
+      + escapeHtml(NAV_SHORT_LABELS[c] || navChipName(chipOf(c))) + '</button>').join('');
+  return '<section id="homePanel" class="home-panel" aria-labelledby="homeTitle">'
+    + '<h2 id="homeTitle" class="home-title">Painel inicial</h2>'
+    + '<p class="home-sub">Escolha uma categoria ou <button type="button" class="home-link" onclick="homeFocusSearch()">use a busca acima</button> para encontrar uma unidade, bairro ou serviço.</p>'
+    + '<div class="home-emerg" role="group" aria-label="Telefones de emergência">'
+    + HOME_EMERGENCY.map(([n, l]) => '<a href="tel:' + n + '"><strong>' + n + '</strong> ' + l + '</a>').join('') + '</div>'
+    + '<h3 class="home-h">Categorias principais</h3><div class="home-grid">' + HOME_MAIN_CATS.map(tile).join('') + '</div>'
+    + '<details class="home-more"><summary>Mais categorias</summary><div class="home-grid">' + HOME_MORE_CATS.map(tile).join('') + '</div></details>'
+    + '<h3 class="home-h">Seu espaço</h3><div class="home-space">' + space + '</div>'
+    + '<h3 class="home-h">Links oficiais</h3><div class="home-space">'
+    + '<a class="home-space-btn" href="https://mapa-social.mds.gov.br/" target="_blank" rel="noopener noreferrer">Mapa Social (MDS) ↗</a>'
+    + '<a class="home-space-btn" href="https://novasage.saude.gov.br/politicas-programas-projetos-estrategias-e-acoes/rede-de-atencao-psicossocial-raps?tab=687a89d328fcb500017d5966" target="_blank" rel="noopener noreferrer">RAPS (Ministério da Saúde) ↗</a></div>'
+    + '<p class="home-all"><button type="button" class="btn-tech btn-secondary" onclick="homeShowAllList()">Ver todos os ' + DATA.length + ' registros</button></p>'
+    + '</section>';
+}
+
 function render() {
   cancelPendingGridChunks();
   setSearchHint('');
@@ -3491,6 +3537,8 @@ function render() {
   const resultsInfo = document.getElementById('resultsInfo');
 
   updateChipCounts();
+  if (cat !== 'all') homeShowAll = false;
+  document.body.classList.remove('home-view');
 
   const clearBtn = document.getElementById('searchClearBtn');
   if (clearBtn) clearBtn.classList.toggle('visible', query.length > 0);
@@ -3852,6 +3900,18 @@ function render() {
   }
 
   if (resultsInfo) resultsInfo.style.display = '';
+
+  // Painel inicial: tela de entrada da visão "Rede Intersetorial de Serviços"
+  // quando não há busca nem ordenação por proximidade.
+  if (cat === 'all' && !query.trim() && !homeShowAll && !proximityState.active) {
+    document.body.classList.add('home-view');
+    document.getElementById('counter').textContent = DATA.length;
+    grid.innerHTML = renderHomePanel();
+    return;
+  }
+  if (cat === 'all' && homeShowAll) {
+    setSearchHint('<button type="button" class="home-back" onclick="homeBack()">← Voltar ao painel inicial</button>');
+  }
 
   // Busca (ver "Motor de busca"): várias palavras, sem acento, com relevância.
   // Só se nada for encontrado é que se tenta corrigir erros de digitação.
