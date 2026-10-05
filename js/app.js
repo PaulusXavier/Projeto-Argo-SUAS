@@ -3482,67 +3482,449 @@ function hydrateAttachImages(root) {
   });
 }
 
-// --- Ferramentas: calculadora, relógio e bloco de notas ----------------------
+// --- Ferramentas: relógio (com cronômetro e temporizador), calculadora e bloco de notas ---
 // O bloco de notas usa a chave "toolpad_*" (ver SENSITIVE_DATA_PREFIXES): fica
 // cifrado, entra no backup e some em "Apagar dados salvos neste dispositivo".
+// v1 = um único texto (versão antiga); v2 = várias notas em JSON (a v1 é migrada sozinha).
 const TOOLPAD_KEY = 'toolpad_v1';
-const TOOLPAD_OLD_KEY = 'argo_toolpad_v1'; // versão anterior (sem cifra)
+const TOOLPAD_V2_KEY = 'toolpad_v2';
+const TOOLPAD_OLD_KEY = 'argo_toolpad_v1'; // versão ainda mais antiga (sem cifra)
+
+// Estado que sobrevive a trocar de aba: o painel é remontado a cada abertura,
+// mas cronômetro, temporizador e histórico da calculadora continuam valendo.
+const TOOLS_STATE = {
+  pane: 'clock',
+  sw: { running: false, start: 0, base: 0, laps: [] },
+  tm: { running: false, end: 0, total: 0, left: 0, done: false, timer: null },
+  calcLog: [],
+  ctx: null,
+  hooked: false,
+  clockTimer: null,
+  flush: null
+};
+
+const TOOLS_TZ_BV = 'America/Boa_Vista';
+const TOOLS_TZ_BR = 'America/Sao_Paulo';
+const toolsPad2 = n => String(n).padStart(2, '0');
+
+function toolsToast(msg) {
+  let t = document.getElementById('toolsToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toolsToast'; t.className = 'tools-toast';
+    t.setAttribute('role', 'status'); t.setAttribute('aria-live', 'polite');
+    document.body.appendChild(t);
+  }
+  t.textContent = msg; t.classList.add('is-on');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('is-on'), 7000);
+}
+
+// O navegador só libera áudio depois de um toque: "prepara" ao clicar em Iniciar.
+function toolsPrimeAudio() {
+  try {
+    const C = window.AudioContext || window.webkitAudioContext;
+    if (!C) return;
+    if (!TOOLS_STATE.ctx) TOOLS_STATE.ctx = new C();
+    if (TOOLS_STATE.ctx.state === 'suspended') TOOLS_STATE.ctx.resume();
+  } catch (e) { /* sem áudio: só o aviso visual */ }
+}
+function toolsBeep() {
+  try {
+    const ctx = TOOLS_STATE.ctx;
+    if (ctx) {
+      if (ctx.state === 'suspended') ctx.resume();
+      [0, 0.4, 0.8].forEach(off => {
+        const o = ctx.createOscillator(), g = ctx.createGain(), t0 = ctx.currentTime + off;
+        o.type = 'sine'; o.frequency.value = 880;
+        o.connect(g); g.connect(ctx.destination);
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.3, t0 + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.28);
+        o.start(t0); o.stop(t0 + 0.3);
+      });
+    }
+  } catch (e) { /* ignora */ }
+  try { if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]); } catch (e) { /* ignora */ }
+}
+
+function toolsPartsIn(d, tz) {
+  try {
+    const f = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
+    const o = {};
+    f.formatToParts(d).forEach(p => { o[p.type] = p.value; });
+    return { h: (+o.hour) % 24, m: +o.minute, s: +o.second };
+  } catch (e) { return { h: d.getHours(), m: d.getMinutes(), s: d.getSeconds() }; }
+}
+
+const toolsFmtHMS = sec => {
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+  return (h ? h + ':' + toolsPad2(m) : toolsPad2(m)) + ':' + toolsPad2(s);
+};
+const toolsFmtSw = ms => {
+  const cs = Math.floor(ms / 10) % 100, t = Math.floor(ms / 1000);
+  return toolsFmtHMS(t) + ',' + toolsPad2(cs);
+};
+
+// ---- Cronômetro
+function toolsSwElapsed() { const s = TOOLS_STATE.sw; return s.base + (s.running ? Date.now() - s.start : 0); }
+function toolsSwPaint() {
+  const d = document.getElementById('toolSwDisp');
+  if (!d) return false;
+  d.textContent = toolsFmtSw(toolsSwElapsed());
+  return true;
+}
+function toolsSwLoop() {
+  if (!TOOLS_STATE.sw.running || !toolsSwPaint()) return;
+  requestAnimationFrame(toolsSwLoop);
+}
+function toolsSwRender() {
+  const sw = TOOLS_STATE.sw;
+  const go = document.getElementById('toolSwGo'), lap = document.getElementById('toolSwLap'), reset = document.getElementById('toolSwReset'), list = document.getElementById('toolSwLaps');
+  if (!go) return;
+  toolsSwPaint();
+  go.textContent = sw.running ? 'Pausar' : (sw.base ? 'Continuar' : 'Iniciar');
+  go.classList.toggle('btn-primary', !sw.running);
+  lap.disabled = !sw.running;
+  reset.disabled = !sw.running && !sw.base;
+  const laps = sw.laps, parts = laps.map((t, i) => t - (i ? laps[i - 1] : 0));
+  const best = laps.length >= 3 ? Math.min(...parts) : -1, worst = laps.length >= 3 ? Math.max(...parts) : -1;
+  list.innerHTML = laps.map((t, i) => {
+    const p = parts[i], cls = p === best ? ' is-best' : p === worst ? ' is-worst' : '';
+    return '<li class="tools-lap' + cls + '"><span>Volta ' + (i + 1) + '</span><strong>' + toolsFmtSw(p) + '</strong><span class="tools-lap-total">' + toolsFmtSw(t) + '</span></li>';
+  }).reverse().join('');
+}
+
+// ---- Temporizador (continua valendo e avisa mesmo com outra aba aberta)
+function toolsTmPaint() {
+  const tm = TOOLS_STATE.tm;
+  const d = document.getElementById('toolTmDisp');
+  if (!d) return;
+  const secs = Math.ceil((tm.running ? Math.max(0, tm.end - Date.now()) : tm.left) / 1000);
+  d.textContent = tm.done ? 'Acabou!' : toolsFmtHMS(secs);
+  d.classList.toggle('is-done', tm.done);
+  const bar = document.getElementById('toolTmBar');
+  if (bar) bar.style.width = (tm.total ? Math.max(0, Math.min(100, 100 - ((tm.running ? tm.end - Date.now() : tm.left) / tm.total) * 100)) : 0) + '%';
+  const go = document.getElementById('toolTmGo'), reset = document.getElementById('toolTmReset');
+  if (go) {
+    go.textContent = tm.running ? 'Pausar' : (tm.left > 0 && tm.left < tm.total ? 'Continuar' : 'Iniciar');
+    go.disabled = !tm.running && tm.left <= 0;
+    go.classList.toggle('btn-primary', !tm.running);
+  }
+  if (reset) reset.disabled = !tm.running && !tm.done && tm.left === tm.total;
+}
+function toolsTmTick() {
+  const tm = TOOLS_STATE.tm;
+  if (!tm.running) return;
+  if (tm.end - Date.now() <= 0) {
+    tm.running = false; tm.left = 0; tm.done = true;
+    clearInterval(tm.timer); tm.timer = null;
+    toolsBeep();
+    toolsToast('⏰ Temporizador: o tempo acabou.');
+  }
+  toolsTmPaint();
+}
+function toolsTmStart() {
+  const tm = TOOLS_STATE.tm;
+  if (tm.running || tm.left <= 0) return;
+  toolsPrimeAudio();
+  tm.done = false; tm.running = true; tm.end = Date.now() + tm.left;
+  clearInterval(tm.timer); tm.timer = setInterval(toolsTmTick, 250);
+  toolsTmPaint();
+}
+function toolsTmPause() {
+  const tm = TOOLS_STATE.tm;
+  if (!tm.running) return;
+  tm.left = Math.max(0, tm.end - Date.now()); tm.running = false;
+  clearInterval(tm.timer); tm.timer = null;
+  toolsTmPaint();
+}
+function toolsTmSet(min) {
+  const tm = TOOLS_STATE.tm;
+  const m = Math.round(Number(min));
+  if (!m || m < 1 || m > 600) return false;
+  clearInterval(tm.timer); tm.timer = null;
+  tm.running = false; tm.done = false; tm.total = m * 60000; tm.left = tm.total;
+  toolsTmPaint();
+  return true;
+}
+
+// ---- Notas em PDF (usa a mesma pdf-lib da aba "Unificar / Converter PDF"; sem enviar nada a servidor)
+async function toolsNotesToPdf(notes) {
+  const PDFLib = await ensurePdfLib();
+  const doc = await PDFLib.PDFDocument.create();
+  const font = await doc.embedFont(PDFLib.StandardFonts.Helvetica);
+  const bold = await doc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+  const rgb = PDFLib.rgb;
+  const supported = new Set(font.getCharacterSet());
+  // A fonte padrão do PDF cobre o português; emojis e símbolos raros ficam de fora.
+  const clean = t => {
+    let out = '';
+    for (const ch of String(t).replace(/\r/g, '').replace(/\t/g, '    ')) {
+      const cp = ch.codePointAt(0);
+      if (cp === 0x200D || (cp >= 0xFE00 && cp <= 0xFE0F)) continue;
+      if (ch === '\n' || supported.has(cp)) out += ch;
+      else if (cp <= 0xFFFF) out += '?';
+    }
+    return out;
+  };
+  const W = 595.28, H = 841.89, M = 56, maxW = W - M * 2, size = 11, lh = 15.5;
+  let page, y;
+  const newPage = () => { page = doc.addPage([W, H]); y = H - M; };
+  const wrap = (text, f, sz) => {
+    if (!text) return [''];
+    const lines = []; let cur = '';
+    text.split(/(\s+)/).forEach(tok => {
+      if (!tok) return;
+      if (f.widthOfTextAtSize(cur + tok, sz) <= maxW) { cur += tok; return; }
+      if (/^\s+$/.test(tok)) { lines.push(cur.trimEnd()); cur = ''; return; }
+      if (cur.trim()) { lines.push(cur.trimEnd()); cur = ''; }
+      let chunk = ''; // palavra maior que a linha: quebra por caractere
+      for (const ch of tok) {
+        if (f.widthOfTextAtSize(chunk + ch, sz) > maxW) { lines.push(chunk); chunk = ch; } else chunk += ch;
+      }
+      cur = chunk;
+    });
+    lines.push(cur.trimEnd());
+    return lines;
+  };
+  const stamp = u => {
+    const d = new Date(u);
+    try { return d.toLocaleDateString('pt-BR', { timeZone: TOOLS_TZ_BV }) + ' ' + d.toLocaleTimeString('pt-BR', { timeZone: TOOLS_TZ_BV, hour: '2-digit', minute: '2-digit' }); }
+    catch (e) { return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
+  };
+  const gray = rgb(0.42, 0.46, 0.52);
+
+  notes.forEach((n, i) => {
+    newPage();
+    const left = 'Argo SUAS — Bloco de notas' + (notes.length > 1 ? ' · Nota ' + (i + 1) + ' de ' + notes.length : '');
+    const right = 'Atualizada em ' + stamp(n.u);
+    page.drawText(clean(left), { x: M, y: y - 9, size: 9, font: bold, color: gray });
+    page.drawText(right, { x: W - M - font.widthOfTextAtSize(right, 9), y: y - 9, size: 9, font, color: gray });
+    y -= 16;
+    page.drawLine({ start: { x: M, y }, end: { x: W - M, y }, thickness: 0.8, color: rgb(0.8, 0.84, 0.88) });
+    y -= 16;
+    clean(n.text).split('\n').forEach(par => {
+      wrap(par, font, size).forEach(line => {
+        if (y - lh < M + 14) newPage();
+        if (line) page.drawText(line, { x: M, y: y - size, size, font, color: rgb(0.06, 0.09, 0.16) });
+        y -= lh;
+      });
+    });
+  });
+
+  const pages = doc.getPages();
+  pages.forEach((pg, i) => {
+    const t = 'Página ' + (i + 1) + ' de ' + pages.length;
+    pg.drawText(t, { x: (W - font.widthOfTextAtSize(t, 8.5)) / 2, y: 28, size: 8.5, font, color: gray });
+  });
+  doc.setTitle('Bloco de notas — Argo SUAS');
+  doc.setCreator('Argo SUAS');
+  doc.setProducer('Argo SUAS (pdf-lib)');
+  return new Blob([await doc.save()], { type: 'application/pdf' });
+}
 
 function renderToolsCard() {
   const keys = ['C','⌫','%','÷','7','8','9','×','4','5','6','−','1','2','3','+','±','0',',','='];
   const names = { 'C': 'Limpar tudo', '⌫': 'Apagar último dígito', '%': 'Porcentagem', '÷': 'Dividir', '×': 'Multiplicar', '−': 'Subtrair', '+': 'Somar', '±': 'Trocar sinal', ',': 'Vírgula', '=': 'Igual' };
   const btns = keys.map(k => '<button type="button" class="calc-k' + (/[÷×−+]/.test(k) ? ' is-op' : '') + (k === '=' ? ' is-eq' : '')
     + '" data-k="' + k + '"' + (names[k] ? ' aria-label="' + names[k] + '"' : '') + '>' + k + '</button>').join('');
+  let ticks = '';
+  for (let i = 0; i < 60; i++) {
+    const major = i % 5 === 0, a = i * Math.PI / 30, r1 = major ? 45 : 49, r2 = 53;
+    ticks += '<line class="an-tick' + (major ? ' is-major' : '') + '" x1="' + (60 + r1 * Math.sin(a)).toFixed(2) + '" y1="' + (60 - r1 * Math.cos(a)).toFixed(2)
+      + '" x2="' + (60 + r2 * Math.sin(a)).toFixed(2) + '" y2="' + (60 - r2 * Math.cos(a)).toFixed(2) + '"/>';
+  }
+  const tabs = [['clock', 'Relógio'], ['sw', 'Cronômetro'], ['tm', 'Temporizador']].map(t =>
+    '<button type="button" role="tab" class="tools-tab" data-tt="' + t[0] + '" id="toolTab-' + t[0] + '" aria-controls="toolPane-' + t[0] + '">' + t[1] + '</button>').join('');
+  const presets = [5, 10, 15, 30, 45, 60].map(m => '<button type="button" class="tools-chip" data-min="' + m + '">' + m + ' min</button>').join('');
   return '<div id="toolsRoot" class="tools-wrap">'
-    + '<section class="tech-card tools-card" aria-label="Relógio"><h2>Relógio</h2>'
-    + '<div id="toolsClock" class="tools-time" role="timer" aria-live="off">--:--:--</div><div id="toolsDate" class="tools-date"></div>'
-    + '<div class="tools-hint">Horário de Boa Vista (RR)</div></section>'
+    // ---------- Relógio / cronômetro / temporizador
+    + '<section class="tech-card tools-card" aria-label="Relógio, cronômetro e temporizador"><h2>Relógio</h2>'
+    + '<div class="tools-tabs" role="tablist" aria-label="Relógio, cronômetro e temporizador">' + tabs + '</div>'
+    + '<div class="tools-pane" role="tabpanel" id="toolPane-clock" aria-labelledby="toolTab-clock">'
+    +   '<div class="tools-clock-row">'
+    +     '<svg class="tools-analog" viewBox="0 0 120 120" role="img" aria-label="Relógio analógico"><circle class="an-face" cx="60" cy="60" r="57"/>' + ticks
+    +       '<line id="toolHandH" class="an-h" x1="60" y1="60" x2="60" y2="35"/><line id="toolHandM" class="an-m" x1="60" y1="60" x2="60" y2="21"/>'
+    +       '<line id="toolHandS" class="an-s" x1="60" y1="68" x2="60" y2="16"/><circle class="an-dot" cx="60" cy="60" r="3.2"/></svg>'
+    +     '<div class="tools-clock-text"><div id="toolsClock" class="tools-time" role="timer" aria-live="off">--:--:--</div><div id="toolsDate" class="tools-date"></div>'
+    +       '<div class="tools-hint">Horário de Boa Vista (RR)</div>'
+    +       '<div class="tools-hint tools-br">Brasília (DF): <strong id="toolsBr">--:--</strong> · +1 h</div></div>'
+    +   '</div></div>'
+    + '<div class="tools-pane" role="tabpanel" id="toolPane-sw" aria-labelledby="toolTab-sw" hidden>'
+    +   '<div id="toolSwDisp" class="tools-time tools-time-sm" role="timer" aria-live="off">00:00,00</div>'
+    +   '<div class="tools-row"><button type="button" class="btn-tech btn-primary" id="toolSwGo">Iniciar</button>'
+    +   '<button type="button" class="btn-tech btn-secondary" id="toolSwLap">Volta</button>'
+    +   '<button type="button" class="btn-tech btn-secondary" id="toolSwReset">Zerar</button></div>'
+    +   '<ol id="toolSwLaps" class="tools-laps" aria-label="Voltas"></ol>'
+    + '</div>'
+    + '<div class="tools-pane" role="tabpanel" id="toolPane-tm" aria-labelledby="toolTab-tm" hidden>'
+    +   '<div id="toolTmDisp" class="tools-time tools-time-sm" role="timer" aria-live="off">00:00</div>'
+    +   '<div class="tools-progress" aria-hidden="true"><span id="toolTmBar"></span></div>'
+    +   '<div class="tools-chips" aria-label="Tempos prontos">' + presets + '</div>'
+    +   '<div class="tools-row"><label class="tools-lbl">Outro tempo (min) <input id="toolTmMin" class="tools-input" type="number" min="1" max="600" inputmode="numeric" placeholder="ex.: 20"></label>'
+    +   '<button type="button" class="btn-tech btn-secondary" id="toolTmSet">Definir</button></div>'
+    +   '<div class="tools-row"><button type="button" class="btn-tech btn-primary" id="toolTmGo">Iniciar</button>'
+    +   '<button type="button" class="btn-tech btn-secondary" id="toolTmReset">Zerar</button></div>'
+    +   '<p class="tools-hint">Escolha um tempo e toque em Iniciar. O aviso (som e vibração) toca mesmo se você trocar de aba, desde que o app continue aberto.</p>'
+    + '</div></section>'
+    // ---------- Calculadora
     + '<section id="calcBox" class="tech-card tools-card" aria-label="Calculadora" tabindex="0"><h2>Calculadora</h2>'
     + '<div id="calcHist" class="calc-hist" aria-hidden="true">&nbsp;</div>'
-    + '<div id="calcDisplay" class="calc-display" role="status" aria-live="polite">0</div><div id="calcKeys" class="calc-keys">' + btns + '</div></section>'
+    + '<div class="calc-display-row"><div id="calcDisplay" class="calc-display" role="status" aria-live="polite">0</div>'
+    + '<button type="button" class="calc-copy" id="calcCopy" aria-label="Copiar resultado" title="Copiar resultado">Copiar</button></div>'
+    + '<div id="calcKeys" class="calc-keys">' + btns + '</div>'
+    + '<div id="calcHint" class="tools-hint" role="status">Clique aqui e use o teclado: números, + − * /, Enter, Backspace e Esc.</div>'
+    + '<details class="calc-log-box"><summary>Histórico <span id="calcLogCount" class="calc-log-count"></span></summary>'
+    + '<ul id="calcLog" class="calc-log"></ul><button type="button" class="btn-tech btn-secondary calc-log-clear" id="calcLogClear">Limpar histórico</button></details></section>'
+    // ---------- Bloco de notas
     + '<section class="tech-card tools-card tools-notes" aria-label="Bloco de notas"><h2>Bloco de notas</h2>'
-    + '<textarea id="toolPad" class="tools-pad" aria-label="Texto do bloco de notas" placeholder="Escreva aqui. O texto é salvo automaticamente, cifrado, neste aparelho."></textarea>'
-    + '<div class="tools-bar"><span id="toolPadInfo" class="tools-hint" role="status"></span>'
-    + '<button type="button" class="btn-tech btn-secondary" id="toolPadCopy">Copiar</button>'
-    + '<button type="button" class="btn-tech btn-secondary" id="toolPadSave">Baixar .txt</button>'
-    + '<button type="button" class="btn-tech btn-secondary" id="toolPadClear">Limpar</button></div>'
-    + '<p class="tools-hint">Fica cifrado com a senha do app e some em “Apagar dados salvos neste dispositivo”. Ao baixar o .txt, o arquivo sai sem cifra.</p></section></div>';
+    + '<div class="notes-layout">'
+    +   '<div class="notes-side"><div class="notes-side-top"><input id="toolNoteSearch" class="tools-input" type="search" placeholder="Buscar nas notas" aria-label="Buscar nas notas">'
+    +   '<button type="button" class="btn-tech btn-primary" id="toolNoteNew">+ Nova</button></div>'
+    +   '<ul id="toolNoteList" class="notes-list" aria-label="Suas notas"></ul></div>'
+    +   '<div class="notes-main"><textarea id="toolPad" class="tools-pad" aria-label="Texto da nota" placeholder="Escreva aqui. O texto é salvo automaticamente, cifrado, neste aparelho."></textarea>'
+    +   '<div class="tools-bar"><span id="toolPadInfo" class="tools-hint" role="status"></span>'
+    +   '<button type="button" class="btn-tech btn-secondary" id="toolPadStamp" title="Inserir data e hora no cursor">Data/hora</button>'
+    +   '<button type="button" class="btn-tech btn-secondary" id="toolPadCopy">Copiar</button>'
+    +   '<button type="button" class="btn-tech btn-secondary" id="toolPadPdf" title="Salvar esta nota em PDF">Salvar PDF</button>'
+    +   '<button type="button" class="btn-tech btn-secondary" id="toolPadPdfAll" title="Salvar todas as notas em um PDF (uma por página)">PDF de todas</button>'
+    +   '<button type="button" class="btn-tech btn-secondary" id="toolPadSave">Baixar .txt</button>'
+    +   '<button type="button" class="btn-tech btn-secondary" id="toolPadClear">Excluir nota</button></div></div>'
+    + '</div>'
+    + '<p class="tools-hint">Fica cifrado com a senha do app e some em “Apagar dados salvos neste dispositivo”. Ao baixar o .txt ou o PDF, o arquivo sai sem cifra.</p></section></div>';
 }
 
 function initToolsPanel() {
-  // ---- Relógio (para sozinho quando a aba some; pausa com a página oculta)
-  const dateEl = document.getElementById('toolsDate');
-  const tz = { timeZone: 'America/Boa_Vista' };
-  const safe = (fn, opt) => { try { return fn(opt); } catch (e) { return fn(); } };
-  const tick = () => {
-    const c = document.getElementById('toolsClock');
-    if (!c) { clearInterval(timer); return; }
-    if (document.hidden) return;
-    const d = new Date();
-    c.textContent = safe(o => d.toLocaleTimeString('pt-BR', o), Object.assign({ hour12: false }, tz));
-    dateEl.textContent = safe(o => d.toLocaleDateString('pt-BR', o), Object.assign({ weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }, tz));
+  const $ = id => document.getElementById(id);
+
+  // ---- Abas do cartão do relógio
+  const setPane = name => {
+    TOOLS_STATE.pane = name;
+    ['clock', 'sw', 'tm'].forEach(n => {
+      const on = n === name;
+      $('toolPane-' + n).hidden = !on;
+      const t = $('toolTab-' + n);
+      t.setAttribute('aria-selected', on ? 'true' : 'false'); t.tabIndex = on ? 0 : -1;
+      t.classList.toggle('is-active', on);
+    });
+    if (name === 'sw') { toolsSwRender(); toolsSwLoop(); }
+    if (name === 'tm') toolsTmPaint();
   };
-  const timer = setInterval(tick, 1000); tick();
-  document.addEventListener('visibilitychange', tick);
+  document.querySelector('.tools-tabs').addEventListener('click', e => {
+    const b = e.target.closest('[data-tt]'); if (b) setPane(b.dataset.tt);
+  });
+  document.querySelector('.tools-tabs').addEventListener('keydown', e => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    const order = ['clock', 'sw', 'tm'], i = order.indexOf(TOOLS_STATE.pane);
+    const n = order[(i + (e.key === 'ArrowRight' ? 1 : 2)) % 3];
+    setPane(n); $('toolTab-' + n).focus(); e.preventDefault();
+  });
+
+  // ---- Relógio (para sozinho quando a aba some; pausa com a página oculta)
+  const tick = () => {
+    const c = $('toolsClock');
+    if (!c) { clearInterval(TOOLS_STATE.clockTimer); return; }
+    if (document.hidden) return;
+    const d = new Date(), p = toolsPartsIn(d, TOOLS_TZ_BV), br = toolsPartsIn(d, TOOLS_TZ_BR);
+    c.textContent = toolsPad2(p.h) + ':' + toolsPad2(p.m) + ':' + toolsPad2(p.s);
+    $('toolsBr').textContent = toolsPad2(br.h) + ':' + toolsPad2(br.m);
+    let dt;
+    try { dt = d.toLocaleDateString('pt-BR', { timeZone: TOOLS_TZ_BV, weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }); }
+    catch (e) { dt = d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }); }
+    $('toolsDate').textContent = dt;
+    $('toolHandH').setAttribute('transform', 'rotate(' + ((p.h % 12) * 30 + p.m * 0.5) + ' 60 60)');
+    $('toolHandM').setAttribute('transform', 'rotate(' + (p.m * 6 + p.s * 0.1) + ' 60 60)');
+    $('toolHandS').setAttribute('transform', 'rotate(' + (p.s * 6) + ' 60 60)');
+  };
+  clearInterval(TOOLS_STATE.clockTimer);
+  TOOLS_STATE.clockTimer = setInterval(tick, 1000); tick();
+  TOOLS_STATE.tickClock = tick;
+  if (!TOOLS_STATE.hooked) {
+    TOOLS_STATE.hooked = true;
+    document.addEventListener('visibilitychange', () => {
+      if (TOOLS_STATE.tickClock) TOOLS_STATE.tickClock();
+      if (!document.hidden) { toolsSwLoop(); toolsTmPaint(); }
+    });
+    window.addEventListener('pagehide', () => { if (TOOLS_STATE.flush) TOOLS_STATE.flush(); });
+  }
+
+  // ---- Cronômetro
+  $('toolSwGo').addEventListener('click', () => {
+    const sw = TOOLS_STATE.sw;
+    if (sw.running) { sw.base += Date.now() - sw.start; sw.running = false; }
+    else { sw.start = Date.now(); sw.running = true; toolsSwLoop(); }
+    toolsSwRender();
+  });
+  $('toolSwLap').addEventListener('click', () => {
+    const sw = TOOLS_STATE.sw;
+    if (sw.running) { sw.laps.push(toolsSwElapsed()); toolsSwRender(); }
+  });
+  $('toolSwReset').addEventListener('click', () => {
+    TOOLS_STATE.sw = { running: false, start: 0, base: 0, laps: [] };
+    toolsSwRender();
+  });
+
+  // ---- Temporizador
+  document.querySelector('.tools-chips').addEventListener('click', e => {
+    const b = e.target.closest('[data-min]'); if (!b) return;
+    toolsTmSet(b.dataset.min);
+    document.querySelectorAll('.tools-chip').forEach(c => c.classList.toggle('is-active', c === b));
+    $('toolTmGo').focus();
+  });
+  const setCustom = () => {
+    const inp = $('toolTmMin');
+    if (!toolsTmSet(inp.value)) { inp.focus(); toolsToast('Informe um tempo entre 1 e 600 minutos.'); return; }
+    document.querySelectorAll('.tools-chip').forEach(c => c.classList.remove('is-active'));
+    $('toolTmGo').focus();
+  };
+  $('toolTmSet').addEventListener('click', setCustom);
+  $('toolTmMin').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); setCustom(); } });
+  $('toolTmGo').addEventListener('click', () => { TOOLS_STATE.tm.running ? toolsTmPause() : toolsTmStart(); });
+  $('toolTmReset').addEventListener('click', () => {
+    const tm = TOOLS_STATE.tm;
+    clearInterval(tm.timer); tm.timer = null;
+    tm.running = false; tm.done = false; tm.left = tm.total;
+    toolsTmPaint();
+  });
+  setPane(TOOLS_STATE.pane);
+  toolsTmPaint();
 
   // ---- Calculadora (sem eval)
-  const disp = document.getElementById('calcDisplay'), hist = document.getElementById('calcHist');
-  const S = { cur: '0', prev: null, op: null, fresh: true };
+  const disp = $('calcDisplay'), hist = $('calcHist'), logEl = $('calcLog'), hint = $('calcHint');
+  const hintDefault = hint.textContent;
+  const S = { cur: '0', prev: null, op: null, fresh: true, last: null, note: '' };
   const val = s => parseFloat(String(s).replace(',', '.'));
   const fmt = n => !isFinite(n) ? 'Erro' : String(parseFloat(n.toPrecision(12))).replace('.', ',');
-  const calc = () => {
-    const a = val(S.prev), b = val(S.cur);
-    return S.op === '+' ? a + b : S.op === '−' ? a - b : S.op === '×' ? a * b : b === 0 ? NaN : a / b;
+  const pretty = s => {
+    if (s === 'Erro' || /e/i.test(s)) return s;
+    const neg = s[0] === '-', t = neg ? s.slice(1) : s, parts = t.split(',');
+    return (neg ? '-' : '') + parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + (parts.length > 1 ? ',' + parts[1] : '');
   };
-  const show = () => { disp.textContent = S.cur; hist.innerHTML = S.op ? S.prev + ' ' + S.op : '&nbsp;'; };
+  const calc = (a, op, b) => op === '+' ? a + b : op === '−' ? a - b : op === '×' ? a * b : b === 0 ? NaN : a / b;
+  const renderLog = () => {
+    const log = TOOLS_STATE.calcLog;
+    logEl.innerHTML = log.length
+      ? log.map((e, i) => '<li><button type="button" class="calc-log-item" data-i="' + i + '" title="Usar este resultado"><span>' + escapeHtml(e.expr) + '</span><strong>' + escapeHtml(e.res) + '</strong></button></li>').join('')
+      : '<li class="tools-hint">Nenhuma conta ainda.</li>';
+    $('calcLogCount').textContent = log.length ? '(' + log.length + ')' : '';
+    $('calcLogClear').hidden = !log.length;
+  };
+  const show = () => {
+    disp.textContent = pretty(S.cur);
+    const L = disp.textContent.length;
+    disp.style.fontSize = L > 17 ? '1.05rem' : L > 13 ? '1.35rem' : '';
+    hist.textContent = S.op ? pretty(S.prev) + ' ' + S.op : (S.note || '\u00a0');
+    document.querySelectorAll('#calcKeys .is-op').forEach(b => b.classList.toggle('is-pending', !!S.op && S.fresh && b.dataset.k === S.op));
+  };
   const press = k => {
     if (S.cur === 'Erro' && k !== 'C') return;
+    if (k !== '=') S.note = '';
     if (/^\d$/.test(k)) {
       if (!S.fresh && S.cur.replace(/[-,]/g, '').length >= 15) return;
       S.cur = (S.fresh || S.cur === '0') ? k : S.cur + k; S.fresh = false;
     } else if (k === ',') {
       if (S.fresh) { S.cur = '0,'; S.fresh = false; } else if (!S.cur.includes(',')) S.cur += ',';
-    } else if (k === 'C') { S.cur = '0'; S.prev = null; S.op = null; S.fresh = true; }
+    } else if (k === 'C') { S.cur = '0'; S.prev = null; S.op = null; S.fresh = true; S.last = null; }
     else if (k === '⌫') {
       if (!S.fresh) S.cur = (S.cur.length <= 1 || (S.cur.length === 2 && S.cur[0] === '-')) ? '0' : S.cur.slice(0, -1);
     } else if (k === '±') { if (S.cur !== '0' && S.cur !== '0,') S.cur = S.cur[0] === '-' ? S.cur.slice(1) : '-' + S.cur; }
@@ -3551,63 +3933,181 @@ function initToolsPanel() {
       const x = val(S.cur);
       S.cur = fmt((S.op === '+' || S.op === '−') && S.prev !== null ? val(S.prev) * x / 100 : x / 100); S.fresh = true;
     } else if (k === '=') {
-      if (S.op && S.prev !== null) { const r = fmt(calc()); hist.textContent = S.prev + ' ' + S.op + ' ' + S.cur + ' ='; S.cur = r; S.op = null; S.prev = null; S.fresh = true; disp.textContent = S.cur; return; }
+      // Com operação pendente: calcula. Sem ela, "=" repete a última (ex.: 5 + 3 = = dá 11).
+      let op, aStr, bStr;
+      if (S.op && S.prev !== null) { op = S.op; aStr = S.prev; bStr = S.cur; S.last = { op, b: bStr }; }
+      else if (S.last) { op = S.last.op; aStr = S.cur; bStr = S.last.b; }
+      else return;
+      const r = fmt(calc(val(aStr), op, val(bStr)));
+      S.note = pretty(aStr) + ' ' + op + ' ' + pretty(bStr) + ' =';
+      if (r !== 'Erro') {
+        TOOLS_STATE.calcLog.unshift({ expr: S.note, res: pretty(r) });
+        TOOLS_STATE.calcLog.length = Math.min(TOOLS_STATE.calcLog.length, 12);
+        renderLog();
+      } else S.last = null;
+      S.cur = r; S.op = null; S.prev = null; S.fresh = true;
     } else { // operador
-      if (S.op && S.prev !== null && !S.fresh) S.cur = fmt(calc());
-      S.prev = S.cur; S.op = k; S.fresh = true;
+      if (S.op && S.prev !== null && !S.fresh) S.cur = fmt(calc(val(S.prev), S.op, val(S.cur)));
+      S.prev = S.cur; S.op = k; S.fresh = true; S.last = null;
     }
     show();
   };
-  document.getElementById('calcKeys').addEventListener('click', e => {
+  $('calcKeys').addEventListener('click', e => {
     const b = e.target.closest('[data-k]'); if (b) press(b.dataset.k);
   });
   const keyMap = { '*': '×', '/': '÷', '-': '−', '.': ',', Enter: '=', Backspace: '⌫', Escape: 'C', Delete: 'C' };
-  document.getElementById('calcBox').addEventListener('keydown', e => {
+  $('calcBox').addEventListener('keydown', e => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.target.tagName === 'BUTTON' && (e.key === 'Enter' || e.key === ' ')) return; // deixa o botão focado agir
+    if (e.target.closest && e.target.closest('details')) return; // histórico tem seus próprios botões
     const k = keyMap[e.key] || e.key;
     if (/^[0-9+,=%]$/.test(k) || ['×', '÷', '−', '⌫', 'C'].includes(k)) {
       e.preventDefault(); e.stopPropagation(); // evita que atalhos globais (ex.: "/") peguem a tecla
       press(k);
     }
   });
+  let hintT = null;
+  const say = msg => { hint.textContent = msg; clearTimeout(hintT); hintT = setTimeout(() => { hint.textContent = hintDefault; }, 2500); };
+  $('calcCopy').addEventListener('click', () => {
+    const txt = S.cur;
+    const ok = () => say('Resultado copiado: ' + pretty(txt));
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok).catch(() => say('Não foi possível copiar.'));
+    else say('Seu navegador não permite copiar daqui.');
+  });
+  logEl.addEventListener('click', e => {
+    const b = e.target.closest('[data-i]'); if (!b) return;
+    const entry = TOOLS_STATE.calcLog[+b.dataset.i]; if (!entry) return;
+    S.cur = entry.res.replace(/\./g, ''); S.prev = null; S.op = null; S.fresh = true; S.last = null; S.note = '';
+    show(); $('calcBox').focus();
+  });
+  $('calcLogClear').addEventListener('click', () => { TOOLS_STATE.calcLog.length = 0; renderLog(); });
+  renderLog(); show();
 
-  // ---- Bloco de notas (cifrado via safeStorage, com salvamento adiado)
-  const pad = document.getElementById('toolPad'), info = document.getElementById('toolPadInfo');
-  try { // migra o texto da versão anterior, que ficava sem cifra
-    const old = localStorage.getItem(TOOLPAD_OLD_KEY);
-    if (old !== null) { if (safeStorage.get(TOOLPAD_KEY) === null) safeStorage.set(TOOLPAD_KEY, old); localStorage.removeItem(TOOLPAD_OLD_KEY); }
-  } catch (e) { /* ignora */ }
-  pad.value = safeStorage.get(TOOLPAD_KEY) || '';
+  // ---- Bloco de notas (várias notas, cifradas via safeStorage, com salvamento adiado)
+  const pad = $('toolPad'), info = $('toolPadInfo'), list = $('toolNoteList'), search = $('toolNoteSearch');
+  const norm = s => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const newId = () => 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const titleOf = x => {
+    const l = (String(x).split('\n').find(s => s.trim()) || '').trim();
+    return l ? (l.length > 40 ? l.slice(0, 40) + '…' : l) : 'Nota sem título';
+  };
+  const whenOf = u => {
+    const d = new Date(u), now = new Date();
+    return d.toDateString() === now.toDateString()
+      ? d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  };
+
+  let data = safeStorage.getJSON(TOOLPAD_V2_KEY, null);
+  if (!data || !Array.isArray(data.notes) || !data.notes.length) {
+    // migra o texto único das versões anteriores para a primeira nota
+    let legacy = null;
+    try { const old = localStorage.getItem(TOOLPAD_OLD_KEY); if (old !== null) legacy = old; } catch (e) { /* ignora */ }
+    const v1 = safeStorage.get(TOOLPAD_KEY); if (v1) legacy = v1;
+    const first = { id: newId(), x: legacy || '', u: Date.now() };
+    data = { active: first.id, notes: [first] };
+    if (legacy && safeStorage.set(TOOLPAD_V2_KEY, JSON.stringify(data))) {
+      safeStorage.remove(TOOLPAD_KEY);
+      try { localStorage.removeItem(TOOLPAD_OLD_KEY); } catch (e) { /* ignora */ }
+    }
+  }
+  const current = () => data.notes.find(n => n.id === data.active) || data.notes[0];
+  const persist = () => {
+    const keep = data.notes.filter(n => n.x !== '' || n.id === data.active);
+    if (!keep.some(n => n.x.trim())) return safeStorage.remove(TOOLPAD_V2_KEY) || true;
+    return safeStorage.set(TOOLPAD_V2_KEY, JSON.stringify({ active: data.active, notes: keep }));
+  };
   const counts = () => {
     const w = (pad.value.trim().match(/\S+/g) || []).length;
     return w + (w === 1 ? ' palavra' : ' palavras') + ' · ' + pad.value.length + ' caracteres';
   };
-  info.textContent = counts();
+  const renderList = () => {
+    const q = norm(search.value.trim());
+    const items = data.notes.slice().sort((a, b) => b.u - a.u).filter(n => !q || norm(n.x).includes(q));
+    list.innerHTML = items.length ? items.map(n => {
+      const act = n.id === data.active;
+      return '<li><button type="button" class="notes-item' + (act ? ' is-active' : '') + '" data-id="' + n.id + '" aria-current="' + (act ? 'true' : 'false') + '">'
+        + '<span class="notes-item-title">' + escapeHtml(titleOf(n.x)) + '</span><span class="notes-item-meta">' + escapeHtml(whenOf(n.u)) + '</span></button></li>';
+    }).join('') : '<li class="tools-hint notes-empty">Nenhuma nota encontrada.</li>';
+  };
   let saveT = null;
   const saveNow = () => {
     clearTimeout(saveT); saveT = null;
-    const ok = pad.value ? safeStorage.set(TOOLPAD_KEY, pad.value) : (safeStorage.remove(TOOLPAD_KEY), true);
+    const ok = persist();
     info.textContent = ok ? 'Salvo às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + ' · ' + counts()
                           : 'Não foi possível salvar (armazenamento cheio ou bloqueado). Copie o texto.';
+    renderList();
   };
-  pad.addEventListener('input', () => { info.textContent = counts(); clearTimeout(saveT); saveT = setTimeout(saveNow, 400); });
+  TOOLS_STATE.flush = () => { if (saveT) saveNow(); };
+  const openNote = id => {
+    if (saveT) saveNow();
+    data.active = id; pad.value = current().x;
+    info.textContent = counts(); renderList(); persist();
+  };
+  pad.value = current().x;
+  info.textContent = counts();
+  renderList();
+
+  pad.addEventListener('input', () => {
+    const n = current(); n.x = pad.value; n.u = Date.now();
+    info.textContent = counts(); clearTimeout(saveT); saveT = setTimeout(saveNow, 400);
+  });
   pad.addEventListener('blur', () => { if (saveT) saveNow(); });
-  window.addEventListener('pagehide', () => { if (saveT) saveNow(); });
-  document.getElementById('toolPadCopy').addEventListener('click', () => {
+  list.addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (b) { openNote(b.dataset.id); pad.focus(); } });
+  search.addEventListener('input', renderList);
+  $('toolNoteNew').addEventListener('click', () => {
+    if (saveT) saveNow();
+    search.value = '';
+    if (!current().x.trim()) { renderList(); pad.focus(); return; } // já existe uma nota vazia
+    const n = { id: newId(), x: '', u: Date.now() };
+    data.notes.push(n); data.active = n.id; pad.value = '';
+    info.textContent = counts(); renderList(); pad.focus();
+  });
+  $('toolPadStamp').addEventListener('click', () => {
+    const d = new Date(); let s;
+    try { s = d.toLocaleDateString('pt-BR', { timeZone: TOOLS_TZ_BV }) + ' ' + d.toLocaleTimeString('pt-BR', { timeZone: TOOLS_TZ_BV, hour: '2-digit', minute: '2-digit' }); }
+    catch (e) { s = d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
+    const pos = pad.selectionStart, lead = pos > 0 && pad.value[pos - 1] !== '\n' ? '\n' : '';
+    pad.setRangeText(lead + s + ' — ', pos, pad.selectionEnd, 'end');
+    pad.dispatchEvent(new Event('input')); pad.focus();
+  });
+  $('toolPadCopy').addEventListener('click', () => {
     const done = () => { info.textContent = 'Texto copiado.'; };
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(pad.value).then(done).catch(() => { pad.select(); });
     else { pad.select(); try { document.execCommand('copy'); done(); } catch (e) { /* seleção fica para copiar à mão */ } }
   });
-  document.getElementById('toolPadSave').addEventListener('click', () => {
+  const slugOf = t => norm(t).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+  const makePdf = async all => {
+    const items = (all ? data.notes.slice().sort((a, b) => b.u - a.u) : [current()]).filter(n => n.x.trim());
+    if (!items.length) { info.textContent = all ? 'Não há notas com texto para salvar.' : 'Escreva algo na nota antes de salvar em PDF.'; return; }
+    const btns = [$('toolPadPdf'), $('toolPadPdfAll')];
+    btns.forEach(b => { b.disabled = true; });
+    info.textContent = 'Gerando PDF…';
+    try {
+      const blob = await toolsNotesToPdf(items.map(n => ({ text: n.x, u: n.u })));
+      const name = all ? 'bloco-de-notas-' + new Date().toISOString().slice(0, 10) + '.pdf' : (slugOf(titleOf(items[0].x)) || 'nota') + '.pdf';
+      pdftoolsDownloadBlob(blob, name);
+      info.textContent = 'PDF gerado: ' + name;
+    } catch (e) {
+      info.textContent = 'Não foi possível gerar o PDF. Na primeira vez é preciso estar online (a biblioteca é baixada e fica guardada).';
+    } finally { btns.forEach(b => { b.disabled = false; }); }
+  };
+  $('toolPadPdf').addEventListener('click', () => makePdf(false));
+  $('toolPadPdfAll').addEventListener('click', () => makePdf(true));
+  $('toolPadSave').addEventListener('click', () => {
+    const slug = norm(titleOf(pad.value)).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'bloco-de-notas';
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([pad.value], { type: 'text/plain;charset=utf-8' }));
-    a.download = 'bloco-de-notas.txt'; document.body.appendChild(a); a.click(); a.remove();
+    a.download = slug + '.txt'; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });
-  document.getElementById('toolPadClear').addEventListener('click', () => {
-    if (pad.value && !confirm('Apagar todo o texto do bloco de notas? Isso não pode ser desfeito.')) return;
-    pad.value = ''; saveNow(); pad.focus();
+  $('toolPadClear').addEventListener('click', () => {
+    if (pad.value && !confirm('Excluir esta nota? Isso não pode ser desfeito.')) return;
+    clearTimeout(saveT); saveT = null;
+    data.notes = data.notes.filter(n => n.id !== data.active);
+    if (!data.notes.length) data.notes.push({ id: newId(), x: '', u: Date.now() });
+    data.active = data.notes.slice().sort((a, b) => b.u - a.u)[0].id;
+    pad.value = current().x; saveNow(); pad.focus();
   });
 }
 
@@ -10331,7 +10831,7 @@ const ARGO_TAB_TIPS = {
   tradutor: 'Escreva ou fale em português e escolha o idioma. Dá para salvar frases próprias para usar de novo.',
   pdftools: 'Arraste até 20 arquivos, escolha as páginas de cada PDF e gire o que estiver torto. Nada sai do seu navegador.',
   appsext: 'Cada atalho abre um app do autor em nova aba, com login e sincronização independentes.',
-  ferramentas: 'Relógio de Boa Vista, calculadora (aceita o teclado) e um bloco de notas cifrado neste aparelho.',
+  ferramentas: 'Relógio de Boa Vista com cronômetro e temporizador, calculadora com histórico (aceita o teclado) e bloco de notas com várias notas, cifrado neste aparelho.',
   noticias: 'Toque num tema rápido (Bolsa Família, CadÚnico…), filtre por Normativos ou por período e use a estrela para salvar o que quer ler depois.',
   cras: 'Procure por bairro para saber qual equipe de referência atende. A planilha de atendimentos abre em tela cheia.',
   cas: 'Aqui ficam os registros de atendimento do CAS. Use a busca para localizar um registro.',
