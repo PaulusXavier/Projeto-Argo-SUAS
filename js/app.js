@@ -1586,6 +1586,8 @@ function setProximityButtonLabel(text) {
   if (!btn) return;
   const label = btn.querySelector('.proximity-label');
   if (label) label.textContent = text;
+  // Enquanto está "Localizando...", sinaliza ocupado (animação + leitor de tela).
+  btn.setAttribute('aria-busy', /^Localizando/.test(text) ? 'true' : 'false');
 }
 
 function toggleProximitySort() {
