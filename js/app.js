@@ -7766,47 +7766,57 @@ function renderNewsCard() {
         <span class="subtitle">📰 Últimas publicações dos três ministérios, com normativos separados das notícias</span>
       </div>
       <div class="card-body">
-        <div class="noticias-toolbar">
-          <input type="search" id="noticiasFilter" class="noticias-search"
-                 placeholder="Buscar (ex.: Bolsa Família, CadÚnico, SUAS)…"
-                 aria-label="Buscar nas notícias" autocomplete="off"
-                 oninput="newsResetAndRender()">
-          <button type="button" class="tradutor-btn" id="noticiasRefreshBtn" onclick="refreshNews()">
-            ${ICONS.cloud} Atualizar
-          </button>
+        <div class="noticias-layout">
+          <aside class="noticias-controls" aria-label="Filtros das notícias">
+            <div class="noticias-toolbar">
+              <input type="search" id="noticiasFilter" class="noticias-search"
+                     placeholder="Buscar (ex.: Bolsa Família, CadÚnico, SUAS)…"
+                     aria-label="Buscar nas notícias" autocomplete="off"
+                     oninput="newsResetAndRender()">
+              <button type="button" class="tradutor-btn" id="noticiasRefreshBtn" onclick="refreshNews()">
+                ${ICONS.cloud} Atualizar
+              </button>
+            </div>
+
+            <div class="noticias-ctrl-label">Temas rápidos</div>
+            <div class="noticias-topics" aria-label="Temas rápidos">${topicChips}</div>
+
+            <div class="noticias-ctrl-label">Ministério</div>
+            <div class="noticias-source-filter" role="group" aria-label="Filtrar por ministério">${sourceChips}</div>
+
+            <div class="noticias-ctrl-label">Tipo e período</div>
+            <div class="noticias-filters-row">
+              <div class="noticias-seg" role="group" aria-label="Tipo de publicação">
+                <button type="button" data-kind="all" class="is-active" onclick="newsSetKind('all')">Tudo</button>
+                <button type="button" data-kind="news" onclick="newsSetKind('news')">Notícias</button>
+                <button type="button" data-kind="norm" onclick="newsSetKind('norm')">Normativos</button>
+              </div>
+              <select id="noticiasPeriod" class="noticias-select" aria-label="Período" onchange="newsSetPeriod(this.value)">
+                <option value="all">Qualquer data</option>
+                <option value="7">Últimos 7 dias</option>
+                <option value="30">Últimos 30 dias</option>
+              </select>
+              <button type="button" class="noticias-saved-toggle" id="noticiasSavedBtn" aria-pressed="false" onclick="newsToggleSavedOnly()">
+                ${ICONS.star} <span>Salvas</span> <span id="noticiasSavedCount"></span>
+              </button>
+            </div>
+
+            <div class="noticias-sites">
+              <span>Abrir o site:</span> ${siteLinks}
+            </div>
+
+            <details class="noticias-privacy">
+              <summary>Como esta lista é carregada</summary>
+              <p>A lista vem dos feeds públicos dos três ministérios (gov.br/mds, gov.br/mec e gov.br/saude). Como o portal não libera leitura direta por outros sites, o app pode buscar o mesmo endereço por um repassador público (allorigins, corsproxy ou codetabs) — só o endereço do feed é enviado, nenhum dado de atendido. A última lista baixada, as publicações salvas e as já lidas ficam guardadas apenas neste navegador.</p>
+            </details>
+          </aside>
+
+          <section class="noticias-results" aria-label="Lista de notícias">
+            <div id="noticiasStatus" class="noticias-status" role="status" aria-live="polite"></div>
+            <div id="noticiasList"></div>
+            <div id="noticiasMore" class="noticias-more"></div>
+          </section>
         </div>
-
-        <div class="noticias-topics" aria-label="Temas rápidos">${topicChips}</div>
-
-        <div class="noticias-filters-row">
-          <div class="noticias-source-filter" role="group" aria-label="Filtrar por ministério">${sourceChips}</div>
-          <div class="noticias-seg" role="group" aria-label="Tipo de publicação">
-            <button type="button" data-kind="all" class="is-active" onclick="newsSetKind('all')">Tudo</button>
-            <button type="button" data-kind="news" onclick="newsSetKind('news')">Notícias</button>
-            <button type="button" data-kind="norm" onclick="newsSetKind('norm')">Normativos</button>
-          </div>
-          <select id="noticiasPeriod" class="noticias-select" aria-label="Período" onchange="newsSetPeriod(this.value)">
-            <option value="all">Qualquer data</option>
-            <option value="7">Últimos 7 dias</option>
-            <option value="30">Últimos 30 dias</option>
-          </select>
-          <button type="button" class="noticias-saved-toggle" id="noticiasSavedBtn" aria-pressed="false" onclick="newsToggleSavedOnly()">
-            ${ICONS.star} <span>Salvas</span> <span id="noticiasSavedCount"></span>
-          </button>
-        </div>
-
-        <div id="noticiasStatus" class="noticias-status" role="status" aria-live="polite"></div>
-        <div id="noticiasList"></div>
-        <div id="noticiasMore" class="noticias-more"></div>
-
-        <div class="noticias-sites">
-          <span>Abrir o site:</span> ${siteLinks}
-        </div>
-
-        <details class="noticias-privacy">
-          <summary>Como esta lista é carregada</summary>
-          <p>A lista vem dos feeds públicos dos três ministérios (gov.br/mds, gov.br/mec e gov.br/saude). Como o portal não libera leitura direta por outros sites, o app pode buscar o mesmo endereço por um repassador público (allorigins, corsproxy ou codetabs) — só o endereço do feed é enviado, nenhum dado de atendido. A última lista baixada, as publicações salvas e as já lidas ficam guardadas apenas neste navegador.</p>
-        </details>
       </div>
     </div>
   `;
@@ -11032,7 +11042,7 @@ function renderAgendaCard() {
           position: relative;
           container-type: inline-size; container-name: agendabook;
           background: var(--paper);
-          background-image: repeating-linear-gradient(to bottom, transparent 0px, transparent 27px, var(--rule-line) 27px, var(--rule-line) 28px);
+          background-image: linear-gradient(to bottom, rgba(255,255,255,0.45), transparent 140px);
           border-radius: 6px 18px 18px 6px;
           box-shadow: 0 2px 0 rgba(0,0,0,0.04) inset, 0 10px 26px rgba(20,20,10,0.18);
           overflow: hidden;
@@ -11165,6 +11175,14 @@ function renderAgendaCard() {
           .agenda-book { padding-left: 22px; --agenda-cell-min: 56px; }
           .agenda-binding { width: 22px; }
           .agenda-header { padding: 14px 12px 10px 14px; }
+          /* Marca e botões na mesma linha; o subtítulo longo some para não empurrar o calendário. */
+          .agenda-brand { flex: 1 1 0; min-width: 0; }
+          .agenda-tools { flex: 0 0 auto; }
+          .agenda-sub-extra { display: none; }
+          .agenda-privacy { margin-bottom: 0.7rem; }
+          .agenda-next-strip { font-size: 12.5px; padding: 6px 10px; gap: 6px; margin: 0 10px 8px; }
+          .agenda-today-banner { margin: 0 10px 8px; }
+          .agenda-year { padding: 2px 10px 8px 12px; }
           .agenda-monthbar { order: 3; flex: 1 1 100%; }
           .agenda-nav-controls { flex: 1; justify-content: space-between; }
           .agenda-month-display { min-width: 0; flex: 1; }
@@ -11197,7 +11215,60 @@ function renderAgendaCard() {
         .agenda-next-strip strong { font-weight:700; }
         .agenda-next-days { margin-left:auto; padding:1px 9px; border-radius:999px; background:var(--cover); color:#fff; font-size:11px; font-weight:700; }
         .agenda-next-btn { border:0; background:none; color:var(--blue-ink); font:inherit; font-weight:700; text-decoration:underline; cursor:pointer; padding:0; }
-        @media print { .agenda-next-strip, .agenda-tools, .agenda-today-banner, .agenda-nav-btn, .agenda-today-btn { display:none !important; } }
+        @media print { .agenda-next-strip, .agenda-tools, .agenda-today-banner, .agenda-nav-btn, .agenda-today-btn, .agenda-year, .agenda-up-box { display:none !important; } }
+
+        /* Em tela cheia a barra do topo já mostra o nome da aba: o cabeçalho do card sobra. */
+        body.tab-focus .agenda-card .card-top { display: none; }
+        body.tab-focus .agenda-card .card-body { padding-top: 1.1rem; }
+
+        /* Números do dia: domingo e feriado em vermelho, pagamento em verde. */
+        .agenda-day-cell .agenda-day-num { color: var(--ink); }
+        .agenda-day-cell.agenda-bg-sunday .agenda-day-num,
+        .agenda-day-cell.agenda-kind-feriado .agenda-day-num { color: var(--red-ink); }
+        .agenda-day-cell.agenda-kind-pagamento .agenda-day-num { color: var(--green-ink); }
+        .agenda-day-cell.agenda-kind-feriado { background-image: linear-gradient(rgba(179,65,58,0.08), rgba(179,65,58,0.08)); }
+        .agenda-day-cell.agenda-kind-pagamento { background-image: linear-gradient(rgba(63,125,85,0.11), rgba(63,125,85,0.11)); }
+        .agenda-day-cell.agenda-kind-extra { background-image: linear-gradient(rgba(47,93,138,0.09), rgba(47,93,138,0.09)); }
+        /* Dias dos meses vizinhos: aparecem esmaecidos, só para completar a semana. */
+        .agenda-day-cell.agenda-day-out { cursor: default; pointer-events: none; opacity: 0.36; border-bottom-color: transparent; }
+        .agenda-day-cell.agenda-day-out .agenda-day-num { font-weight: 600; color: var(--ink-muted); }
+
+        /* Faixa dos 12 meses: pula direto para qualquer mês. */
+        .agenda-year { display: flex; gap: 6px; overflow-x: auto; padding: 2px 14px 10px 20px; scrollbar-width: thin; scroll-snap-type: x proximity; }
+        .agenda-year-btn {
+          flex: 1 0 auto; min-width: 52px; scroll-snap-align: center;
+          display: flex; flex-direction: column; align-items: center; gap: 3px;
+          padding: 6px 8px 5px; border-radius: 10px; border: 1px solid var(--rule-line);
+          background: var(--paper-alt); color: var(--ink-muted);
+          font-size: 12.5px; font-weight: 800; text-transform: capitalize; cursor: pointer;
+        }
+        .agenda-year-btn:hover { border-color: var(--gold); color: var(--cover); }
+        .agenda-year-btn.is-now:not(.is-current) { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); color: var(--cover); }
+        .agenda-year-btn.is-current { background: var(--cover); border-color: var(--cover); color: var(--paper); }
+        .agenda-year-dots { display: flex; gap: 3px; align-items: center; height: 6px; }
+        .agenda-year-dots i { display: block; width: 6px; height: 6px; border-radius: 50%; }
+        .agenda-year-btn.is-current .agenda-year-dots i { box-shadow: 0 0 0 1px rgba(255,255,255,0.7); }
+        .agenda-year-dots .d-feriado { background: var(--red-ink); }
+        .agenda-year-dots .d-facultativo { background: var(--amber-bg); box-shadow: inset 0 0 0 1px var(--amber-ink); }
+        .agenda-year-dots .d-pagamento { background: var(--green-ink); }
+        .agenda-year-dots .d-extra { background: var(--blue-ink); }
+        .agenda-year-dots .d-nota { background: transparent; box-shadow: inset 0 0 0 1.5px var(--blue-ink); }
+        .agenda-year-btn.is-current .agenda-year-dots .d-nota { box-shadow: inset 0 0 0 1.5px #fff; }
+
+        /* Legenda que também filtra. */
+        .agenda-legend-btn {
+          display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 8px;
+          border-radius: 999px; border: 1px solid var(--rule-line); background: var(--paper-alt);
+          font: inherit; font-size: 12px; font-weight: 700; color: var(--ink-muted); cursor: pointer;
+        }
+        .agenda-legend-btn:hover { border-color: var(--gold); color: var(--cover); }
+        .agenda-legend-btn b { font-weight: 800; color: var(--ink); min-width: 0.6em; }
+        .agenda-legend-btn[aria-pressed="false"] { opacity: 0.55; text-decoration: line-through; }
+        .agenda-legend-btn[aria-pressed="false"] b { display: none; }
+
+        /* Próximos marcos na coluna lateral. */
+        .agenda-up-box { margin-top: 16px; padding-top: 6px; border-top: 1px dashed var(--rule-line); }
+        .agenda-up-box[hidden] { display: none; }
       </style>
       <div class="card-top">
         <div style="display:flex; align-items:center; gap:0.55rem;">
@@ -11207,7 +11278,7 @@ function renderAgendaCard() {
         <span class="subtitle">📅 Feriados, pontos facultativos e pagamentos, com anotações que acompanham você entre aparelhos</span>
       </div>
       <div class="card-body">
-        <details class="agenda-privacy"${agendaSyncCode ? '' : ' open'}>
+        <details class="agenda-privacy">
           <summary>${ICONS.info}<span>Como funcionam as anotações</span></summary>
           <p>Feriados e pagamentos aparecem sem nenhuma configuração. Para guardar anotações e vê-las em outros aparelhos, toque em 🔄 e defina um código de sincronização: ele funciona como uma senha compartilhada só entre os seus dispositivos. As anotações ficam em um banco de dados online (Firebase/Google), não neste navegador.</p>
         </details>
@@ -11217,7 +11288,7 @@ function renderAgendaCard() {
           <div class="agenda-header">
             <div class="agenda-brand">
               <h3>Argo</h3>
-              <p>Agenda oficial ${AGENDA_YEAR}</p>
+              <p>Agenda oficial ${AGENDA_YEAR}<span class="agenda-sub-extra"> · feriados, facultativos e pagamentos</span></p>
             </div>
             <div class="agenda-monthbar">
               <div class="agenda-nav-controls">
@@ -11250,6 +11321,8 @@ function renderAgendaCard() {
 
           <div id="agendaNextStrip" class="agenda-next-strip" role="status"></div>
 
+          <nav class="agenda-year" id="agendaYear" aria-label="Meses de ${AGENDA_YEAR}"></nav>
+
           <div class="agenda-spread">
             <div class="agenda-cal">
               <div class="agenda-weekdays" aria-hidden="true">
@@ -11261,15 +11334,20 @@ function renderAgendaCard() {
               <h4 class="agenda-side-title" id="agendaSideTitle">Neste mês</h4>
               <p class="agenda-side-sub" id="agendaMonthSummary"></p>
               <div class="agenda-list" id="agendaMonthList"></div>
+              <section class="agenda-up-box" id="agendaUpBox" hidden aria-labelledby="agendaUpTitle">
+                <h4 class="agenda-side-title" id="agendaUpTitle">Próximos marcos</h4>
+                <p class="agenda-side-sub">Nos outros meses; toque para ir ao dia.</p>
+                <div class="agenda-list" id="agendaUpcoming"></div>
+              </section>
             </aside>
           </div>
 
           <div class="agenda-footer">
-            <div class="agenda-legend">
-              <div class="agenda-legend-item"><div class="agenda-dot" style="background:var(--red-ink)"></div>Feriado</div>
-              <div class="agenda-legend-item"><div class="agenda-dot" style="background:var(--amber-bg); box-shadow: inset 0 0 0 1px var(--amber-ink)"></div>Facultativo</div>
-              <div class="agenda-legend-item"><div class="agenda-dot" style="background:var(--green-ink)"></div>Pagamento</div>
-              <div class="agenda-legend-item"><div class="agenda-dot" style="background:var(--blue-ink)"></div>13º salário</div>
+            <div class="agenda-legend" role="group" aria-label="Filtrar por tipo de data">
+              <button type="button" class="agenda-legend-btn" data-kind="feriado" aria-pressed="true" onclick="agendaToggleKind('feriado')"><span class="agenda-dot" style="background:var(--red-ink)"></span>Feriado <b></b></button>
+              <button type="button" class="agenda-legend-btn" data-kind="facultativo" aria-pressed="true" onclick="agendaToggleKind('facultativo')"><span class="agenda-dot" style="background:var(--amber-bg); box-shadow: inset 0 0 0 1px var(--amber-ink)"></span>Facultativo <b></b></button>
+              <button type="button" class="agenda-legend-btn" data-kind="pagamento" aria-pressed="true" onclick="agendaToggleKind('pagamento')"><span class="agenda-dot" style="background:var(--green-ink)"></span>Pagamento <b></b></button>
+              <button type="button" class="agenda-legend-btn" data-kind="extra" aria-pressed="true" onclick="agendaToggleKind('extra')"><span class="agenda-dot" style="background:var(--blue-ink)"></span>13º salário <b></b></button>
             </div>
             <div class="agenda-creator-info">
               Criado por<br><span class="agenda-creator-name">Paulo Xavier — CRP-20/09816</span>
@@ -11287,6 +11365,8 @@ function agendaKeyFor(month, day) {
 
 // Dia que recebe o foco do teclado (só uma célula fica na ordem de Tab).
 let agendaFocusDay = 0;
+// Tipos de data escondidos pela legenda (feriado, facultativo, pagamento, extra).
+let agendaHiddenKinds = new Set();
 
 function agendaDaysInMonth(month) {
   return new Date(AGENDA_YEAR, month + 1, 0).getDate();
@@ -11324,19 +11404,21 @@ function agendaRenderCalendar() {
 
     if (d > 0 && d <= count) {
       const key = agendaKeyFor(agendaCurrentMonth, d);
-      const info = AGENDA_DATA_INFO[key];
+      const infoAll = AGENDA_DATA_INFO[key];
+      const info = (infoAll && !agendaHiddenKinds.has(argoAgendaKind(infoAll))) ? infoAll : null;
       const date = new Date(AGENDA_YEAR, agendaCurrentMonth, d);
       const wd = date.getDay();
       const entries = agendaNotesCache[key];
       const note = agendaEntriesPreview(entries);
 
+      if (info) cell.classList.add('agenda-kind-' + argoAgendaKind(info));
       if (wd === 0) cell.classList.add('agenda-bg-sunday');
       else if (wd === 6) cell.classList.add('agenda-bg-saturday');
 
       const isToday = isThisMonth && today.getDate() === d;
       if (isToday) cell.classList.add('agenda-is-today');
 
-      let html = '<span class="agenda-day-num" style="color:' + (wd === 0 ? 'var(--red-ink)' : 'var(--ink)') + '">' + d + '</span>';
+      let html = '<span class="agenda-day-num">' + d + '</span>';
       if (note) {
         const tilt = (d % 2 === 0) ? '-1.5deg' : '1deg';
         html += '<div class="agenda-note-preview" style="transform:rotate(' + tilt + ')">' + escapeHtml(note) + '</div>';
@@ -11369,7 +11451,10 @@ function agendaRenderCalendar() {
         else if (ev.key === 'PageDown') { ev.preventDefault(); agendaChangeMonth(1, d); }
       });
     } else {
-      cell.classList.add('agenda-day-empty');
+      // Dia do mês vizinho: só completa a semana (esmaecido e sem clique).
+      const outDate = new Date(AGENDA_YEAR, agendaCurrentMonth, d);
+      cell.classList.add('agenda-day-out');
+      cell.innerHTML = '<span class="agenda-day-num">' + outDate.getDate() + '</span>';
       cell.setAttribute('aria-hidden', 'true');
     }
     grid.appendChild(cell);
@@ -11382,6 +11467,95 @@ function agendaRenderCalendar() {
 
   agendaRenderMonthList();
   agendaRenderNextStrip();
+  agendaRenderYearStrip();
+  agendaRenderUpcoming();
+  agendaUpdateLegend();
+}
+
+// Faixa dos 12 meses, com um pontinho por tipo de data (e anotação) de cada mês.
+function agendaRenderYearStrip() {
+  const el = document.getElementById('agendaYear');
+  if (!el) return;
+  const now = new Date();
+  const nowMonth = now.getFullYear() === AGENDA_YEAR ? now.getMonth() : -1;
+  const kinds = Array.from({ length: 12 }, () => ({}));
+  Object.keys(AGENDA_DATA_INFO).forEach(k => {
+    const m = Number(k.slice(5, 7)) - 1;
+    if (m >= 0 && m < 12) kinds[m][argoAgendaKind(AGENDA_DATA_INFO[k])] = true;
+  });
+  Object.keys(agendaNotesCache).forEach(k => {
+    if (k.slice(0, 4) !== String(AGENDA_YEAR)) return;
+    const e = agendaNotesCache[k];
+    const m = Number(k.slice(5, 7)) - 1;
+    if (e && e.length && m >= 0 && m < 12) kinds[m].nota = true;
+  });
+  const hadFocus = el.contains(document.activeElement);
+  el.innerHTML = AGENDA_MONTH_NAMES.map((name, i) => {
+    const dots = ['feriado', 'facultativo', 'pagamento', 'extra', 'nota']
+      .filter(k => kinds[i][k] && !agendaHiddenKinds.has(k))
+      .map(k => '<i class="d-' + k + '"></i>').join('');
+    return '<button type="button" class="agenda-year-btn' + (i === agendaCurrentMonth ? ' is-current' : '') + (i === nowMonth ? ' is-now' : '') + '"' +
+      ' onclick="agendaJumpTo(' + i + ')" aria-label="' + name + '"' + (i === agendaCurrentMonth ? ' aria-current="true"' : '') + '>' +
+      name.slice(0, 3).toLowerCase() + '<span class="agenda-year-dots" aria-hidden="true">' + dots + '</span></button>';
+  }).join('');
+  const cur = el.querySelector('.is-current');
+  if (cur) {
+    if (el.scrollWidth > el.clientWidth) el.scrollLeft = cur.offsetLeft - (el.clientWidth - cur.offsetWidth) / 2;
+    if (hadFocus) cur.focus({ preventScroll: true });
+  }
+}
+
+// Coluna lateral: os próximos marcos do ano a partir de hoje.
+function agendaRenderUpcoming() {
+  const box = document.getElementById('agendaUpBox');
+  const list = document.getElementById('agendaUpcoming');
+  if (!box || !list) return;
+  const now = new Date();
+  if (now.getFullYear() !== AGENDA_YEAR) { box.hidden = true; return; }
+  const todayKey = agendaIsoKey(now);
+  const keys = Object.keys(AGENDA_DATA_INFO).sort()
+    .filter(k => k >= todayKey && Number(k.slice(5, 7)) - 1 !== agendaCurrentMonth && !agendaHiddenKinds.has(argoAgendaKind(AGENDA_DATA_INFO[k])))
+    .slice(0, 5);
+  if (!keys.length) { box.hidden = true; return; }
+  list.innerHTML = keys.map(key => {
+    const date = agendaDateFromKey(key);
+    const kind = argoAgendaKind(AGENDA_DATA_INFO[key]);
+    const when = agendaRelativeLabel(key) || AGENDA_WEEKDAY_ABBR[date.getDay()].toLowerCase();
+    const title = agendaDayTitle(key);
+    return '<button type="button" class="agenda-item agenda-item-' + kind + (key === todayKey ? ' is-today' : '') + '" data-jump="' + key + '"' +
+      ' aria-label="' + escapeHtml(agendaLongDate(date) + ', ' + title) + '">' +
+      '<span class="agenda-item-date"><b>' + date.getDate() + '</b><small>' + AGENDA_MONTH_NAMES[date.getMonth()].slice(0, 3).toLowerCase() + '</small></span>' +
+      '<span class="agenda-item-main"><span class="agenda-item-title"><i class="agenda-item-dot"></i><span>' + escapeHtml(title) + '</span></span></span>' +
+      '<span class="agenda-item-when">' + escapeHtml(when) + '</span></button>';
+  }).join('');
+  list.onclick = (ev) => {
+    const btn = ev.target.closest ? ev.target.closest('.agenda-item') : null;
+    if (!btn || !btn.dataset.jump) return;
+    const d = agendaDateFromKey(btn.dataset.jump);
+    agendaCurrentMonth = d.getMonth();
+    agendaFocusDay = d.getDate();
+    agendaRenderCalendar();
+    agendaFocusCell(agendaFocusDay);
+  };
+  box.hidden = false;
+}
+
+// Legenda clicável: esconde/mostra cada tipo de data e mostra a contagem do mês.
+function agendaToggleKind(kind) {
+  if (agendaHiddenKinds.has(kind)) agendaHiddenKinds.delete(kind); else agendaHiddenKinds.add(kind);
+  agendaRenderCalendar();
+}
+
+function agendaUpdateLegend() {
+  const counts = { feriado: 0, facultativo: 0, pagamento: 0, extra: 0 };
+  const prefix = AGENDA_YEAR + '-' + String(agendaCurrentMonth + 1).padStart(2, '0') + '-';
+  Object.keys(AGENDA_DATA_INFO).forEach(k => { if (k.indexOf(prefix) === 0) counts[argoAgendaKind(AGENDA_DATA_INFO[k])]++; });
+  document.querySelectorAll('.agenda-legend-btn').forEach(btn => {
+    const k = btn.dataset.kind;
+    btn.setAttribute('aria-pressed', agendaHiddenKinds.has(k) ? 'false' : 'true');
+    const b = btn.querySelector('b');
+    if (b) b.textContent = counts[k] ? String(counts[k]) : '';
+  });
 }
 
 // Faixa acima do calendário: próximo feriado/pagamento com contagem de dias.
@@ -11425,7 +11599,8 @@ function agendaRenderMonthList() {
 
   for (let d = 1; d <= count; d++) {
     const key = agendaKeyFor(m, d);
-    const info = AGENDA_DATA_INFO[key];
+    const infoAll = AGENDA_DATA_INFO[key];
+    const info = (infoAll && !agendaHiddenKinds.has(argoAgendaKind(infoAll))) ? infoAll : null;
     const entries = agendaNotesCache[key];
     const note = agendaEntriesPreview(entries);
     if (!info && !note) continue;
