@@ -6046,3 +6046,15 @@ details.card-fold[open] > *:not(summary) + *:not(summary) { margin-top: 1rem; }
   :root[data-theme="dark"] .quick-nav-icon { color: color-mix(in srgb, var(--ic-c) 70%, #fff); }
   .filter-chip[aria-selected="true"] .chip-icon { color: #fff !important; }
   .quick-nav-btn.is-active .quick-nav-icon { color: #fff !important; }
+
+/* Analisador de planilha (aba Ferramentas) */
+.sh-out { margin-top: 0.7rem; font-size: 0.86rem; color: var(--text-main); max-height: 28rem; overflow: auto; }
+.sh-out:empty { display: none; }
+.sh-block { padding: 0.6rem 0; border-top: 1px solid var(--border-ui); }
+.sh-block:first-child { border-top: 0; padding-top: 0; }
+.sh-block > div { margin-top: 0.2rem; }
+.sh-scroll { overflow-x: auto; margin-top: 0.4rem; }
+.sh-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.sh-table th, .sh-table td { text-align: left; padding: 0.3rem 0.55rem; border-bottom: 1px solid var(--border-ui); white-space: nowrap; }
+.sh-table th { color: var(--text-muted); font-weight: 700; }
+.sheet-card .tools-row .btn-tech { flex: 0 0 auto; }
