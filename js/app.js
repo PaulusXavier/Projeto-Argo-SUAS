@@ -10218,6 +10218,15 @@ const NAV_SHORT_LABELS = {
   saude: 'RAPS', hospitalar: 'Hospitais', social: 'SUAS', informes: 'Programas', cas: 'CAS', cras: 'CRAS'
 };
 const NAV_QUICK_MAX = 6;
+// Acesso rápido: título curto + subtítulo (mantém o texto completo no tooltip e no leitor de tela).
+const NAV_QUICK_META = {
+  agenda:   { title: 'Agenda Argo',           sub: 'Calendário e lembretes' },
+  mapa:     { title: 'Mapa dos Equipamentos', sub: 'Rede em Boa Vista' },
+  tradutor: { title: 'Tradutor',              sub: 'Es · En · Fr' },
+  pdftools: { title: 'PDF',                   sub: 'Unificar / Converter' },
+  appsext:  { title: 'Aplicativos',           sub: 'Toth, Umbrela, Anona…' },
+  noticias: { title: 'Notícias',              sub: 'MDS, MEC e Saúde' }
+};
 
 function navReadRecent() {
   try {
@@ -10248,12 +10257,18 @@ function renderQuickNav() {
   host.innerHTML = items.map(cat => {
     const chip = chips[cat];
     const icon = chip.querySelector('.chip-icon');
-    const label = NAV_SHORT_LABELS[cat] || navChipName(chip);
+    const meta = NAV_QUICK_META[cat];
+    const title = meta ? meta.title : (NAV_SHORT_LABELS[cat] || navChipName(chip));
+    const sub = meta ? meta.sub : '';
+    const isActive = cat === activeCat;
     const isRecent = recents.includes(cat);
-    return '<button type="button" class="quick-nav-btn' + (cat === activeCat ? ' is-active' : '') + '" data-goto="' + escapeHtml(cat) + '"'
+    return '<button type="button" class="quick-nav-btn' + (isActive ? ' is-active' : '') + '" data-goto="' + escapeHtml(cat) + '"'
+      + (isActive ? ' aria-current="true"' : '')
+      + ' aria-label="' + escapeHtml(navChipName(chip)) + '"'
       + ' title="' + escapeHtml(navChipName(chip)) + (isRecent ? ' (usada recentemente)' : '') + '">'
       + '<span class="quick-nav-icon" aria-hidden="true">' + (icon ? icon.innerHTML : '') + '</span>'
-      + '<span>' + escapeHtml(label) + '</span></button>';
+      + '<span class="quick-nav-text"><span class="quick-nav-title">' + escapeHtml(title) + '</span>'
+      + (sub ? '<span class="quick-nav-sub">' + escapeHtml(sub) + '</span>' : '') + '</span></button>';
   }).join('');
 }
 
