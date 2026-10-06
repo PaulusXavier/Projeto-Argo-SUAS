@@ -7680,7 +7680,7 @@ const NEWS_SAVED_KEY = 'argo_noticias_saved_v1';
 const NEWS_READ_KEY = 'argo_noticias_read_v1';
 
 // Preferências da tela (não persistem de propósito: cada visita começa limpa).
-const newsUi = { kind: 'all', period: 'all', savedOnly: false, limit: NEWS_PAGE_SIZE };
+const newsUi = { kind: 'all', period: 'all', savedOnly: false, unreadOnly: false, limit: NEWS_PAGE_SIZE };
 
 function newsLoadJson(key) {
   try {
@@ -7772,7 +7772,8 @@ function renderNewsCard() {
               <input type="search" id="noticiasFilter" class="noticias-search"
                      placeholder="Buscar (ex.: Bolsa Família, CadÚnico, SUAS)…"
                      aria-label="Buscar nas notícias" autocomplete="off"
-                     oninput="newsResetAndRender()">
+                     oninput="newsDebouncedSearch()"
+                     onkeydown="if (event.key === 'Escape' && this.value) { this.value = ''; newsResetAndRender(); }">
               <button type="button" class="tradutor-btn" id="noticiasRefreshBtn" onclick="refreshNews()">
                 ${ICONS.cloud} Atualizar
               </button>
@@ -7799,7 +7800,14 @@ function renderNewsCard() {
               <button type="button" class="noticias-saved-toggle" id="noticiasSavedBtn" aria-pressed="false" onclick="newsToggleSavedOnly()">
                 ${ICONS.star} <span>Salvas</span> <span id="noticiasSavedCount"></span>
               </button>
+              <button type="button" class="noticias-saved-toggle" id="noticiasUnreadBtn" aria-pressed="false" onclick="newsToggleUnreadOnly()">
+                <span>Não lidas</span> <span id="noticiasUnreadCount"></span>
+              </button>
             </div>
+            <button type="button" class="noticias-act noticias-markall" id="noticiasMarkAllBtn" onclick="newsMarkAllRead()"
+                    title="Marca como lidas as publicações da lista atual (com os filtros aplicados)">
+              ${ICONS.check} Marcar a lista como lida
+            </button>
 
             <div class="noticias-sites">
               <span>Abrir o site:</span> ${siteLinks}
@@ -7850,9 +7858,37 @@ function newsUpdateSourceCounts() {
   });
   const sc = document.getElementById('noticiasSavedCount');
   if (sc) sc.textContent = newsSaved.length ? `(${newsSaved.length})` : '';
+  const uc = document.getElementById('noticiasUnreadCount');
+  if (uc) {
+    const unread = newsState.items.filter(it => !newsReadSet.has(it.link)).length;
+    uc.textContent = unread ? `(${unread})` : '';
+  }
 }
 
 function newsResetAndRender() { newsUi.limit = NEWS_PAGE_SIZE; renderNewsList(); }
+
+// Busca com pequeno atraso: não refaz a lista a cada tecla digitada.
+let newsSearchTimer = null;
+function newsDebouncedSearch() {
+  clearTimeout(newsSearchTimer);
+  newsSearchTimer = setTimeout(newsResetAndRender, 180);
+}
+
+function newsToggleUnreadOnly() {
+  newsUi.unreadOnly = !newsUi.unreadOnly;
+  const btn = document.getElementById('noticiasUnreadBtn');
+  if (btn) { btn.classList.toggle('is-active', newsUi.unreadOnly); btn.setAttribute('aria-pressed', String(newsUi.unreadOnly)); }
+  newsResetAndRender();
+}
+
+// Marca como lidas todas as publicações da lista atual (respeita os filtros).
+function newsMarkAllRead() {
+  const { items } = newsFilteredItems();
+  if (!items.length) return;
+  items.forEach(it => { if (it.link) newsReadSet.add(it.link); });
+  newsSaveJson(NEWS_READ_KEY, Array.from(newsReadSet).slice(-400));
+  renderNewsList();
+}
 
 function newsSetKind(kind) {
   newsUi.kind = kind;
@@ -7883,7 +7919,9 @@ function newsClearFilters() {
   if (filterEl) filterEl.value = '';
   document.querySelectorAll('.noticias-source-checkbox').forEach(b => { b.checked = true; });
   const p = document.getElementById('noticiasPeriod'); if (p) p.value = 'all';
-  newsUi.kind = 'all'; newsUi.period = 'all'; newsUi.savedOnly = false;
+  newsUi.kind = 'all'; newsUi.period = 'all'; newsUi.savedOnly = false; newsUi.unreadOnly = false;
+  const ub = document.getElementById('noticiasUnreadBtn');
+  if (ub) { ub.classList.remove('is-active'); ub.setAttribute('aria-pressed', 'false'); }
   document.querySelectorAll('.noticias-seg button').forEach(b => b.classList.toggle('is-active', b.dataset.kind === 'all'));
   const btn = document.getElementById('noticiasSavedBtn');
   if (btn) { btn.classList.remove('is-active'); btn.setAttribute('aria-pressed', 'false'); }
@@ -7944,6 +7982,7 @@ function newsFilteredItems() {
   let items = newsUi.savedOnly ? newsSaved.slice() : newsState.items;
 
   if (selectedSources) items = items.filter(it => selectedSources.has(it.source));
+  if (newsUi.unreadOnly) items = items.filter(it => !newsReadSet.has(it.link));
   if (newsUi.kind === 'news') items = items.filter(it => !newsIsNormative(it));
   if (newsUi.kind === 'norm') items = items.filter(newsIsNormative);
   if (newsUi.period !== 'all') {
@@ -8001,10 +8040,11 @@ function renderNewsList() {
       list.innerHTML = newsSkeletonHtml();
       return;
     }
-    const hasActiveFilter = terms.length || newsUi.kind !== 'all' || newsUi.period !== 'all' || newsUi.savedOnly
+    const hasActiveFilter = terms.length || newsUi.kind !== 'all' || newsUi.period !== 'all' || newsUi.savedOnly || newsUi.unreadOnly
       || (selectedSources && selectedSources.size < NEWS_SOURCES.length);
     const msg = newsUi.savedOnly && !newsSaved.length
       ? 'Você ainda não salvou nenhuma publicação. Toque em “Salvar” em qualquer item para guardá-lo aqui.'
+      : newsUi.unreadOnly && newsState.items.length && !terms.length ? 'Você já leu todas as publicações desta lista. 🎉'
       : newsState.items.length ? 'Nenhuma publicação corresponde a esses filtros.' : 'Nenhuma publicação carregada ainda.';
     list.innerHTML = `
       <div class="noticias-empty">
@@ -8014,6 +8054,8 @@ function renderNewsList() {
     return;
   }
 
+  const markBtn = document.getElementById('noticiasMarkAllBtn');
+  if (markBtn) markBtn.disabled = !items.some(it => !newsReadSet.has(it.link));
   const visible = items.slice(0, newsUi.limit);
   let html = '', lastGroup = '';
   visible.forEach(it => {
@@ -8026,7 +8068,7 @@ function renderNewsList() {
   if (more) {
     const rest = items.length - visible.length;
     more.innerHTML = rest > 0
-      ? `<button type="button" class="tradutor-btn-ghost" onclick="newsShowMore()">Mostrar mais (${rest})</button>`
+      ? `<div>Mostrando ${visible.length} de ${items.length} publicações</div><button type="button" class="tradutor-btn-ghost" onclick="newsShowMore()">Mostrar mais (${rest})</button>`
       : (items.length > NEWS_PAGE_SIZE ? `<span>Fim da lista · ${items.length} publicações</span>` : '');
   }
 }
@@ -8065,7 +8107,7 @@ async function refreshNews() {
 
 function initNewsPanel() {
   // Reinicia os filtros de tela (o painel é remontado a cada abertura).
-  newsUi.kind = 'all'; newsUi.period = 'all'; newsUi.savedOnly = false; newsUi.limit = NEWS_PAGE_SIZE;
+  newsUi.kind = 'all'; newsUi.period = 'all'; newsUi.savedOnly = false; newsUi.unreadOnly = false; newsUi.limit = NEWS_PAGE_SIZE;
   newsSaved = newsLoadJson(NEWS_SAVED_KEY);
   newsReadSet = new Set(newsLoadJson(NEWS_READ_KEY));
 
@@ -11302,6 +11344,7 @@ function renderAgendaCard() {
               <button type="button" id="agendaNotifyBtn" class="agenda-sync-btn" title="Notificar sobre a semana" aria-label="Notificar sobre a semana" onclick="agendaToggleNotify()">
                 🔔<span id="agendaNotifyDot" class="agenda-sync-dot agenda-sync-off"></span>
               </button>
+              <button type="button" class="agenda-sync-btn" title="Baixar as datas de ${AGENDA_YEAR} para o calendário do celular (.ics)" aria-label="Baixar as datas para o calendário do celular (.ics)" onclick="agendaExportIcs()">📥</button>
               <button type="button" class="agenda-sync-btn" title="Imprimir este mês" aria-label="Imprimir este mês" onclick="window.print()">🖨️</button>
               <button type="button" id="agendaSyncBtn" class="agenda-sync-btn" title="Sincronização entre aparelhos" aria-label="Sincronização entre aparelhos" onclick="agendaOpenSyncModal()">
                 🔄<span id="agendaSyncDot" class="agenda-sync-dot agenda-sync-off"></span>
@@ -11333,6 +11376,7 @@ function renderAgendaCard() {
             <aside class="agenda-side" aria-labelledby="agendaSideTitle">
               <h4 class="agenda-side-title" id="agendaSideTitle">Neste mês</h4>
               <p class="agenda-side-sub" id="agendaMonthSummary"></p>
+              <p class="agenda-side-sub" id="agendaBusinessDays" title="Segunda a sexta, sem feriados nem pontos facultativos"></p>
               <div class="agenda-list" id="agendaMonthList"></div>
               <section class="agenda-up-box" id="agendaUpBox" hidden aria-labelledby="agendaUpTitle">
                 <h4 class="agenda-side-title" id="agendaUpTitle">Próximos marcos</h4>
@@ -11628,7 +11672,9 @@ function agendaRenderMonthList() {
   }
 
   if (!html) {
-    html = '<p class="agenda-list-empty">Nenhuma data marcada em ' + AGENDA_MONTH_NAMES[m].toLowerCase() + '. Toque em um dia do calendário para fazer uma anotação.</p>';
+    html = Object.keys(AGENDA_DATA_INFO).length
+      ? '<p class="agenda-list-empty">Nenhuma data marcada em ' + AGENDA_MONTH_NAMES[m].toLowerCase() + '. Toque em um dia do calendário para fazer uma anotação.</p>'
+      : '<p class="agenda-list-empty">As datas oficiais de ' + AGENDA_YEAR + ' (feriados, facultativos e pagamentos) ainda não foram cadastradas neste app. As anotações funcionam normalmente: toque em um dia para escrever.</p>';
   }
   list.innerHTML = html;
   list.onclick = (ev) => {
@@ -11645,6 +11691,65 @@ function agendaRenderMonthList() {
     if (notes) parts.push(notes + (notes === 1 ? ' anotação' : ' anotações'));
     summary.textContent = agendaJoinPt(parts);
   }
+  const bd = document.getElementById('agendaBusinessDays');
+  if (bd) {
+    if (Object.keys(AGENDA_DATA_INFO).length) {
+      const n = agendaBusinessDays(m);
+      bd.textContent = n + (n === 1 ? ' dia útil' : ' dias úteis') + ' no mês';
+      bd.hidden = false;
+    } else {
+      bd.hidden = true;
+    }
+  }
+}
+
+// Dias úteis do mês: segunda a sexta, sem feriados nem pontos facultativos
+// cadastrados (conta mesmo com o filtro da legenda escondendo esses tipos).
+function agendaBusinessDays(m) {
+  let n = 0;
+  for (let d = 1; d <= agendaDaysInMonth(m); d++) {
+    const wd = new Date(AGENDA_YEAR, m, d).getDay();
+    if (wd === 0 || wd === 6) continue;
+    const info = AGENDA_DATA_INFO[agendaKeyFor(m, d)];
+    const kind = info ? argoAgendaKind(info) : '';
+    if (kind === 'feriado' || kind === 'facultativo') continue;
+    n++;
+  }
+  return n;
+}
+
+// Baixa as datas oficiais do ano (feriados, facultativos, pagamentos) como
+// arquivo .ics, que o calendário do celular importa. Anotações pessoais NÃO
+// entram: ficam só na agenda e na sincronização.
+function agendaExportIcs() {
+  const keys = Object.keys(AGENDA_DATA_INFO).sort();
+  if (!keys.length) {
+    agendaToast('As datas oficiais de ' + AGENDA_YEAR + ' ainda não foram cadastradas.', 'warn');
+    return;
+  }
+  const esc = (t) => String(t).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+  const compact = (k) => k.replace(/-/g, '');
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Argo SUAS//Agenda Argo//PT-BR', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:Agenda Argo ' + AGENDA_YEAR];
+  keys.forEach((k) => {
+    const next = agendaDateFromKey(k); next.setDate(next.getDate() + 1);
+    lines.push('BEGIN:VEVENT',
+      'UID:' + k + '@argo-suas',
+      'DTSTAMP:' + stamp,
+      'DTSTART;VALUE=DATE:' + compact(k),
+      'DTEND;VALUE=DATE:' + compact(agendaIsoKey(next)),
+      'SUMMARY:' + esc(agendaDayTitle(k)),
+      'TRANSP:TRANSPARENT',
+      'END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  const blob = new Blob([lines.join('\r\n') + '\r\n'], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'agenda-argo-' + AGENDA_YEAR + '.ics';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+  agendaToast('Datas de ' + AGENDA_YEAR + ' baixadas (' + keys.length + ' eventos).', 'ok');
 }
 
 function agendaChangeMonth(delta, keepDay) {
