@@ -6079,6 +6079,37 @@ function toolsExtrasHtml() {
     </div>
     <div id="ddOut" class="pc-out" role="status" aria-live="polite"></div>
     <p class="tools-hint">A contagem começa no dia seguinte à data de partida. Em dias úteis, saem sábados, domingos, feriados e pontos facultativos cadastrados na Agenda. Confira a regra do prazo no normativo ou no ofício.</p>
+  </section>
+  <section class="tech-card tools-card sheet-card" aria-label="Analisador de planilha">
+    <h2>Analisador de planilha</h2>
+    <label class="tools-lbl">Planilha da base (.csv, .xlsx ou .xls)<input id="shFile" class="tools-input" type="file" accept=".csv,.txt,.xlsx,.xls,text/csv"></label>
+    <div id="shSheetRow" class="tools-row" hidden><label class="tools-lbl">Aba da planilha<select id="shSheet" class="tools-input"></select></label></div>
+    <div id="shSummary" class="tools-hint" role="status" aria-live="polite"></div>
+    <div id="shControls" hidden>
+      <div class="pc-ref">
+        <label class="tools-lbl">Coluna<select id="shCol" class="tools-input"></select></label>
+      </div>
+      <div class="tools-row">
+        <button type="button" class="btn-tech btn-primary" id="shAuto">Conferir tudo</button>
+        <button type="button" class="btn-tech btn-secondary" id="shFreq">Contar valores</button>
+        <button type="button" class="btn-tech btn-secondary" id="shDup">Achar duplicados</button>
+        <button type="button" class="btn-tech btn-secondary" id="shNis">Conferir NIS</button>
+        <button type="button" class="btn-tech btn-secondary" id="shCpf">Conferir CPF</button>
+        <button type="button" class="btn-tech btn-secondary" id="shDate">Conferir datas</button>
+      </div>
+      <div class="tools-row">
+        <label class="tools-lbl">Contar linhas em que a coluna<select id="shMode" class="tools-input">
+          <option value="has">contém</option><option value="eq">é igual a</option><option value="empty">está vazia</option><option value="full">está preenchida</option></select></label>
+        <label class="tools-lbl">Valor<input id="shVal" class="tools-input" type="text" autocomplete="off" placeholder="ex.: Centro"></label>
+        <button type="button" class="btn-tech btn-secondary" id="shFilt">Contar</button>
+      </div>
+    </div>
+    <div id="shOut" class="sh-out" role="status" aria-live="polite"></div>
+    <div class="tools-row">
+      <button type="button" class="btn-tech btn-secondary" id="shCopy" disabled>Copiar resultado</button>
+      <button type="button" class="btn-tech btn-secondary" id="shClear" disabled>Limpar planilha</button>
+    </div>
+    <p class="tools-hint">A primeira linha precisa ser o cabeçalho. A planilha é lida neste aparelho: nada é enviado e nada fica salvo. Os dados ficam só na memória até você tocar em Limpar ou trocar de aba. NIS e CPF aparecem só com os 3 últimos dígitos. A conferência vê formato e dígito verificador, não se o número existe no CadÚnico. Em .xlsx/.xls, o primeiro uso baixa uma biblioteca e precisa de internet; em CSV funciona offline.</p>
   </section>`;
 }
 
@@ -6380,6 +6411,7 @@ function initToolsPanel() {
   const $ = id => document.getElementById(id);
   initToolsExtras();
   initToolsAtendimento();
+  initSheetAnalyzer();
 
   // ---- Abas do cartão do relógio
   const setPane = name => {
@@ -14197,7 +14229,7 @@ const ARGO_TAB_TIPS = {
   tradutor: 'Escreva ou fale em português e escolha o idioma. Dá para salvar frases próprias para usar de novo.',
   pdftools: 'Una até 20 arquivos, divida ou extraia páginas, reduza o tamanho de um PDF, numere as páginas e converta entre PDF, Word e JPG. Nada sai do seu navegador.',
   appsext: 'Cada atalho abre um app do autor em nova aba, com login e sincronização independentes.',
-  ferramentas: 'Relógio de Boa Vista com cronômetro e temporizador, calculadora, renda per capita, idade, QR Code, contador de atendimentos, prazos em dias úteis e bloco de notas cifrado neste aparelho.',
+  ferramentas: 'Relógio de Boa Vista com cronômetro e temporizador, calculadora, renda per capita, idade, QR Code, contador de atendimentos, prazos em dias úteis, analisador de planilha (duplicados, NIS/CPF e datas) e bloco de notas cifrado neste aparelho.',
   noticias: 'Toque num tema rápido (Bolsa Família, CadÚnico…), filtre por Normativos ou por período e use a estrela para salvar o que quer ler depois.',
   cras: 'Procure por bairro para saber qual equipe de referência atende. A planilha de atendimentos abre em tela cheia.',
   cas: 'Aqui ficam os registros de atendimento do CAS. Use a busca para localizar um registro.',
@@ -17278,3 +17310,334 @@ updateHeaderFooterStats();
 syncCategoryToggleLabel();
 initArgoAssistant();
 initLoginMascot();
+
+
+/* ============================================================
+   ANALISADOR DE PLANILHA (aba Ferramentas)
+   Lê uma planilha (.csv, .xlsx ou .xls) da base de famílias e mostra
+   contagens, duplicados e problemas (NIS/CPF inválidos, datas
+   impossíveis, campos vazios). Tudo roda neste aparelho: nada é enviado
+   e nada é gravado — os dados ficam só na memória até clicar em
+   "Limpar", trocar de aba do app ou fechar. Para .xlsx/.xls o app baixa
+   a biblioteca SheetJS do cdnjs na primeira vez (como as ferramentas de PDF).
+   A validação confere formato e dígito verificador; não prova que o
+   número existe no CadÚnico.
+   ============================================================ */
+const SHEET_XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+const SHEET_MAX_BYTES = 25 * 1024 * 1024;
+
+// Lê CSV com aspas, detecta ; , tab ou | e devolve matriz de textos.
+function sheetParseCsv(text) {
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const first = text.split(/\r?\n/, 1)[0] || '';
+  let delim = ';', best = -1;
+  [';', ',', '\t', '|'].forEach(d => {
+    const n = first.split(d).length - 1;
+    if (n > best) { best = n; delim = d; }
+  });
+  const rows = [];
+  let row = [], cur = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; }
+      else cur += c;
+    } else if (c === '"' && cur === '') q = true;
+    else if (c === delim) { row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(cur); cur = '';
+      rows.push(row); row = [];
+    } else cur += c;
+  }
+  if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+  return rows;
+}
+
+function sheetDigits(v) { return String(v == null ? '' : v).replace(/\D/g, ''); }
+
+// NIS/PIS: pesos 3,2,9,8,7,6,5,4,3,2; DV = 11 - (soma mod 11), 10 e 11 viram 0.
+function sheetCheckNis(v) {
+  const d = sheetDigits(v);
+  if (d.length !== 11) return 'tamanho diferente de 11 dígitos';
+  if (/^(\d)\1+$/.test(d)) return 'dígitos todos iguais';
+  const w = [3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  let s = 0;
+  for (let i = 0; i < 10; i++) s += Number(d[i]) * w[i];
+  let dv = 11 - (s % 11);
+  if (dv > 9) dv = 0;
+  return dv === Number(d[10]) ? '' : 'dígito verificador não confere';
+}
+
+// CPF: o Excel apaga zeros à esquerda, então 9 ou 10 dígitos são completados.
+function sheetCheckCpf(v) {
+  let d = sheetDigits(v);
+  if (d.length === 9 || d.length === 10) d = d.padStart(11, '0');
+  if (d.length !== 11) return 'tamanho diferente de 11 dígitos';
+  if (/^(\d)\1+$/.test(d)) return 'dígitos todos iguais';
+  const calc = n => {
+    let s = 0;
+    for (let i = 0; i < n; i++) s += Number(d[i]) * (n + 1 - i);
+    const r = (s * 10) % 11;
+    return r === 10 ? 0 : r;
+  };
+  return calc(9) === Number(d[9]) && calc(10) === Number(d[10]) ? '' : 'dígito verificador não confere';
+}
+
+// Aceita dd/mm/aaaa (também com - ou .) e aaaa-mm-dd.
+function sheetCheckDate(v, hoje) {
+  const s = String(v).trim();
+  let d, m, y, mt;
+  if ((mt = s.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})(?:\s.*)?$/))) { d = +mt[1]; m = +mt[2]; y = +mt[3]; }
+  else if ((mt = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s].*)?$/))) { y = +mt[1]; m = +mt[2]; d = +mt[3]; }
+  else return 'formato não reconhecido';
+  const dt = new Date(y, m - 1, d);
+  if (dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d) return 'data inexistente';
+  if (y < 1900) return 'ano antes de 1900';
+  if (dt > (hoje || new Date())) return 'data no futuro';
+  return '';
+}
+
+function sheetNorm(v) {
+  return String(v == null ? '' : v).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+function sheetEsc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function sheetPct(n, t) { return t ? (n * 100 / t).toFixed(1).replace('.', ',') + '%' : '–'; }
+// Documentos longos aparecem só com os 3 últimos dígitos, na tela e no texto copiado.
+function sheetMask(v) {
+  const s = String(v).trim(), d = sheetDigits(s);
+  return d.length >= 9 && /^[\d.\-\s]+$/.test(s) ? '•••' + d.slice(-3) : s;
+}
+// Chave para achar repetidos: números comparam só os dígitos; textos ignoram acento e caixa.
+function sheetDupKey(v) {
+  const s = String(v).trim();
+  if (!s) return '';
+  return /^[\d.\-\/\s]+$/.test(s) ? sheetDigits(s) : sheetNorm(s);
+}
+
+function initSheetAnalyzer() {
+  const $ = id => document.getElementById(id);
+  const fileEl = $('shFile');
+  if (!fileEl) return;
+  const S = { head: [], rows: [], nums: [], wb: null, text: '' };
+  const cell = (r, c) => (r[c] == null ? '' : String(r[c]));
+  const colIdx = () => parseInt($('shCol').value, 10) || 0;
+  const LIM_TABELA = 25, LIM_PROBLEMAS = 30;
+
+  const render = blocks => {
+    let html = '', text = '';
+    blocks.forEach(b => {
+      html += '<div class="sh-block"><strong>' + sheetEsc(b.title) + '</strong>';
+      text += b.title + '\n';
+      (b.lines || []).forEach(l => { html += '<div>' + sheetEsc(l) + '</div>'; text += l + '\n'; });
+      if (b.table && b.table.rows.length) {
+        html += '<div class="sh-scroll"><table class="sh-table"><thead><tr>'
+          + b.table.head.map(h => '<th scope="col">' + sheetEsc(h) + '</th>').join('')
+          + '</tr></thead><tbody>'
+          + b.table.rows.map(r => '<tr>' + r.map(c => '<td>' + sheetEsc(c) + '</td>').join('') + '</tr>').join('')
+          + '</tbody></table></div>';
+        text += b.table.head.join('\t') + '\n' + b.table.rows.map(r => r.join('\t')).join('\n') + '\n';
+      }
+      html += '</div>';
+      text += '\n';
+    });
+    $('shOut').innerHTML = html;
+    S.text = text.trim();
+    $('shCopy').disabled = !S.text;
+  };
+  const say = msg => { $('shSummary').textContent = msg; };
+
+  const overview = () => {
+    const total = S.rows.length;
+    const rows = S.head.slice(0, 60).map((h, c) => {
+      let vazias = 0;
+      const set = new Set();
+      S.rows.forEach(r => { const v = cell(r, c).trim(); if (!v) vazias++; else set.add(sheetNorm(v)); });
+      return [h, total - vazias, vazias, set.size];
+    });
+    return {
+      title: 'Colunas da planilha',
+      lines: S.head.length > 60 ? ['Mostrando as 60 primeiras colunas de ' + S.head.length + '.'] : [],
+      table: { head: ['Coluna', 'Preenchidas', 'Vazias', 'Valores diferentes'], rows }
+    };
+  };
+
+  const freq = c => {
+    const m = new Map();
+    let vazias = 0;
+    S.rows.forEach(r => {
+      const v = cell(r, c).trim();
+      if (!v) { vazias++; return; }
+      const k = sheetNorm(v), e = m.get(k);
+      if (e) e.n++; else m.set(k, { label: v, n: 1 });
+    });
+    const arr = [...m.values()].sort((a, b) => b.n - a.n || a.label.localeCompare(b.label, 'pt-BR'));
+    const cheias = S.rows.length - vazias;
+    return {
+      title: 'Contagem por valor — ' + S.head[c],
+      lines: [cheias + ' linhas preenchidas, ' + vazias + ' vazias, ' + arr.length + ' valores diferentes.'
+        + (arr.length > LIM_TABELA ? ' Mostrando os ' + LIM_TABELA + ' mais frequentes.' : '')],
+      table: { head: ['Valor', 'Linhas', '% das preenchidas'], rows: arr.slice(0, LIM_TABELA).map(e => [sheetMask(e.label), e.n, sheetPct(e.n, cheias)]) }
+    };
+  };
+
+  const dup = c => {
+    const m = new Map();
+    let cheias = 0;
+    S.rows.forEach((r, i) => {
+      const v = cell(r, c), k = sheetDupKey(v);
+      if (!k) return;
+      cheias++;
+      const e = m.get(k);
+      if (e) e.l.push(S.nums[i]); else m.set(k, { label: v.trim(), l: [S.nums[i]] });
+    });
+    const grupos = [...m.values()].filter(e => e.l.length > 1).sort((a, b) => b.l.length - a.l.length);
+    const linhas = grupos.reduce((s, e) => s + e.l.length, 0);
+    return {
+      title: 'Duplicados — ' + S.head[c],
+      lines: grupos.length
+        ? [linhas + ' linhas com valor repetido, em ' + grupos.length + ' grupo(s), entre ' + cheias + ' preenchidas. “Linha” é o número da linha na planilha.'
+          + (grupos.length > LIM_PROBLEMAS ? ' Mostrando os ' + LIM_PROBLEMAS + ' maiores grupos.' : '')]
+        : ['Nenhum valor repetido entre as ' + cheias + ' linhas preenchidas.'],
+      table: { head: ['Valor', 'Vezes', 'Linhas'], rows: grupos.slice(0, LIM_PROBLEMAS).map(e => [sheetMask(e.label), e.l.length, e.l.slice(0, 8).join(', ') + (e.l.length > 8 ? '…' : '')]) }
+    };
+  };
+
+  const validate = (c, fn, nome) => {
+    const motivos = new Map(), ruins = [];
+    let cheias = 0, vazias = 0;
+    S.rows.forEach((r, i) => {
+      const v = cell(r, c).trim();
+      if (!v) { vazias++; return; }
+      cheias++;
+      const mot = fn(v);
+      if (mot) { motivos.set(mot, (motivos.get(mot) || 0) + 1); ruins.push([S.nums[i], sheetMask(v), mot]); }
+    });
+    const lines = ['Conferidos (' + nome + '): ' + cheias + '. Com problema: ' + ruins.length + '. Linhas vazias: ' + vazias + '.'];
+    [...motivos.entries()].sort((a, b) => b[1] - a[1]).forEach(([mot, n]) => lines.push('• ' + n + ' com ' + mot));
+    if (ruins.length > LIM_PROBLEMAS) lines.push('Mostrando as ' + LIM_PROBLEMAS + ' primeiras linhas com problema.');
+    return { title: 'Conferência de ' + nome + ' — ' + S.head[c], lines, table: { head: ['Linha', 'Valor', 'Problema'], rows: ruins.slice(0, LIM_PROBLEMAS) } };
+  };
+
+  const filtrar = () => {
+    const c = colIdx(), mode = $('shMode').value, val = $('shVal').value;
+    if ((mode === 'has' || mode === 'eq') && !val.trim()) { return { title: 'Contar linhas', lines: ['Digite o valor que você procura.'] }; }
+    const q = sheetNorm(val);
+    let n = 0;
+    S.rows.forEach(r => {
+      const v = sheetNorm(cell(r, c));
+      if (mode === 'has' ? v.includes(q) : mode === 'eq' ? v === q : mode === 'empty' ? v === '' : v !== '') n++;
+    });
+    const desc = { has: 'contém “' + val.trim() + '”', eq: 'é igual a “' + val.trim() + '”', empty: 'está vazio', full: 'está preenchido' }[mode];
+    return { title: 'Contar linhas — ' + S.head[c], lines: [n + ' de ' + S.rows.length + ' linhas (' + sheetPct(n, S.rows.length) + ') em que ' + S.head[c] + ' ' + desc + '.'] };
+  };
+
+  const conferirTudo = () => {
+    const blocos = [];
+    S.head.forEach((h, i) => {
+      const k = sheetNorm(h);
+      if (/\bnis\b/.test(k)) blocos.push(validate(i, sheetCheckNis, 'NIS'), dup(i));
+      else if (/\bcpf\b/.test(k)) blocos.push(validate(i, sheetCheckCpf, 'CPF'), dup(i));
+      else if (/nasc|\bdata\b/.test(k)) blocos.push(validate(i, v => sheetCheckDate(v), 'datas'));
+    });
+    const vazias = S.head.map((h, c) => [h, S.rows.filter(r => !cell(r, c).trim()).length]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]);
+    blocos.push({
+      title: 'Campos vazios',
+      lines: vazias.length ? [] : ['Nenhuma coluna tem campo vazio.'],
+      table: { head: ['Coluna', 'Linhas vazias', '% das linhas'], rows: vazias.slice(0, LIM_TABELA).map(x => [x[0], x[1], sheetPct(x[1], S.rows.length)]) }
+    });
+    if (blocos.length === 1) blocos.unshift({ title: 'Conferir tudo', lines: ['Não achei colunas chamadas NIS, CPF, nascimento ou data. Escolha a coluna e use os botões de conferência.'] });
+    return blocos;
+  };
+
+  // Recebe a matriz crua (primeira linha não vazia = cabeçalho) e prepara o estado.
+  const setTable = aoa => {
+    const idx = aoa.findIndex(r => r.some(v => String(v).trim() !== ''));
+    if (idx < 0) { say('A planilha está vazia.'); return; }
+    const used = new Set();
+    S.head = aoa[idx].map((h, i) => {
+      let nome = String(h).trim() || 'Coluna ' + (i + 1), n = 2;
+      const base = nome;
+      while (used.has(nome)) nome = base + ' (' + n++ + ')';
+      used.add(nome);
+      return nome;
+    });
+    S.rows = []; S.nums = [];
+    for (let i = idx + 1; i < aoa.length; i++) {
+      if (!aoa[i].some(v => String(v).trim() !== '')) continue;
+      S.rows.push(aoa[i]); S.nums.push(i + 1);
+    }
+    $('shCol').innerHTML = S.head.map((h, i) => '<option value="' + i + '">' + sheetEsc(h) + '</option>').join('');
+    $('shControls').hidden = false;
+    $('shClear').disabled = false;
+    say(S.rows.length + ' linhas e ' + S.head.length + ' colunas lidas. Os dados ficam só neste aparelho.');
+    render([overview()]);
+  };
+
+  const loadSheet = i => {
+    const X = window.XLSX, ws = S.wb.Sheets[S.wb.SheetNames[i]];
+    const aoa = X.utils.sheet_to_json(ws, { header: 1, raw: false, dateNF: 'dd/mm/yyyy', defval: '', blankrows: true });
+    setTable(aoa.map(r => r.map(v => (v instanceof Date
+      ? String(v.getDate()).padStart(2, '0') + '/' + String(v.getMonth() + 1).padStart(2, '0') + '/' + v.getFullYear()
+      : String(v == null ? '' : v)))));
+  };
+
+  const limpar = () => {
+    S.head = []; S.rows = []; S.nums = []; S.wb = null; S.text = '';
+    fileEl.value = '';
+    $('shCol').innerHTML = ''; $('shSheet').innerHTML = '';
+    $('shSheetRow').hidden = true; $('shControls').hidden = true;
+    $('shOut').innerHTML = ''; $('shVal').value = '';
+    $('shCopy').disabled = true; $('shClear').disabled = true;
+    say('');
+  };
+
+  fileEl.addEventListener('change', async () => {
+    const f = fileEl.files && fileEl.files[0];
+    if (!f) return;
+    if (f.size > SHEET_MAX_BYTES) { limpar(); say('O arquivo passa de 25 MB. Divida a planilha em partes menores.'); return; }
+    say('Lendo a planilha…');
+    try {
+      const buf = await f.arrayBuffer();
+      const ext = (f.name.split('.').pop() || '').toLowerCase();
+      if (ext === 'xlsx' || ext === 'xls') {
+        if (!window.XLSX) await pdftoolsLoadScript(SHEET_XLSX_URL);
+        S.wb = window.XLSX.read(buf, { type: 'array', cellDates: true, dateNF: 'dd/mm/yyyy' });
+        const names = S.wb.SheetNames;
+        $('shSheet').innerHTML = names.map((n, i) => '<option value="' + i + '">' + sheetEsc(n) + '</option>').join('');
+        $('shSheetRow').hidden = names.length < 2;
+        loadSheet(0);
+      } else {
+        let text;
+        try { text = new TextDecoder('utf-8', { fatal: true }).decode(buf); }
+        catch (e) { text = new TextDecoder('windows-1252').decode(buf); }
+        S.wb = null;
+        $('shSheetRow').hidden = true;
+        setTable(sheetParseCsv(text));
+      }
+    } catch (e) {
+      say(/Falha ao carregar/.test(String(e && e.message))
+        ? 'Para abrir .xlsx ou .xls pela primeira vez é preciso internet. Sem internet, salve a planilha como CSV e abra de novo.'
+        : 'Não consegui ler esse arquivo. Confira se é .csv, .xlsx ou .xls e se não está protegido por senha.');
+    }
+  });
+
+  const on = (id, fn) => $(id).addEventListener('click', () => { if (S.rows.length) render([].concat(fn())); });
+  $('shSheet').addEventListener('change', () => loadSheet(parseInt($('shSheet').value, 10) || 0));
+  on('shFreq', () => freq(colIdx()));
+  on('shDup', () => dup(colIdx()));
+  on('shNis', () => validate(colIdx(), sheetCheckNis, 'NIS'));
+  on('shCpf', () => validate(colIdx(), sheetCheckCpf, 'CPF'));
+  on('shDate', () => validate(colIdx(), v => sheetCheckDate(v), 'datas'));
+  on('shAuto', conferirTudo);
+  on('shFilt', filtrar);
+  $('shMode').addEventListener('change', () => { const m = $('shMode').value; $('shVal').disabled = m === 'empty' || m === 'full'; });
+  $('shClear').addEventListener('click', limpar);
+  $('shCopy').addEventListener('click', async () => {
+    if (!S.text) return;
+    try { await navigator.clipboard.writeText(S.text); say('Resultado copiado.'); }
+    catch (e) { say('Não consegui copiar. Selecione o texto do resultado e copie manualmente.'); }
+  });
+}
