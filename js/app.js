@@ -14329,7 +14329,8 @@ function argoAssistantAsk(rawText) {
       ? 'Achei ' + (matches.length === 1 ? 'uma aba que combina' : 'algumas abas que combinam') + ' com isso. Quer abrir? Se preferir, posso procurar o termo nos equipamentos.'
       : 'Não tenho uma resposta pronta para isso, mas posso procurar "' + rawText.trim() + '" direto nos equipamentos da rede.',
     mood: matches.length ? 'info' : 'notfound',
-    quickActions: acts
+    quickActions: acts,
+    fallback: !matches.length   // sem resposta pronta nem aba parecida: a IA (se ligada) pode tentar
   };
 }
 
@@ -14351,7 +14352,7 @@ function initArgoAssistant() {
   if (typeof ArgoMascot === 'undefined' || typeof ArgoMascot.mountAssistant !== 'function') return;
   argoAssistantCtrl = ArgoMascot.mountAssistant({
     greeting: () => argoGreetingWord() + '! Eu sou o Argo, seu guia a bordo. Posso abrir uma aba, buscar uma unidade ou explicar como algo funciona. Pergunte do seu jeito ou toque num atalho.',
-    ask: argoAssistantAsk,
+    ask: argoAssistantAskHybrid,
     defaultQuickActions: argoAssistantDefaultQuickActions
   });
 }
@@ -17640,4 +17641,98 @@ function initSheetAnalyzer() {
     try { await navigator.clipboard.writeText(S.text); say('Resultado copiado.'); }
     catch (e) { say('Não consegui copiar. Selecione o texto do resultado e copie manualmente.'); }
   });
+}
+
+/* ============================================================
+   IA NO MASCOTE ARGO (opcional, modelo híbrido)
+   1) As respostas prontas (argoAssistantAsk) vêm sempre primeiro e
+      funcionam offline.
+   2) Só quando elas não entendem a pergunta, e se houver internet e um
+      endereço em ARGO_IA.url, a pergunta vai para um intermediário
+      (Cloudflare Worker, ver scripts/ia-worker/LEIA-ME.md) que chama a IA.
+   3) Se a IA falhar, demorar ou estiver desligada, vale a resposta pronta.
+   Sai do aparelho: só o texto da pergunta e até 4 fichas do diretório
+   público. Perguntas com documento, telefone, e-mail ou nome e sobrenome
+   são barradas aqui antes de qualquer envio. Nada de famílias, planilhas
+   ou bloco de notas é enviado.
+   ============================================================ */
+const ARGO_IA = {
+  url: 'https://argo-ia.paulo-ae18.workers.dev',   // endereço do Worker; vazio = IA desligada
+  timeoutMs: 20000,
+  maxPergunta: 500
+};
+
+function argoIaAtiva() {
+  return !!ARGO_IA.url && navigator.onLine !== false;
+}
+
+// Devolve um aviso se a pergunta parece trazer dado pessoal; '' se estiver livre.
+function argoIaBloqueio(texto) {
+  const t = String(texto || '');
+  const aviso = 'Para proteger as famílias, não envio mensagens com nome, documento, telefone ou e-mail para a IA. Reescreva a pergunta sem identificar ninguém.';
+  if (/[^\s@]+@[^\s@]+\.[a-z]{2,}/i.test(t)) return aviso;
+  const seq = t.match(/\d[\d.\-\/\s]{6,}\d/g) || [];
+  if (seq.some(s => s.replace(/\D/g, '').length >= 9)) return aviso;
+  if (/\b(nome|chama|chamada|chamado)\b[^.?!\n]{0,25}\b[A-ZÁÉÍÓÚÂÊÔÃÕÇ][a-záéíóúâêôãõç]+\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ][a-záéíóúâêôãõç]+/.test(t)) return aviso;
+  return '';
+}
+
+// Escolhe até 4 fichas do diretório que combinam com a pergunta (o "contexto" da IA).
+let argoIaIndice = null;
+function argoIaContexto(pergunta) {
+  if (typeof DATA === 'undefined' || !Array.isArray(DATA)) return [];
+  if (!argoIaIndice) {
+    argoIaIndice = DATA.map(d => ({
+      d,
+      nome: argoNorm([d.name, d.fullName].join(' ')),
+      resto: argoNorm([d.group, d.address, d.services, d.desc].join(' '))
+    }));
+  }
+  const stop = new Set(['de', 'da', 'do', 'das', 'dos', 'que', 'com', 'para', 'por', 'uma', 'um', 'como', 'qual', 'quais', 'onde', 'fica', 'tem', 'sobre', 'preciso', 'quero', 'ajuda', 'atende', 'atendimento']);
+  const palavras = argoNorm(pergunta).split(' ').filter(w => w.length > 2 && !stop.has(w));
+  if (!palavras.length) return [];
+  return argoIaIndice
+    .map(x => ({ x, s: palavras.reduce((s, w) => s + (x.nome.indexOf(w) > -1 ? 3 : x.resto.indexOf(w) > -1 ? 1 : 0), 0) }))
+    .filter(r => r.s > 0)
+    .sort((a, b) => b.s - a.s)
+    .slice(0, 4)
+    .map(({ x: { d } }) => ({
+      nome: d.fullName || d.name || '',
+      grupo: d.group || '',
+      endereco: d.address || '',
+      horario: d.hours || '',
+      telefones: Array.isArray(d.phones) ? d.phones.join(', ') : '',
+      servicos: String(d.services || '').slice(0, 320)
+    }));
+}
+
+async function argoIaPerguntar(pergunta) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), ARGO_IA.timeoutMs);
+  try {
+    const r = await fetch(ARGO_IA.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pergunta: pergunta.slice(0, ARGO_IA.maxPergunta), contexto: argoIaContexto(pergunta) }),
+      signal: ctl.signal
+    });
+    if (!r.ok) return '';
+    const j = await r.json();
+    return typeof j.resposta === 'string' ? j.resposta.trim().slice(0, 1500) : '';
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Ponto de entrada do mascote: resposta pronta primeiro; IA só como reserva.
+function argoAssistantAskHybrid(rawText) {
+  const local = argoAssistantAsk(rawText);
+  if (!local || !local.fallback || !argoIaAtiva()) return local;
+  const bloqueio = argoIaBloqueio(rawText);
+  if (bloqueio) return { reply: bloqueio, mood: 'notfound', quickActions: null };
+  return argoIaPerguntar(rawText.trim())
+    .then(txt => (txt
+      ? { reply: txt + '\n\n(Resposta gerada por IA. Confira os dados com a unidade.)', mood: 'info', quickActions: local.quickActions }
+      : local))
+    .catch(() => local);
 }
