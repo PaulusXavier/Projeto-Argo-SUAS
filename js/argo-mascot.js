@@ -493,14 +493,15 @@
   // Assistente (botão flutuante + painel de conversa) — o mascote "quase
   // como um assistente dentro do app". Fica montado uma única vez e some
   // sozinho via CSS quando o app está trancado, em modo destaque ou na
-  // impressão (ver ensureStyles). Tudo roda no aparelho: nenhuma pergunta
-  // digitada aqui sai do navegador — quem decide as respostas é a função
-  // `ask` fornecida por quem chama mountAssistant (normalmente app.js),
-  // com uma base de respostas prontas sobre o próprio app.
+  // impressão (ver ensureStyles). Este arquivo não envia nada para a rede:
+  // quem decide as respostas é a função `ask` fornecida por quem chama
+  // mountAssistant (normalmente app.js). Ela pode devolver o resultado na
+  // hora ou uma Promise (resposta de IA opcional, ver "IA NO MASCOTE ARGO"
+  // em app.js — lá está o que é enviado e o filtro de dados pessoais).
   //
   // ArgoMascot.mountAssistant({
   //   greeting: () => 'Olá! Eu sou o Argo...',           // string ou função
-  //   ask: (texto) => ({ reply, mood, quickActions }) | null,
+  //   ask: (texto) => ({ reply, mood, quickActions }) | null | Promise<mesmo formato>,
   //   defaultQuickActions: () => [{ label, run, reply, mood }, ...]
   // })
   // → { open, close, toggle, ask(texto), say(texto, mood) }
@@ -642,23 +643,44 @@
         : (options.defaultQuickActions || []);
     }
 
+    // Mostra a resposta (ou o "não entendi") e os atalhos que a acompanham.
+    function showAnswer(result) {
+      if (result && result.reply) {
+        addMsg(result.reply, 'bot', result.mood);
+        var acts = (result.quickActions || defaultQuick()).slice();
+        // Quando a resposta trouxe um atalho específico, oferece voltar ao menu.
+        if (result.quickActions && result.quickActions.length) acts.push({ label: 'Mais assuntos', menu: true });
+        renderQuick(acts);
+      } else {
+        addMsg('Hmm, essa eu não entendi bem. Tente com outras palavras ou escolha um destes caminhos:', 'bot', 'notfound');
+        renderQuick(defaultQuick());
+      }
+    }
+
+    // Igual ao typingThen, mas espera uma Promise (resposta de IA): o "…" fica
+    // até a resposta chegar. Se a Promise falhar, cai no "não entendi".
+    function typingWhile(promise, cb) {
+      var row = document.createElement('div');
+      row.className = 'argo-assistant-msg argo-assistant-msg-bot argo-assistant-typing';
+      row.innerHTML = '<span class="argo-assistant-msg-icon">' + boatSVG('info', 24) + '</span>' +
+        '<span class="argo-assistant-bubble"><i></i><i></i><i></i></span>';
+      log.appendChild(row);
+      log.scrollTop = log.scrollHeight;
+      var done = false;
+      function fin(res) { if (done) return; done = true; row.remove(); cb(res); }
+      promise.then(fin, function () { fin(null); });
+    }
+
     function ask(text) {
       text = String(text == null ? '' : text).trim();
       if (!text) return;
       addMsg(text, 'user');
       var result = (typeof options.ask === 'function') ? options.ask(text) : null;
-      typingThen(function () {
-        if (result && result.reply) {
-          addMsg(result.reply, 'bot', result.mood);
-          var acts = (result.quickActions || defaultQuick()).slice();
-          // Quando a resposta trouxe um atalho específico, oferece voltar ao menu.
-          if (result.quickActions && result.quickActions.length) acts.push({ label: 'Mais assuntos', menu: true });
-          renderQuick(acts);
-        } else {
-          addMsg('Hmm, essa eu não entendi bem. Tente com outras palavras ou escolha um destes caminhos:', 'bot', 'notfound');
-          renderQuick(defaultQuick());
-        }
-      });
+      if (result && typeof result.then === 'function') {
+        typingWhile(result, showAnswer);
+      } else {
+        typingThen(function () { showAnswer(result); });
+      }
     }
 
     function open() {
