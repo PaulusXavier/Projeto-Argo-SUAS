@@ -1,0 +1,12 @@
+# Opcional: só se você publicar pelo terminal (npx wrangler deploy).
+# Pelo painel da Cloudflare não precisa deste arquivo.
+name = "argo-ia"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+[ai]
+binding = "AI"
+
+[vars]
+ALLOWED_ORIGIN = "https://SEU-USUARIO.github.io"
+# Não há chave de API: o Workers AI usa a sua própria conta Cloudflare.
