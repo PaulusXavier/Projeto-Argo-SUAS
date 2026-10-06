@@ -337,6 +337,7 @@ function finishUnlockAfterRender() {
 }
 
 function lockApp(reason) {
+  if (typeof tradutorClearSession === 'function') tradutorClearSession();
   // Ao trancar (inclusive ao carregar a página, antes do login), a chave de
   // cifragem sai da memória — os dados sensíveis salvos ficam ilegíveis até
   // a senha correta ser digitada de novo.
@@ -733,6 +734,7 @@ function initAuth() {
 }
 
 function logout(reason) {
+  if (typeof tradutorClearSession === 'function') tradutorClearSession();
   // "Sair" sempre exige a senha de novo, mesmo com "manter conectado"
   // marcado numa sessão anterior — sem isso, o botão Sair não sairia de
   // verdade enquanto a aba permanecesse aberta.
@@ -6477,22 +6479,51 @@ function renderPdfToolsCard() {
 }
 
 const TRADUTOR_LANGS = {
-  pt: { label: 'Português', voice: 'pt-BR', flag: '🇧🇷' },
-  es: { label: 'Espanhol', voice: 'es-ES', flag: '🇪🇸' },
-  en: { label: 'Inglês', voice: 'en-US', flag: '🇺🇸' },
-  fr: { label: 'Francês', voice: 'fr-FR', flag: '🇫🇷' }
+  pt: { label: 'Português', voice: 'pt-BR', flag: '🇧🇷', prefs: ['pt-BR', 'pt-PT'] },
+  // Espanhol: no atendimento a venezuelanos, voz/reconhecimento de variante
+  // latino-americana (es-VE, es-MX, es-US...) soam mais naturais que es-ES.
+  es: { label: 'Espanhol', voice: 'es-ES', rec: 'es-VE', flag: '🇪🇸', prefs: ['es-VE', 'es-MX', 'es-US', 'es-419', 'es-CO', 'es-AR', 'es-ES'] },
+  en: { label: 'Inglês', voice: 'en-US', flag: '🇺🇸', prefs: ['en-US', 'en-GB'] },
+  fr: { label: 'Francês', voice: 'fr-FR', flag: '🇫🇷', prefs: ['fr-FR', 'fr-CA'] }
 };
 
-const TRADUTOR_PHRASES = [
-  'Bom dia! Qual é o seu nome completo?',
-  'Você já tem o Cadastro Único (CadÚnico)?',
-  'Você tem algum documento de identificação, como passaporte ou cédula?',
-  'Por favor, aguarde um momento, vou chamar alguém para te ajudar.',
-  'Quantas pessoas moram na sua casa?',
-  'Você precisa de ajuda com alimentação, moradia ou documentos?',
-  'Volte aqui na próxima sexta-feira, das 8h às 12h.',
-  'Traga um comprovante de endereço na próxima visita.'
+// Frases padrão de atendimento com tradução revisada (pt, es, en, fr). Quando
+// o texto de origem é uma delas, a tradução sai na hora e SEM internet; as
+// demais frases usam o serviço online. Para incluir uma frase, acrescente
+// uma linha [português, espanhol, inglês, francês].
+const TRADUTOR_BANK_ROWS = [
+  ['Bem-vindo(a) ao CRAS. Como posso ajudar?', '¡Bienvenido(a) al CRAS! ¿En qué puedo ayudarle?', 'Welcome to the CRAS (Social Assistance Reference Center). How can I help you?', 'Bienvenue au CRAS. Comment puis-je vous aider ?'],
+  ['Bom dia! Qual é o seu nome completo?', '¡Buen día! ¿Cuál es su nombre completo?', 'Good morning! What is your full name?', 'Bonjour ! Quel est votre nom complet ?'],
+  ['Você entende o que estou dizendo?', '¿Entiende lo que le estoy diciendo?', 'Do you understand what I am saying?', 'Comprenez-vous ce que je dis ?'],
+  ['Pode repetir, por favor? Fale mais devagar.', '¿Puede repetir, por favor? Hable más despacio.', 'Could you repeat that, please? Speak more slowly.', 'Pouvez-vous répéter, s’il vous plaît ? Parlez plus lentement.'],
+  ['Qual é a sua data de nascimento?', '¿Cuál es su fecha de nacimiento?', 'What is your date of birth?', 'Quelle est votre date de naissance ?'],
+  ['Qual é o seu telefone para contato?', '¿Cuál es su teléfono de contacto?', 'What is your contact phone number?', 'Quel est votre numéro de téléphone ?'],
+  ['Você já tem o Cadastro Único (CadÚnico)?', '¿Ya tiene el Cadastro Único (CadÚnico)?', 'Do you already have the Cadastro Único (CadÚnico)?', 'Avez-vous déjà le Cadastro Único (CadÚnico) ?'],
+  ['Você tem algum documento de identificação, como passaporte ou cédula?', '¿Tiene algún documento de identificación, como pasaporte o cédula?', 'Do you have any identification document, such as a passport or ID card?', 'Avez-vous une pièce d’identité, comme un passeport ou une carte d’identité ?'],
+  ['Quantas pessoas moram na sua casa?', '¿Cuántas personas viven en su casa?', 'How many people live in your home?', 'Combien de personnes vivent chez vous ?'],
+  ['Você tem filhos ou dependentes? Quantos anos eles têm?', '¿Tiene hijos o personas a su cargo? ¿Cuántos años tienen?', 'Do you have children or dependents? How old are they?', 'Avez-vous des enfants ou des personnes à charge ? Quel âge ont-ils ?'],
+  ['As crianças estão matriculadas na escola?', '¿Los niños están inscritos en la escuela?', 'Are the children enrolled in school?', 'Les enfants sont-ils inscrits à l’école ?'],
+  ['Você tem a carteira de vacinação das crianças?', '¿Tiene la cartilla de vacunación de los niños?', 'Do you have the children’s vaccination card?', 'Avez-vous le carnet de vaccination des enfants ?'],
+  ['Você está recebendo algum benefício do governo?', '¿Está recibiendo algún beneficio del gobierno?', 'Are you receiving any government benefit?', 'Recevez-vous une aide du gouvernement ?'],
+  ['Você precisa de ajuda com alimentação, moradia ou documentos?', '¿Necesita ayuda con alimentación, vivienda o documentos?', 'Do you need help with food, housing or documents?', 'Avez-vous besoin d’aide pour l’alimentation, le logement ou les papiers ?'],
+  ['Você tem onde dormir hoje?', '¿Tiene dónde dormir hoy?', 'Do you have a place to sleep tonight?', 'Avez-vous un endroit où dormir ce soir ?'],
+  ['Você precisa de atendimento médico agora?', '¿Necesita atención médica ahora?', 'Do you need medical care right now?', 'Avez-vous besoin de soins médicaux maintenant ?'],
+  ['Por favor, aguarde um momento, vou chamar alguém para te ajudar.', 'Por favor, espere un momento, voy a llamar a alguien para ayudarle.', 'Please wait a moment, I will call someone to help you.', 'Veuillez patienter un instant, je vais appeler quelqu’un pour vous aider.'],
+  ['Traga um comprovante de endereço na próxima visita.', 'Traiga un comprobante de domicilio en su próxima visita.', 'Please bring proof of address on your next visit.', 'Apportez un justificatif de domicile lors de votre prochaine visite.'],
+  ['Volte aqui na próxima sexta-feira, das 8h às 12h.', 'Regrese aquí el próximo viernes, de 8 a 12 horas.', 'Please come back next Friday, between 8 a.m. and 12 p.m.', 'Revenez ici vendredi prochain, entre 8 h et 12 h.'],
+  ['Assine aqui, por favor.', 'Firme aquí, por favor.', 'Please sign here.', 'Veuillez signer ici.'],
+  ['O atendimento é gratuito.', 'La atención es gratuita.', 'The service is free of charge.', 'Le service est gratuit.'],
+  ['Obrigado pela visita. Até a próxima!', 'Gracias por su visita. ¡Hasta la próxima!', 'Thank you for visiting. See you next time!', 'Merci de votre visite. À bientôt !']
 ];
+const TRADUTOR_PHRASES = TRADUTOR_BANK_ROWS.map(r => r[0]);
+
+// Chave de comparação sem acento, pontuação e maiúsculas: quem digita a frase
+// do banco um pouco diferente (sem "!" ou sem acento) ainda acerta.
+function tradutorNormKey(t) {
+  return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+const TRADUTOR_BANK = new Map(TRADUTOR_BANK_ROWS.map(r => [tradutorNormKey(r[0]), { es: r[1], en: r[2], fr: r[3] }]));
 
 /* Aba "Tradutor" — comunicação em texto e voz com estrangeiros
    (espanhol, inglês e francês), muito usada no atendimento a
@@ -6506,17 +6537,18 @@ const TRADUTOR_PHRASES = [
 let tradutorRecognition = null;
 let tradutorListening = false;
 
-// O serviço gratuito MyMemory limita cada tradução a ~500 caracteres; acima
-// disso ele devolve um aviso de limite em vez de traduzir. Avisamos antes de
-// enviar, em vez de deixar o técnico descobrir isso só depois pelo erro.
-const TRADUTOR_MAX_CHARS = 480;
+// O serviço gratuito MyMemory limita cada pedido a ~500 caracteres. Por isso
+// textos maiores são divididos em partes (por frase) de até
+// TRADUTOR_CHUNK_CHARS, traduzidos em sequência e juntados. O teto total do
+// campo é TRADUTOR_MAX_CHARS, para não gastar a cota diária gratuita à toa.
+const TRADUTOR_MAX_CHARS = 1500;
+const TRADUTOR_CHUNK_CHARS = 450;
 
 // Cache simples em memória (dura enquanto a aba estiver aberta): evita
-// reenviar ao serviço externo um texto que acabou de ser traduzido (ex.:
-// o técnico traduz, edita e volta ao texto original, ou reusa uma frase
-// rápida várias vezes no mesmo atendimento) — resposta instantânea e um
-// pedido a menos na cota diária gratuita do serviço.
+// reenviar ao serviço externo uma parte que acabou de ser traduzida —
+// resposta instantânea e um pedido a menos na cota gratuita.
 const tradutorCache = new Map();
+let tradutorLastTarget = 'es';
 const TRADUTOR_CACHE_MAX = 100;
 
 const TRADUTOR_CUSTOM_KEY = 'argo_tradutor_custom_phrases';
@@ -6656,6 +6688,10 @@ function renderTranslatorCard() {
     `<option value="${code}" ${code === selected ? 'selected' : ''}>${l.flag} ${l.label}</option>`
   ).join('');
 
+  const targetChips = ['es', 'en', 'fr'].map(c =>
+    `<button type="button" class="tradutor-target" data-to="${c}" aria-pressed="false" onclick="tradutorSetTarget('${c}')">${TRADUTOR_LANGS[c].flag} ${TRADUTOR_LANGS[c].label}</button>`
+  ).join('');
+
   return `
     <div class="tech-card tradutor-card">
       <div class="card-top">
@@ -6680,6 +6716,9 @@ function renderTranslatorCard() {
             ${langOptions('es')}
           </select>
         </div>
+        <div class="tradutor-quick" role="group" aria-label="Traduzir para">
+          <span>Traduzir para:</span> ${targetChips}
+        </div>
 
         <div class="tradutor-panes">
           <div class="tradutor-pane">
@@ -6699,12 +6738,15 @@ function renderTranslatorCard() {
               <span id="tradutorToLabel">Espanhol</span>
               <div class="tradutor-pane-tools">
                 <button type="button" class="tradutor-icon-btn" id="tradutorCopyTo" onclick="tradutorCopy('to')" title="Copiar tradução" aria-label="Copiar tradução">${ICONS.copy}</button>
+                <button type="button" class="tradutor-speak-btn" id="tradutorCheckBtn" onclick="tradutorBackCheck()" disabled title="Traduz o resultado de volta para conferir se o sentido se manteve">Conferir</button>
+                <button type="button" class="tradutor-speak-btn" id="tradutorBigBtn" onclick="tradutorBigFromOutput()" disabled title="Mostra a tradução em letras grandes, para a pessoa ler">Tela grande</button>
                 <button type="button" class="tradutor-speak-btn" id="tradutorSpeakTo" onclick="tradutorSpeak('to')" disabled>${ICONS.volume} Ouvir</button>
               </div>
             </div>
             <textarea id="tradutorOutput" placeholder="A tradução aparece aqui..." readonly></textarea>
           </div>
         </div>
+        <div class="tradutor-back" id="tradutorBackBox" hidden aria-live="polite"></div>
 
         <div class="tradutor-actions">
           <div class="tradutor-actions-left">
@@ -6723,6 +6765,8 @@ function renderTranslatorCard() {
           </div>
           <span class="tradutor-status" id="tradutorStatus" role="status" aria-live="polite"></span>
         </div>
+
+        <div class="tradutor-log" id="tradutorLogBox" hidden></div>
 
         <div class="tradutor-phrases">
           <div class="tradutor-phrases-head">
@@ -6754,6 +6798,26 @@ function tradutorSyncSpeakLabels() {
   const inputEl = document.getElementById('tradutorInput');
   if (inputEl) inputEl.placeholder = `Digite ou fale aqui o texto em ${TRADUTOR_LANGS[from].label.toLowerCase()}...`;
   tradutorSaveLangPref();
+  document.querySelectorAll('.tradutor-target').forEach(b => {
+    const on = b.dataset.to === to;
+    b.classList.toggle('is-active', on);
+    b.setAttribute('aria-pressed', String(on));
+  });
+  if (to !== 'pt') tradutorLastTarget = to;
+}
+
+// Atalho "Traduzir para": troca o idioma de destino com um toque e, se já
+// havia texto traduzido, refaz a tradução no novo idioma na hora.
+function tradutorSetTarget(code) {
+  const fromSel = document.getElementById('tradutorFrom');
+  const toSel = document.getElementById('tradutorTo');
+  if (!fromSel || !toSel || !TRADUTOR_LANGS[code]) return;
+  toSel.value = code;
+  if (fromSel.value === code) fromSel.value = 'pt';
+  tradutorSyncSpeakLabels();
+  const hasIn = (document.getElementById('tradutorInput') || {}).value;
+  const hasOut = (document.getElementById('tradutorOutput') || {}).value;
+  if (hasIn && hasIn.trim() && hasOut && hasOut.trim()) tradutorTranslate();
 }
 
 function tradutorSaveLangPref() {
@@ -6824,13 +6888,27 @@ function tradutorSwapLangs() {
 
 function tradutorSetStatus(msg, kind) {
   const el = document.getElementById('tradutorStatus');
-  if (!el) return;
-  el.textContent = msg || '';
-  el.className = 'tradutor-status' + (kind ? ' is-' + kind : '');
+  if (el) {
+    el.textContent = msg || '';
+    el.className = 'tradutor-status' + (kind ? ' is-' + kind : '');
+  }
+  // Ponto central por onde passam todos os caminhos de tradução/limpeza:
+  // mantém "Ouvir", "Conferir" e "Tela grande" ligados só se há tradução.
+  tradutorSyncOutputButtons();
 }
 
 function tradutorClearStatus() {
   tradutorSetStatus('', '');
+  tradutorHideBackCheck();
+}
+
+function tradutorSyncOutputButtons() {
+  const out = document.getElementById('tradutorOutput');
+  const has = !!(out && out.value.trim());
+  ['tradutorSpeakTo', 'tradutorCheckBtn', 'tradutorBigBtn'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) b.disabled = !has;
+  });
 }
 
 function tradutorUpdateCharCount() {
@@ -6867,6 +6945,73 @@ function tradutorClear() {
   tradutorUpdateCharCount();
 }
 
+// O MyMemory às vezes devolve entidades HTML (&#39;, &amp;) no texto.
+function tradutorDecode(txt) {
+  const t = String(txt || '');
+  if (!/&[#a-z0-9]+;/i.test(t)) return t;
+  const ta = document.createElement('textarea');
+  ta.innerHTML = t;
+  return ta.value;
+}
+
+// Divide por frase em partes de até `max` caracteres (e por palavra, no caso
+// raro de uma única frase maior que o limite).
+function tradutorSplitText(text, max) {
+  const clean = String(text).replace(/\s+/g, ' ').trim();
+  if (clean.length <= max) return [clean];
+  const sentences = clean.match(/[^.!?…]+[.!?…]*\s*/g) || [clean];
+  const chunks = [];
+  let cur = '';
+  const flush = () => { if (cur.trim()) chunks.push(cur.trim()); cur = ''; };
+  sentences.forEach(sent => {
+    if (sent.length > max) {
+      flush();
+      let piece = '';
+      sent.split(' ').forEach(w => {
+        if ((piece + ' ' + w).trim().length > max) { if (piece) chunks.push(piece.trim()); piece = w; }
+        else piece = (piece + ' ' + w).trim();
+      });
+      if (piece) chunks.push(piece.trim());
+      return;
+    }
+    if ((cur + sent).length > max) flush();
+    cur += sent;
+  });
+  flush();
+  return chunks;
+}
+
+async function tradutorFetchChunk(chunk, from, to) {
+  const key = `${from}|${to}|${chunk}`;
+  const hit = tradutorCache.get(key);
+  if (hit) return hit;
+  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=${from}|${to}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('network');
+  const data = await res.json();
+  const translated = data && data.responseData && data.responseData.translatedText;
+  const status = data && data.responseStatus ? Number(data.responseStatus) : 200;
+  // O MyMemory às vezes devolve status 200 com o aviso de cota esgotada
+  // dentro do próprio texto: sem este tratamento, o aviso em inglês seria
+  // mostrado como se fosse a tradução.
+  if (translated && /MYMEMORY WARNING/i.test(translated)) throw new Error('quota');
+  if (!translated || status >= 400) throw new Error('bad response');
+  const clean = tradutorDecode(translated);
+  if (tradutorCache.size >= TRADUTOR_CACHE_MAX) tradutorCache.delete(tradutorCache.keys().next().value);
+  tradutorCache.set(key, clean);
+  return clean;
+}
+
+async function tradutorFetchText(text, from, to, onProgress) {
+  const chunks = tradutorSplitText(text, TRADUTOR_CHUNK_CHARS);
+  const parts = [];
+  for (let i = 0; i < chunks.length; i++) {
+    if (onProgress && chunks.length > 1) onProgress(i + 1, chunks.length);
+    parts.push(await tradutorFetchChunk(chunks[i], from, to));
+  }
+  return parts.join(' ');
+}
+
 async function tradutorTranslate() {
   const input = document.getElementById('tradutorInput');
   const output = document.getElementById('tradutorOutput');
@@ -6874,74 +7019,200 @@ async function tradutorTranslate() {
   const to = document.getElementById('tradutorTo').value;
   const text = input.value.trim();
   const btn = document.getElementById('tradutorGoBtn');
-  const speakTo = document.getElementById('tradutorSpeakTo');
 
   if (!text) {
     tradutorSetStatus('Digite um texto para traduzir.', 'error');
     return;
   }
   if (text.length > TRADUTOR_MAX_CHARS) {
-    tradutorSetStatus(`Texto muito longo (${text.length} caracteres) — o serviço de tradução aceita até ${TRADUTOR_MAX_CHARS}. Divida em partes menores.`, 'error');
+    tradutorSetStatus(`Texto muito longo (${text.length} caracteres) — o limite é ${TRADUTOR_MAX_CHARS}. Divida em partes menores.`, 'error');
     return;
   }
+  tradutorHideBackCheck();
   if (from === to) {
     output.value = text;
-    if (speakTo) speakTo.disabled = false;
     tradutorSetStatus('Os idiomas são iguais — nada para traduzir.', '');
     tradutorMaybeAutoSpeak();
     return;
   }
 
-  const cacheKey = `${from}|${to}|${text}`;
-  const cached = tradutorCache.get(cacheKey);
-  if (cached) {
-    output.value = cached;
-    if (speakTo) speakTo.disabled = false;
-    tradutorSetStatus('Tradução concluída.', 'success');
-    tradutorMaybeAutoSpeak();
-    return;
+  // Frases padrão: tradução revisada, instantânea e que funciona offline.
+  if (from === 'pt') {
+    const hit = TRADUTOR_BANK.get(tradutorNormKey(text));
+    if (hit && hit[to]) {
+      output.value = hit[to];
+      tradutorSetStatus('Tradução pronta (frase padrão revisada — funciona sem internet).', 'success');
+      tradutorLogTurn(from, to, text, hit[to]);
+      tradutorMaybeAutoSpeak();
+      return;
+    }
   }
 
   // Falha rápido e com mensagem clara quando o aparelho está sem internet,
-  // em vez de esperar o fetch estourar em timeout para só então mostrar um
-  // erro genérico — o serviço de tradução é sempre online, mesmo o resto do
-  // app funcionando offline.
+  // em vez de esperar o fetch estourar em timeout.
   if (!navigator.onLine) {
-    tradutorSetStatus('Sem conexão com a internet. A tradução de texto precisa estar online (a voz e o microfone continuam funcionando offline).', 'error');
+    tradutorSetStatus('Sem conexão com a internet. A tradução de texto livre precisa estar online (frases padrão, voz e microfone continuam funcionando offline).', 'error');
     return;
   }
 
   btn.disabled = true;
   tradutorSetStatus('Traduzindo...', '');
   try {
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('network');
-    const data = await res.json();
-    const translated = data && data.responseData && data.responseData.translatedText;
-    const status = data && data.responseStatus ? Number(data.responseStatus) : 200;
-    if (!translated || status >= 400) throw new Error('bad response');
-    // O MyMemory às vezes devolve status 200 mas com um aviso de cota
-    // esgotada dentro do próprio texto traduzido, em vez de um erro HTTP —
-    // sem esse tratamento, esse aviso em inglês seria mostrado ao técnico
-    // e ao estrangeiro atendido como se fosse a tradução de verdade.
-    if (/MYMEMORY WARNING/i.test(translated)) {
-      tradutorSetStatus('O serviço de tradução gratuito atingiu o limite diário de uso. Tente novamente mais tarde ou em outro horário.', 'error');
-      return;
-    }
+    const translated = await tradutorFetchText(text, from, to,
+      (i, n) => tradutorSetStatus(`Traduzindo parte ${i} de ${n}...`, ''));
     output.value = translated;
-    if (speakTo) speakTo.disabled = false;
     tradutorSetStatus('Tradução concluída.', 'success');
-    if (tradutorCache.size >= TRADUTOR_CACHE_MAX) {
-      tradutorCache.delete(tradutorCache.keys().next().value);
-    }
-    tradutorCache.set(cacheKey, translated);
+    tradutorLogTurn(from, to, text, translated);
     tradutorMaybeAutoSpeak();
   } catch (e) {
-    tradutorSetStatus('Não foi possível traduzir agora. Verifique a internet e tente novamente.', 'error');
+    if (e && e.message === 'quota') {
+      tradutorSetStatus('O serviço de tradução gratuito atingiu o limite diário de uso. Use as frases padrão (funcionam sem o serviço) ou tente mais tarde.', 'error');
+    } else {
+      tradutorSetStatus('Não foi possível traduzir agora. Verifique a internet e tente novamente.', 'error');
+    }
   } finally {
     btn.disabled = false;
   }
+}
+
+// Conferência: traduz o resultado de volta para o idioma de origem, para o
+// técnico checar se o sentido se manteve (ex.: a pergunta continua pergunta).
+function tradutorHideBackCheck() {
+  const b = document.getElementById('tradutorBackBox');
+  if (b) { b.hidden = true; b.innerHTML = ''; }
+}
+
+async function tradutorBackCheck() {
+  const out = document.getElementById('tradutorOutput');
+  const from = document.getElementById('tradutorFrom').value;
+  const to = document.getElementById('tradutorTo').value;
+  const box = document.getElementById('tradutorBackBox');
+  const btn = document.getElementById('tradutorCheckBtn');
+  const text = out ? out.value.trim() : '';
+  if (!text || !box || from === to) return;
+  if (!navigator.onLine) {
+    tradutorSetStatus('Sem conexão com a internet para conferir a tradução.', 'error');
+    return;
+  }
+  if (btn) btn.disabled = true;
+  tradutorSetStatus('Conferindo...', '');
+  try {
+    const back = await tradutorFetchText(text, to, from);
+    box.hidden = false;
+    box.innerHTML = `<div><strong>Retradução para ${escapeHtml(TRADUTOR_LANGS[from].label)} (conferência):</strong> ${escapeHtml(back)}</div>
+      <small>Serve só para checar o sentido: é outra tradução automática e pode trocar palavras. Na dúvida, simplifique a frase.</small>`;
+    tradutorSetStatus('Conferência pronta.', 'success');
+  } catch (e) {
+    tradutorSetStatus(e && e.message === 'quota'
+      ? 'O serviço de tradução gratuito atingiu o limite diário de uso.'
+      : 'Não foi possível conferir agora. Tente novamente.', 'error');
+  } finally {
+    tradutorSyncOutputButtons();
+  }
+}
+
+// ---- Conversa da sessão (só em memória; some ao bloquear o app) ----
+let tradutorLog = [];
+const TRADUTOR_LOG_MAX = 30;
+
+function tradutorLogTurn(from, to, src, out) {
+  if (!src || !out) return;
+  const last = tradutorLog[tradutorLog.length - 1];
+  if (last && last.from === from && last.to === to && last.src === src) return;
+  tradutorLog.push({ from, to, src, out });
+  if (tradutorLog.length > TRADUTOR_LOG_MAX) tradutorLog.shift();
+  tradutorRenderLog();
+}
+
+function tradutorRenderLog() {
+  const box = document.getElementById('tradutorLogBox');
+  if (!box) return;
+  if (!tradutorLog.length) { box.hidden = true; box.innerHTML = ''; return; }
+  box.hidden = false;
+  box.innerHTML = `
+    <div class="tradutor-log-head">
+      <h3>Conversa desta sessão <span>(só nesta tela; some ao bloquear o app)</span></h3>
+      <div class="tradutor-log-tools">
+        <button type="button" class="tradutor-btn-ghost" onclick="tradutorCopyLog(this)">Copiar conversa</button>
+        <button type="button" class="tradutor-btn-ghost" onclick="tradutorClearLog()">Limpar</button>
+      </div>
+    </div>
+    <ol class="tradutor-log-list">${tradutorLog.map((t, i) => ({ t, i })).reverse().map(({ t, i }) => `
+      <li class="tradutor-log-item">
+        <span class="tradutor-log-flags" aria-hidden="true">${TRADUTOR_LANGS[t.from].flag}→${TRADUTOR_LANGS[t.to].flag}</span>
+        <span class="tradutor-log-text"><span>${escapeHtml(t.src)}</span><strong>${escapeHtml(t.out)}</strong></span>
+        <span class="tradutor-log-btns">
+          <button type="button" class="tradutor-icon-btn" onclick="tradutorLogSpeak(${i})" title="Ouvir a tradução" aria-label="Ouvir a tradução">${ICONS.volume}</button>
+          <button type="button" class="tradutor-icon-btn" onclick="tradutorLogBig(${i})" title="Mostrar em tela grande" aria-label="Mostrar em tela grande">⛶</button>
+        </span>
+      </li>`).join('')}</ol>`;
+}
+
+function tradutorLogSpeak(i) { const t = tradutorLog[i]; if (t) tradutorSpeakText(t.out, t.to); }
+function tradutorLogBig(i) { const t = tradutorLog[i]; if (t) tradutorShowBig(t.out, t.to); }
+
+async function tradutorCopyLog(btn) {
+  if (!tradutorLog.length) return;
+  const text = tradutorLog.map(t =>
+    `${TRADUTOR_LANGS[t.from].flag} ${t.src}\n${TRADUTOR_LANGS[t.to].flag} ${t.out}`).join('\n\n');
+  try {
+    await navigator.clipboard.writeText(text);
+    const old = btn.textContent;
+    btn.textContent = 'Copiado';
+    setTimeout(() => { btn.textContent = old; }, 1500);
+  } catch (e) { /* sem permissão da área de transferência */ }
+}
+
+function tradutorClearLog() { tradutorLog = []; tradutorRenderLog(); }
+
+// Chamada ao bloquear/sair: apaga a conversa e fecha a tela grande, para não
+// deixar texto de um atendimento visível para a próxima pessoa.
+function tradutorClearSession() {
+  tradutorLog = [];
+  tradutorCloseBig();
+  tradutorRenderLog();
+}
+
+// ---- Tela grande: a pessoa atendida lê a tradução em letras grandes ----
+function tradutorBigFromOutput() {
+  const out = document.getElementById('tradutorOutput');
+  const to = document.getElementById('tradutorTo');
+  if (out && to) tradutorShowBig(out.value, to.value);
+}
+
+function tradutorBigKey(e) { if (e.key === 'Escape') tradutorCloseBig(); }
+
+function tradutorCloseBig() {
+  const ov = document.getElementById('tradutorBigOverlay');
+  if (ov) ov.remove();
+  document.removeEventListener('keydown', tradutorBigKey);
+}
+
+function tradutorShowBig(text, langCode) {
+  if (!text || !text.trim() || !TRADUTOR_LANGS[langCode]) return;
+  tradutorCloseBig();
+  const lang = TRADUTOR_LANGS[langCode];
+  const ov = document.createElement('div');
+  ov.id = 'tradutorBigOverlay';
+  ov.className = 'tradutor-big';
+  ov.setAttribute('role', 'dialog');
+  ov.setAttribute('aria-modal', 'true');
+  ov.setAttribute('aria-label', 'Tradução em tela grande');
+  ov.innerHTML = `
+    <div class="tradutor-big-inner">
+      <div class="tradutor-big-top">
+        <span>${lang.flag} ${escapeHtml(lang.label)}</span>
+        <button type="button" class="tradutor-big-close">✕ Fechar</button>
+      </div>
+      <div class="tradutor-big-text" lang="${lang.voice}">${escapeHtml(text)}</div>
+      <button type="button" class="tradutor-btn tradutor-big-speak">${ICONS.volume} Ouvir</button>
+    </div>`;
+  ov.addEventListener('click', e => { if (e.target === ov) tradutorCloseBig(); });
+  ov.querySelector('.tradutor-big-close').addEventListener('click', tradutorCloseBig);
+  ov.querySelector('.tradutor-big-speak').addEventListener('click', () => tradutorSpeakText(text, langCode));
+  document.body.appendChild(ov);
+  document.addEventListener('keydown', tradutorBigKey);
+  ov.querySelector('.tradutor-big-close').focus();
 }
 
 // Lê a tradução em voz alta assim que ela fica pronta, se o técnico marcou
@@ -6970,22 +7241,42 @@ function tradutorEnsureVoices() {
   return tradutorVoicesReadyPromise;
 }
 
-async function tradutorSpeak(which) {
+// Escolhe a voz instalada que melhor combina com o idioma, na ordem de
+// preferência de TRADUTOR_LANGS (ex.: espanhol latino antes do da Espanha).
+function tradutorPickVoice(langCode) {
+  const voices = window.speechSynthesis.getVoices() || [];
+  if (!voices.length) return null;
+  const norm = v => String(v.lang || '').replace('_', '-').toLowerCase();
+  const prefs = (TRADUTOR_LANGS[langCode].prefs || []).map(x => x.toLowerCase());
+  for (const pref of prefs) {
+    const v = voices.find(x => norm(x) === pref);
+    if (v) return v;
+  }
+  return voices.find(x => norm(x).startsWith(langCode)) || null;
+}
+
+async function tradutorSpeakText(text, langCode) {
   if (!('speechSynthesis' in window)) {
     tradutorSetStatus('Este navegador não tem suporte a voz.', 'error');
     return;
   }
-  const langCode = which === 'from' ? document.getElementById('tradutorFrom').value : document.getElementById('tradutorTo').value;
-  const text = which === 'from' ? document.getElementById('tradutorInput').value : document.getElementById('tradutorOutput').value;
-  if (!text || !text.trim()) return;
+  if (!text || !text.trim() || !TRADUTOR_LANGS[langCode]) return;
   await tradutorEnsureVoices();
   const slow = document.getElementById('tradutorSlowSpeech');
   window.speechSynthesis.cancel();
   const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = TRADUTOR_LANGS[langCode].voice;
+  const voice = tradutorPickVoice(langCode);
+  if (voice) { utter.voice = voice; utter.lang = voice.lang; }
+  else utter.lang = TRADUTOR_LANGS[langCode].voice;
   utter.rate = (slow && slow.checked) ? 0.7 : 1;
   utter.onerror = () => tradutorSetStatus('Não foi possível reproduzir o áudio.', 'error');
   window.speechSynthesis.speak(utter);
+}
+
+function tradutorSpeak(which) {
+  const langCode = which === 'from' ? document.getElementById('tradutorFrom').value : document.getElementById('tradutorTo').value;
+  const text = which === 'from' ? document.getElementById('tradutorInput').value : document.getElementById('tradutorOutput').value;
+  return tradutorSpeakText(text, langCode);
 }
 
 /* Entrada de voz: transcreve a fala direto no campo de origem, no
@@ -7011,7 +7302,7 @@ function tradutorToggleMic() {
   const baseText = inputEl.value.trim() ? inputEl.value.trim() + ' ' : '';
   let tradutorGotFinalResult = false;
   tradutorRecognition = new SpeechRecognitionCtor();
-  tradutorRecognition.lang = TRADUTOR_LANGS[fromSel.value].voice;
+  tradutorRecognition.lang = TRADUTOR_LANGS[fromSel.value].rec || TRADUTOR_LANGS[fromSel.value].voice;
   tradutorRecognition.interimResults = true;
   tradutorRecognition.continuous = true;
 
@@ -7164,7 +7455,11 @@ function tradutorUsePhrase(pos) {
   if (!phrase) return;
   const fromSel = document.getElementById('tradutorFrom');
   const inputEl = document.getElementById('tradutorInput');
+  const toSel = document.getElementById('tradutorTo');
   if (fromSel) fromSel.value = 'pt';
+  // Se o destino estava em português (após "Inverter"), volta ao último
+  // idioma estrangeiro usado, senão a frase "traduziria" pt → pt.
+  if (toSel && toSel.value === 'pt') toSel.value = tradutorLastTarget || 'es';
   if (inputEl) inputEl.value = phrase;
   tradutorSyncSpeakLabels();
   tradutorUpdateCharCount();
@@ -7178,6 +7473,8 @@ function initTranslatorPanel() {
   tradutorLoadCustomPhrases();
   tradutorRenderPhrases();
   tradutorUpdateCharCount();
+  tradutorRenderLog();
+  tradutorSyncOutputButtons();
   const micBtn = document.getElementById('tradutorMicBtn');
   if (micBtn && !(window.SpeechRecognition || window.webkitSpeechRecognition)) {
     micBtn.disabled = true;
@@ -7527,6 +7824,17 @@ function newsField(item, tag) {
   return found && found.length ? (found[0].textContent || '').trim() : '';
 }
 
+// Alguns feeds trazem a descrição com marcação HTML ou entidades (&nbsp;,
+// &amp;). Aqui vira texto simples, com espaços normalizados.
+function newsCleanText(raw) {
+  if (!raw) return '';
+  let txt = String(raw);
+  if (/[<&]/.test(txt)) {
+    try { txt = new DOMParser().parseFromString(txt, 'text/html').body.textContent || ''; } catch (e) { /* mantém o texto */ }
+  }
+  return txt.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 function newsParseFeed(xmlText, sourceId) {
   const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
   if (doc.getElementsByTagName('parsererror').length) throw new Error('XML inválido');
@@ -7536,7 +7844,7 @@ function newsParseFeed(xmlText, sourceId) {
     .map(item => ({
       title: newsField(item, 'title'),
       link: newsField(item, 'link') || item.getAttribute('rdf:about') || '',
-      desc: newsField(item, 'description'),
+      desc: newsCleanText(newsField(item, 'description')),
       date: newsField(item, 'date') || newsField(item, 'pubDate'),
       type: newsField(item, 'type'),
       source: sourceId
@@ -7650,13 +7958,21 @@ function newsRelativeTime(iso) {
 }
 
 // Classifica o item só pelo título, para dar uma etiqueta visual útil.
+// Compara sem acento/maiúscula e reconhece também notas técnicas, editais,
+// circulares, ofícios e medidas provisórias (antes caíam como "Notícia").
 function newsKind(item) {
-  const t = item.title.toLowerCase();
-  if (t.startsWith('instrução normativa') || t.startsWith('instrucao normativa')) return 'Instrução Normativa';
-  if (t.startsWith('portaria')) return 'Portaria';
-  if (t.startsWith('resolução') || t.startsWith('resolucao')) return 'Resolução';
-  if (t.startsWith('decreto')) return 'Decreto';
-  if (t.startsWith('lei ')) return 'Lei';
+  const t = newsNorm(item.title).trim();
+  const starts = (...p) => p.some(x => t.startsWith(x));
+  if (starts('instrucao normativa')) return 'Instrução Normativa';
+  if (starts('portaria')) return 'Portaria';
+  if (starts('resolucao')) return 'Resolução';
+  if (starts('decreto')) return 'Decreto';
+  if (starts('lei ', 'lei n')) return 'Lei';
+  if (starts('medida provisoria')) return 'Medida Provisória';
+  if (starts('nota tecnica', 'nota informativa')) return 'Nota Técnica';
+  if (starts('circular')) return 'Circular';
+  if (starts('edital', 'chamamento', 'chamada publica')) return 'Edital';
+  if (starts('oficio')) return 'Ofício';
   return 'Notícia';
 }
 
@@ -7679,10 +7995,30 @@ const NEWS_TOPICS = ['Bolsa Família', 'CadÚnico', 'BPC', 'SUAS', 'Criança', '
 
 const NEWS_PAGE_SIZE = 15;
 const NEWS_SAVED_KEY = 'argo_noticias_saved_v1';
+const NEWS_SORT_PREF_KEY = 'argo_noticias_sort_pref_v1';
 const NEWS_READ_KEY = 'argo_noticias_read_v1';
 
 // Preferências da tela (não persistem de propósito: cada visita começa limpa).
-const newsUi = { kind: 'all', period: 'all', savedOnly: false, unreadOnly: false, limit: NEWS_PAGE_SIZE };
+const newsUi = { kind: 'all', period: 'all', savedOnly: false, unreadOnly: false, sort: 'date', limit: NEWS_PAGE_SIZE };
+
+// Relevância para o trabalho no SUAS. Termos centrais (benefícios, cadastro,
+// serviços e rede) pesam mais que os de contexto (públicos prioritários).
+// Tudo comparado sem acento. Serve para ordenar ("Mais relevantes") e para
+// a etiqueta "SUAS" nos itens com termo central no título.
+const NEWS_CORE_RE = /bolsa familia|cadunico|cadastro unico|\bbpc\b|prestacao continuada|\bsuas\b|\bcras\b|\bcreas\b|assistencia social|socioassistencia|protecao social|beneficio eventual|beneficios eventuais|\bscfv\b|\bpaif\b|\bpaefi\b|centro pop|acolhimento|seguranca alimentar|cesta|trabalho infantil|primeira infancia|crianca feliz|\braps\b|\bcaps\b|saude mental|\bcnas\b|\bsicon\b|condicionalidade/;
+const NEWS_CONTEXT_RE = /idos[oa]|crianca|adolescente|familia|vulnerabilidade|pobreza|fome|deficiencia|autismo|\btea\b|violencia|mulher|migrante|refugiad|indigena|situacao de rua|moradia|drogas|creche|frequencia escolar|pe-de-meia|vacinacao/;
+
+function newsRelevance(it) {
+  const title = newsNorm(it.title);
+  const desc = newsNorm(it.desc);
+  let score = 0;
+  if (NEWS_CORE_RE.test(title)) score += 4;
+  if (NEWS_CORE_RE.test(desc)) score += 2;
+  if (NEWS_CONTEXT_RE.test(title)) score += 1;
+  if (NEWS_CONTEXT_RE.test(desc)) score += 1;
+  return score;
+}
+function newsIsPriority(it) { return NEWS_CORE_RE.test(newsNorm(it.title)); }
 
 function newsLoadJson(key) {
   try {
@@ -7791,8 +8127,8 @@ function renderNewsCard() {
             <div class="noticias-filters-row">
               <div class="noticias-seg" role="group" aria-label="Tipo de publicação">
                 <button type="button" data-kind="all" class="is-active" onclick="newsSetKind('all')">Tudo</button>
-                <button type="button" data-kind="news" onclick="newsSetKind('news')">Notícias</button>
-                <button type="button" data-kind="norm" onclick="newsSetKind('norm')">Normativos</button>
+                <button type="button" data-kind="news" onclick="newsSetKind('news')">Notícias <span class="noticias-kind-count" id="noticiasKindCount-news"></span></button>
+                <button type="button" data-kind="norm" onclick="newsSetKind('norm')">Normativos <span class="noticias-kind-count" id="noticiasKindCount-norm"></span></button>
               </div>
               <select id="noticiasPeriod" class="noticias-select" aria-label="Período" onchange="newsSetPeriod(this.value)">
                 <option value="all">Qualquer data</option>
@@ -7806,10 +8142,26 @@ function renderNewsCard() {
                 <span>Não lidas</span> <span id="noticiasUnreadCount"></span>
               </button>
             </div>
-            <button type="button" class="noticias-act noticias-markall" id="noticiasMarkAllBtn" onclick="newsMarkAllRead()"
-                    title="Marca como lidas as publicações da lista atual (com os filtros aplicados)">
-              ${ICONS.check} Marcar a lista como lida
-            </button>
+            <div class="noticias-ctrl-label">Ordem</div>
+            <select id="noticiasSort" class="noticias-select noticias-sort" aria-label="Ordenar publicações" onchange="newsSetSort(this.value)">
+              <option value="date">Mais recentes primeiro</option>
+              <option value="relevance">Mais relevantes para o SUAS</option>
+            </select>
+
+            <div class="noticias-bulk">
+              <button type="button" class="noticias-act noticias-markall" id="noticiasMarkAllBtn" onclick="newsMarkAllRead()"
+                      title="Marca como lidas as publicações da lista atual (com os filtros aplicados)">
+                ${ICONS.check} Marcar a lista como lida
+              </button>
+              <button type="button" class="noticias-act noticias-markall" id="noticiasCopyBtn" onclick="newsCopyList(this)"
+                      title="Copia título e link das primeiras 10 publicações da lista atual, para colar no WhatsApp ou e-mail da equipe">
+                ${ICONS.copy} Copiar lista (10)
+              </button>
+              <button type="button" class="noticias-act noticias-markall" id="noticiasExportBtn" onclick="newsExportSaved()"
+                      title="Baixa um arquivo de texto com título, data e link das publicações salvas">
+                ${ICONS.copy} Exportar salvas (.txt)
+              </button>
+            </div>
 
             <div class="noticias-sites">
               <span>Abrir o site:</span> ${siteLinks}
@@ -7823,6 +8175,7 @@ function renderNewsCard() {
 
           <section class="noticias-results" aria-label="Lista de notícias">
             <div id="noticiasStatus" class="noticias-status" role="status" aria-live="polite"></div>
+            <div id="noticiasHighlights"></div>
             <div id="noticiasList"></div>
             <div id="noticiasMore" class="noticias-more"></div>
           </section>
@@ -7833,7 +8186,7 @@ function renderNewsCard() {
 }
 
 // Lista atualmente carregada em memória (preenchida pelo cache e pela rede).
-let newsState = { items: [], ts: 0, loading: false };
+let newsState = { items: [], ts: 0, loading: false, failed: [] };
 
 // Guarda quando a aba foi vista pela última vez, só para destacar com a
 // etiqueta "Novo" as publicações mais recentes que essa marca.
@@ -7856,10 +8209,19 @@ function newsUpdateSourceCounts() {
     const el = document.getElementById(`noticiasCount-${s.id}`);
     if (!el) return;
     const n = newsState.items.filter(it => it.source === s.id).length;
-    el.textContent = n ? `(${n})` : '';
+    const failed = (newsState.failed || []).includes(s.label);
+    el.textContent = failed ? '⚠' : (n ? `(${n})` : '');
+    el.title = failed ? 'Não foi possível atualizar este ministério na última busca' : '';
   });
   const sc = document.getElementById('noticiasSavedCount');
   if (sc) sc.textContent = newsSaved.length ? `(${newsSaved.length})` : '';
+  const nNorm = newsState.items.filter(newsIsNormative).length;
+  const kn = document.getElementById('noticiasKindCount-news');
+  const kk = document.getElementById('noticiasKindCount-norm');
+  if (kn) kn.textContent = newsState.items.length ? `(${newsState.items.length - nNorm})` : '';
+  if (kk) kk.textContent = newsState.items.length ? `(${nNorm})` : '';
+  const eb = document.getElementById('noticiasExportBtn');
+  if (eb) eb.disabled = !newsSaved.length;
   const uc = document.getElementById('noticiasUnreadCount');
   if (uc) {
     const unread = newsState.items.filter(it => !newsReadSet.has(it.link)).length;
@@ -7907,6 +8269,97 @@ function newsToggleSavedOnly() {
   newsResetAndRender();
 }
 
+function newsSetSort(v) {
+  newsUi.sort = v === 'relevance' ? 'relevance' : 'date';
+  try { localStorage.setItem(NEWS_SORT_PREF_KEY, newsUi.sort); } catch (e) { /* ignora */ }
+  newsResetAndRender();
+}
+
+// Expande/recolhe a descrição longa de um item ("Ler mais").
+function newsToggleDesc(btn) {
+  const art = btn.closest('.noticias-item');
+  const desc = art && art.querySelector('.noticias-desc');
+  if (!desc) return;
+  const open = desc.classList.toggle('is-expanded');
+  btn.textContent = open ? 'Ler menos' : 'Ler mais';
+  btn.setAttribute('aria-expanded', String(open));
+}
+
+// Alterna lida/não lida em um item (para quem abriu e quer deixar pendente).
+function newsToggleRead(btn) {
+  const link = btn.dataset.link;
+  if (!link) return;
+  if (newsReadSet.has(link)) newsReadSet.delete(link); else newsReadSet.add(link);
+  newsSaveJson(NEWS_READ_KEY, Array.from(newsReadSet).slice(-400));
+  renderNewsList();
+}
+
+// Baixa as publicações salvas em .txt (título, ministério, data e link),
+// útil para anexar a relatórios ou compartilhar com a equipe.
+function newsExportSaved() {
+  if (!newsSaved.length) return;
+  const now = new Date();
+  const lines = [
+    'Publicações salvas — Argo SUAS',
+    `Exportado em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`,
+    ''
+  ];
+  newsSaved.forEach((it, i) => {
+    const src = newsSourceInfo(it.source);
+    const date = newsFormatDate(it.date);
+    lines.push(`${i + 1}. [${src.label} · ${newsKind(it)}] ${it.title}`);
+    if (date) lines.push(`   Data: ${date}`);
+    lines.push(`   Link: ${it.link}`, '');
+  });
+  try {
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `noticias-salvas-${now.toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  } catch (e) { /* navegador sem suporte a download: ignora */ }
+}
+
+// Copia as 10 primeiras da lista atual (com filtros) como texto simples.
+async function newsCopyList(btn) {
+  const { items } = newsFilteredItems();
+  if (!items.length) return;
+  const text = items.slice(0, 10).map((it, i) => `${i + 1}. [${newsSourceInfo(it.source).label}] ${it.title}\n${it.link}`).join('\n\n');
+  try {
+    await navigator.clipboard.writeText(text);
+    const old = btn.innerHTML;
+    btn.innerHTML = ICONS.check + ' Copiado';
+    setTimeout(() => { btn.innerHTML = old; }, 1500);
+  } catch (e) { /* sem permissão da área de transferência */ }
+}
+
+// "Em destaque para o SUAS": até 3 publicações dos últimos 14 dias com tema
+// central no título, ainda não lidas. Só aparece com a lista sem filtros.
+function newsRenderHighlights(hasActiveFilter) {
+  const box = document.getElementById('noticiasHighlights');
+  if (!box) return;
+  const limit = Date.now() - 14 * 86400000;
+  const top = hasActiveFilter ? [] : newsState.items
+    .filter(it => it.date && new Date(it.date).getTime() >= limit && newsIsPriority(it) && !newsReadSet.has(it.link))
+    .sort((a, b) => newsRelevance(b) - newsRelevance(a) || new Date(b.date) - new Date(a.date))
+    .slice(0, 3);
+  if (!top.length) { box.innerHTML = ''; return; }
+  box.innerHTML = `
+    <section class="noticias-highlights" aria-label="Em destaque para o SUAS">
+      <h4>⭐ Em destaque para o SUAS <span>(últimos 14 dias, não lidas)</span></h4>
+      <ul>${top.map(it => {
+        const link = escapeHtml(it.link);
+        return `<li><span class="noticias-tag" style="--tag-bg:${(NEWS_SOURCE_COLORS[it.source] || NEWS_SOURCE_COLORS.mds).bg}; --tag-fg:${(NEWS_SOURCE_COLORS[it.source] || NEWS_SOURCE_COLORS.mds).fg};">${escapeHtml(newsSourceInfo(it.source).label)}</span>
+          <a href="${link}" data-link="${link}" target="_blank" rel="noopener noreferrer" onclick="newsMarkRead(this)" onauxclick="newsMarkRead(this)">${escapeHtml(it.title)}</a>
+          <small>${escapeHtml(newsRelativeTime(it.date) || newsFormatDate(it.date))}</small></li>`;
+      }).join('')}</ul>
+    </section>`;
+}
+
 function newsPickTopic(topic) {
   const el = document.getElementById('noticiasFilter');
   if (!el) return;
@@ -7921,7 +8374,7 @@ function newsClearFilters() {
   if (filterEl) filterEl.value = '';
   document.querySelectorAll('.noticias-source-checkbox').forEach(b => { b.checked = true; });
   const p = document.getElementById('noticiasPeriod'); if (p) p.value = 'all';
-  newsUi.kind = 'all'; newsUi.period = 'all'; newsUi.savedOnly = false; newsUi.unreadOnly = false;
+  newsUi.kind = 'all'; newsUi.period = 'all'; newsUi.savedOnly = false; newsUi.unreadOnly = false; 
   const ub = document.getElementById('noticiasUnreadBtn');
   if (ub) { ub.classList.remove('is-active'); ub.setAttribute('aria-pressed', 'false'); }
   document.querySelectorAll('.noticias-seg button').forEach(b => b.classList.toggle('is-active', b.dataset.kind === 'all'));
@@ -7953,7 +8406,12 @@ function newsMarkRead(a) {
   newsReadSet.add(link);
   newsSaveJson(NEWS_READ_KEY, Array.from(newsReadSet).slice(-400));
   const art = a.closest('.noticias-item');
-  if (art) art.classList.add('is-read');
+  if (art) {
+    art.classList.add('is-read');
+    const rb = art.querySelector('.noticias-readbtn');
+    if (rb) rb.lastChild.textContent = ' Marcar como não lida';
+  }
+  newsUpdateSourceCounts();
 }
 
 async function newsShareItem(btn) {
@@ -7997,6 +8455,11 @@ function newsFilteredItems() {
       return terms.every(t => hay.includes(t));
     });
   }
+  if (newsUi.sort === 'relevance') {
+    items = items.map(it => ({ it, score: newsRelevance(it) }))
+      .sort((a, b) => b.score - a.score || new Date(b.it.date || 0) - new Date(a.it.date || 0))
+      .map(x => x.it);
+  }
   return { items, terms, selectedSources };
 }
 
@@ -8015,15 +8478,18 @@ function newsItemHtml(it, terms) {
         <span class="noticias-tag" title="${escapeHtml(src.fullLabel)}" style="--tag-bg:${color.bg}; --tag-fg:${color.fg};">${escapeHtml(src.label)}</span>
         <span class="noticias-tag noticias-tag-kind">${escapeHtml(newsKind(it))}</span>
         ${isNew ? `<span class="noticias-tag noticias-tag-new">Novo</span>` : ''}
+        ${newsIsPriority(it) ? `<span class="noticias-tag noticias-tag-suas" title="Menciona tema central do SUAS (benefícios, cadastro, serviços ou rede)">SUAS</span>` : ''}
         <span class="noticias-date">${escapeHtml(newsFormatDate(it.date))}${rel ? ` · ${escapeHtml(rel)}` : ''}</span>
       </div>
       <h3 class="noticias-title">
-        <a href="${link}" data-link="${link}" target="_blank" rel="noopener noreferrer" onclick="newsMarkRead(this)">${newsHighlight(it.title, terms)} ${ICONS.external}</a>
+        <a href="${link}" data-link="${link}" target="_blank" rel="noopener noreferrer" onclick="newsMarkRead(this)" onauxclick="newsMarkRead(this)">${newsHighlight(it.title, terms)} ${ICONS.external}</a>
       </h3>
       ${it.desc ? `<p class="noticias-desc">${newsHighlight(it.desc, terms)}</p>` : ''}
       <div class="noticias-actions">
+        ${it.desc && it.desc.length > 200 ? `<button type="button" class="noticias-act" onclick="newsToggleDesc(this)" aria-expanded="false">Ler mais</button>` : ''}
         <button type="button" class="noticias-act${isSaved ? ' is-on' : ''}" data-link="${link}" onclick="newsToggleSaved(this)" aria-pressed="${isSaved}" title="${isSaved ? 'Remover das salvas' : 'Salvar para ler depois'}">${ICONS.star} ${isSaved ? 'Salva' : 'Salvar'}</button>
         <button type="button" class="noticias-act" data-link="${link}" onclick="newsShareItem(this)" title="Compartilhar ou copiar o link">${ICONS.copy} Compartilhar</button>
+        <button type="button" class="noticias-act noticias-readbtn" data-link="${link}" onclick="newsToggleRead(this)">${ICONS.check} ${isRead ? 'Marcar como não lida' : 'Marcar como lida'}</button>
       </div>
     </article>`;
 }
@@ -8035,6 +8501,9 @@ function renderNewsList() {
 
   newsUpdateSourceCounts();
   const { items, terms, selectedSources } = newsFilteredItems();
+  const filtersOn = terms.length || newsUi.kind !== 'all' || newsUi.period !== 'all' || newsUi.savedOnly || newsUi.unreadOnly
+    || (selectedSources && selectedSources.size < NEWS_SOURCES.length);
+  newsRenderHighlights(filtersOn);
 
   if (!items.length) {
     if (more) more.innerHTML = '';
@@ -8056,13 +8525,15 @@ function renderNewsList() {
     return;
   }
 
+  const copyBtn = document.getElementById('noticiasCopyBtn');
+  if (copyBtn) copyBtn.disabled = !items.length;
   const markBtn = document.getElementById('noticiasMarkAllBtn');
   if (markBtn) markBtn.disabled = !items.some(it => !newsReadSet.has(it.link));
   const visible = items.slice(0, newsUi.limit);
   let html = '', lastGroup = '';
   visible.forEach(it => {
-    const g = newsGroupLabel(it.date);
-    if (g !== lastGroup) { html += `<h4 class="noticias-group">${escapeHtml(g)}</h4>`; lastGroup = g; }
+    const g = newsUi.sort === 'relevance' ? '' : newsGroupLabel(it.date);
+    if (g && g !== lastGroup) { html += `<h4 class="noticias-group">${escapeHtml(g)}</h4>`; lastGroup = g; }
     html += newsItemHtml(it, terms);
   });
   list.innerHTML = html;
@@ -8087,18 +8558,19 @@ async function refreshNews() {
     const before = new Set(newsState.items.map(i => i.link));
     const added = newsState.items.length ? items.filter(i => !before.has(i.link)).length : 0;
     newsState.items = items;
+    newsState.failed = failedSources;
     newsState.ts = Date.now();
     newsWriteCache(items);
     let base = `${items.length} publicações · atualizado em ${escapeHtml(newsFormatUpdated(newsState.ts))}`;
     if (added) base += ` · ${added} nova${added > 1 ? 's' : ''}`;
     newsSetStatus(failedSources.length
-      ? `${base} — não foi possível buscar: ${escapeHtml(failedSources.join(', '))}.`
+      ? `${base} — não foi possível buscar: ${escapeHtml(failedSources.join(', '))}. <button type="button" class="noticias-retry" onclick="refreshNews()">Tentar de novo</button>`
       : base);
   } catch (e) {
     if (newsState.items.length) {
-      newsSetStatus(`Não foi possível atualizar agora. Mostrando a lista salva em ${escapeHtml(newsFormatUpdated(newsState.ts))}.`);
+      newsSetStatus(`Não foi possível atualizar agora. Mostrando a lista salva em ${escapeHtml(newsFormatUpdated(newsState.ts))}. <button type="button" class="noticias-retry" onclick="refreshNews()">Tentar de novo</button>`);
     } else {
-      newsSetStatus('Não foi possível carregar as publicações. Verifique a conexão e toque em “Atualizar”, ou abra o site de um dos ministérios abaixo direto no navegador.');
+      newsSetStatus('Não foi possível carregar as publicações. Verifique a conexão e toque em “Atualizar”, ou abra o site de um dos ministérios ao lado direto no navegador. <button type="button" class="noticias-retry" onclick="refreshNews()">Tentar de novo</button>');
     }
   } finally {
     newsState.loading = false;
@@ -8110,12 +8582,16 @@ async function refreshNews() {
 function initNewsPanel() {
   // Reinicia os filtros de tela (o painel é remontado a cada abertura).
   newsUi.kind = 'all'; newsUi.period = 'all'; newsUi.savedOnly = false; newsUi.unreadOnly = false; newsUi.limit = NEWS_PAGE_SIZE;
+  try { newsUi.sort = localStorage.getItem(NEWS_SORT_PREF_KEY) === 'relevance' ? 'relevance' : 'date'; } catch (e) { newsUi.sort = 'date'; }
   newsSaved = newsLoadJson(NEWS_SAVED_KEY);
   newsReadSet = new Set(newsLoadJson(NEWS_READ_KEY));
 
   // Lê a marca de "última vez visto" ANTES de sobrescrevê-la.
   newsLastSeenTs = Number(localStorage.getItem(NEWS_LAST_SEEN_KEY)) || 0;
   try { localStorage.setItem(NEWS_LAST_SEEN_KEY, String(Date.now())); } catch (e) { /* ignora */ }
+
+  const sortEl = document.getElementById('noticiasSort');
+  if (sortEl) sortEl.value = newsUi.sort;
 
   const cached = newsReadCache();
   if (cached) {
@@ -8137,6 +8613,13 @@ function initNewsPanel() {
 
   refreshNews();
 }
+
+// Voltou a internet com a aba aberta: busca de novo se a lista estiver vazia
+// ou com mais de 2 horas (não faz nada se o painel não estiver na tela).
+window.addEventListener('online', () => {
+  if (!document.getElementById('noticiasList') || newsState.loading) return;
+  if (!newsState.items.length || Date.now() - newsState.ts > 2 * 60 * 60 * 1000) refreshNews();
+});
 
 function renderMapCard() {
   const categoryOptions = ['<option value="all">Todas as categorias</option>']
