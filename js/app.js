@@ -7927,7 +7927,7 @@ function buildCartaoFrente(tipo, item) {
     'feira-produtor': '#4D7C0F', 'feira-passarao': '#4D7C0F', 'mercado-municipal': '#4D7C0F'
   }[tipo] || '#0091C2';
   const chk = `<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="${COR}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:0.35mm;" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="${COR}" fill-opacity="0.14" stroke-width="2"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>`;
-  const li = (t) => `<li style="display:flex; gap:1.4mm; align-items:flex-start; margin:0 0 1.2mm 0; list-style:none;">${chk}<span>${t}</span></li>`;
+  const li = (t) => `<li style="display:flex; gap:1.4mm; align-items:flex-start; margin:0 0 0.62em 0; list-style:none; text-wrap:pretty;">${chk}<span style="min-width:0;">${t}</span></li>`;
   const ul = (items) => `<ul style="margin:0; padding:0; list-style:none;">${items.join('')}</ul>`;
   const h = (t) => `<div style="display:flex; align-items:center; gap:1.3mm; font-weight:800; font-size:6.6pt; text-transform:uppercase; letter-spacing:0.05em; color:${COR}; margin:0 0 1.3mm 0;"><span style="display:inline-block; width:1.2mm; height:2.6mm; border-radius:0.6mm; background:${COR};"></span>${t}</div>`;
 
@@ -8489,7 +8489,7 @@ function buildCartaoFrente(tipo, item) {
           corpo: ul([
             li('<strong>Atende crianças e adolescentes</strong> com direitos ameaçados ou violados: violência, negligência, abandono, trabalho infantil, evasão escolar'),
             li('<strong>Plantão 24h</strong> para casos urgentes. Denúncia também pelo <strong>Disque 100</strong>')
-          ]) + (terr ? `<div style="margin-top:1.1mm; font-size:6pt; line-height:1.22; color:#334155;"><strong style="color:${COR};">Bairros atendidos:</strong> ${escapeHtml(terr)}</div>` : ''),
+          ]) + (terr ? `<div style="margin-top:1.1mm; font-size:0.84em; line-height:1.25; color:#334155; text-wrap:pretty;"><strong style="color:${COR};">Bairros atendidos:</strong> ${escapeHtml(terr)}</div>` : ''),
           rodape: 'Atendimento gratuito. Procure a unidade do <strong>território onde a criança ou o adolescente mora</strong>.'
         };
       })(),
@@ -8574,7 +8574,7 @@ function buildCartaoFrente(tipo, item) {
   };
 }
 
-function printCartaoFrenteVerso(id) {
+async function printCartaoFrenteVerso(id) {
   const item = DATA.find(x => x.id === id);
   const tipo = getCartaoTipo(item);
   if (!item || !tipo) return;
@@ -8618,8 +8618,8 @@ function printCartaoFrenteVerso(id) {
       <span style="font-weight:800; font-size:${fsTitulo}pt; letter-spacing:0.01em; line-height:1.05; min-width:0;">${f.titulo}</span>
       <span style="font-weight:700; font-size:6.4pt; letter-spacing:0.02em; padding:0.7mm 2.2mm; border-radius:99mm; background:rgba(255,255,255,0.2); border:0.2mm solid rgba(255,255,255,0.45); white-space:nowrap; ${keep}">${f.sub}</span>
     </div>
-    <div style="flex:1; display:flex; flex-direction:column; padding:1.4mm 3.5mm 0.6mm 3.5mm; font-size:${f.fs}pt; line-height:1.27; overflow:hidden;"><div style="margin:auto 0;">${f.corpo}</div></div>
-    <div style="padding:1.2mm 3.5mm 1.5mm 3.5mm; font-size:5.8pt; line-height:1.22; color:#334155; background:${tint('14')}; border-top:0.25mm solid ${tint('55')}; ${keep}">${f.rodape}</div>`);
+    <div data-cartao-corpo style="flex:1; display:flex; flex-direction:column; padding:1.4mm 3.5mm 0.6mm 3.5mm; font-size:${f.fs}pt; line-height:1.27; overflow:hidden;"><div style="margin:auto 0;">${f.corpo}</div></div>
+    <div style="padding:1.2mm 3.5mm 1.5mm 3.5mm; font-size:6.1pt; line-height:1.25; color:#334155; text-wrap:pretty; background:${tint('14')}; border-top:0.25mm solid ${tint('55')}; ${keep}">${f.rodape}</div>`);
 
   // Ícone dentro de uma "pastilha" redonda tingida da cor do tipo — dá ritmo
   // às três linhas de contato e facilita achar endereço/telefone/horário.
@@ -8641,8 +8641,9 @@ function printCartaoFrenteVerso(id) {
       : p;
   };
   // peso: endereço e telefone em destaque; horário (texto mais longo) mais leve.
+  const semQuebra = (t) => (t || '').replace(/Boa Vista-RR/g, '<span style="white-space:nowrap;">Boa Vista-RR</span>');
   const linha = (icone, valor, peso, cor, plano) => valor
-    ? `<div style="display:flex; gap:2mm; align-items:center; margin-top:1.4mm;">${ico(icone)}<div style="font-size:${fsInfo(plano !== undefined ? plano : valor)}pt; line-height:1.22; font-weight:${peso || 700}; color:${cor || '#0F172A'}; min-width:0;">${valor}</div></div>`
+    ? `<div style="display:flex; gap:2mm; align-items:center; margin-top:1.4mm;">${ico(icone)}<div style="font-size:${fsInfo(plano !== undefined ? plano : valor)}pt; line-height:1.22; font-weight:${peso || 700}; color:${cor || '#0F172A'}; min-width:0; text-wrap:pretty;">${semQuebra(valor)}</div></div>`
     : '';
 
   const verso = cartao(`
@@ -8650,14 +8651,14 @@ function printCartaoFrenteVerso(id) {
       <span style="font-weight:800; font-size:8pt; letter-spacing:0.08em;">${f.sigla}</span>
       <span style="font-weight:600; font-size:6pt; letter-spacing:0.04em; text-transform:uppercase; opacity:0.92;">${f.area}</span>
     </div>
-    <div style="flex:1; padding:1.6mm 3.8mm 1mm 3.8mm; overflow:hidden; display:flex; flex-direction:column; justify-content:center;">
+    <div style="flex:1; padding:1.2mm 3.8mm 0.8mm 3.8mm; overflow:hidden; display:flex; flex-direction:column; justify-content:center;">
       <div style="font-weight:800; font-size:${fsNome}pt; line-height:1.12; color:#0F172A;">${nome}</div>
-      ${nomeCompleto && nomeCompleto !== nome ? `<div style="font-size:6.6pt; color:#475569; margin-top:0.6mm; line-height:1.2; padding-bottom:1.3mm; border-bottom:0.2mm solid ${tint('55')};">${nomeCompleto}</div>` : `<div style="border-bottom:0.2mm solid ${tint('55')}; margin-top:1.3mm;"></div>`}
+      ${nomeCompleto && nomeCompleto !== nome ? `<div style="font-size:6.6pt; color:#475569; margin-top:0.6mm; line-height:1.2; text-wrap:pretty; padding-bottom:1.3mm; border-bottom:0.2mm solid ${tint('55')};">${nomeCompleto}</div>` : `<div style="border-bottom:0.2mm solid ${tint('55')}; margin-top:1.3mm;"></div>`}
       ${linha(ov.icone === 'globe' ? ICO_WEB : ICO_PIN, endereco, 700)}
       ${linha(ICO_TEL, fones.map(fmtFone).join(' · '), 700, '#0F172A', fones.join(' · '))}
       ${linha(ICO_REL, horario, 500, '#334155')}
     </div>
-    <div style="height:2.4mm; background:${f.cor}; color:rgba(255,255,255,0.85); font-size:4.2pt; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; display:flex; align-items:center; justify-content:center; ${keep}">Argo SUAS · Rede de Políticas Públicas de Roraima</div>`);
+    <div style="height:3.1mm; background:${f.cor}; color:rgba(255,255,255,0.92); font-size:5pt; font-weight:600; letter-spacing:0.09em; text-transform:uppercase; display:flex; align-items:center; justify-content:center; ${keep}">Argo SUAS · Rede de Políticas Públicas de Roraima</div>`);
 
   // Marcas de corte nas margens da folha: ligue as marcas opostas com uma régua.
   const markStyle = 'position:absolute; background:#000; -webkit-print-color-adjust:exact; print-color-adjust:exact;';
@@ -8687,6 +8688,7 @@ function printCartaoFrenteVerso(id) {
 
   const printArea = document.getElementById('print-area');
   printArea.innerHTML = folha(frente) + folha(verso);
+  await fitCartaoCorpo(printArea);
 
   setTempPageOrientation('A4 portrait', '0');
   window.addEventListener('afterprint', function clearOrientation() {
@@ -8695,6 +8697,38 @@ function printCartaoFrenteVerso(id) {
   });
 
   window.print();
+}
+
+// Ajusta o tamanho da letra do corpo da FRENTE para aproveitar bem o cartão:
+// cartões com pouco texto (UBS, hospitais do interior) crescem até 8,6 pt para
+// ficarem legíveis; cartões cheios encolhem até 6,4 pt, sem nunca cortar texto.
+// Os 10 cartões da folha são idênticos, então mede só o primeiro e aplica em todos.
+// #print-area fica com display:none na tela (scrollHeight = 0), então a área é
+// mostrada fora da tela só durante a medição (mesmo padrão de printGuide).
+async function fitCartaoCorpo(area) {
+  if (document.fonts && document.fonts.status !== 'loaded') {
+    try { await document.fonts.ready; } catch (e) { /* segue com as fontes atuais */ }
+  }
+  const corpos = area.querySelectorAll('[data-cartao-corpo]');
+  if (!corpos.length) return;
+  const guardado = area.style.cssText;
+  area.style.cssText = 'display:block; position:fixed; top:-10000px; left:-10000px; width:21cm; visibility:hidden;';
+  try {
+    const corpo = corpos[0];
+    const conteudo = corpo.firstElementChild;
+    const cs = getComputedStyle(corpo);
+    const folga = 1.2 * (96 / 25.4) * 2;   // 1,2 mm de respiro em cima e embaixo
+    const util = corpo.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - folga;
+    let pt = 8.6;
+    corpo.style.fontSize = pt + 'pt';
+    while (pt > 6.4 && conteudo.getBoundingClientRect().height > util) {
+      pt = Math.round((pt - 0.1) * 10) / 10;
+      corpo.style.fontSize = pt + 'pt';
+    }
+    corpos.forEach(c => { c.style.fontSize = pt + 'pt'; });
+  } finally {
+    area.style.cssText = guardado;
+  }
 }
 
 // Link do Google Maps para a unidade: usa as coordenadas já guardadas no
