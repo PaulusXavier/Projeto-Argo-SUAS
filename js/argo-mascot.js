@@ -282,7 +282,7 @@
       '.argo-assistant-hint-x:hover{opacity:1;background:rgba(127,127,127,.14)}' +
 
       '.argo-assistant-panel{position:fixed;left:max(16px,env(safe-area-inset-left));bottom:calc(82px + env(safe-area-inset-bottom));'+
-        'width:min(340px,calc(100vw - 32px));max-height:min(70vh,520px);display:flex;flex-direction:column;overflow:hidden;'+
+        'width:min(380px,calc(100vw - 32px));max-height:min(74vh,600px);display:flex;flex-direction:column;overflow:hidden;'+
         'background:var(--bg-card,#151F35);color:var(--text-main,#F1F5F9);border-radius:var(--radius-ui,12px);'+
         'box-shadow:var(--shadow-lg,0 24px 48px -12px rgba(0,0,0,.4));border:1px solid rgba(127,127,127,0.18);'+
         'opacity:0;transform:translateY(10px) scale(.98);pointer-events:none;transition:opacity .18s ease,transform .18s ease;z-index:9998}' +
@@ -306,12 +306,42 @@
       '.argo-assistant-close:hover{opacity:1;background:rgba(127,127,127,.14)}' +
 
       '.argo-assistant-log{flex:1;overflow-y:auto;padding:12px 12px 4px;display:flex;flex-direction:column;gap:10px;min-height:70px}' +
-      '.argo-assistant-msg{display:flex;gap:8px;max-width:94%}' +
+      '.argo-assistant-msg{display:flex;gap:8px;max-width:96%;min-width:0}' +
       '.argo-assistant-msg-bot{align-self:flex-start}' +
       '.argo-assistant-msg-user{align-self:flex-end;flex-direction:row-reverse}' +
       '.argo-assistant-msg-icon{flex:0 0 auto;width:24px;height:24px;margin-top:3px}' +
       '.argo-assistant-msg-icon .argo-mascot-icon{width:24px;height:24px}' +
       '.argo-assistant-bubble{font-size:13px;line-height:1.45;padding:9px 12px;border-radius:14px;white-space:pre-line;word-break:break-word}' +
+      '.argo-assistant-bubble.argo-md{white-space:normal}' +
+      '.argo-md p{margin:0 0 6px}.argo-md p:last-child,.argo-md ul:last-child,.argo-md ol:last-child{margin-bottom:0}' +
+      '.argo-md ul,.argo-md ol{margin:0 0 6px;padding-left:18px}.argo-md li{margin:2px 0}' +
+      '.argo-assistant-col{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}' +
+      '.argo-assistant-streaming::after{content:"";display:inline-block;width:6px;height:13px;margin-left:2px;vertical-align:-2px;background:currentColor;opacity:.5;animation:argoAssistantTyping 1s steps(2) infinite}' +
+      '.argo-assistant-badge{align-self:flex-start;font-size:10.5px;font-weight:800;letter-spacing:.02em;padding:2px 8px;border-radius:20px;background:rgba(0,145,194,.14);color:var(--brand-primary,#0091C2)}' +
+      '.argo-assistant-badge-alerta{background:rgba(185,28,28,.16);color:#DC2626}.argo-assistant-badge-basesuas{background:rgba(21,128,61,.16);color:#16A34A}' +
+      '.argo-assistant-note{font-size:11px;color:var(--text-muted,#A7B7CC);padding:0 4px}' +
+      '.argo-assistant-units{display:flex;flex-direction:column;gap:6px}' +
+      '.argo-assistant-unit{border:1px solid rgba(127,127,127,.28);border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:3px;font-size:12px}' +
+      '.argo-assistant-unit strong{font-size:13px}.argo-assistant-unit-group{font-size:10.5px;color:var(--text-muted,#A7B7CC)}' +
+      '.argo-assistant-unit-line{line-height:1.35}' +
+      '.argo-assistant-unit-actions,.argo-assistant-msg-actions{display:flex;flex-wrap:wrap;gap:5px;margin-top:3px}' +
+      '.argo-assistant-mini{border:1px solid rgba(127,127,127,.35);background:transparent;color:inherit;font:600 11.5px/1 inherit;padding:6px 9px;border-radius:16px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;min-height:28px}' +
+      '.argo-assistant-mini:hover{background:rgba(0,145,194,.14);border-color:var(--brand-primary,#0091C2)}' +
+      '.argo-assistant-mini-ghost{border-color:transparent;opacity:.75}.argo-assistant-mini-ghost:hover{opacity:1}.argo-assistant-mini.is-on{background:rgba(0,145,194,.2);opacity:1}' +
+      '.argo-assistant-mini:disabled{cursor:default;opacity:.5}' +
+      '.argo-assistant-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}' +
+      '.argo-assistant-tool{flex:0 0 auto;min-width:32px;min-height:32px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;color:inherit;opacity:.6;cursor:pointer;border-radius:8px;padding:6px;touch-action:manipulation}' +
+      '.argo-assistant-tool:hover{opacity:1;background:rgba(127,127,127,.14)}' +
+      '.argo-assistant-led{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;background:#16A34A;vertical-align:1px}' +
+      '.argo-assistant-status-warn .argo-assistant-led{background:#D97706}.argo-assistant-status-off .argo-assistant-led{background:#9CA3AF}' +
+      '.argo-assistant-head-text span em{font-style:normal}' +
+      '.argo-assistant-dot{position:absolute;top:2px;right:2px;width:12px;height:12px;border-radius:50%;background:#DC2626;border:2px solid var(--bg-card,#151F35)}' +
+      '.argo-assistant-fab{position:fixed}.argo-assistant-fab.argo-assistant-busy{box-shadow:0 0 0 3px rgba(0,145,194,.35),var(--shadow-lg,0 24px 48px -12px rgba(0,0,0,.4));animation:argoAssistantPulse 1.4s ease-in-out infinite}' +
+      '@keyframes argoAssistantPulse{0%,100%{box-shadow:0 0 0 2px rgba(0,145,194,.2)}50%{box-shadow:0 0 0 7px rgba(0,145,194,.3)}}' +
+      '.argo-assistant-panel.argo-assistant-wide{width:min(560px,calc(100vw - 32px));max-height:min(86vh,760px)}' +
+      '.argo-assistant-field{position:relative;flex:1;min-width:0;display:flex}.argo-assistant-count{position:absolute;right:10px;bottom:-1px;font-size:10px;color:var(--text-muted,#A7B7CC);background:var(--bg-card,#151F35);padding:0 3px}' +
+      '.argo-assistant-send.is-stop{background:#DC2626}' +
+      '.argo-assistant-chip-ask{border-style:dotted}' +
       '.argo-assistant-msg-bot .argo-assistant-bubble{background:rgba(127,127,127,.14);border-bottom-left-radius:4px}' +
       '.argo-assistant-msg-user .argo-assistant-bubble{background:var(--brand-primary,var(--argo-mascot-info,#0091C2));color:#fff;border-bottom-right-radius:4px}' +
       '.argo-assistant-typing .argo-assistant-bubble{display:flex;gap:4px;align-items:center;padding:12px 14px}' +
@@ -326,7 +356,7 @@
 
       '.argo-assistant-form{display:flex;gap:8px;padding:10px 12px;border-top:1px solid rgba(127,127,127,.16);flex:0 0 auto}' +
       '.argo-assistant-input{flex:1;min-width:0;border:1px solid rgba(127,127,127,.3);background:transparent;color:inherit;'+
-        'border-radius:20px;padding:8px 14px;font-size:13px;outline:none;font-family:inherit}' +
+        'border-radius:18px;padding:8px 14px;font-size:13px;line-height:1.35;outline:none;font-family:inherit;resize:none;max-height:96px;width:100%;box-sizing:border-box}' +
       '.argo-assistant-input:focus{border-color:var(--brand-primary,var(--argo-mascot-info,#0091C2))}' +
       '.argo-assistant-send{flex:0 0 auto;width:36px;height:36px;border-radius:50%;border:none;'+
         'background:var(--brand-primary,var(--argo-mascot-info,#0091C2));color:#fff;display:flex;align-items:center;'+
@@ -346,14 +376,14 @@
       'body.tab-focus .argo-assistant-fab{width:48px;height:48px}' +
       'body.tab-focus .argo-assistant-fab .argo-mascot-icon{width:30px;height:30px}' +
       'body.tab-focus .content-area{padding-bottom:calc(5.5rem + env(safe-area-inset-bottom))!important}' +
-      '.argo-assistant-fab:focus-visible,.argo-assistant-chip:focus-visible,.argo-assistant-close:focus-visible{outline:3px solid var(--brand-primary,#0091C2);outline-offset:2px}' +
+      '.argo-assistant-fab:focus-visible,.argo-assistant-chip:focus-visible,.argo-assistant-close:focus-visible,.argo-assistant-tool:focus-visible,.argo-assistant-mini:focus-visible,.argo-assistant-input:focus-visible{outline:3px solid var(--brand-primary,#0091C2);outline-offset:2px}' +
       '.argo-assistant-chip-menu{opacity:.85;border-style:dashed}' +
       '.argo-assistant-kbd{display:inline-block;border:1px solid rgba(127,127,127,.45);border-radius:5px;padding:0 5px;font-size:11px;font-weight:700;margin:0 1px}' +
       'body:has(#appRoot[data-locked="true"]) .argo-assistant-fab,'+
       'body:has(#appRoot[data-locked="true"]) .argo-assistant-hint,'+
       'body:has(#appRoot[data-locked="true"]) .argo-assistant-panel{display:none}' +
       '@media (prefers-reduced-motion:reduce){.argo-assistant-panel,.argo-assistant-fab{transition:none}'+
-        '.argo-assistant-hint{animation:none}.argo-assistant-typing i{animation:none}}';
+        '.argo-assistant-hint{animation:none}.argo-assistant-typing i,.argo-assistant-streaming::after,.argo-assistant-busy{animation:none}}';
 
     var tag = document.createElement('style');
     tag.id = STYLE_ID;
@@ -495,17 +525,61 @@
   // sozinho via CSS quando o app está trancado, em modo destaque ou na
   // impressão (ver ensureStyles). Este arquivo não envia nada para a rede:
   // quem decide as respostas é a função `ask` fornecida por quem chama
-  // mountAssistant (normalmente app.js). Ela pode devolver o resultado na
-  // hora ou uma Promise (resposta de IA opcional, ver "IA NO MASCOTE ARGO"
-  // em app.js — lá está o que é enviado e o filtro de dados pessoais).
+  // mountAssistant (normalmente app.js, com o ArgoCerebro).
   //
   // ArgoMascot.mountAssistant({
   //   greeting: () => 'Olá! Eu sou o Argo...',           // string ou função
-  //   ask: (texto) => ({ reply, mood, quickActions }) | null | Promise<mesmo formato>,
-  //   defaultQuickActions: () => [{ label, run, reply, mood }, ...]
+  //   ask: (texto, meta) => resultado | null | Promise<resultado>,
+  //   defaultQuickActions: () => [{ label, run, reply, mood }, ...],
+  //   onUnit: (unidade) => {},                           // botão "Ver ficha" dos cartões
+  //   onReset: () => {},                                 // "Nova conversa"
+  //   status: () => ({ text, level: 'ok' | 'warn' | 'off' })
   // })
-  // → { open, close, toggle, ask(texto), say(texto, mood) }
+  //
+  // resultado = {
+  //   reply, mood, badge,                // texto (mini-markdown: **negrito**, "- " listas)
+  //   note,                              // linha pequena (base legal, aviso)
+  //   units: [{ name, group, address, hours, phones, phoneLinks:[{label,href}], ... }],
+  //   quickActions: [{ label, run, reply, mood, menu }],
+  //   followups: ['pergunta sugerida', ...],
+  //   stream: { run(onDelta, signal) → Promise<texto | {text, units, note, ...}>, fallback: resultado }
+  // }
+  // → { open, close, toggle, ask(texto), say(texto, mood), reset(), refreshStatus() }
   var assistantController = null;
+
+  // Mini-markdown seguro: só **negrito**, listas "- " / "1. " e parágrafos.
+  // Tudo vira nó de texto (nunca HTML), então nada vindo da IA executa.
+  function renderMd(text, target) {
+    target.textContent = '';
+    var lines = String(text == null ? '' : text).replace(/\r/g, '').split('\n');
+    var list = null, listType = '';
+    function inline(parent, str) {
+      var parts = str.split(/(\*\*[^*]+\*\*)/);
+      for (var i = 0; i < parts.length; i++) {
+        var p = parts[i];
+        if (!p) continue;
+        if (/^\*\*[^*]+\*\*$/.test(p)) { var b = document.createElement('strong'); b.textContent = p.slice(2, -2); parent.appendChild(b); }
+        else parent.appendChild(document.createTextNode(p.replace(/\*\*/g, '')));
+      }
+    }
+    function endList() { list = null; listType = ''; }
+    lines.forEach(function (ln) {
+      var m = ln.match(/^\s*(?:[-•]\s+|(\d{1,2})[.)]\s+)(.*)$/);
+      if (m && m[2].trim()) {
+        var type = m[1] ? 'ol' : 'ul';
+        if (!list || listType !== type) { list = document.createElement(type); listType = type; target.appendChild(list); }
+        var li = document.createElement('li'); inline(li, m[2].trim()); list.appendChild(li);
+        return;
+      }
+      endList();
+      if (!ln.trim()) return;
+      var p = document.createElement('p'); inline(p, ln.trim()); target.appendChild(p);
+    });
+    if (!target.firstChild) target.textContent = String(text || '');
+  }
+  function plainText(text) {
+    return String(text == null ? '' : text).replace(/\*\*/g, '').replace(/^\s*[-•]\s+/gm, '• ').trim();
+  }
 
   function mountAssistant(options) {
     if (assistantController) return assistantController;
@@ -513,15 +587,19 @@
     options = options || {};
     ensureStyles();
 
+    var svgSend = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" ' +
+      'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
+    var svgStop = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2.5"/></svg>';
+
     var root = document.createElement('div');
     root.id = 'argoAssistantRoot';
     root.innerHTML =
       '<button type="button" id="argoAssistantFab" class="argo-assistant-fab" aria-haspopup="dialog" ' +
         'aria-expanded="false" aria-controls="argoAssistantPanel" aria-label="Abrir assistente Argo">' +
-        boatSVG('info', 30) +
+        boatSVG('info', 30) + '<span class="argo-assistant-dot" hidden></span>' +
       '</button>' +
       '<div id="argoAssistantHint" class="argo-assistant-hint" hidden>' +
-        '<span>Oi! Sou o Argo. Precisando achar algo, é só me chamar — ou tecle <b class="argo-assistant-kbd">?</b></span>' +
+        '<span>Oi! Sou o Argo. Pergunte do seu jeito — unidades, fluxos, dúvidas do SUAS — ou tecle <b class="argo-assistant-kbd">?</b></span>' +
         '<button type="button" class="argo-assistant-hint-x" aria-label="Fechar dica">✕</button>' +
       '</div>' +
       '<div id="argoAssistantPanel" class="argo-assistant-panel" role="dialog" aria-modal="false" ' +
@@ -529,37 +607,46 @@
         '<div class="argo-assistant-head">' +
           boatSVG('info', 32) +
           '<div class="argo-assistant-head-text"><strong id="argoAssistantTitle">Argo</strong>' +
-            '<span>seu guia a bordo do Argo SUAS</span></div>' +
+            '<span id="argoAssistantStatus"><i class="argo-assistant-led" aria-hidden="true"></i><em>seu guia a bordo do Argo SUAS</em></span></div>' +
+          '<button type="button" class="argo-assistant-tool" id="argoAssistantNew" aria-label="Nova conversa" title="Nova conversa">' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 10 9 10"/></svg></button>' +
+          '<button type="button" class="argo-assistant-tool argo-assistant-wide-btn" id="argoAssistantWide" aria-label="Ampliar painel" aria-pressed="false" title="Ampliar">' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>' +
           '<button type="button" class="argo-assistant-close" id="argoAssistantCloseBtn" aria-label="Fechar assistente">✕</button>' +
         '</div>' +
-        '<div class="argo-assistant-log" id="argoAssistantLog" role="log" aria-live="polite"></div>' +
+        '<div class="argo-assistant-log" id="argoAssistantLog" role="log" aria-live="off"></div>' +
+        '<div class="argo-assistant-sr" id="argoAssistantSr" role="status" aria-live="polite"></div>' +
         '<div class="argo-assistant-quick" id="argoAssistantQuick"></div>' +
         '<form class="argo-assistant-form" id="argoAssistantForm">' +
-          '<label for="argoAssistantInput" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">Escreva sua pergunta para o Argo</label>' +
-          '<input type="text" id="argoAssistantInput" class="argo-assistant-input" placeholder="Pergunte alguma coisa..." autocomplete="off">' +
-          '<button type="submit" class="argo-assistant-send" aria-label="Enviar pergunta">' +
-            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" ' +
-              'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-              '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>' +
-            '</svg>' +
-          '</button>' +
+          '<label for="argoAssistantInput" class="argo-assistant-sr">Escreva sua pergunta para o Argo</label>' +
+          '<div class="argo-assistant-field">' +
+            '<textarea id="argoAssistantInput" class="argo-assistant-input" rows="1" maxlength="500" placeholder="Pergunte alguma coisa..." autocomplete="off" enterkeyhint="send"></textarea>' +
+            '<span class="argo-assistant-count" id="argoAssistantCount" hidden></span>' +
+          '</div>' +
+          '<button type="submit" class="argo-assistant-send" id="argoAssistantSend" aria-label="Enviar pergunta">' + svgSend + '</button>' +
         '</form>' +
       '</div>';
     document.body.appendChild(root);
 
     var fab = root.querySelector('#argoAssistantFab');
+    var dot = root.querySelector('.argo-assistant-dot');
     var hint = root.querySelector('#argoAssistantHint');
     var hintClose = root.querySelector('.argo-assistant-hint-x');
     var panel = root.querySelector('#argoAssistantPanel');
     var log = root.querySelector('#argoAssistantLog');
+    var sr = root.querySelector('#argoAssistantSr');
     var quick = root.querySelector('#argoAssistantQuick');
     var form = root.querySelector('#argoAssistantForm');
     var input = root.querySelector('#argoAssistantInput');
+    var count = root.querySelector('#argoAssistantCount');
+    var sendBtn = root.querySelector('#argoAssistantSend');
     var closeBtn = root.querySelector('#argoAssistantCloseBtn');
+    var newBtn = root.querySelector('#argoAssistantNew');
+    var wideBtn = root.querySelector('#argoAssistantWide');
+    var statusEl = root.querySelector('#argoAssistantStatus');
 
-    var isOpen = false;
-    var greeted = false;
-    var HINT_KEY = 'argo_assistant_hint_seen_v1';
+    var isOpen = false, greeted = false, busy = false, abortCtl = null, lastQuestion = '', runId = 0;
+    var HINT_KEY = 'argo_assistant_hint_seen_v2', WIDE_KEY = 'argo_assistant_wide_v1';
 
     function dismissHint() {
       hint.hidden = true;
@@ -580,122 +667,322 @@
     }
     try {
       if (!localStorage.getItem(HINT_KEY)) armHint();
+      if (localStorage.getItem(WIDE_KEY) === '1') setWide(true);
     } catch (e) { /* localStorage indisponível - sem dica, sem problema */ }
     hintClose.addEventListener('click', function (e) { e.stopPropagation(); dismissHint(); });
 
-    function addMsg(text, who, mood) {
-      if (!text) return;
-      var row = document.createElement('div');
-      row.className = 'argo-assistant-msg argo-assistant-msg-' + who;
-      if (who === 'bot') {
-        var ic = document.createElement('span');
-        ic.className = 'argo-assistant-msg-icon';
-        ic.innerHTML = boatSVG(mood || 'info', 24);
-        row.appendChild(ic);
-      }
-      var bubble = document.createElement('span');
-      bubble.className = 'argo-assistant-bubble';
-      bubble.textContent = text; // nunca HTML: texto do usuário e respostas viram texto puro
-      row.appendChild(bubble);
-      log.appendChild(row);
-      log.scrollTop = log.scrollHeight;
+    function setWide(on) {
+      panel.classList.toggle('argo-assistant-wide', !!on);
+      wideBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      wideBtn.setAttribute('aria-label', on ? 'Reduzir painel' : 'Ampliar painel');
+      wideBtn.title = on ? 'Reduzir' : 'Ampliar';
     }
 
+    // ---------- status (online/IA) ----------
+    function refreshStatus() {
+      var st = { text: 'seu guia a bordo do Argo SUAS', level: 'ok' };
+      try { if (typeof options.status === 'function') st = options.status() || st; } catch (e) { /* mantém o padrão */ }
+      statusEl.querySelector('em').textContent = st.text;
+      statusEl.className = 'argo-assistant-status-' + (st.level || 'ok');
+    }
+    window.addEventListener('online', refreshStatus);
+    window.addEventListener('offline', refreshStatus);
+
+    // ---------- mensagens ----------
+    function scrollDown() { log.scrollTop = log.scrollHeight; }
+    function announce(text) { sr.textContent = ''; setTimeout(function () { sr.textContent = plainText(text).slice(0, 700); }, 30); }
+
+    function makeBotRow(mood) {
+      var row = document.createElement('div');
+      row.className = 'argo-assistant-msg argo-assistant-msg-bot';
+      var ic = document.createElement('span');
+      ic.className = 'argo-assistant-msg-icon';
+      ic.innerHTML = boatSVG(mood || 'info', 24);
+      var col = document.createElement('div');
+      col.className = 'argo-assistant-col';
+      row.appendChild(ic); row.appendChild(col);
+      return { row: row, col: col, icon: ic };
+    }
+
+    function addMsg(text, who, mood) {
+      if (!text) return null;
+      if (who === 'user') {
+        var urow = document.createElement('div');
+        urow.className = 'argo-assistant-msg argo-assistant-msg-user';
+        var ub = document.createElement('span');
+        ub.className = 'argo-assistant-bubble';
+        ub.textContent = text; // nunca HTML: texto do usuário vira texto puro
+        urow.appendChild(ub); log.appendChild(urow); scrollDown();
+        return urow;
+      }
+      var b = makeBotRow(mood);
+      var bub = document.createElement('div');
+      bub.className = 'argo-assistant-bubble argo-md';
+      renderMd(text, bub);
+      b.col.appendChild(bub);
+      log.appendChild(b.row); scrollDown();
+      return b;
+    }
+
+    function copyText(txt, btn) {
+      function ok() { var old = btn.textContent; btn.textContent = 'Copiado ✓'; setTimeout(function () { btn.textContent = old; }, 1500); }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(txt).then(ok, function () { btn.textContent = 'Não consegui copiar'; }); return; }
+      } catch (e) { /* cai no fallback */ }
+      try {
+        var ta = document.createElement('textarea'); ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); ok();
+      } catch (e2) { btn.textContent = 'Não consegui copiar'; }
+    }
+
+    function tinyBtn(label, cls, fn) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'argo-assistant-mini ' + (cls || ''); b.textContent = label;
+      b.addEventListener('click', fn);
+      return b;
+    }
+
+    function buildUnit(u) {
+      var card = document.createElement('div');
+      card.className = 'argo-assistant-unit';
+      var t = document.createElement('strong'); t.textContent = u.name || u.fullName || 'Unidade'; card.appendChild(t);
+      if (u.group) { var g = document.createElement('span'); g.className = 'argo-assistant-unit-group'; g.textContent = u.group; card.appendChild(g); }
+      if (u.address) { var a = document.createElement('div'); a.className = 'argo-assistant-unit-line'; a.textContent = '📍 ' + (u.address.length > 130 ? u.address.slice(0, 129) + '…' : u.address); card.appendChild(a); }
+      if (u.hours) { var h = document.createElement('div'); h.className = 'argo-assistant-unit-line'; h.textContent = '🕒 ' + (u.hours.length > 110 ? u.hours.slice(0, 109) + '…' : u.hours); card.appendChild(h); }
+      var row = document.createElement('div'); row.className = 'argo-assistant-unit-actions';
+      (u.phoneLinks || []).slice(0, 2).forEach(function (p) {
+        if (!p || !p.href) return;
+        var l = document.createElement('a'); l.className = 'argo-assistant-mini'; l.href = p.href; l.textContent = '📞 ' + p.label; row.appendChild(l);
+      });
+      if (u.address) {
+        var m = document.createElement('a'); m.className = 'argo-assistant-mini'; m.target = '_blank'; m.rel = 'noopener noreferrer';
+        m.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(u.address.replace(/<[^>]*>/g, ' ') + ' Boa Vista RR');
+        m.textContent = '🗺️ Mapa'; row.appendChild(m);
+      }
+      if (typeof options.onUnit === 'function') row.appendChild(tinyBtn('📄 Ver ficha', '', function () { try { options.onUnit(u); } catch (e) { /* ação do app - ignora */ } }));
+      row.appendChild(tinyBtn('Copiar', '', function (ev) {
+        copyText([u.name, u.address, u.hours ? 'Horário: ' + u.hours : '', (u.phones || []).join(' · ')].filter(Boolean).join('\n'), ev.currentTarget);
+      }));
+      card.appendChild(row);
+      return card;
+    }
+
+    // badge, nota, cartões e ações de uma resposta do Argo
+    function decorate(b, result, plain) {
+      if (result.badge) {
+        var bd = document.createElement('span');
+        bd.className = 'argo-assistant-badge argo-assistant-badge-' + String(result.badge).replace(/\s+/g, '').toLowerCase();
+        bd.textContent = result.badge === 'IA' ? '✨ Resposta gerada por IA' : result.badge;
+        b.col.insertBefore(bd, b.col.firstChild);
+      }
+      if (result.note) { var n = document.createElement('div'); n.className = 'argo-assistant-note'; n.textContent = result.note; b.col.appendChild(n); }
+      if (result.units && result.units.length) {
+        var wrap = document.createElement('div'); wrap.className = 'argo-assistant-units';
+        result.units.slice(0, 5).forEach(function (u) { wrap.appendChild(buildUnit(u)); });
+        b.col.appendChild(wrap);
+      }
+      var acts = document.createElement('div'); acts.className = 'argo-assistant-msg-actions';
+      if (plain && plain.length > 60 && !result.crisis) acts.appendChild(tinyBtn('Copiar', 'argo-assistant-mini-ghost', function (ev) { copyText(plain, ev.currentTarget); }));
+      if (result.badge === 'IA') {
+        acts.appendChild(tinyBtn('Refazer', 'argo-assistant-mini-ghost', function () { if (!busy && lastQuestion) ask(lastQuestion, { regen: true, silent: true }); }));
+        var up = tinyBtn('👍', 'argo-assistant-mini-ghost', function () { up.disabled = down.disabled = true; up.classList.add('is-on'); });
+        up.setAttribute('aria-label', 'Resposta útil');
+        var down = tinyBtn('👎', 'argo-assistant-mini-ghost', function () {
+          up.disabled = down.disabled = true; down.classList.add('is-on');
+          addMsg('Obrigado por avisar! Posso tentar de outro jeito, ou você pode buscar direto no diretório. Dica: quanto mais específica a pergunta (unidade, bairro, público), melhor a resposta.', 'bot', 'info');
+          renderQuick([{ label: 'Refazer a resposta', run: function () { if (!busy && lastQuestion) ask(lastQuestion, { regen: true, silent: true }); } }, { label: 'Mais assuntos', menu: true }]);
+        });
+        down.setAttribute('aria-label', 'Resposta não ajudou');
+        acts.appendChild(up); acts.appendChild(down);
+      }
+      if (acts.firstChild) b.col.appendChild(acts);
+    }
+
+    // ---------- atalhos ----------
     function renderQuick(actions) {
       quick.innerHTML = '';
       (actions || []).forEach(function (a) {
         if (!a || !a.label) return;
         var btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'argo-assistant-chip' + (a.menu ? ' argo-assistant-chip-menu' : '');
+        btn.className = 'argo-assistant-chip' + (a.menu ? ' argo-assistant-chip-menu' : '') + (a.ask ? ' argo-assistant-chip-ask' : '');
         btn.textContent = a.label;
         btn.addEventListener('click', function () {
           if (a.menu) { addMsg('Claro! Por onde quer seguir?', 'bot', 'info'); renderQuick(defaultQuick()); return; }
+          if (a.ask) { ask(a.ask, a.force ? { forceAI: true, silent: true } : null); return; }
           runAction(a);
         });
         quick.appendChild(btn);
       });
     }
-
     function runAction(a) {
       if (typeof a.run === 'function') {
         try { a.run(); } catch (e) { /* ação de navegação do app - ignora falha isolada */ }
       }
       if (a.reply) addMsg(a.reply, 'bot', a.mood);
     }
-
-    // Pausa curtinha com "…" antes da resposta — dá a sensação de que o
-    // Argo está lendo a pergunta, sem atrapalhar quem usa leitor de tela
-    // (a bolha de digitação não tem texto, só é removida em seguida).
-    function typingThen(cb) {
-      var row = document.createElement('div');
-      row.className = 'argo-assistant-msg argo-assistant-msg-bot argo-assistant-typing';
-      row.innerHTML = '<span class="argo-assistant-msg-icon">' + boatSVG('info', 24) + '</span>' +
-        '<span class="argo-assistant-bubble"><i></i><i></i><i></i></span>';
-      log.appendChild(row);
-      log.scrollTop = log.scrollHeight;
-      setTimeout(function () { row.remove(); cb(); }, 380);
-    }
-
     function defaultQuick() {
-      return (typeof options.defaultQuickActions === 'function')
-        ? options.defaultQuickActions()
-        : (options.defaultQuickActions || []);
+      return (typeof options.defaultQuickActions === 'function') ? options.defaultQuickActions() : (options.defaultQuickActions || []);
     }
 
-    // Mostra a resposta (ou o "não entendi") e os atalhos que a acompanham.
+    function quickFor(result) {
+      var acts = (result.quickActions || []).slice();
+      (result.followups || []).forEach(function (q) { acts.push({ label: q, ask: q }); });
+      if (!acts.length) return defaultQuick();
+      acts.push({ label: 'Mais assuntos', menu: true });
+      return acts.slice(0, 7);
+    }
+
+    // ---------- estados de "pensando" ----------
+    function typingRow() {
+      var b = makeBotRow('info');
+      b.row.classList.add('argo-assistant-typing');
+      var bub = document.createElement('span'); bub.className = 'argo-assistant-bubble';
+      bub.innerHTML = '<i></i><i></i><i></i>';
+      b.col.appendChild(bub); log.appendChild(b.row); scrollDown();
+      return b.row;
+    }
+    function setBusy(on) {
+      busy = on;
+      fab.classList.toggle('argo-assistant-busy', on);
+      sendBtn.innerHTML = on ? svgStop : svgSend;
+      sendBtn.classList.toggle('is-stop', on);
+      sendBtn.setAttribute('aria-label', on ? 'Parar resposta' : 'Enviar pergunta');
+      log.setAttribute('aria-busy', on ? 'true' : 'false');
+    }
+
+    function finishUnread() { if (!isOpen) dot.hidden = false; }
+
+    // Mostra a resposta pronta (ou o "não entendi") e os atalhos que a acompanham.
     function showAnswer(result) {
       if (result && result.reply) {
-        addMsg(result.reply, 'bot', result.mood);
-        var acts = (result.quickActions || defaultQuick()).slice();
-        // Quando a resposta trouxe um atalho específico, oferece voltar ao menu.
-        if (result.quickActions && result.quickActions.length) acts.push({ label: 'Mais assuntos', menu: true });
-        renderQuick(acts);
+        var b = addMsg(result.reply, 'bot', result.mood);
+        decorate(b, result, plainText(result.reply));
+        renderQuick(quickFor(result));
+        announce(result.reply);
       } else {
         addMsg('Hmm, essa eu não entendi bem. Tente com outras palavras ou escolha um destes caminhos:', 'bot', 'notfound');
         renderQuick(defaultQuick());
       }
+      finishUnread();
     }
 
-    // Igual ao typingThen, mas espera uma Promise (resposta de IA): o "…" fica
-    // até a resposta chegar. Se a Promise falhar, cai no "não entendi".
-    function typingWhile(promise, cb) {
-      var row = document.createElement('div');
-      row.className = 'argo-assistant-msg argo-assistant-msg-bot argo-assistant-typing';
-      row.innerHTML = '<span class="argo-assistant-msg-icon">' + boatSVG('info', 24) + '</span>' +
-        '<span class="argo-assistant-bubble"><i></i><i></i><i></i></span>';
-      log.appendChild(row);
-      log.scrollTop = log.scrollHeight;
-      var done = false;
-      function fin(res) { if (done) return; done = true; row.remove(); cb(res); }
-      promise.then(fin, function () { fin(null); });
-    }
+    // Resposta em streaming: o texto aparece aos poucos; "Parar" interrompe e mantém o que chegou.
+    function showStream(result, myRun) {
+      var typing = typingRow();
+      var b = null, bub = null, raf = 0, acc = '';
+      abortCtl = (typeof AbortController !== 'undefined') ? new AbortController() : { signal: undefined, abort: function () {} };
+      var stopped = false, finished = false;
+      abortCtl.signal && abortCtl.signal.addEventListener && abortCtl.signal.addEventListener('abort', function () { stopped = true; });
 
-    function ask(text) {
-      text = String(text == null ? '' : text).trim();
-      if (!text) return;
-      addMsg(text, 'user');
-      var result = (typeof options.ask === 'function') ? options.ask(text) : null;
-      if (result && typeof result.then === 'function') {
-        typingWhile(result, showAnswer);
-      } else {
-        typingThen(function () { showAnswer(result); });
+      function ensureBubble() {
+        if (b) return;
+        typing.remove();
+        b = makeBotRow(result.mood || 'info');
+        bub = document.createElement('div');
+        bub.className = 'argo-assistant-bubble argo-md argo-assistant-streaming';
+        b.col.appendChild(bub); log.appendChild(b.row);
       }
+      function paint() { raf = 0; if (bub && !finished) { renderMd(acc, bub); scrollDown(); } }
+      function onDelta(piece, full) {
+        if (myRun !== runId) return;
+        ensureBubble();
+        acc = (typeof full === 'string') ? full : acc + piece;
+        if (!raf) raf = (window.requestAnimationFrame || setTimeout)(paint, 16);
+      }
+      var p;
+      try { p = result.stream.run(onDelta, abortCtl.signal); } catch (e) { p = Promise.reject(e); }
+      return Promise.resolve(p).then(function (final) {
+        finished = true;
+        if (myRun !== runId) return;
+        var f = (typeof final === 'string') ? { text: final } : (final || {});
+        var text = f.text || acc;
+        if (!b) { typing.remove(); b = makeBotRow(result.mood || 'info'); bub = document.createElement('div'); bub.className = 'argo-assistant-bubble argo-md'; b.col.appendChild(bub); log.appendChild(b.row); }
+        bub.classList.remove('argo-assistant-streaming');
+        renderMd(text, bub);
+        var finalResult = { badge: result.badge || 'IA', note: f.note || '', units: f.units || [], quickActions: f.quickActions || result.quickActions, followups: f.followups || result.followups, mood: result.mood };
+        decorate(b, finalResult, plainText(text));
+        renderQuick(quickFor(finalResult));
+        announce(text);
+        scrollDown();
+      }, function (err) {
+        finished = true;
+        if (myRun !== runId) return;
+        var partial = (err && err.partial) || acc;
+        if (b && partial && partial.length > 25) {
+          bub.classList.remove('argo-assistant-streaming');
+          renderMd(partial + (stopped ? '\n\n(resposta interrompida)' : '\n\n(a resposta foi cortada por falha de conexão)'), bub);
+          decorate(b, { badge: 'IA' }, plainText(partial));
+          renderQuick(quickFor({ quickActions: (result.stream.fallback && result.stream.fallback.quickActions) || [], followups: [] }));
+          return;
+        }
+        if (b) b.row.remove();
+        typing.remove();
+        if (stopped) { addMsg('Resposta interrompida.', 'bot', 'info'); renderQuick(defaultQuick()); return; }
+        var msg = err && err.userMessage;
+        if (msg) { addMsg(msg, 'bot', 'notfound'); renderQuick(defaultQuick()); return; }
+        showAnswer(result.stream.fallback || null);
+      }).then(function () {
+        if (myRun !== runId) return;
+        abortCtl = null; setBusy(false); finishUnread(); refreshStatus();
+      });
+    }
+
+    // ---------- fluxo principal ----------
+    function ask(text, meta) {
+      text = String(text == null ? '' : text).trim();
+      if (!text || busy) return;
+      meta = meta || {};
+      lastQuestion = text;
+      var myRun = ++runId;
+      quick.innerHTML = '';
+      if (!meta.silent) addMsg(text, 'user');
+      setBusy(true);
+      var result;
+      try { result = (typeof options.ask === 'function') ? options.ask(text, meta) : null; }
+      catch (e) { result = null; }
+      var typing = null;
+      function settle(res) {
+        if (myRun !== runId) return;
+        if (typing) typing.remove();
+        if (res && res.stream && typeof res.stream.run === 'function') { showStream(res, myRun); return; }
+        showAnswer(res);
+        abortCtl = null; setBusy(false); refreshStatus();
+      }
+      if (result && typeof result.then === 'function') {
+        typing = typingRow();
+        result.then(settle, function () { settle(null); });
+      } else {
+        typing = typingRow();
+        setTimeout(function () { settle(result); }, 320);
+      }
+    }
+
+    function stop() {
+      if (abortCtl && abortCtl.abort) abortCtl.abort();
+    }
+
+    function reset() {
+      runId++; stop(); abortCtl = null; setBusy(false);
+      log.textContent = ''; quick.innerHTML = ''; sr.textContent = ''; lastQuestion = ''; greeted = false;
+      try { if (typeof options.onReset === 'function') options.onReset(); } catch (e) { /* ignora */ }
+      if (isOpen) { greeted = true; greet(); }
+    }
+
+    function greet() {
+      var g = (typeof options.greeting === 'function') ? options.greeting() : options.greeting;
+      addMsg(g || 'Oi! Eu sou o Argo. Como posso ajudar?', 'bot', 'success');
+      renderQuick(defaultQuick());
     }
 
     function open() {
       if (isOpen) return;
       isOpen = true;
-      panel.hidden = false;
-      hint.hidden = true;
+      panel.hidden = false; hint.hidden = true; dot.hidden = true;
       fab.setAttribute('aria-expanded', 'true');
+      refreshStatus();
       requestAnimationFrame(function () { panel.classList.add('argo-assistant-open'); });
-      if (!greeted) {
-        greeted = true;
-        var greet = (typeof options.greeting === 'function') ? options.greeting() : options.greeting;
-        addMsg(greet || 'Oi! Eu sou o Argo. Como posso ajudar?', 'bot', 'success');
-        renderQuick(defaultQuick());
-      }
+      if (!greeted) { greeted = true; greet(); }
       setTimeout(function () { input.focus(); }, 180);
     }
 
@@ -709,6 +996,13 @@
 
     fab.addEventListener('click', function () { isOpen ? close() : open(); });
     closeBtn.addEventListener('click', function (e) { e.stopPropagation(); close(); try { fab.focus(); } catch (err) { /* ignora */ } });
+    newBtn.addEventListener('click', function (e) { e.stopPropagation(); reset(); });
+    wideBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var on = !panel.classList.contains('argo-assistant-wide'); setWide(on);
+      try { localStorage.setItem(WIDE_KEY, on ? '1' : '0'); } catch (err) { /* ignora */ }
+      setTimeout(scrollDown, 60);
+    });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && isOpen) { close(); fab.focus(); }
     });
@@ -719,21 +1013,35 @@
     document.addEventListener('click', function (e) {
       if (!isOpen) return;
       if (panel.contains(e.target) || fab.contains(e.target)) return;
+      if (e.target && e.target.isConnected === false) return; // botão do próprio painel que foi removido do DOM
       close();
     });
+
+    // ---------- campo de texto ----------
     var history = [], histPos = 0;
+    function autosize() {
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 96) + 'px';
+      var len = input.value.length;
+      count.hidden = len < 400;
+      if (len >= 400) count.textContent = len + '/500';
+    }
+    input.addEventListener('input', autosize);
     form.addEventListener('submit', function (e) {
       e.preventDefault();
+      if (busy) { stop(); return; }
       var v = input.value;
-      input.value = '';
+      input.value = ''; autosize();
       if (v.trim()) { history.push(v); histPos = history.length; }
       ask(v);
     });
     input.addEventListener('keydown', function (e) {
-      if (e.key === 'ArrowUp' && history.length) {
-        e.preventDefault(); histPos = Math.max(0, histPos - 1); input.value = history[histPos];
-      } else if (e.key === 'ArrowDown' && history.length) {
-        e.preventDefault(); histPos = Math.min(history.length, histPos + 1); input.value = history[histPos] || '';
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event('submit', { cancelable: true })); return; }
+      var atStart = input.selectionStart === 0 && input.selectionEnd === 0;
+      if (e.key === 'ArrowUp' && history.length && (!input.value || atStart)) {
+        e.preventDefault(); histPos = Math.max(0, histPos - 1); input.value = history[histPos]; autosize();
+      } else if (e.key === 'ArrowDown' && history.length && input.value && histPos < history.length) {
+        e.preventDefault(); histPos = Math.min(history.length, histPos + 1); input.value = history[histPos] || ''; autosize();
       }
     });
     // Atalho "?" (fora de campos de texto) abre/fecha o assistente.
@@ -752,7 +1060,9 @@
       close: close,
       toggle: function () { isOpen ? close() : open(); },
       ask: ask,
-      say: function (text, mood) { addMsg(text, 'bot', mood); }
+      say: function (text, mood) { addMsg(text, 'bot', mood); },
+      reset: reset,
+      refreshStatus: refreshStatus
     };
     return assistantController;
   }
