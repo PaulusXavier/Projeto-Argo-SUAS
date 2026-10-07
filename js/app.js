@@ -349,6 +349,8 @@ function lockApp(reason) {
   if (appRoot) appRoot.dataset.locked = 'true';
   if (typeof closeTabFocus === 'function') closeTabFocus();
   if (argoAssistantCtrl && typeof argoAssistantCtrl.close === 'function') argoAssistantCtrl.close();
+  if (argoAssistantCtrl && typeof argoAssistantCtrl.reset === 'function') argoAssistantCtrl.reset();
+  if (typeof ArgoCerebro !== 'undefined') ArgoCerebro.reset();
   if (typeof argoLoginMascotReact === 'function') argoLoginMascotReact('reset');
   if (loginScreen) {
     loginScreen.hidden = false;
@@ -14180,7 +14182,7 @@ const ARGO_ASSISTANT_INTENTS = [
     reply: 'Até logo! Se precisar, estarei por aqui — é só tocar no barquinho ou teclar ?.'
   },
   {
-    keys: ['quem e voce', 'quem e vc', 'o que voce faz', 'o que vc faz', 'para que serve', 'ajuda', 'socorro', 'como usar', 'como funciona', 'nao sei'],
+    keys: ['quem e voce', 'quem e vc', 'o que voce faz', 'o que vc faz', 'para que serve', 'ajuda', 'como usar o app', 'como usar o argo', 'como funciona o app', 'como funciona o argo'],
     mood: 'success',
     reply: 'Sou o Argo, o barquinho-guia do app. Conheço cada aba: encontro equipamentos da rede, abro a ferramenta certa, explico como gerar a ficha e leio as dicas de cada tela. Diga o que você quer fazer.'
   },
@@ -14362,7 +14364,8 @@ function argoAssistantAsk(rawText) {
     return {
       reply: typeof best.reply === 'function' ? best.reply() : best.reply,
       mood: best.mood || 'info',
-      quickActions: acts
+      quickActions: acts,
+      score: bestScore
     };
   }
 
@@ -14416,9 +14419,12 @@ let argoAssistantCtrl = null;
 function initArgoAssistant() {
   if (typeof ArgoMascot === 'undefined' || typeof ArgoMascot.mountAssistant !== 'function') return;
   argoAssistantCtrl = ArgoMascot.mountAssistant({
-    greeting: () => argoGreetingWord() + '! Eu sou o Argo, seu guia a bordo. Posso abrir uma aba, buscar uma unidade ou explicar como algo funciona. Pergunte do seu jeito ou toque num atalho.',
+    greeting: () => argoGreetingWord() + '! Eu sou o Argo, seu guia a bordo. Posso achar unidades da rede (telefone, endereço, horário), explicar dúvidas do SUAS, abrir abas e ferramentas. Pergunte do seu jeito ou toque num atalho.',
     ask: argoAssistantAskHybrid,
-    defaultQuickActions: argoAssistantDefaultQuickActions
+    defaultQuickActions: argoAssistantDefaultQuickActions,
+    onUnit: argoAssistantOpenUnit,
+    onReset: () => { if (typeof ArgoCerebro !== 'undefined') ArgoCerebro.reset(); },
+    status: argoAssistantStatus
   });
 }
 
@@ -17709,95 +17715,143 @@ function initSheetAnalyzer() {
 }
 
 /* ============================================================
-   IA NO MASCOTE ARGO (opcional, modelo híbrido)
-   1) As respostas prontas (argoAssistantAsk) vêm sempre primeiro e
-      funcionam offline.
-   2) Só quando elas não entendem a pergunta, e se houver internet e um
-      endereço em ARGO_IA.url, a pergunta vai para um intermediário
-      (Cloudflare Worker, ver scripts/ia-worker/LEIA-ME.md) que chama a IA.
-   3) Se a IA falhar, demorar ou estiver desligada, vale a resposta pronta.
-   Sai do aparelho: só o texto da pergunta e até 4 fichas do diretório
-   público. Perguntas com documento, telefone, e-mail ou nome e sobrenome
-   são barradas aqui antes de qualquer envio. Nada de famílias, planilhas
-   ou bloco de notas é enviado.
+   IA NO MASCOTE ARGO (cérebro em js/argo-cerebro.js)
+   Ordem de resposta, da mais segura para a mais flexível:
+     1) pedido de socorro / risco de vida → telefones de emergência, na hora;
+     2) pergunta sobre unidade (telefone, endereço, horário, bairro) →
+        fichas reais do diretório, mesmo sem internet;
+     3) dúvida conceitual do SUAS → base offline com a norma de referência;
+     4) pedidos de navegação do app (abas, ferramentas) → respostas prontas;
+     5) o que sobrou → IA em streaming (se houver internet e ARGO_IA.url),
+        com o histórico da conversa e até 5 fichas do diretório;
+     6) se a IA falhar, vale a resposta pronta.
+   Sai do aparelho (só no passo 5): o texto da pergunta, as últimas mensagens
+   da conversa e fichas do diretório público. Perguntas com documento,
+   telefone, e-mail, nome e sobrenome ou endereço residencial são barradas
+   antes de qualquer envio. Nada de famílias, planilhas ou bloco de notas.
+   A conversa fica só na memória da página e é apagada ao trancar o app.
    ============================================================ */
 const ARGO_IA = {
-  url: 'https://argo-ia.paulo-ae18.workers.dev',   // endereço do Worker; vazio = IA desligada
-  timeoutMs: 20000,
-  maxPergunta: 500
+  url: 'https://argo-ia.paulo-ae18.workers.dev'   // endereço do Worker; vazio = IA desligada
 };
 
-function argoIaAtiva() {
-  return !!ARGO_IA.url && navigator.onLine !== false;
-}
-
-// Devolve um aviso se a pergunta parece trazer dado pessoal; '' se estiver livre.
-function argoIaBloqueio(texto) {
-  const t = String(texto || '');
-  const aviso = 'Para proteger as famílias, não envio mensagens com nome, documento, telefone ou e-mail para a IA. Reescreva a pergunta sem identificar ninguém.';
-  if (/[^\s@]+@[^\s@]+\.[a-z]{2,}/i.test(t)) return aviso;
-  const seq = t.match(/\d[\d.\-\/\s]{6,}\d/g) || [];
-  if (seq.some(s => s.replace(/\D/g, '').length >= 9)) return aviso;
-  if (/\b(nome|chama|chamada|chamado)\b[^.?!\n]{0,25}\b[A-ZÁÉÍÓÚÂÊÔÃÕÇ][a-záéíóúâêôãõç]+\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ][a-záéíóúâêôãõç]+/.test(t)) return aviso;
-  return '';
-}
-
-// Escolhe até 4 fichas do diretório que combinam com a pergunta (o "contexto" da IA).
-let argoIaIndice = null;
-function argoIaContexto(pergunta) {
-  if (typeof DATA === 'undefined' || !Array.isArray(DATA)) return [];
-  if (!argoIaIndice) {
-    argoIaIndice = DATA.map(d => ({
-      d,
-      nome: argoNorm([d.name, d.fullName].join(' ')),
-      resto: argoNorm([d.group, d.address, d.services, d.desc].join(' '))
-    }));
+let argoBrainReady = false;
+function argoBrain() {
+  if (typeof ArgoCerebro === 'undefined') return null;
+  if (!argoBrainReady) {
+    ArgoCerebro.init({ data: typeof DATA !== 'undefined' ? DATA : [], ia: { url: ARGO_IA.url } });
+    argoBrainReady = true;
   }
-  const stop = new Set(['de', 'da', 'do', 'das', 'dos', 'que', 'com', 'para', 'por', 'uma', 'um', 'como', 'qual', 'quais', 'onde', 'fica', 'tem', 'sobre', 'preciso', 'quero', 'ajuda', 'atende', 'atendimento']);
-  const palavras = argoNorm(pergunta).split(' ').filter(w => w.length > 2 && !stop.has(w));
-  if (!palavras.length) return [];
-  return argoIaIndice
-    .map(x => ({ x, s: palavras.reduce((s, w) => s + (x.nome.indexOf(w) > -1 ? 3 : x.resto.indexOf(w) > -1 ? 1 : 0), 0) }))
-    .filter(r => r.s > 0)
-    .sort((a, b) => b.s - a.s)
-    .slice(0, 4)
-    .map(({ x: { d } }) => ({
-      nome: d.fullName || d.name || '',
-      grupo: d.group || '',
-      endereco: d.address || '',
-      horario: d.hours || '',
-      telefones: Array.isArray(d.phones) ? d.phones.join(', ') : '',
-      servicos: String(d.services || '').slice(0, 320)
-    }));
+  return ArgoCerebro;
 }
 
-async function argoIaPerguntar(pergunta) {
-  const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), ARGO_IA.timeoutMs);
-  try {
-    const r = await fetch(ARGO_IA.url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pergunta: pergunta.slice(0, ARGO_IA.maxPergunta), contexto: argoIaContexto(pergunta) }),
-      signal: ctl.signal
-    });
-    if (!r.ok) return '';
-    const j = await r.json();
-    return typeof j.resposta === 'string' ? j.resposta.trim().slice(0, 1500) : '';
-  } finally {
-    clearTimeout(timer);
+function argoAssistantStatus() {
+  const B = argoBrain();
+  if (navigator.onLine === false) return { text: 'Sem internet · respostas prontas', level: 'off' };
+  if (B && B.aiOn()) return { text: 'IA ativa · diretório e base SUAS offline', level: 'ok' };
+  return { text: 'Respostas prontas (sem IA)', level: 'warn' };
+}
+
+function argoActiveTabInfo() {
+  const active = document.querySelector('#filterBar .filter-chip.active');
+  const cat = active ? active.dataset.cat : 'all';
+  const nm = active ? ((active.querySelector('span:not(.chip-icon):not(.chip-count)') || {}).textContent || '').trim() : '';
+  return { cat: cat === 'all' ? '' : cat, name: nm };
+}
+
+function argoAssistantOpenUnit(u) {
+  if (!u) return;
+  argoAssistantSearch(u.name || '');
+  if (argoAssistantCtrl && argoAssistantCtrl.close) argoAssistantCtrl.close();
+}
+
+// Converte o resultado do cérebro (declarativo) no formato da interface do mascote.
+function argoAssistantToUi(result, rawText, allowAiChip) {
+  const B = argoBrain();
+  const out = Object.assign({}, result);
+  out.quickActions = (result.quickActions || []).map(a => {
+    if (a.run) return a;
+    if (a.cat) return { label: a.label, run: () => argoAssistantGoTo(a.cat), reply: 'Abri "' + a.label.replace(/^(Ver|Abrir)\s+/i, '') + '".', mood: 'success' };
+    if (a.search !== undefined) return { label: a.label, run: () => (a.search ? argoAssistantSearch(a.search) : argoAssistantFocusSearch()), reply: a.search ? 'Pronto! Joguei essa busca no diretório.' : 'Pronto! O cursor já está na busca.', mood: 'success' };
+    return a;
+  });
+  if (allowAiChip && B && B.aiOn() && !result.crisis) out.quickActions.push({ label: '✨ Aprofundar com a IA', ask: rawText, force: true });
+  out.units = argoUnitsForUi(result.units);
+  return out;
+}
+function argoUnitsForUi(units) {
+  const B = argoBrain();
+  return (units || []).map(u => Object.assign({}, u, {
+    phoneLinks: (u.phones || []).map(p => ({ label: String(p).replace(/\s*\(.*$/, '').trim() || String(p), href: B ? B.telHref(p) : '' })).filter(x => x.href)
+  }));
+}
+
+// Ponto de entrada do mascote.
+function argoAssistantAskHybrid(rawText, meta) {
+  const B = argoBrain();
+  if (!B) return argoAssistantAsk(rawText);
+  meta = meta || {};
+  const tab = argoActiveTabInfo();
+  const keep = (res, units) => { B.remember(rawText, res.reply, units); return res; };
+  const questionLike = /\?|^(como|o que|qual|quais|quando|posso|devo|por que|porque|quem|existe|ha|há)\b/i.test(rawText.trim()) || rawText.trim().split(/\s+/).length >= 6;
+
+  // Dado pessoal na pergunta: avisa na hora (a pergunta só sai do aparelho se for à IA,
+  // mas o ideal é nem digitar nomes e documentos aqui). Pedido de socorro tem prioridade.
+  if (!B.crisis(rawText)) {
+    const aviso = B.piiBlock(rawText);
+    if (aviso) return { reply: aviso, mood: 'notfound', quickActions: [] };
   }
+
+  let plan = { kind: 'none' };
+  let local = null;
+  if (!meta.forceAI && !meta.regen) {
+    plan = B.plan(rawText, { tabCat: tab.cat });
+    if (plan.kind === 'crisis' || plan.kind === 'directory' || plan.kind === 'concept') {
+      return keep(argoAssistantToUi(plan.result, rawText, plan.kind === 'concept'), plan.result.units);
+    }
+    local = argoAssistantAsk(rawText);
+    // uma palavra solta ("serviço", "unidade") não deve sequestrar uma pergunta longa que a IA entende melhor
+    const longQ = rawText.trim().split(/\s+/).length >= 6 && B.aiOn();
+    if (local && !local.fallback && (local.score || 0) >= 2 && ((local.score || 0) >= 4 || !longQ)) return keep(local);
+  } else {
+    local = argoAssistantAsk(rawText);
+  }
+
+  // lista aproximada do diretório só serve para pedidos curtos ("preciso de um psicólogo"); em pergunta longa vira ruído
+  const weak = (plan.kind === 'directory-weak' && rawText.trim().split(/\s+/).length < 6) ? argoAssistantToUi(plan.result, rawText, false) : null;
+  const iaOk = B.aiOn();
+  if (iaOk && (meta.forceAI || meta.regen || !weak || questionLike)) {
+    const ai = argoAskAI(rawText, tab, weak || local);
+    if (ai) return ai;
+  }
+  if (weak) return keep(weak, plan.result.units);
+  if (local) return keep(local);
+  return local;
 }
 
-// Ponto de entrada do mascote: resposta pronta primeiro; IA só como reserva.
-function argoAssistantAskHybrid(rawText) {
-  const local = argoAssistantAsk(rawText);
-  if (!local || !local.fallback || !argoIaAtiva()) return local;
-  const bloqueio = argoIaBloqueio(rawText);
-  if (bloqueio) return { reply: bloqueio, mood: 'notfound', quickActions: null };
-  return argoIaPerguntar(rawText.trim())
-    .then(txt => (txt
-      ? { reply: txt + '\n\n(Resposta gerada por IA. Confira os dados com a unidade.)', mood: 'info', quickActions: local.quickActions }
-      : local))
-    .catch(() => local);
+function argoAskAI(rawText, tab, fallbackResult) {
+  const B = argoBrain();
+  const bloqueio = B.piiBlock(rawText);
+  if (bloqueio) return { reply: bloqueio, mood: 'notfound', quickActions: [] };
+  const gate = B.aiGate();
+  if (gate) return { reply: gate, mood: 'info', quickActions: fallbackResult ? fallbackResult.quickActions : [] };
+  const payload = B.buildPayload(rawText, { tabCat: tab.cat, tabName: tab.name });
+  const ctxNames = payload.contexto.map(f => B.norm(f.nome));
+  return {
+    reply: '', mood: 'info', badge: 'IA',
+    stream: {
+      fallback: fallbackResult || { reply: 'Não consegui consultar a IA agora. Posso procurar o termo direto no diretório.', mood: 'notfound', quickActions: [{ label: 'Buscar "' + rawText.slice(0, 22) + '" nos equipamentos', run: () => argoAssistantSearch(rawText), reply: 'Pronto! Joguei essa busca no diretório.', mood: 'success' }] },
+      run: (onDelta, signal) => B.streamAI(payload, { onDelta, signal }).then(txt => {
+        const units = B.mentionedUnits(txt, ctxNames);
+        B.remember(rawText, txt, units);
+        const bad = B.verifyPhones(txt);
+        return {
+          text: txt,
+          note: bad ? '⚠️ Um número citado não consta no diretório. Confirme com a unidade antes de usar.' : 'Confira os dados com a unidade antes de encaminhar.',
+          units: argoUnitsForUi(units),
+          followups: units.length ? ['Qual o telefone?', 'Qual o horário?'] : []
+        };
+      }, err => { if (err && err.partial) B.remember(rawText, err.partial, []); throw err; })
+    }
+  };
 }
