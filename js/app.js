@@ -3534,6 +3534,10 @@ const TOOLS_STATE = {
   sw: { running: false, start: 0, base: 0, laps: [] },
   tm: { running: false, end: 0, total: 0, left: 0, done: false, timer: null },
   calcLog: [],
+  calcMem: 0,        // memória da calculadora (M+ / M− / MR / MC)
+  alarms: [],        // alarmes (só na memória; o nome não é salvo em lugar nenhum)
+  alarmTimer: null,
+  baseTitle: null,   // título original da página, enquanto o temporizador mostra a contagem
   view: { cat: 'all', q: '' }, // filtro e busca da aba Ferramentas (sobrevivem a trocar de aba)
   ctx: null,
   hooked: false,
@@ -3545,7 +3549,83 @@ const TOOLS_TZ_BV = 'America/Boa_Vista';
 const TOOLS_TZ_BR = 'America/Sao_Paulo';
 const toolsPad2 = n => String(n).padStart(2, '0');
 
-function toolsToast(msg) {
+// Fusos para comparar com Boa Vista (UTC−4). A escolha fica neste aparelho (sem dados de pessoas).
+const TOOLS_ZONE_KEY = 'argo_tools_zone_v1';
+const TOOLS_ZONES = [
+  ['America/Sao_Paulo', 'Brasília (DF)'], ['America/Manaus', 'Manaus (AM)'], ['America/Rio_Branco', 'Rio Branco (AC)'],
+  ['America/Noronha', 'Fernando de Noronha'], ['Europe/Lisbon', 'Lisboa'], ['UTC', 'UTC']
+];
+function toolsZoneSaved() {
+  try { const v = localStorage.getItem(TOOLS_ZONE_KEY); if (TOOLS_ZONES.some(z => z[0] === v)) return v; } catch (e) { /* ignora */ }
+  return TOOLS_ZONES[0][0];
+}
+// Hora, dia e deslocamento (em minutos em relação ao UTC) de um instante num fuso.
+function toolsZoneInfo(d, tz) {
+  try {
+    const f = new Intl.DateTimeFormat('en-GB', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
+    const o = {};
+    f.formatToParts(d).forEach(p => { o[p.type] = p.value; });
+    const asUtc = Date.UTC(+o.year, +o.month - 1, +o.day, (+o.hour) % 24, +o.minute, +o.second);
+    return { h: (+o.hour) % 24, m: +o.minute, day: Math.floor(asUtc / 86400000), off: Math.round((asUtc - Math.floor(d.getTime() / 1000) * 1000) / 60000) };
+  } catch (e) { return null; }
+}
+// Ex.: "15:42 · +1 h" ou "03:10 (amanhã) · +4 h" (em relação a Boa Vista).
+function toolsZoneText(d, tz) {
+  const z = toolsZoneInfo(d, tz), b = toolsZoneInfo(d, TOOLS_TZ_BV);
+  if (!z || !b) return '--:--';
+  const diff = z.off - b.off, a = Math.abs(diff), dd = z.day - b.day;
+  const dh = diff === 0 ? 'mesmo horário' : (diff > 0 ? '+' : '−') + Math.floor(a / 60) + (a % 60 ? ':' + toolsPad2(a % 60) : '') + ' h';
+  return toolsPad2(z.h) + ':' + toolsPad2(z.m) + (dd ? (dd > 0 ? ' (amanhã)' : ' (ontem)') : '') + ' · ' + dh;
+}
+
+function toolsCopy(txt, okMsg) {
+  const ok = () => toolsToast(okMsg || 'Copiado.', 2500);
+  const fail = () => toolsToast('Não foi possível copiar.', 3500);
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok).catch(fail);
+  else fail();
+}
+
+// ---- Alarmes: próxima ocorrência de HH:MM no horário de Boa Vista, comparada com o relógio
+// do aparelho (por isso aguenta a aba ficar em segundo plano e só toca um pouco depois).
+function toolsAlarmNext(hm) {
+  const parts = hm.split(':').map(Number), now = Date.now(), p = toolsPartsIn(new Date(now), TOOLS_TZ_BV);
+  let delta = (parts[0] * 3600 + parts[1] * 60) - (p.h * 3600 + p.m * 60 + p.s);
+  if (delta <= 0) delta += 86400;
+  return now - (now % 1000) + delta * 1000;
+}
+function toolsAlarmTick() {
+  const al = TOOLS_STATE.alarms, now = Date.now();
+  al.forEach(a => {
+    if (a.done || now < a.at) return;
+    a.done = true; toolsBeep();
+    toolsToast('⏰ Alarme das ' + a.hm + (a.label ? ': ' + a.label : '.'), 12000);
+  });
+  if (!al.some(a => !a.done)) { clearInterval(TOOLS_STATE.alarmTimer); TOOLS_STATE.alarmTimer = null; }
+  toolsAlarmRender();
+}
+function toolsAlarmRender() {
+  const ul = document.getElementById('toolAlList');
+  if (!ul) return;
+  const al = TOOLS_STATE.alarms;
+  ul.innerHTML = al.length ? al.map(a => '<li class="tools-al' + (a.done ? ' is-done' : '') + '"><strong>' + a.hm + '</strong><span>'
+    + (a.label ? escapeHtml(a.label) : 'Alarme') + (a.done ? ' · tocou' : '') + '</span>'
+    + '<button type="button" class="tools-ico-btn" data-al="' + a.id + '" aria-label="Remover alarme das ' + a.hm + '" title="Remover">✕</button></li>').join('')
+    : '<li class="tools-hint">Nenhum alarme ativo.</li>';
+}
+
+// Mostra a contagem no título da aba do navegador enquanto o temporizador roda.
+function toolsTmTitle() {
+  const tm = TOOLS_STATE.tm, S = TOOLS_STATE;
+  if (tm.running) {
+    if (S.baseTitle === null) S.baseTitle = document.title;
+    document.title = '⏳ ' + toolsFmtHMS(Math.ceil(Math.max(0, tm.end - Date.now()) / 1000)) + ' · ' + S.baseTitle;
+  } else if (S.baseTitle !== null) {
+    if (tm.done && document.hidden) document.title = '⏰ Acabou! · ' + S.baseTitle;
+    else { document.title = S.baseTitle; S.baseTitle = null; }
+  }
+}
+
+function toolsToast(msg, ms) {
   let t = document.getElementById('toolsToast');
   if (!t) {
     t = document.createElement('div');
@@ -3554,7 +3634,7 @@ function toolsToast(msg) {
     document.body.appendChild(t);
   }
   t.textContent = msg; t.classList.add('is-on');
-  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('is-on'), 7000);
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('is-on'), ms || 7000);
 }
 
 // O navegador só libera áudio depois de um toque: "prepara" ao clicar em Iniciar.
@@ -3623,6 +3703,7 @@ function toolsSwRender() {
   go.textContent = sw.running ? 'Pausar' : (sw.base ? 'Continuar' : 'Iniciar');
   go.classList.toggle('btn-primary', !sw.running);
   lap.disabled = !sw.running;
+  const cp = document.getElementById('toolSwCopy'); if (cp) cp.disabled = !sw.laps.length;
   reset.disabled = !sw.running && !sw.base;
   const laps = sw.laps, parts = laps.map((t, i) => t - (i ? laps[i - 1] : 0));
   const best = laps.length >= 3 ? Math.min(...parts) : -1, worst = laps.length >= 3 ? Math.max(...parts) : -1;
@@ -3635,6 +3716,7 @@ function toolsSwRender() {
 // ---- Temporizador (continua valendo e avisa mesmo com outra aba aberta)
 function toolsTmPaint() {
   const tm = TOOLS_STATE.tm;
+  toolsTmTitle();
   const d = document.getElementById('toolTmDisp');
   if (!d) return;
   const secs = Math.ceil((tm.running ? Math.max(0, tm.end - Date.now()) : tm.left) / 1000);
@@ -3675,6 +3757,16 @@ function toolsTmPause() {
   tm.left = Math.max(0, tm.end - Date.now()); tm.running = false;
   clearInterval(tm.timer); tm.timer = null;
   toolsTmPaint();
+}
+// "+1 min": soma ao tempo que está rodando ou ao que está definido (limite de 600 min).
+function toolsTmAdd(min) {
+  const tm = TOOLS_STATE.tm, ms = min * 60000;
+  if (tm.done) { tm.done = false; tm.total = 0; tm.left = 0; }
+  if (tm.total + ms > 600 * 60000) return false;
+  tm.total += ms;
+  if (tm.running) tm.end += ms; else tm.left += ms;
+  toolsTmPaint();
+  return true;
 }
 function toolsTmSet(min) {
   const tm = TOOLS_STATE.tm;
@@ -6369,9 +6461,10 @@ function initToolsExtras() {
 }
 
 function renderToolsCard() {
-  const keys = ['C','⌫','%','÷','7','8','9','×','4','5','6','−','1','2','3','+','±','0',',','='];
-  const names = { 'C': 'Limpar tudo', '⌫': 'Apagar último dígito', '%': 'Porcentagem', '÷': 'Dividir', '×': 'Multiplicar', '−': 'Subtrair', '+': 'Somar', '±': 'Trocar sinal', ',': 'Vírgula', '=': 'Igual' };
-  const btns = keys.map(k => '<button type="button" class="calc-k' + (/[÷×−+]/.test(k) ? ' is-op' : '') + (k === '=' ? ' is-eq' : '')
+  const keys = ['MC','MR','M+','M−','√','x²','1/x','CE','C','⌫','%','÷','7','8','9','×','4','5','6','−','1','2','3','+','±','0',',','='];
+  const names = { 'C': 'Limpar tudo', 'CE': 'Limpar o número digitado', '⌫': 'Apagar último dígito', '%': 'Porcentagem', '÷': 'Dividir', '×': 'Multiplicar', '−': 'Subtrair', '+': 'Somar', '±': 'Trocar sinal', ',': 'Vírgula', '=': 'Igual',
+    'MC': 'Limpar memória', 'MR': 'Usar valor da memória', 'M+': 'Somar à memória', 'M−': 'Subtrair da memória', '√': 'Raiz quadrada', 'x²': 'Elevar ao quadrado', '1/x': 'Inverso (1 dividido pelo número)' };
+  const btns = keys.map(k => '<button type="button" class="calc-k' + (k.length === 1 && /[÷×−+]/.test(k) ? ' is-op' : '') + (/^(MC|MR|M\+|M−|√|x²|1\/x|CE)$/.test(k) ? ' calc-fn' : '') + (k === '=' ? ' is-eq' : '')
     + '" data-k="' + k + '"' + (names[k] ? ' aria-label="' + names[k] + '"' : '') + '>' + k + '</button>').join('');
   let ticks = '';
   for (let i = 0; i < 60; i++) {
@@ -6379,8 +6472,10 @@ function renderToolsCard() {
     ticks += '<line class="an-tick' + (major ? ' is-major' : '') + '" x1="' + (60 + r1 * Math.sin(a)).toFixed(2) + '" y1="' + (60 - r1 * Math.cos(a)).toFixed(2)
       + '" x2="' + (60 + r2 * Math.sin(a)).toFixed(2) + '" y2="' + (60 - r2 * Math.cos(a)).toFixed(2) + '"/>';
   }
-  const tabs = [['clock', 'Relógio'], ['sw', 'Cronômetro'], ['tm', 'Temporizador']].map(t =>
+  const tabs = [['clock', 'Relógio'], ['sw', 'Cronômetro'], ['tm', 'Temporizador'], ['al', 'Alarme']].map(t =>
     '<button type="button" role="tab" class="tools-tab" data-tt="' + t[0] + '" id="toolTab-' + t[0] + '" aria-controls="toolPane-' + t[0] + '">' + t[1] + '</button>').join('');
+  const zoneSaved = toolsZoneSaved();
+  const zoneOpts = TOOLS_ZONES.map(z => '<option value="' + z[0] + '"' + (z[0] === zoneSaved ? ' selected' : '') + '>' + z[1] + '</option>').join('');
   const presets = [5, 10, 15, 30, 45, 60].map(m => '<button type="button" class="tools-chip" data-min="' + m + '">' + m + ' min</button>').join('');
   return '<div id="toolsRoot" class="tools-wrap">'
     + toolsNavHtml()
@@ -6394,13 +6489,14 @@ function renderToolsCard() {
     +       '<line id="toolHandS" class="an-s" x1="60" y1="68" x2="60" y2="16"/><circle class="an-dot" cx="60" cy="60" r="3.2"/></svg>'
     +     '<div class="tools-clock-text"><div id="toolsClock" class="tools-time" role="timer" aria-live="off">--:--:--</div><div id="toolsDate" class="tools-date"></div>'
     +       '<div class="tools-hint">Horário de Boa Vista (RR)</div>'
-    +       '<div class="tools-hint tools-br">Brasília (DF): <strong id="toolsBr">--:--</strong> · +1 h</div></div>'
+    +       '<div class="tools-hint tools-br"><label for="toolsZoneSel" class="sr-only">Comparar com outro fuso</label><select id="toolsZoneSel" class="tools-select">' + zoneOpts + '</select><strong id="toolsBr">--:--</strong></div></div>'
     +   '</div></div>'
     + '<div class="tools-pane" role="tabpanel" id="toolPane-sw" aria-labelledby="toolTab-sw" hidden>'
     +   '<div id="toolSwDisp" class="tools-time tools-time-sm" role="timer" aria-live="off">00:00,00</div>'
     +   '<div class="tools-row"><button type="button" class="btn-tech btn-primary" id="toolSwGo">Iniciar</button>'
     +   '<button type="button" class="btn-tech btn-secondary" id="toolSwLap">Volta</button>'
-    +   '<button type="button" class="btn-tech btn-secondary" id="toolSwReset">Zerar</button></div>'
+    +   '<button type="button" class="btn-tech btn-secondary" id="toolSwReset">Zerar</button>'
+    +   '<button type="button" class="btn-tech btn-secondary" id="toolSwCopy" title="Copiar as voltas como texto">Copiar voltas</button></div>'
     +   '<ol id="toolSwLaps" class="tools-laps" aria-label="Voltas"></ol>'
     + '</div>'
     + '<div class="tools-pane" role="tabpanel" id="toolPane-tm" aria-labelledby="toolTab-tm" hidden>'
@@ -6410,16 +6506,25 @@ function renderToolsCard() {
     +   '<div class="tools-row"><label class="tools-lbl">Outro tempo (min) <input id="toolTmMin" class="tools-input" type="number" min="1" max="600" inputmode="numeric" placeholder="ex.: 20"></label>'
     +   '<button type="button" class="btn-tech btn-secondary" id="toolTmSet">Definir</button></div>'
     +   '<div class="tools-row"><button type="button" class="btn-tech btn-primary" id="toolTmGo">Iniciar</button>'
+    +   '<button type="button" class="btn-tech btn-secondary" id="toolTmAdd" title="Somar 1 minuto ao tempo">+1 min</button>'
     +   '<button type="button" class="btn-tech btn-secondary" id="toolTmReset">Zerar</button></div>'
-    +   '<p class="tools-hint">Escolha um tempo e toque em Iniciar. O aviso (som e vibração) toca mesmo se você trocar de aba, desde que o app continue aberto.</p>'
+    +   '<p class="tools-hint">Escolha um tempo e toque em Iniciar. O aviso (som e vibração) toca mesmo se você trocar de aba, desde que o app continue aberto. A contagem também aparece no título da aba do navegador.</p>'
+    + '</div>'
+    + '<div class="tools-pane" role="tabpanel" id="toolPane-al" aria-labelledby="toolTab-al" hidden>'
+    +   '<div class="tools-row"><label class="tools-lbl">Horário (Boa Vista) <input id="toolAlTime" class="tools-input" type="time"></label>'
+    +   '<label class="tools-lbl tools-grow">Aviso (opcional) <input id="toolAlLabel" class="tools-input" type="text" maxlength="60" placeholder="ex.: visita domiciliar às 15h"></label>'
+    +   '<button type="button" class="btn-tech btn-primary" id="toolAlAdd">Ativar alarme</button></div>'
+    +   '<ul id="toolAlList" class="tools-al-list" aria-label="Alarmes"></ul>'
+    +   '<p class="tools-hint">O alarme toca na próxima vez que der o horário, desde que o app continue aberto. Fica só na memória: ao recarregar a página os alarmes somem, e o aviso digitado não é salvo.</p>'
     + '</div></section>'
     // ---------- Calculadora
     + '<section id="calcBox" class="tech-card tools-card" aria-label="Calculadora" tabindex="0"><h2>Calculadora</h2>'
-    + '<div id="calcHist" class="calc-hist" aria-hidden="true">&nbsp;</div>'
+    + '<div class="calc-top"><span id="calcMem" class="calc-mem" hidden>M</span><div id="calcHist" class="calc-hist" aria-hidden="true">&nbsp;</div></div>'
     + '<div class="calc-display-row"><div id="calcDisplay" class="calc-display" role="status" aria-live="polite">0</div>'
-    + '<button type="button" class="calc-copy" id="calcCopy" aria-label="Copiar resultado" title="Copiar resultado">Copiar</button></div>'
+    + '<button type="button" class="calc-copy" id="calcCopy" aria-label="Copiar resultado" title="Copiar resultado">Copiar</button>'
+    + '<button type="button" class="calc-copy" id="calcCopyBrl" aria-label="Copiar como valor em reais" title="Copiar como valor em reais (R$)">R$</button></div>'
     + '<div id="calcKeys" class="calc-keys">' + btns + '</div>'
-    + '<div id="calcHint" class="tools-hint" role="status">Clique aqui e use o teclado: números, + − * /, Enter, Backspace e Esc.</div>'
+    + '<div id="calcHint" class="tools-hint" role="status">Clique aqui e use o teclado: números, + − * /, Enter, Backspace, Esc (limpa tudo) e Del (limpa o número). Ctrl+V cola um valor.</div>'
     + '<details class="calc-log-box"><summary>Histórico <span id="calcLogCount" class="calc-log-count"></span></summary>'
     + '<ul id="calcLog" class="calc-log"></ul><button type="button" class="btn-tech btn-secondary calc-log-clear" id="calcLogClear">Limpar histórico</button></details></section>'
     // ---------- Atendimento: renda per capita, idade e QR Code
@@ -6430,13 +6535,17 @@ function renderToolsCard() {
     +   '<div class="notes-side"><div class="notes-side-top"><input id="toolNoteSearch" class="tools-input" type="search" placeholder="Buscar nas notas" aria-label="Buscar nas notas">'
     +   '<button type="button" class="btn-tech btn-primary" id="toolNoteNew">+ Nova</button></div>'
     +   '<ul id="toolNoteList" class="notes-list" aria-label="Suas notas"></ul></div>'
-    +   '<div class="notes-main"><textarea id="toolPad" class="tools-pad" aria-label="Texto da nota" placeholder="Escreva aqui. O texto é salvo automaticamente, cifrado, neste aparelho."></textarea>'
+    +   '<div class="notes-main"><textarea id="toolPad" class="tools-pad" aria-label="Texto da nota" placeholder="Escreva aqui. O texto é salvo automaticamente, cifrado, neste aparelho. Dica: Ctrl+S salva na hora."></textarea>'
     +   '<div class="tools-bar"><span id="toolPadInfo" class="tools-hint" role="status"></span>'
     +   '<button type="button" class="btn-tech btn-secondary" id="toolPadStamp" title="Inserir data e hora no cursor">Data/hora</button>'
+    +   '<button type="button" class="btn-tech btn-secondary" id="toolPadTask" title="Transformar a linha (ou as linhas selecionadas) em tarefas. Enter continua a lista; Ctrl+Enter marca ou desmarca.">☐ Lista</button>'
+    +   '<button type="button" class="btn-tech btn-secondary" id="toolPadPin" aria-pressed="false">Fixar</button>'
     +   '<button type="button" class="btn-tech btn-secondary" id="toolPadCopy">Copiar</button>'
-    +   '<button type="button" class="btn-tech btn-secondary" id="toolPadPdf" title="Salvar esta nota em PDF">Salvar PDF</button>'
-    +   '<button type="button" class="btn-tech btn-secondary" id="toolPadPdfAll" title="Salvar todas as notas em um PDF (uma por página)">PDF de todas</button>'
-    +   '<button type="button" class="btn-tech btn-secondary" id="toolPadSave">Baixar .txt</button>'
+    +   '<details class="notes-export"><summary class="btn-tech btn-secondary">Exportar</summary><div class="notes-export-menu">'
+    +   '<button type="button" class="btn-tech btn-secondary" id="toolPadPdf" title="Salvar esta nota em PDF">Esta nota em PDF</button>'
+    +   '<button type="button" class="btn-tech btn-secondary" id="toolPadPdfAll" title="Salvar todas as notas em um PDF (uma por página)">Todas em PDF</button>'
+    +   '<button type="button" class="btn-tech btn-secondary" id="toolPadSave">Esta nota em .txt</button>'
+    +   '<button type="button" class="btn-tech btn-secondary" id="toolPadSaveAll" title="Baixar todas as notas em um único .txt">Todas em .txt</button></div></details>'
     +   '<button type="button" class="btn-tech btn-secondary" id="toolPadClear">Excluir nota</button></div></div>'
     + '</div>'
     + '<p class="tools-hint">Fica cifrado com a senha do app e some em “Apagar dados salvos neste dispositivo”. Ao baixar o .txt ou o PDF, o arquivo sai sem cifra.</p></section></div>';
@@ -6456,15 +6565,15 @@ const TOOLS_CATS = [
 ];
 // A chave é o aria-label de cada cartão (é por ele que a barra encontra o cartão).
 const TOOLS_CATALOG = {
-  'Relógio, cronômetro e temporizador': { id: 'relogio', cat: 'tempo', kw: 'hora horario cronometro timer alarme boa vista brasilia fuso' },
-  'Calculadora': { id: 'calculadora', cat: 'calculo', kw: 'conta somar porcentagem dividir multiplicar' },
+  'Relógio, cronômetro e temporizador': { id: 'relogio', cat: 'tempo', kw: 'hora horario cronometro timer alarme lembrete despertador boa vista brasilia fuso' },
+  'Calculadora': { id: 'calculadora', cat: 'calculo', kw: 'conta somar porcentagem dividir multiplicar memoria raiz quadrado colar real reais' },
   'Renda per capita': { id: 'renda', cat: 'atend', kw: 'bolsa familia cadunico cadastro unico salario minimo meio salario renda familia pessoas' },
   'Idade e datas': { id: 'idade', cat: 'atend', kw: 'nascimento faixa etaria meses crianca idoso' },
   'Gerador de QR Code': { id: 'qr', cat: 'atend', kw: 'link whatsapp codigo imagem png' },
   'Contador de atendimentos': { id: 'contador', cat: 'atend', kw: 'rma mensal contagem resumo mes atendimentos' },
   'Calculadora de prazos': { id: 'prazos', cat: 'atend', kw: 'dias uteis corridos feriados vencimento data' },
   'Analisador de planilha': { id: 'planilha', cat: 'dados', kw: 'csv excel xlsx xls duplicados repetidos base familias nis coluna contar' },
-  'Bloco de notas': { id: 'notas', cat: 'notas', kw: 'anotacao nota texto pdf txt' }
+  'Bloco de notas': { id: 'notas', cat: 'notas', kw: 'anotacao nota texto pdf txt lista tarefas checklist fixar' }
 };
 const toolsNorm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
@@ -6611,9 +6720,10 @@ function initToolsPanel() {
   initToolsNav();
 
   // ---- Abas do cartão do relógio
+  const PANES = ['clock', 'sw', 'tm', 'al'];
   const setPane = name => {
     TOOLS_STATE.pane = name;
-    ['clock', 'sw', 'tm'].forEach(n => {
+    PANES.forEach(n => {
       const on = n === name;
       $('toolPane-' + n).hidden = !on;
       const t = $('toolTab-' + n);
@@ -6622,25 +6732,27 @@ function initToolsPanel() {
     });
     if (name === 'sw') { toolsSwRender(); toolsSwLoop(); }
     if (name === 'tm') toolsTmPaint();
+    if (name === 'al') toolsAlarmRender();
   };
   document.querySelector('.tools-tabs').addEventListener('click', e => {
     const b = e.target.closest('[data-tt]'); if (b) setPane(b.dataset.tt);
   });
   document.querySelector('.tools-tabs').addEventListener('keydown', e => {
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-    const order = ['clock', 'sw', 'tm'], i = order.indexOf(TOOLS_STATE.pane);
-    const n = order[(i + (e.key === 'ArrowRight' ? 1 : 2)) % 3];
+    const i = PANES.indexOf(TOOLS_STATE.pane);
+    const n = PANES[(i + (e.key === 'ArrowRight' ? 1 : PANES.length - 1)) % PANES.length];
     setPane(n); $('toolTab-' + n).focus(); e.preventDefault();
   });
 
   // ---- Relógio (para sozinho quando a aba some; pausa com a página oculta)
+  const zoneSel = $('toolsZoneSel');
   const tick = () => {
     const c = $('toolsClock');
     if (!c) { clearInterval(TOOLS_STATE.clockTimer); return; }
     if (document.hidden) return;
-    const d = new Date(), p = toolsPartsIn(d, TOOLS_TZ_BV), br = toolsPartsIn(d, TOOLS_TZ_BR);
+    const d = new Date(), p = toolsPartsIn(d, TOOLS_TZ_BV);
     c.textContent = toolsPad2(p.h) + ':' + toolsPad2(p.m) + ':' + toolsPad2(p.s);
-    $('toolsBr').textContent = toolsPad2(br.h) + ':' + toolsPad2(br.m);
+    $('toolsBr').textContent = toolsZoneText(d, zoneSel.value);
     let dt;
     try { dt = d.toLocaleDateString('pt-BR', { timeZone: TOOLS_TZ_BV, weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }); }
     catch (e) { dt = d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }); }
@@ -6652,6 +6764,10 @@ function initToolsPanel() {
   clearInterval(TOOLS_STATE.clockTimer);
   TOOLS_STATE.clockTimer = setInterval(tick, 1000); tick();
   TOOLS_STATE.tickClock = tick;
+  zoneSel.addEventListener('change', () => {
+    try { localStorage.setItem(TOOLS_ZONE_KEY, zoneSel.value); } catch (e) { /* ignora */ }
+    tick();
+  });
   if (!TOOLS_STATE.hooked) {
     TOOLS_STATE.hooked = true;
     document.addEventListener('visibilitychange', () => {
@@ -6676,6 +6792,11 @@ function initToolsPanel() {
     TOOLS_STATE.sw = { running: false, start: 0, base: 0, laps: [] };
     toolsSwRender();
   });
+  $('toolSwCopy').addEventListener('click', () => {
+    const laps = TOOLS_STATE.sw.laps;
+    if (!laps.length) return;
+    toolsCopy(laps.map((t, i) => 'Volta ' + (i + 1) + ': ' + toolsFmtSw(t - (i ? laps[i - 1] : 0)) + ' (total ' + toolsFmtSw(t) + ')').join('\n'), 'Voltas copiadas.');
+  });
 
   // ---- Temporizador
   document.querySelector('.tools-chips').addEventListener('click', e => {
@@ -6686,24 +6807,50 @@ function initToolsPanel() {
   });
   const setCustom = () => {
     const inp = $('toolTmMin');
-    if (!toolsTmSet(inp.value)) { inp.focus(); toolsToast('Informe um tempo entre 1 e 600 minutos.'); return; }
+    if (!toolsTmSet(inp.value)) { inp.focus(); toolsToast('Informe um tempo entre 1 e 600 minutos.', 3500); return; }
     document.querySelectorAll('.tools-chip').forEach(c => c.classList.remove('is-active'));
     $('toolTmGo').focus();
   };
   $('toolTmSet').addEventListener('click', setCustom);
   $('toolTmMin').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); setCustom(); } });
   $('toolTmGo').addEventListener('click', () => { TOOLS_STATE.tm.running ? toolsTmPause() : toolsTmStart(); });
+  $('toolTmAdd').addEventListener('click', () => {
+    if (!toolsTmAdd(1)) toolsToast('O limite do temporizador é 600 minutos.', 3500);
+    document.querySelectorAll('.tools-chip').forEach(c => c.classList.remove('is-active'));
+  });
   $('toolTmReset').addEventListener('click', () => {
     const tm = TOOLS_STATE.tm;
     clearInterval(tm.timer); tm.timer = null;
     tm.running = false; tm.done = false; tm.left = tm.total;
     toolsTmPaint();
   });
+
+  // ---- Alarme (horário de Boa Vista; toca enquanto o app estiver aberto)
+  $('toolAlAdd').addEventListener('click', () => {
+    const hm = $('toolAlTime').value, al = TOOLS_STATE.alarms;
+    if (!/^\d{2}:\d{2}$/.test(hm)) { toolsToast('Informe o horário do alarme.', 3500); $('toolAlTime').focus(); return; }
+    if (al.filter(a => !a.done).length >= 8) { toolsToast('Limite de 8 alarmes ativos.', 3500); return; }
+    toolsPrimeAudio();
+    al.push({ id: 'a' + Date.now().toString(36) + al.length, hm, label: $('toolAlLabel').value.trim().slice(0, 60), at: toolsAlarmNext(hm), done: false });
+    al.sort((x, y) => x.at - y.at);
+    $('toolAlLabel').value = '';
+    if (!TOOLS_STATE.alarmTimer) TOOLS_STATE.alarmTimer = setInterval(toolsAlarmTick, 1000);
+    toolsAlarmRender();
+  });
+  $('toolAlLabel').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('toolAlAdd').click(); } });
+  $('toolAlList').addEventListener('click', e => {
+    const b = e.target.closest('[data-al]'); if (!b) return;
+    TOOLS_STATE.alarms = TOOLS_STATE.alarms.filter(a => a.id !== b.dataset.al);
+    if (!TOOLS_STATE.alarms.some(a => !a.done)) { clearInterval(TOOLS_STATE.alarmTimer); TOOLS_STATE.alarmTimer = null; }
+    toolsAlarmRender();
+  });
   setPane(TOOLS_STATE.pane);
   toolsTmPaint();
 
   // ---- Calculadora (sem eval)
   const disp = $('calcDisplay'), hist = $('calcHist'), logEl = $('calcLog'), hint = $('calcHint');
+  const memEl = $('calcMem'), keysEl = $('calcKeys');
+  const mcBtn = keysEl.querySelector('[data-k="MC"]'), mrBtn = keysEl.querySelector('[data-k="MR"]');
   const hintDefault = hint.textContent;
   const S = { cur: '0', prev: null, op: null, fresh: true, last: null, note: '' };
   const val = s => parseFloat(String(s).replace(',', '.'));
@@ -6714,6 +6861,8 @@ function initToolsPanel() {
     return (neg ? '-' : '') + parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + (parts.length > 1 ? ',' + parts[1] : '');
   };
   const calc = (a, op, b) => op === '+' ? a + b : op === '−' ? a - b : op === '×' ? a * b : b === 0 ? NaN : a / b;
+  const MSG_ZERO = 'Não é possível dividir por zero';
+  const reset = () => { S.cur = '0'; S.prev = null; S.op = null; S.fresh = true; S.last = null; S.note = ''; };
   const renderLog = () => {
     const log = TOOLS_STATE.calcLog;
     logEl.innerHTML = log.length
@@ -6726,18 +6875,23 @@ function initToolsPanel() {
     disp.textContent = pretty(S.cur);
     const L = disp.textContent.length;
     disp.style.fontSize = L > 17 ? '1.05rem' : L > 13 ? '1.35rem' : '';
-    hist.textContent = S.op ? pretty(S.prev) + ' ' + S.op : (S.note || '\u00a0');
-    document.querySelectorAll('#calcKeys .is-op').forEach(b => b.classList.toggle('is-pending', !!S.op && S.fresh && b.dataset.k === S.op));
+    hist.textContent = (S.cur === 'Erro' && S.note) ? S.note : S.op ? pretty(S.prev) + ' ' + S.op : (S.note || '\u00a0');
+    const mem = TOOLS_STATE.calcMem;
+    memEl.hidden = !mem; mcBtn.disabled = mrBtn.disabled = !mem;
+    memEl.title = mem ? 'Memória: ' + pretty(fmt(mem)) : '';
+    keysEl.querySelectorAll('.is-op').forEach(b => b.classList.toggle('is-pending', !!S.op && S.fresh && b.dataset.k === S.op));
   };
   const press = k => {
-    if (S.cur === 'Erro' && k !== 'C') return;
+    // Depois de um erro, só limpar (C, CE ou ⌫) destrava a calculadora.
+    if (S.cur === 'Erro') { if (k === 'C' || k === 'CE' || k === '⌫') { reset(); show(); } return; }
     if (k !== '=') S.note = '';
     if (/^\d$/.test(k)) {
       if (!S.fresh && S.cur.replace(/[-,]/g, '').length >= 15) return;
       S.cur = (S.fresh || S.cur === '0') ? k : S.cur + k; S.fresh = false;
     } else if (k === ',') {
       if (S.fresh) { S.cur = '0,'; S.fresh = false; } else if (!S.cur.includes(',')) S.cur += ',';
-    } else if (k === 'C') { S.cur = '0'; S.prev = null; S.op = null; S.fresh = true; S.last = null; }
+    } else if (k === 'C') { reset(); }
+    else if (k === 'CE') { S.cur = '0'; S.fresh = true; } // limpa só o número digitado; a conta em andamento continua
     else if (k === '⌫') {
       if (!S.fresh) S.cur = (S.cur.length <= 1 || (S.cur.length === 2 && S.cur[0] === '-')) ? '0' : S.cur.slice(0, -1);
     } else if (k === '±') { if (S.cur !== '0' && S.cur !== '0,') S.cur = S.cur[0] === '-' ? S.cur.slice(1) : '-' + S.cur; }
@@ -6745,6 +6899,16 @@ function initToolsPanel() {
       // 200 + 10 % mostra 20 (10% de 200) e "=" dá 220; sem operação pendente, divide por 100.
       const x = val(S.cur);
       S.cur = fmt((S.op === '+' || S.op === '−') && S.prev !== null ? val(S.prev) * x / 100 : x / 100); S.fresh = true;
+    } else if (k === '√' || k === 'x²' || k === '1/x') {
+      const x = val(S.cur);
+      S.cur = fmt(k === '√' ? Math.sqrt(x) : k === 'x²' ? x * x : 1 / x); S.fresh = true;
+      if (S.cur === 'Erro') S.note = k === '√' ? 'Não existe raiz quadrada de número negativo' : k === '1/x' ? MSG_ZERO : 'Resultado grande demais';
+    } else if (k === 'MC') { TOOLS_STATE.calcMem = 0; }
+    else if (k === 'MR') { S.cur = fmt(TOOLS_STATE.calcMem); S.fresh = true; }
+    else if (k === 'M+' || k === 'M−') {
+      const x = val(S.cur);
+      TOOLS_STATE.calcMem = parseFloat((TOOLS_STATE.calcMem + (k === 'M+' ? x : -x)).toPrecision(12));
+      S.fresh = true;
     } else if (k === '=') {
       // Com operação pendente: calcula. Sem ela, "=" repete a última (ex.: 5 + 3 = = dá 11).
       let op, aStr, bStr;
@@ -6757,35 +6921,59 @@ function initToolsPanel() {
         TOOLS_STATE.calcLog.unshift({ expr: S.note, res: pretty(r) });
         TOOLS_STATE.calcLog.length = Math.min(TOOLS_STATE.calcLog.length, 12);
         renderLog();
-      } else S.last = null;
+      } else { S.last = null; S.note = MSG_ZERO; }
       S.cur = r; S.op = null; S.prev = null; S.fresh = true;
     } else { // operador
       if (S.op && S.prev !== null && !S.fresh) S.cur = fmt(calc(val(S.prev), S.op, val(S.cur)));
-      S.prev = S.cur; S.op = k; S.fresh = true; S.last = null;
+      if (S.cur === 'Erro') { S.prev = null; S.op = null; S.fresh = true; S.last = null; S.note = MSG_ZERO; }
+      else { S.prev = S.cur; S.op = k; S.fresh = true; S.last = null; }
     }
     show();
   };
-  $('calcKeys').addEventListener('click', e => {
-    const b = e.target.closest('[data-k]'); if (b) press(b.dataset.k);
+  keysEl.addEventListener('click', e => {
+    const b = e.target.closest('[data-k]'); if (b && !b.disabled) press(b.dataset.k);
   });
-  const keyMap = { '*': '×', '/': '÷', '-': '−', '.': ',', Enter: '=', Backspace: '⌫', Escape: 'C', Delete: 'C' };
+  const keyMap = { '*': '×', '/': '÷', '-': '−', '.': ',', Enter: '=', Backspace: '⌫', Escape: 'C', Delete: 'CE' };
   $('calcBox').addEventListener('keydown', e => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.target.tagName === 'BUTTON' && (e.key === 'Enter' || e.key === ' ')) return; // deixa o botão focado agir
     if (e.target.closest && e.target.closest('details')) return; // histórico tem seus próprios botões
     const k = keyMap[e.key] || e.key;
-    if (/^[0-9+,=%]$/.test(k) || ['×', '÷', '−', '⌫', 'C'].includes(k)) {
+    if (/^[0-9+,=%]$/.test(k) || ['×', '÷', '−', '⌫', 'C', 'CE'].includes(k)) {
       e.preventDefault(); e.stopPropagation(); // evita que atalhos globais (ex.: "/") peguem a tecla
       press(k);
     }
   });
   let hintT = null;
   const say = msg => { hint.textContent = msg; clearTimeout(hintT); hintT = setTimeout(() => { hint.textContent = hintDefault; }, 2500); };
-  $('calcCopy').addEventListener('click', () => {
-    const txt = S.cur;
-    const ok = () => say('Resultado copiado: ' + pretty(txt));
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok).catch(() => say('Não foi possível copiar.'));
+  const copyVal = txt => {
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(() => say('Copiado: ' + txt)).catch(() => say('Não foi possível copiar.'));
     else say('Seu navegador não permite copiar daqui.');
+  };
+  $('calcCopy').addEventListener('click', () => { if (S.cur !== 'Erro') copyVal(pretty(S.cur)); });
+  $('calcCopyBrl').addEventListener('click', () => {
+    const n = val(S.cur);
+    if (!isFinite(n)) return;
+    copyVal(n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }).replace(/\u00a0/g, ' '));
+  });
+  // Cola números em vários formatos: 1234.56 · 1.234,56 · R$ 1.234,56 · -15
+  const parseBr = t => {
+    let s = String(t).replace(/[^\d.,-]/g, '').replace(/(?!^)-/g, '');
+    if (!/\d/.test(s)) return null;
+    const lc = s.lastIndexOf(','), ld = s.lastIndexOf('.');
+    if (lc > -1 && ld > -1) s = lc > ld ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+    else if (lc > -1) s = s.replace(/,/g, (m, i) => i === lc ? '.' : '');
+    else if (ld > -1 && /^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+    const n = parseFloat(s);
+    return isFinite(n) ? n : null;
+  };
+  $('calcBox').addEventListener('paste', e => {
+    const n = parseBr((e.clipboardData && e.clipboardData.getData('text')) || '');
+    if (n === null) return;
+    e.preventDefault();
+    if (S.cur === 'Erro') reset();
+    S.cur = fmt(n); S.fresh = true; S.note = '';
+    show(); say('Valor colado: ' + pretty(S.cur));
   });
   logEl.addEventListener('click', e => {
     const b = e.target.closest('[data-i]'); if (!b) return;
@@ -6804,12 +6992,26 @@ function initToolsPanel() {
     const l = (String(x).split('\n').find(s => s.trim()) || '').trim();
     return l ? (l.length > 40 ? l.slice(0, 40) + '…' : l) : 'Nota sem título';
   };
+  // Prévia na lista: a linha onde a busca bateu ou, sem busca, a 2ª linha com texto.
+  const snipOf = (x, q) => {
+    const ls = String(x).split('\n').map(s => s.trim()).filter(Boolean);
+    const s = (q && ls.find((l, i) => i > 0 && norm(l).includes(q))) || ls[1] || '';
+    return s.length > 60 ? s.slice(0, 60) + '…' : s;
+  };
   const whenOf = u => {
     const d = new Date(u), now = new Date();
     return d.toDateString() === now.toDateString()
       ? d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
       : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   };
+  const stampOf = u => {
+    const d = new Date(u);
+    try { return d.toLocaleDateString('pt-BR', { timeZone: TOOLS_TZ_BV }) + ' ' + d.toLocaleTimeString('pt-BR', { timeZone: TOOLS_TZ_BV, hour: '2-digit', minute: '2-digit' }); }
+    catch (e) { return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
+  };
+  const stampNow = () => stampOf(Date.now());
+  // Fixadas primeiro; dentro de cada grupo, a mais recente no topo.
+  const byRecent = (a, b) => (b.p ? 1 : 0) - (a.p ? 1 : 0) || b.u - a.u;
 
   let data = safeStorage.getJSON(TOOLPAD_V2_KEY, null);
   if (!data || !Array.isArray(data.notes) || !data.notes.length) {
@@ -6836,12 +7038,20 @@ function initToolsPanel() {
   };
   const renderList = () => {
     const q = norm(search.value.trim());
-    const items = data.notes.slice().sort((a, b) => b.u - a.u).filter(n => !q || norm(n.x).includes(q));
+    const items = data.notes.slice().sort(byRecent).filter(n => !q || norm(n.x).includes(q));
     list.innerHTML = items.length ? items.map(n => {
-      const act = n.id === data.active;
+      const act = n.id === data.active, sn = snipOf(n.x, q);
       return '<li><button type="button" class="notes-item' + (act ? ' is-active' : '') + '" data-id="' + n.id + '" aria-current="' + (act ? 'true' : 'false') + '">'
-        + '<span class="notes-item-title">' + escapeHtml(titleOf(n.x)) + '</span><span class="notes-item-meta">' + escapeHtml(whenOf(n.u)) + '</span></button></li>';
+        + '<span class="notes-item-title">' + (n.p ? '<span class="notes-pin" role="img" aria-label="Fixada">📌</span> ' : '') + escapeHtml(titleOf(n.x)) + '</span>'
+        + (sn ? '<span class="notes-item-snip">' + escapeHtml(sn) + '</span>' : '')
+        + '<span class="notes-item-meta">' + escapeHtml(whenOf(n.u)) + '</span></button></li>';
     }).join('') : '<li class="tools-hint notes-empty">Nenhuma nota encontrada.</li>';
+  };
+  const paintPin = () => {
+    const b = $('toolPadPin'), on = !!current().p;
+    b.textContent = on ? 'Desafixar' : 'Fixar';
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.title = on ? 'Tirar esta nota do topo da lista' : 'Manter esta nota no topo da lista';
   };
   let saveT = null;
   const saveNow = () => {
@@ -6855,15 +7065,15 @@ function initToolsPanel() {
   const openNote = id => {
     if (saveT) saveNow();
     data.active = id; pad.value = current().x;
-    info.textContent = counts(); renderList(); persist();
+    info.textContent = counts(); renderList(); paintPin(); persist();
   };
   pad.value = current().x;
   info.textContent = counts();
-  renderList();
+  renderList(); paintPin();
 
   pad.addEventListener('input', () => {
     const n = current(); n.x = pad.value; n.u = Date.now();
-    info.textContent = counts(); clearTimeout(saveT); saveT = setTimeout(saveNow, 400);
+    info.textContent = 'Salvando… · ' + counts(); clearTimeout(saveT); saveT = setTimeout(saveNow, 400);
   });
   pad.addEventListener('blur', () => { if (saveT) saveNow(); });
   list.addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (b) { openNote(b.dataset.id); pad.focus(); } });
@@ -6874,24 +7084,76 @@ function initToolsPanel() {
     if (!current().x.trim()) { renderList(); pad.focus(); return; } // já existe uma nota vazia
     const n = { id: newId(), x: '', u: Date.now() };
     data.notes.push(n); data.active = n.id; pad.value = '';
-    info.textContent = counts(); renderList(); pad.focus();
+    info.textContent = counts(); renderList(); paintPin(); pad.focus();
   });
+  $('toolPadPin').addEventListener('click', () => {
+    const n = current(); n.p = !n.p;
+    saveNow(); paintPin();
+  });
+
+  // ---- Edição com histórico de desfazer (Ctrl+Z) preservado; sem execCommand, cai no setRangeText
+  const edit = (a, b, txt) => {
+    pad.focus(); // o execCommand só age no campo em foco (ao clicar nos botões, o foco vai para o botão)
+    pad.setSelectionRange(a, b);
+    let ok = false;
+    try { ok = txt ? document.execCommand('insertText', false, txt) : document.execCommand('delete'); } catch (e) { ok = false; }
+    if (!ok) { pad.setRangeText(txt, a, b, 'end'); pad.dispatchEvent(new Event('input')); }
+  };
   $('toolPadStamp').addEventListener('click', () => {
-    const d = new Date(); let s;
-    try { s = d.toLocaleDateString('pt-BR', { timeZone: TOOLS_TZ_BV }) + ' ' + d.toLocaleTimeString('pt-BR', { timeZone: TOOLS_TZ_BV, hour: '2-digit', minute: '2-digit' }); }
-    catch (e) { s = d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
     const pos = pad.selectionStart, lead = pos > 0 && pad.value[pos - 1] !== '\n' ? '\n' : '';
-    pad.setRangeText(lead + s + ' — ', pos, pad.selectionEnd, 'end');
-    pad.dispatchEvent(new Event('input')); pad.focus();
+    edit(pos, pad.selectionEnd, lead + stampNow() + ' — '); pad.focus();
   });
+
+  // ---- Listas: "☐ tarefa" (Ctrl+Enter marca ☑), "- item" e "• item" continuam sozinhas no Enter
+  const LIST_RE = /^(\s*)(☐ |☑ |- |• )/;
+  $('toolPadTask').addEventListener('click', () => {
+    const v = pad.value, a = pad.selectionStart, b = pad.selectionEnd;
+    const ls = a ? v.lastIndexOf('\n', a - 1) + 1 : 0;
+    const end = b > a && v[b - 1] === '\n' ? b - 1 : b, le0 = v.indexOf('\n', end), le = le0 < 0 ? v.length : le0;
+    const block = v.slice(ls, le);
+    const out = !block.trim() ? block + '☐ ' : block.split('\n').map(l => {
+      if (!l.trim()) return l;
+      const m = LIST_RE.exec(l);
+      return m ? (m[2] === '☐ ' ? l : m[1] + '☐ ' + l.slice(m[0].length)) : /^\s*/.exec(l)[0] + '☐ ' + l.trimStart();
+    }).join('\n');
+    if (out !== block) edit(ls, le, out);
+    pad.focus();
+  });
+  pad.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) { e.preventDefault(); saveNow(); return; }
+    if (e.key !== 'Enter' || e.shiftKey || e.altKey || e.isComposing) return;
+    const v = pad.value, pos = pad.selectionStart;
+    if (pos !== pad.selectionEnd) return;
+    const ls = pos ? v.lastIndexOf('\n', pos - 1) + 1 : 0, le0 = v.indexOf('\n', pos), le = le0 < 0 ? v.length : le0;
+    const full = v.slice(ls, le), m = LIST_RE.exec(full);
+    if (e.ctrlKey || e.metaKey) { // Ctrl+Enter: marca/desmarca; em linha comum, vira tarefa
+      e.preventDefault();
+      if (m && (m[2] === '☐ ' || m[2] === '☑ ')) {
+        const at = ls + m[1].length;
+        edit(at, at + 1, m[2] === '☐ ' ? '☑' : '☐');
+      } else if (full.trim()) {
+        const at = ls + /^\s*/.exec(full)[0].length;
+        edit(at, at, '☐ ');
+      } else return;
+      pad.setSelectionRange(pos + (m ? 0 : 2), pos + (m ? 0 : 2));
+      return;
+    }
+    if (!m || pos < ls + m[0].length) return;
+    e.preventDefault();
+    if (full.length === m[0].length && pos === le) edit(ls, le, ''); // Enter em item vazio encerra a lista
+    else edit(pos, pos, '\n' + m[1] + (m[2] === '☑ ' ? '☐ ' : m[2]));
+  });
+
   $('toolPadCopy').addEventListener('click', () => {
     const done = () => { info.textContent = 'Texto copiado.'; };
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(pad.value).then(done).catch(() => { pad.select(); });
     else { pad.select(); try { document.execCommand('copy'); done(); } catch (e) { /* seleção fica para copiar à mão */ } }
   });
   const slugOf = t => norm(t).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+  const closeMenu = () => { const d = document.querySelector('.notes-export'); if (d) d.open = false; };
   const makePdf = async all => {
-    const items = (all ? data.notes.slice().sort((a, b) => b.u - a.u) : [current()]).filter(n => n.x.trim());
+    closeMenu();
+    const items = (all ? data.notes.slice().sort(byRecent) : [current()]).filter(n => n.x.trim());
     if (!items.length) { info.textContent = all ? 'Não há notas com texto para salvar.' : 'Escreva algo na nota antes de salvar em PDF.'; return; }
     const btns = [$('toolPadPdf'), $('toolPadPdfAll')];
     btns.forEach(b => { b.disabled = true; });
@@ -6907,20 +7169,32 @@ function initToolsPanel() {
   };
   $('toolPadPdf').addEventListener('click', () => makePdf(false));
   $('toolPadPdfAll').addEventListener('click', () => makePdf(true));
-  $('toolPadSave').addEventListener('click', () => {
-    const slug = norm(titleOf(pad.value)).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'bloco-de-notas';
+  const downloadText = (txt, name) => {
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([pad.value], { type: 'text/plain;charset=utf-8' }));
-    a.download = slug + '.txt'; document.body.appendChild(a); a.click(); a.remove();
+    a.href = URL.createObjectURL(new Blob([txt], { type: 'text/plain;charset=utf-8' }));
+    a.download = name; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+  $('toolPadSave').addEventListener('click', () => {
+    closeMenu();
+    downloadText(pad.value, (slugOf(titleOf(pad.value)) || 'bloco-de-notas') + '.txt');
+  });
+  $('toolPadSaveAll').addEventListener('click', () => {
+    closeMenu();
+    const items = data.notes.slice().sort(byRecent).filter(n => n.x.trim());
+    if (!items.length) { info.textContent = 'Não há notas com texto para baixar.'; return; }
+    const sep = '\n\n' + '='.repeat(40) + '\n\n';
+    downloadText(items.map((n, i) => '[Nota ' + (i + 1) + ' de ' + items.length + ' · atualizada em ' + stampOf(n.u) + ']\n' + n.x).join(sep),
+      'bloco-de-notas-' + new Date().toISOString().slice(0, 10) + '.txt');
+    info.textContent = items.length + (items.length === 1 ? ' nota baixada.' : ' notas baixadas.');
   });
   $('toolPadClear').addEventListener('click', () => {
     if (pad.value && !confirm('Excluir esta nota? Isso não pode ser desfeito.')) return;
     clearTimeout(saveT); saveT = null;
     data.notes = data.notes.filter(n => n.id !== data.active);
     if (!data.notes.length) data.notes.push({ id: newId(), x: '', u: Date.now() });
-    data.active = data.notes.slice().sort((a, b) => b.u - a.u)[0].id;
-    pad.value = current().x; saveNow(); pad.focus();
+    data.active = data.notes.slice().sort(byRecent)[0].id;
+    pad.value = current().x; saveNow(); paintPin(); pad.focus();
   });
 }
 
@@ -15061,7 +15335,7 @@ const ARGO_TAB_TIPS = {
   tradutor: 'Escreva ou fale em português e escolha o idioma. Dá para salvar frases próprias para usar de novo.',
   pdftools: 'Una até 20 arquivos, divida ou extraia páginas, reduza o tamanho de um PDF, numere as páginas e converta entre PDF, Word e JPG. Nada sai do seu navegador.',
   appsext: 'Cada atalho abre um app do autor em nova aba, com login e sincronização independentes.',
-  ferramentas: 'Relógio de Boa Vista com cronômetro e temporizador, calculadora, renda per capita, idade, QR Code, contador de atendimentos, prazos em dias úteis, analisador de planilha (duplicados, NIS/CPF e datas) e bloco de notas cifrado neste aparelho.',
+  ferramentas: 'Relógio de Boa Vista com cronômetro, temporizador e alarme, calculadora com memória, renda per capita, idade, QR Code, contador de atendimentos, prazos em dias úteis, analisador de planilha (duplicados, NIS/CPF e datas) e bloco de notas cifrado neste aparelho.',
   noticias: 'Toque num tema rápido (Bolsa Família, CadÚnico…), filtre por Normativos ou por período e use a estrela para salvar o que quer ler depois.',
   cras: 'Procure por bairro para saber qual equipe de referência atende. A planilha de atendimentos abre em tela cheia.',
   cas: 'Aqui ficam os registros de atendimento do CAS. Use a busca para localizar um registro.',
