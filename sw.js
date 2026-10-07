@@ -1,7 +1,7 @@
 // Este número é substituído automaticamente em cada build/deploy (scripts/build.mjs),
 // e é essa mudança de versão que dispara a atualização nos aparelhos. Só precisa
 // trocar à mão se for publicar a pasta SEM passar pelo build.
-const CACHE_VERSION = 'v140';
+const CACHE_VERSION = 'v141';
 const CACHE_NAME = `rede-apoio-bv-${CACHE_VERSION}`;
 
 // Cache separado e SEM número de versão, para conteúdo pesado de fora do
@@ -27,6 +27,7 @@ const ASSETS = [
   './js/app.js',
   './js/auth-config.js',
   './js/argo-mascot.js',
+  './js/argo-cerebro.js',
   './manifest.json',
   './favicon.ico',
   './apple-touch-icon.png',
@@ -54,7 +55,7 @@ const ASSETS = [
 
 // Sem estes o app não funciona: se algum falhar, a instalação inteira falha
 // e o Service Worker antigo continua valendo (melhor que um app pela metade).
-const CRITICAL_ASSETS = ['./', './index.html', './css/styles.css', './js/equipe-cras-cristiana.js', './js/data.js', './js/argo-mascot.js', './js/auth-config.js', './js/app.js', './manifest.json'];
+const CRITICAL_ASSETS = ['./', './index.html', './css/styles.css', './js/equipe-cras-cristiana.js', './js/data.js', './js/argo-mascot.js', './js/argo-cerebro.js', './js/auth-config.js', './js/app.js', './manifest.json'];
 
 // INSTALAÇÃO: baixa os arquivos novos e já assume o controle,
 // sem esperar todas as abas antigas fecharem.
