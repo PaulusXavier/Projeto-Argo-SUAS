@@ -9034,21 +9034,28 @@ function renderPdfToolsCard() {
           </div>
           <p class="pdftools-tool-desc">Junte PDFs e fotos (JPG ou PNG) em um único documento, na ordem que você escolher (arraste os itens ou use as setas). Em cada PDF você pode usar só algumas páginas, e qualquer item pode ser girado.</p>
 
-          <label class="pdftools-dropzone" for="pdftoolsMergeInput" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="pdftoolsHandleDrop(event, 'merge')">
+          <label class="pdftools-dropzone" id="pdftoolsMergeDropzone" for="pdftoolsMergeInput" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="pdftoolsHandleDrop(event, 'merge')">
             <input type="file" id="pdftoolsMergeInput" accept=".pdf,application/pdf,image/jpeg,image/png,.jpg,.jpeg,.png" multiple onchange="pdftoolsAddMergeFiles(this.files)">
             <div class="pdftools-dropzone-icon">${ICONS.folder}</div>
-            <div class="pdftools-dropzone-text">Toque para escolher PDFs e fotos</div>
+            <div class="pdftools-dropzone-text" id="pdftoolsMergeDropText">Toque para escolher PDFs e fotos</div>
             <div class="pdftools-dropzone-hint">ou arraste os arquivos até aqui</div>
           </label>
 
           <div class="pdftools-filelist-toolbar" id="pdftoolsMergeToolbar" style="display:none;">
             <span id="pdftoolsMergeSummary"></span>
+            <span class="pdftools-toolbar-btns">
+            <button type="button" class="pdftools-sort-btn" id="pdftoolsMergeReverseBtn" onclick="pdftoolsReverseMergeFiles()" title="Inverter a ordem da lista (o último vira o primeiro)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16"/><path d="M3 16l4 4 4-4"/><path d="M17 20V4"/><path d="M13 8l4-4 4 4"/></svg>
+              Inverter
+            </button>
             <button type="button" class="pdftools-sort-btn" id="pdftoolsMergeSortBtn" onclick="pdftoolsSortMergeFilesAlpha()" title="Ordenar arquivos por nome (A-Z)">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h6"/><path d="M3 12h4"/><path d="M3 18h2"/><path d="M17 4v16"/><path d="M13 8l4-4 4 4"/></svg>
               Ordenar A-Z
             </button>
+            </span>
           </div>
 
+          <div class="pdftools-undo" id="pdftoolsMergeUndo" hidden></div>
           <ul class="pdftools-filelist" id="pdftoolsMergeList"></ul>
 
           <div class="pdftools-capacity" id="pdftoolsMergeCapacity" role="img" aria-label="Espaço usado do limite de 50 MB">
@@ -9070,6 +9077,7 @@ function renderPdfToolsCard() {
           </div>
           <div class="pdftools-progress" id="pdftoolsMergeProgress"><div class="pdftools-progress-fill" id="pdftoolsMergeProgressFill"></div></div>
           <div class="pdftools-status is-info" id="pdftoolsMergeStatus"></div>
+          <div class="pdftools-result" id="pdftoolsMergeResult" hidden></div>
         </div>
 
         <div class="pdftools-grid">
@@ -9342,6 +9350,8 @@ const EXTERNAL_APPS = [
     url: 'https://paulusxavier.github.io/Toth/',
     icon: 'form',
     tag: 'Diário de Campo',
+    cat: 'atend',
+    feats: ['Exporta PDF, Word, CSV', 'Sincroniza por conta'],
     accent: '#0EA5E9',
     accentBg: 'rgba(14, 165, 233, 0.12)'
   },
@@ -9352,6 +9362,8 @@ const EXTERNAL_APPS = [
     url: 'https://paulusxavier.github.io/Projeto-Umbrela-PAIF/',
     icon: 'team',
     tag: 'PAIF / PAF',
+    cat: 'atend',
+    feats: ['Gráficos', 'Sincroniza por conta'],
     accent: '#059669',
     accentBg: 'rgba(5, 150, 105, 0.12)'
   },
@@ -9362,6 +9374,8 @@ const EXTERNAL_APPS = [
     url: 'https://paulusxavier.github.io/Anona/',
     icon: 'cash',
     tag: 'Bolsa Família',
+    cat: 'atend',
+    feats: ['Calendário', 'Relatórios', 'Recurso'],
     accent: '#D97706',
     accentBg: 'rgba(217, 119, 6, 0.12)'
   },
@@ -9372,6 +9386,8 @@ const EXTERNAL_APPS = [
     url: 'https://paulusxavier.github.io/Bloco-de-Notas-PX-/index.html',
     icon: 'pen',
     tag: 'Notas',
+    cat: 'pessoal',
+    feats: ['Qualquer aparelho', 'Sincroniza por conta'],
     accent: '#DB2777',
     accentBg: 'rgba(219, 39, 119, 0.12)'
   },
@@ -9382,6 +9398,8 @@ const EXTERNAL_APPS = [
     url: 'https://paulusxavier.github.io/Vita/',
     icon: 'info',
     tag: 'Site do autor',
+    cat: 'pessoal',
+    feats: ['Currículo', 'Leituras indicadas'],
     accent: '#B7791F',
     accentBg: 'rgba(183, 121, 31, 0.14)'
   }
@@ -9395,29 +9413,183 @@ function appsextHost(url) {
   try { return new URL(url).host; } catch (e) { return ''; }
 }
 
-function renderExternalAppsCard() {
-  const tiles = EXTERNAL_APPS.map(app => {
-    const host = appsextHost(app.url);
-    return `
-    <a class="appsext-tile" href="${app.url}" target="_blank" rel="noopener noreferrer"
+const APPSEXT_GROUPS = [
+  { id: 'atend', title: 'Atendimento e acompanhamento' },
+  { id: 'pessoal', title: 'Pessoal e institucional' }
+];
+const APPSEXT_PINS_KEY = 'argo_apps_pins_v1';
+const APPSEXT_OPEN_KEY = 'argo_apps_open_v1';
+const APPSEXT_SORT_KEY = 'argo_apps_sort_v1';
+
+function appsextRead(key, fallback) {
+  try { const v = JSON.parse(localStorage.getItem(key) || 'null'); return v == null ? fallback : v; } catch (e) { return fallback; }
+}
+function appsextWrite(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* ignora */ } }
+
+function appsextOpenedLabel(url) {
+  const ts = (appsextRead(APPSEXT_OPEN_KEY, {}) || {})[url];
+  if (!ts) return '';
+  const days = Math.floor((Date.now() - ts) / 86400000);
+  if (days <= 0) return 'aberto hoje';
+  if (days === 1) return 'aberto ontem';
+  return `aberto há ${days} dias`;
+}
+
+function appsextTileHtml(app, pinned) {
+  const i = EXTERNAL_APPS.indexOf(app);
+  const host = appsextHost(app.url);
+  const opened = appsextOpenedLabel(app.url);
+  const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+  const feats = (app.feats || []).map(f => `<li>${f}</li>`).join('');
+  return `
+    <article class="appsext-tile${pinned ? ' is-pinned' : ''}" data-app="${i}"
        style="--app-accent:${app.accent || 'var(--brand-appsext)'};--app-accent-bg:${app.accentBg || 'rgba(124, 58, 237, 0.12)'}">
       <span class="appsext-icon${app.img ? ' has-img' : ''}" aria-hidden="true">
         ${app.img ? `<img src="${app.img}" alt="" width="48" height="48" loading="lazy" decoding="async" onerror="this.parentNode.classList.add('is-fallback');this.remove()">` : ''}
         <span class="appsext-icon-fallback">${ICONS[app.icon] || ICONS.external}</span>
       </span>
-      <span class="appsext-text">
+      <div class="appsext-text">
         <span class="appsext-title-row">
-          <span class="appsext-title">${app.name}</span>
+          <a class="appsext-title appsext-stretch" href="${app.url}" target="_blank" rel="noopener noreferrer" onclick="appsextMarkOpen(${i})" onauxclick="appsextMarkOpen(${i})">${app.name}<span class="sr-only"> (abre em outra aba)</span></a>
           ${app.tag ? `<span class="appsext-tag">${app.tag}</span>` : ''}
         </span>
         <span class="appsext-desc">${app.desc}</span>
-        <span class="appsext-meta">${host ? `${host} · ` : ''}abre em outra aba</span>
-      </span>
-      <span class="cras-link-arrow" aria-hidden="true">${ICONS.external}</span>
-    </a>
-  `;
-  }).join('');
+        ${feats ? `<ul class="appsext-feats" aria-label="Recursos">${feats}</ul>` : ''}
+        <span class="appsext-meta"><span>${host}</span><span class="appsext-opened">${opened ? ' · ' + opened : ''}</span></span>
+        <div class="appsext-actions">
+          <a class="appsext-open" href="${app.url}" target="_blank" rel="noopener noreferrer" onclick="appsextMarkOpen(${i})" onauxclick="appsextMarkOpen(${i})">Abrir ${ICONS.external}</a>
+          <button type="button" class="appsext-act${pinned ? ' is-on' : ''}" aria-pressed="${pinned ? 'true' : 'false'}" onclick="appsextTogglePin(${i})" title="${pinned ? 'Tirar dos fixados' : 'Fixar no topo'}">${ICONS.star} ${pinned ? 'Fixado' : 'Fixar'}</button>
+          <button type="button" class="appsext-act" onclick="appsextShare(${i}, this)" title="${canShare ? 'Compartilhar o link' : 'Copiar o link'}">${ICONS.copy} ${canShare ? 'Compartilhar' : 'Copiar link'}</button>
+        </div>
+      </div>
+    </article>`;
+}
 
+function appsextSortMode() { return appsextRead(APPSEXT_SORT_KEY, 'default') === 'recent' ? 'recent' : 'default'; }
+
+// "Recentes": o que você abriu por último vem primeiro; o que nunca abriu segue a ordem original.
+function appsextOrder(list) {
+  if (appsextSortMode() !== 'recent') return list;
+  const opened = appsextRead(APPSEXT_OPEN_KEY, {}) || {};
+  return list.map((a, i) => ({ a, i, t: opened[a.url] || 0 }))
+    .sort((x, y) => y.t - x.t || x.i - y.i).map(x => x.a);
+}
+
+function appsextBodyHtml() {
+  const pins = new Set(appsextRead(APPSEXT_PINS_KEY, []));
+  const pinnedApps = appsextOrder(EXTERNAL_APPS.filter(a => pins.has(a.url)));
+  let html = '';
+  if (pinnedApps.length) {
+    html += `<h3 class="appsext-group">⭐ Fixados</h3><div class="appsext-grid">${pinnedApps.map(a => appsextTileHtml(a, true)).join('')}</div>`;
+  }
+  APPSEXT_GROUPS.forEach(g => {
+    const apps = appsextOrder(EXTERNAL_APPS.filter(a => (a.cat || 'pessoal') === g.id && !pins.has(a.url)));
+    if (!apps.length) return;
+    html += `<h3 class="appsext-group">${g.title}</h3><div class="appsext-grid">${apps.map(a => appsextTileHtml(a, false)).join('')}</div>`;
+  });
+  return html;
+}
+
+function appsextSetSort(mode) {
+  appsextWrite(APPSEXT_SORT_KEY, mode === 'recent' ? 'recent' : 'default');
+  document.querySelectorAll('.appsext-seg button').forEach(b => {
+    const on = b.dataset.sort === appsextSortMode();
+    b.classList.toggle('is-active', on); b.setAttribute('aria-pressed', String(on));
+  });
+  appsextRerender();
+}
+
+function appsextRefreshOnline() {
+  const box = document.getElementById('appsextOffline');
+  if (box) box.hidden = navigator.onLine !== false;
+}
+window.addEventListener('online', appsextRefreshOnline);
+window.addEventListener('offline', appsextRefreshOnline);
+
+// Indicar o próprio Argo SUAS a um colega (compartilha ou copia o endereço do app).
+async function appsextShareArgo(btn) {
+  const url = location.origin + location.pathname;
+  const flash = (txt) => { if (!btn) return; const old = btn.innerHTML; btn.textContent = txt; setTimeout(() => { btn.innerHTML = old; }, 1800); };
+  if (typeof navigator.share === 'function') {
+    try { await navigator.share({ title: 'Argo SUAS', text: 'Argo SUAS — rede de políticas públicas de Roraima, fichas e ferramentas.', url }); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  try { await navigator.clipboard.writeText(url); flash('Link copiado ✓'); } catch (e) { flash('Não consegui copiar'); }
+}
+
+function appsextRerender() {
+  const box = document.getElementById('appsextBody');
+  if (box) box.innerHTML = appsextBodyHtml();
+}
+
+function appsextMarkOpen(i) {
+  const app = EXTERNAL_APPS[i];
+  if (!app) return;
+  const map = appsextRead(APPSEXT_OPEN_KEY, {}) || {};
+  map[app.url] = Date.now();
+  appsextWrite(APPSEXT_OPEN_KEY, map);
+  const tile = document.querySelector(`.appsext-tile[data-app="${i}"] .appsext-opened`);
+  if (tile) tile.textContent = ' · ' + appsextOpenedLabel(app.url);
+}
+
+function appsextTogglePin(i) {
+  const app = EXTERNAL_APPS[i];
+  if (!app) return;
+  const pins = new Set(appsextRead(APPSEXT_PINS_KEY, []));
+  if (pins.has(app.url)) pins.delete(app.url); else pins.add(app.url);
+  appsextWrite(APPSEXT_PINS_KEY, Array.from(pins));
+  appsextRerender();
+}
+
+async function appsextShare(i, btn) {
+  const app = EXTERNAL_APPS[i];
+  if (!app) return;
+  const flash = (txt) => { if (!btn) return; const old = btn.innerHTML; btn.textContent = txt; setTimeout(() => { btn.innerHTML = old; }, 1600); };
+  if (typeof navigator.share === 'function') {
+    try { await navigator.share({ title: app.name, text: app.name + ' — ' + app.tag, url: app.url }); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(app.url);
+    else {
+      const ta = document.createElement('textarea'); ta.value = app.url; ta.style.cssText = 'position:fixed;opacity:0';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+    }
+    flash('Link copiado ✓');
+  } catch (e) { flash('Não consegui copiar'); }
+}
+
+// ---- Instalar o próprio Argo SUAS no aparelho (atalho na tela inicial)
+let appsextInstallEvt = null;
+window.addEventListener('beforeinstallprompt', (e) => { appsextInstallEvt = e; appsextRefreshInstall(); });
+window.addEventListener('appinstalled', () => { appsextInstallEvt = null; appsextRefreshInstall(); });
+
+function appsextIsStandalone() {
+  return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+}
+function appsextRefreshInstall() {
+  const box = document.getElementById('appsextInstall');
+  if (!box) return;
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  if (appsextIsStandalone()) { box.hidden = true; box.innerHTML = ''; return; }
+  if (appsextInstallEvt) {
+    box.hidden = false;
+    box.innerHTML = `<span class="appsext-install-text"><strong>Instale o Argo SUAS neste aparelho</strong><small>Abre em tela cheia, como um aplicativo, e funciona também sem internet.</small></span>
+      <button type="button" class="appsext-open" onclick="appsextInstall()">Instalar</button>`;
+  } else if (ios) {
+    box.hidden = false;
+    box.innerHTML = `<span class="appsext-install-text"><strong>Instale o Argo SUAS no iPhone/iPad</strong><small>Toque em Compartilhar (□↑) e depois em “Adicionar à Tela de Início”.</small></span>`;
+  } else { box.hidden = true; box.innerHTML = ''; }
+}
+async function appsextInstall() {
+  const evt = appsextInstallEvt;
+  if (!evt) return;
+  try { await evt.prompt(); await evt.userChoice; } catch (e) { /* ignora */ }
+  appsextInstallEvt = null;
+  appsextRefreshInstall();
+}
+
+function renderExternalAppsCard() {
   return `
     <div class="tech-card appsext-card" id="appsExternosGrid">
       <div class="card-top">
@@ -9428,22 +9600,33 @@ function renderExternalAppsCard() {
         <span class="subtitle">🚀 Demais ferramentas do autor, cada uma em seu próprio endereço</span>
       </div>
       <div class="card-body">
+        <div class="appsext-offline" id="appsextOffline" role="status" hidden>
+          📴 Você está sem internet. Os aplicativos abrem em outras abas e precisam de conexão (os que você já abriu antes podem funcionar offline).
+        </div>
+        <div class="appsext-install" id="appsextInstall" hidden></div>
         <div class="appsext-privacy">
           ${ICONS.info}
-          <span>Estes aplicativos e o site do autor são projetos independentes, hospedados fora do Argo SUAS. Cada um abre em uma nova aba; os aplicativos têm login e sincronização próprios.</span>
+          <span>Estes aplicativos e o site do autor são projetos independentes, hospedados fora do Argo SUAS. Cada um abre em uma nova aba; os aplicativos têm login e sincronização próprios. Dica: no celular, abra o aplicativo e use “Adicionar à tela inicial” para ter o atalho.</span>
         </div>
-        <div class="appsext-grid">
-          ${tiles}
+        <div class="appsext-toolbar">
+          <span class="appsext-toolbar-label">Ordem</span>
+          <div class="appsext-seg" role="group" aria-label="Ordem dos aplicativos">
+            <button type="button" data-sort="default" class="${appsextSortMode() === 'default' ? 'is-active' : ''}" aria-pressed="${appsextSortMode() === 'default'}" onclick="appsextSetSort('default')">Padrão</button>
+            <button type="button" data-sort="recent" class="${appsextSortMode() === 'recent' ? 'is-active' : ''}" aria-pressed="${appsextSortMode() === 'recent'}" onclick="appsextSetSort('recent')">Recentes primeiro</button>
+          </div>
+        </div>
+        <div id="appsextBody">${appsextBodyHtml()}</div>
+        <div class="appsext-share">
+          <span class="appsext-install-text"><strong>Indique o Argo SUAS a um colega</strong><small>Envie o endereço do app para quem trabalha na rede e ainda não usa.</small></span>
+          <button type="button" class="appsext-act" onclick="appsextShareArgo(this)">${ICONS.copy} ${typeof navigator !== 'undefined' && typeof navigator.share === 'function' ? 'Compartilhar' : 'Copiar link'}</button>
         </div>
       </div>
     </div>
   `;
 }
 
-// Painel só de links externos: não há nada para inicializar (sem
-// formulário, upload ou estado próprio), mas a função existe para seguir
-// o mesmo contrato { rootId, render, init } dos demais PANEL_TABS.
-function initExternalAppsPanel() {}
+// Painel só de links externos; só precisa mostrar o convite de instalação.
+function initExternalAppsPanel() { appsextRefreshInstall(); appsextRefreshOnline(); }
 
 function renderTranslatorCard() {
   const langOptions = (selected) => Object.entries(TRADUTOR_LANGS).map(([code, l]) =>
@@ -10746,9 +10929,9 @@ function newsIsNormative(item) { return newsKind(item) !== 'Notícia'; }
 // Cor de destaque por ministério, só para diferenciar rapidamente a
 // etiqueta de origem de cada publicação na lista.
 const NEWS_SOURCE_COLORS = {
-  mds: { bg: '#e8f1f9', fg: '#0f4a41' },
-  mec: { bg: '#fef3e2', fg: '#92400e' },
-  saude: { bg: '#e7f7ec', fg: '#065f46' }
+  mds: { bg: '#e8f1f9', fg: '#0f4a41', accent: '#0891b2' },
+  mec: { bg: '#fef3e2', fg: '#92400e', accent: '#d97706' },
+  saude: { bg: '#e7f7ec', fg: '#065f46', accent: '#059669' }
 };
 
 function newsSourceInfo(sourceId) {
@@ -10863,7 +11046,7 @@ function renderNewsCard() {
     <div class="tech-card noticias-card">
       <div class="card-top">
         <div style="display:flex; align-items:center; gap:0.55rem;">
-          <span class="tradutor-badge">${ICONS.form}</span>
+          <span class="tradutor-badge noticias-badge"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22h14a2 2 0 0 0 2-2V7l-4-4H8a2 2 0 0 0-2 2v3H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2z" transform="translate(0 -1)"/><path d="M18 3v4h4"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></span>
           <h2 style="margin:0;">Notícias do MDS, MEC e Saúde</h2>
         </div>
         <span class="subtitle">📰 Últimas publicações dos três ministérios, com normativos separados das notícias</span>
@@ -10885,6 +11068,10 @@ function renderNewsCard() {
             <div class="noticias-ctrl-label">Temas rápidos</div>
             <div class="noticias-topics" aria-label="Temas rápidos">${topicChips}</div>
 
+            <button type="button" class="noticias-filters-toggle" id="noticiasFiltersToggle" aria-expanded="false" aria-controls="noticiasFiltersBody" onclick="newsToggleFilters()">
+              <span>⚙️ Filtros e ordem</span> <span class="noticias-filters-badge" id="noticiasFiltersBadge" hidden></span>
+            </button>
+            <div class="noticias-filters-body" id="noticiasFiltersBody">
             <div class="noticias-ctrl-label">Ministério</div>
             <div class="noticias-source-filter" role="group" aria-label="Filtrar por ministério">${sourceChips}</div>
 
@@ -10931,6 +11118,7 @@ function renderNewsCard() {
             <div class="noticias-sites">
               <span>Abrir o site:</span> ${siteLinks}
             </div>
+            </div>
 
             <details class="noticias-privacy">
               <summary>Como esta lista é carregada</summary>
@@ -10939,7 +11127,9 @@ function renderNewsCard() {
           </aside>
 
           <section class="noticias-results" aria-label="Lista de notícias">
+            <div id="noticiasStats" class="noticias-stats"></div>
             <div id="noticiasStatus" class="noticias-status" role="status" aria-live="polite"></div>
+            <div id="noticiasActive" class="noticias-active"></div>
             <div id="noticiasHighlights"></div>
             <div id="noticiasList"></div>
             <div id="noticiasMore" class="noticias-more"></div>
@@ -11134,6 +11324,70 @@ function newsPickTopic(topic) {
 
 function newsShowMore() { newsUi.limit += NEWS_PAGE_SIZE; renderNewsList(); }
 
+// Resumo no topo da lista: total, não lidas, novas desde a última visita e
+// normativos. "Não lidas" e "Normativos" funcionam como atalhos de filtro.
+function newsRenderStats() {
+  const box = document.getElementById('noticiasStats');
+  if (!box) return;
+  const all = newsState.items;
+  if (!all.length) { box.innerHTML = ''; return; }
+  const unread = all.filter(it => !newsReadSet.has(it.link)).length;
+  const fresh = newsLastSeenTs ? all.filter(it => it.date && new Date(it.date).getTime() > newsLastSeenTs).length : 0;
+  const norm = all.filter(newsIsNormative).length;
+  const tile = (n, label, extra, action, on) => action
+    ? `<button type="button" class="noticias-stat${on ? ' is-on' : ''}" onclick="${action}" aria-pressed="${on ? 'true' : 'false'}"><strong>${n}</strong><span>${label}</span></button>`
+    : `<div class="noticias-stat ${extra}"><strong>${n}</strong><span>${label}</span></div>`;
+  box.innerHTML =
+    tile(all.length, 'publicações', '', '', false) +
+    tile(unread, 'não lidas', '', 'newsToggleUnreadOnly()', newsUi.unreadOnly) +
+    (newsLastSeenTs ? tile(fresh, 'novas desde a última visita', 'is-fresh', '', false) : '') +
+    tile(norm, 'normativos', '', `newsSetKind(newsUi.kind === 'norm' ? 'all' : 'norm')`, newsUi.kind === 'norm');
+}
+
+// Etiquetas dos filtros em uso, cada uma com ✕ para tirar só aquele filtro.
+function newsRenderActiveFilters(terms, selectedSources) {
+  const box = document.getElementById('noticiasActive');
+  if (!box) return;
+  const chips = [];
+  const q = ((document.getElementById('noticiasFilter') || {}).value || '').trim();
+  if (terms.length && q) chips.push(['q', `Busca: “${q.length > 24 ? q.slice(0, 24) + '…' : q}”`]);
+  if (selectedSources && selectedSources.size < NEWS_SOURCES.length) {
+    chips.push(['src', 'Ministério: ' + (NEWS_SOURCES.filter(s => selectedSources.has(s.id)).map(s => s.label).join(', ') || 'nenhum')]);
+  }
+  if (newsUi.kind === 'news') chips.push(['kind', 'Só notícias']);
+  if (newsUi.kind === 'norm') chips.push(['kind', 'Só normativos']);
+  if (newsUi.period !== 'all') chips.push(['period', `Últimos ${newsUi.period} dias`]);
+  if (newsUi.savedOnly) chips.push(['saved', 'Salvas']);
+  if (newsUi.unreadOnly) chips.push(['unread', 'Não lidas']);
+
+  const badge = document.getElementById('noticiasFiltersBadge');
+  if (badge) { badge.hidden = !chips.length; badge.textContent = chips.length; }
+
+  if (!chips.length) { box.innerHTML = ''; return; }
+  box.innerHTML = chips.map(([k, label]) =>
+    `<button type="button" class="noticias-chip" onclick="newsClearOne('${k}')" title="Tirar este filtro" aria-label="Tirar filtro: ${escapeHtml(label)}">${escapeHtml(label)} <span aria-hidden="true">✕</span></button>`
+  ).join('') + (chips.length > 1 ? `<button type="button" class="noticias-chip noticias-chip-clear" onclick="newsClearFilters()">Limpar tudo</button>` : '');
+}
+
+function newsClearOne(key) {
+  if (key === 'q') { const el = document.getElementById('noticiasFilter'); if (el) el.value = ''; }
+  else if (key === 'src') document.querySelectorAll('.noticias-source-checkbox').forEach(b => { b.checked = true; });
+  else if (key === 'kind') { newsSetKind('all'); return; }
+  else if (key === 'period') { newsUi.period = 'all'; const p = document.getElementById('noticiasPeriod'); if (p) p.value = 'all'; }
+  else if (key === 'saved') { newsToggleSavedOnly(); return; }
+  else if (key === 'unread') { newsToggleUnreadOnly(); return; }
+  newsResetAndRender();
+}
+
+// No celular os filtros ficam recolhidos para a lista aparecer logo.
+function newsToggleFilters() {
+  const body = document.getElementById('noticiasFiltersBody');
+  const btn = document.getElementById('noticiasFiltersToggle');
+  if (!body || !btn) return;
+  const open = body.classList.toggle('is-open');
+  btn.setAttribute('aria-expanded', String(open));
+}
+
 function newsClearFilters() {
   const filterEl = document.getElementById('noticiasFilter');
   if (filterEl) filterEl.value = '';
@@ -11238,7 +11492,7 @@ function newsItemHtml(it, terms) {
   const link = escapeHtml(it.link);
   const normative = newsIsNormative(it);
   return `
-    <article class="noticias-item${isRead ? ' is-read' : ''}${normative ? ' is-normative' : ''}">
+    <article class="noticias-item${isRead ? ' is-read' : ''}${normative ? ' is-normative' : ''}" data-src="${escapeHtml(it.source || '')}" style="--src-color:${color.accent || color.fg};">
       <div class="noticias-item-tags">
         <span class="noticias-tag" title="${escapeHtml(src.fullLabel)}" style="--tag-bg:${color.bg}; --tag-fg:${color.fg};">${escapeHtml(src.label)}</span>
         <span class="noticias-tag noticias-tag-kind">${escapeHtml(newsKind(it))}</span>
@@ -11269,6 +11523,8 @@ function renderNewsList() {
   const filtersOn = terms.length || newsUi.kind !== 'all' || newsUi.period !== 'all' || newsUi.savedOnly || newsUi.unreadOnly
     || (selectedSources && selectedSources.size < NEWS_SOURCES.length);
   newsRenderHighlights(filtersOn);
+  newsRenderStats();
+  newsRenderActiveFilters(terms, selectedSources);
 
   if (!items.length) {
     if (more) more.innerHTML = '';
@@ -11313,7 +11569,7 @@ function renderNewsList() {
 
 async function refreshNews() {
   const btn = document.getElementById('noticiasRefreshBtn');
-  if (btn) btn.disabled = true;
+  if (btn) { btn.disabled = true; btn.classList.add('is-loading'); }
   newsState.loading = true;
   newsSetStatus(newsState.items.length ? 'Buscando publicações mais recentes…' : 'Carregando publicações…');
   if (!newsState.items.length) renderNewsList(); // sem lista salva ainda: mostra o skeleton
@@ -11339,7 +11595,7 @@ async function refreshNews() {
     }
   } finally {
     newsState.loading = false;
-    if (btn) btn.disabled = false;
+    if (btn) { btn.disabled = false; btn.classList.remove('is-loading'); }
     renderNewsList();
   }
 }
@@ -16167,7 +16423,7 @@ const PDFTOOLS_MERGE_MAX_BYTES = 50 * 1024 * 1024;
 // Cada item da lista é { id, kind: 'pdf' | 'image', name, size, pages, range, rotation,
 // bytes (PDF) ou file (imagem) }. "range" é o texto digitado em "Páginas"
 // (vazio = todas) e "rotation" o giro extra em graus (0, 90, 180, 270).
-const pdftoolsMergeState = { files: [], busy: false };
+const pdftoolsMergeState = { files: [], busy: false, undo: null, last: null };
 
 function pdftoolsIsPdfFile(file) {
   return file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
@@ -16298,7 +16554,9 @@ async function pdftoolsAddMergeFiles(fileList) {
     if (input) input.value = '';
     // Os avisos vão para a renderização (antes, ela sobrescrevia a mensagem
     // logo em seguida e o técnico nunca via por que um arquivo foi recusado).
+    pdftoolsMergeState.undo = null;
     pdftoolsRenderMergeList(pdftoolsNoticeFromProblems(problems));
+    pdftoolsQueueThumbs();
   }
 }
 
@@ -16348,7 +16606,7 @@ function pdftoolsRenderMergeList(notice) {
       <span class="pdftools-drag-handle" title="Arraste para reordenar" aria-hidden="true">
         <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor"><circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/><circle cx="2" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="2" cy="14" r="1.5"/><circle cx="8" cy="14" r="1.5"/></svg>
       </span>
-      <span class="pdftools-kind ${isPdf ? 'is-pdf' : 'is-image'}" title="${isPdf ? 'PDF' : 'Foto'}" aria-hidden="true">${isPdf ? ICONS.pdf : ICONS.image}</span>
+      <span class="pdftools-thumb ${isPdf ? 'is-pdf' : 'is-image'}${f.thumb ? ' has-img' : ''}" data-thumb="${f.id}" style="--rot:${f.rotation || 0}deg" title="${isPdf ? 'PDF' : 'Foto'}" aria-hidden="true">${f.thumb ? `<img src="${f.thumb}" alt="">` : (isPdf ? ICONS.pdf : ICONS.image)}<em>${isPdf ? 'PDF' : 'FOTO'}</em></span>
       <span class="pdftools-fileitem-name">${idx + 1}. ${escapeHtml(f.name)}</span>
       <span class="pdftools-fileitem-meta">${pagesLabel} · ${pdftoolsFormatBytes(f.size || 0)}${rotLabel}</span>
       <span class="pdftools-fileitem-btns">
@@ -16381,6 +16639,37 @@ function pdftoolsRenderMergeList(notice) {
 
   if (btn) btn.disabled = pdftoolsMergeState.busy || files.length < 2 || totalBytes > PDFTOOLS_MERGE_MAX_BYTES || invalid.length > 0;
   if (clearBtn) clearBtn.disabled = files.length === 0;
+  const revBtn = document.getElementById('pdftoolsMergeReverseBtn');
+  if (revBtn) revBtn.disabled = files.length < 2;
+
+  // Com arquivos na lista, a área de soltar encolhe e vira "Adicionar mais".
+  const dz = document.getElementById('pdftoolsMergeDropzone');
+  const dzText = document.getElementById('pdftoolsMergeDropText');
+  if (dz) dz.classList.toggle('is-compact', files.length > 0);
+  if (dzText) dzText.textContent = files.length ? '+ Adicionar mais arquivos' : 'Toque para escolher PDFs e fotos';
+
+  // Resultado da última unificação (só enquanto a lista não mudou).
+  const resBox = document.getElementById('pdftoolsMergeResult');
+  if (resBox) {
+    if (notice && notice.result && pdftoolsMergeState.last) {
+      const L = pdftoolsMergeState.last;
+      resBox.hidden = false;
+      resBox.innerHTML = `<span class="pdftools-result-info"><strong>${escapeHtml(L.name)}</strong><small>${L.pages} pág. · ${pdftoolsFormatBytes(L.blob.size)}</small></span>
+        <button type="button" class="pdftools-btn-ghost" onclick="pdftoolsMergeDownloadAgain()">Baixar de novo</button>
+        <button type="button" class="pdftools-btn-ghost" onclick="pdftoolsClearMergeFiles()">Nova unificação</button>`;
+    } else {
+      resBox.hidden = true; resBox.innerHTML = '';
+      pdftoolsMergeState.last = null;
+    }
+  }
+  const undoBox = document.getElementById('pdftoolsMergeUndo');
+  if (undoBox) {
+    const u = pdftoolsMergeState.undo;
+    if (u && !(notice && notice.result)) {
+      undoBox.hidden = false;
+      undoBox.innerHTML = `<span>“${escapeHtml(u.file.name)}” foi removido.</span> <button type="button" onclick="pdftoolsUndoRemove()">Desfazer</button>`;
+    } else { undoBox.hidden = true; undoBox.innerHTML = ''; }
+  }
 
   const toolbar = document.getElementById('pdftoolsMergeToolbar');
   const sortBtn = document.getElementById('pdftoolsMergeSortBtn');
@@ -16443,14 +16732,80 @@ function pdftoolsMoveMergeFile(id, dir) {
 }
 
 function pdftoolsRemoveMergeFile(id) {
-  pdftoolsMergeState.files = pdftoolsMergeState.files.filter(f => f.id !== id);
+  const idx = pdftoolsMergeState.files.findIndex(f => f.id === id);
+  if (idx < 0) return;
+  pdftoolsMergeState.undo = { file: pdftoolsMergeState.files[idx], index: idx };
+  pdftoolsMergeState.files.splice(idx, 1);
   pdftoolsRenderMergeList();
+}
+
+// Desfaz a última remoção (volta o arquivo à mesma posição).
+function pdftoolsUndoRemove() {
+  const u = pdftoolsMergeState.undo;
+  pdftoolsMergeState.undo = null;
+  if (!u || pdftoolsMergeState.files.length >= PDFTOOLS_MERGE_MAX_FILES) { pdftoolsRenderMergeList(); return; }
+  pdftoolsMergeState.files.splice(Math.min(u.index, pdftoolsMergeState.files.length), 0, u.file);
+  pdftoolsRenderMergeList();
+}
+
+function pdftoolsReverseMergeFiles() {
+  if (pdftoolsMergeState.files.length < 2) return;
+  pdftoolsMergeState.files.reverse();
+  pdftoolsRenderMergeList();
+}
+
+function pdftoolsMergeDownloadAgain() {
+  const L = pdftoolsMergeState.last;
+  if (L) pdftoolsDownloadBlob(L.blob, L.name);
+}
+
+// ---- Miniaturas: foto = a própria imagem reduzida; PDF = 1ª página (pdf.js,
+// carregada só quando há PDF na lista; sem internet fica o ícone). Uma de cada vez.
+let pdftoolsThumbChain = Promise.resolve();
+function pdftoolsQueueThumbs() {
+  pdftoolsMergeState.files.filter(f => !f.thumb && !f.thumbTried).forEach(f => {
+    f.thumbTried = true;
+    pdftoolsThumbChain = pdftoolsThumbChain.then(() => pdftoolsMakeThumb(f)).catch(() => {});
+  });
+}
+async function pdftoolsMakeThumb(f) {
+  let url = '';
+  const H = 104;
+  try {
+    if (f.kind === 'image') {
+      const src = URL.createObjectURL(f.file);
+      try {
+        const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+        const k = Math.min(1, H / Math.max(img.naturalWidth, img.naturalHeight));
+        const c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
+        const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+        url = c.toDataURL('image/jpeg', 0.7);
+      } finally { URL.revokeObjectURL(src); }
+    } else if (f.bytes) {
+      const pdfjs = await ensurePdfJs();
+      const doc = await pdfjs.getDocument({ data: new Uint8Array(f.bytes.slice(0)) }).promise;
+      const page = await doc.getPage(1);
+      const base = page.getViewport({ scale: 1 });
+      const vp = page.getViewport({ scale: H / Math.max(base.width, base.height) });
+      const c = document.createElement('canvas'); c.width = Math.ceil(vp.width); c.height = Math.ceil(vp.height);
+      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+      await page.render({ canvasContext: g, viewport: vp }).promise;
+      url = c.toDataURL('image/jpeg', 0.7);
+      doc.destroy && doc.destroy();
+    }
+  } catch (e) { url = ''; }
+  if (!url) return;
+  f.thumb = url;
+  const el = document.querySelector('[data-thumb="' + f.id + '"]');
+  if (el) { el.classList.add('has-img'); const old = el.querySelector('svg, img'); const img = document.createElement('img'); img.alt = ''; img.src = url; if (old) old.replaceWith(img); else el.prepend(img); }
 }
 
 // Esvazia a lista de uma vez (botão "Limpar lista"), em vez de precisar
 // remover arquivo por arquivo quando o técnico quer recomeçar a seleção.
 function pdftoolsClearMergeFiles() {
-  if (!pdftoolsMergeState.files.length) return;
+  pdftoolsMergeState.undo = null;
+  if (!pdftoolsMergeState.files.length) { pdftoolsRenderMergeList(); return; }
   pdftoolsMergeState.files = [];
   pdftoolsRenderMergeList();
 }
@@ -16542,8 +16897,10 @@ async function pdftoolsMergePdfs() {
     const typed = filenameInput ? filenameInput.value.trim() : '';
     const fallback = pdftoolsDefaultMergeName();
     const base = (typed || fallback).replace(/[\\/:*?"<>|]+/g, '').replace(/\.pdf$/i, '').trim() || fallback;
-    pdftoolsDownloadBlob(new Blob([bytes], { type: 'application/pdf' }), `${base}.pdf`);
-    notice = { message: `Pronto! "${base}.pdf" foi baixado — ${merged.getPageCount()} páginas · ${pdftoolsFormatBytes(bytes.length)}.`, kind: 'success' };
+    const outBlob = new Blob([bytes], { type: 'application/pdf' });
+    pdftoolsDownloadBlob(outBlob, `${base}.pdf`);
+    pdftoolsMergeState.last = { blob: outBlob, name: `${base}.pdf`, pages: merged.getPageCount() };
+    notice = { message: `Pronto! "${base}.pdf" foi baixado — ${merged.getPageCount()} páginas · ${pdftoolsFormatBytes(bytes.length)}.`, kind: 'success', result: true };
   } catch (e) {
     notice = {
       message: currentName
