@@ -6509,3 +6509,42 @@ details.card-fold[open] > *:not(summary) + *:not(summary) { margin-top: 1rem; }
 @media (prefers-reduced-motion: reduce) {
   .login-submit, .login-submit:hover:not(:disabled) { transition: none; transform: none; }
 }
+
+/* ==========================================================
+   Ferramentas — melhorias: calculadora (memória e funções),
+   relógio (fuso e alarme) e bloco de notas (fixar, listas, exportar)
+   ========================================================== */
+.calc-top { display: flex; align-items: flex-end; gap: 0.5rem; }
+.calc-top .calc-hist { flex: 1 1 auto; min-width: 0; }
+.calc-mem { flex: 0 0 auto; padding: 0 0.4rem; font-size: 0.72rem; font-weight: 800; line-height: 1.5; color: #fff; background: var(--brand-primary); border-radius: 6px; }
+.calc-mem[hidden] { display: none; }
+.calc-k.calc-fn { min-height: 40px; font-size: 0.88rem; color: var(--text-muted); background: var(--bg-main); }
+.calc-k:disabled { opacity: 0.4; cursor: not-allowed; }
+.calc-k:disabled:hover { border-color: var(--border-ui); }
+.calc-display-row .calc-copy { min-width: 44px; }
+
+.tools-br { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.4rem; }
+.tools-select { max-width: 100%; min-height: 32px; padding: 0.2rem 0.5rem; font: inherit; font-size: 0.8rem; color: var(--text-main); background: var(--bg-card); border: 1px solid var(--border-ui); border-radius: 8px; }
+.tools-select:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 2px; }
+.tools-grow { flex: 1 1 170px; }
+.tools-al-list { list-style: none; margin: 0.7rem 0 0; padding: 0; }
+.tools-al { display: flex; align-items: center; gap: 0.7rem; padding: 0.25rem 0.2rem; font-size: 0.88rem; border-bottom: 1px solid var(--border-ui); }
+.tools-al strong { font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.tools-al span { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); }
+.tools-al.is-done strong { color: var(--text-muted); text-decoration: line-through; }
+.tools-al-list .tools-hint { border: 0; }
+
+.notes-pin { font-size: 0.72rem; }
+.notes-item-snip { font-size: 0.76rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tools-bar .btn-tech[aria-pressed="true"] { color: var(--brand-primary); border-color: var(--brand-primary); }
+.notes-export > summary { list-style: none; cursor: pointer; user-select: none; }
+.notes-export > summary::-webkit-details-marker { display: none; }
+.notes-export > summary::after { content: " ▾"; }
+.notes-export[open] > summary::after { content: " ▴"; }
+.notes-export[open] { flex: 1 1 100%; }
+.notes-export-menu { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
+.notes-export > summary:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 2px; }
+/* Linha de status do bloco de notas em linha própria e de altura fixa: o texto muda
+   ("Salvando…" → "Salvo às…") e, se ela empurrasse os botões, o clique logo após
+   digitar se perdia. */
+.tools-bar #toolPadInfo { flex: 1 1 100%; min-height: 1.3em; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
