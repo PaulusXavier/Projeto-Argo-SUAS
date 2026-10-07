@@ -19,7 +19,7 @@ Observação: o hash antigo continua no histórico do Git. Se a senha atual for 
 Para que o código e os dados do app não fiquem legíveis no site publicado:
 
 1. Abra `scripts/gerar-protecao.html` direto da sua pasta (funciona offline).
-2. Selecione de uma vez os arquivos **originais**: `index.html` (raiz) e, de `js/`, `app.js`, `data.js`, `equipe-cras-cristiana.js`, `argo-mascot.js` e `auth-config.js`.
+2. Selecione de uma vez os arquivos **originais**: `index.html` (raiz) e, de `js/`, `app.js`, `data.js`, `equipe-cras-cristiana.js`, `argo-mascot.js`, `argo-cerebro.js` e `auth-config.js`.
 3. Defina a senha (12+ caracteres) e clique em **Gerar versão protegida**.
 4. Do ZIP gerado, publique `index.html`, `gate.js`, `argo.enc` e `sw.js` e **apague a pasta `js/`** do site. Mantenha `css/`, `assets/`, `ferramentas/` e `manifest.json`.
 5. Publique em um repositório **novo** (ou privado): o histórico do Git antigo continua com os arquivos em texto aberto.
