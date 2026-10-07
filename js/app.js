@@ -3534,6 +3534,7 @@ const TOOLS_STATE = {
   sw: { running: false, start: 0, base: 0, laps: [] },
   tm: { running: false, end: 0, total: 0, left: 0, done: false, timer: null },
   calcLog: [],
+  view: { cat: 'all', q: '' }, // filtro e busca da aba Ferramentas (sobrevivem a trocar de aba)
   ctx: null,
   hooked: false,
   clockTimer: null,
@@ -6382,6 +6383,7 @@ function renderToolsCard() {
     '<button type="button" role="tab" class="tools-tab" data-tt="' + t[0] + '" id="toolTab-' + t[0] + '" aria-controls="toolPane-' + t[0] + '">' + t[1] + '</button>').join('');
   const presets = [5, 10, 15, 30, 45, 60].map(m => '<button type="button" class="tools-chip" data-min="' + m + '">' + m + ' min</button>').join('');
   return '<div id="toolsRoot" class="tools-wrap">'
+    + toolsNavHtml()
     // ---------- Relógio / cronômetro / temporizador
     + '<section class="tech-card tools-card" aria-label="Relógio, cronômetro e temporizador"><h2>Relógio</h2>'
     + '<div class="tools-tabs" role="tablist" aria-label="Relógio, cronômetro e temporizador">' + tabs + '</div>'
@@ -6440,11 +6442,173 @@ function renderToolsCard() {
     + '<p class="tools-hint">Fica cifrado com a senha do app e some em “Apagar dados salvos neste dispositivo”. Ao baixar o .txt ou o PDF, o arquivo sai sem cifra.</p></section></div>';
 }
 
+/* ---------------------------------------------------------------------------
+   Barra da aba Ferramentas: busca, filtro por tipo, favoritas (★) e recolher.
+   Não mexe no conteúdo de nenhum cartão: só mostra/esconde, reordena e
+   recolhe. Favoritas e cartões recolhidos ficam neste aparelho (sem dados de
+   pessoas), como as preferências da aba Aplicativos.
+   --------------------------------------------------------------------------- */
+const TOOLS_PINS_KEY = 'argo_tools_pins_v1';
+const TOOLS_FOLD_KEY = 'argo_tools_fold_v1';
+const TOOLS_CATS = [
+  ['all', 'Todas'], ['fav', '★ Favoritas'], ['tempo', 'Tempo'], ['calculo', 'Cálculos'],
+  ['atend', 'Atendimento'], ['dados', 'Dados'], ['notas', 'Notas']
+];
+// A chave é o aria-label de cada cartão (é por ele que a barra encontra o cartão).
+const TOOLS_CATALOG = {
+  'Relógio, cronômetro e temporizador': { id: 'relogio', cat: 'tempo', kw: 'hora horario cronometro timer alarme boa vista brasilia fuso' },
+  'Calculadora': { id: 'calculadora', cat: 'calculo', kw: 'conta somar porcentagem dividir multiplicar' },
+  'Renda per capita': { id: 'renda', cat: 'atend', kw: 'bolsa familia cadunico cadastro unico salario minimo meio salario renda familia pessoas' },
+  'Idade e datas': { id: 'idade', cat: 'atend', kw: 'nascimento faixa etaria meses crianca idoso' },
+  'Gerador de QR Code': { id: 'qr', cat: 'atend', kw: 'link whatsapp codigo imagem png' },
+  'Contador de atendimentos': { id: 'contador', cat: 'atend', kw: 'rma mensal contagem resumo mes atendimentos' },
+  'Calculadora de prazos': { id: 'prazos', cat: 'atend', kw: 'dias uteis corridos feriados vencimento data' },
+  'Analisador de planilha': { id: 'planilha', cat: 'dados', kw: 'csv excel xlsx xls duplicados repetidos base familias nis coluna contar' },
+  'Bloco de notas': { id: 'notas', cat: 'notas', kw: 'anotacao nota texto pdf txt' }
+};
+const toolsNorm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+function toolsNavHtml() {
+  const chips = TOOLS_CATS.map(c =>
+    '<button type="button" class="tools-chip tools-fchip" data-tf="' + c[0] + '" aria-pressed="false">' + c[1]
+    + '<span class="tools-fcount" data-tfc="' + c[0] + '"></span></button>').join('');
+  return '<div class="tools-nav" role="search" aria-label="Encontrar ferramenta">'
+    + '<label class="sr-only" for="toolsFind">Buscar ferramenta</label>'
+    + '<input id="toolsFind" class="tools-input tools-find" type="search" autocomplete="off" enterkeyhint="search" placeholder="Buscar ferramenta (ex.: renda, prazo, planilha)…">'
+    + '<div class="tools-filter" role="group" aria-label="Filtrar por tipo">' + chips + '</div>'
+    + '<div class="tools-nav-foot"><span id="toolsNavInfo" class="tools-hint" role="status" aria-live="polite"></span>'
+    + '<button type="button" class="tools-link-btn" id="toolsFoldAll"></button></div>'
+    + '<p id="toolsEmpty" class="tools-empty" hidden></p></div>';
+}
+
+function initToolsNav() {
+  const root = document.getElementById('toolsRoot'); if (!root) return;
+  const $ = id => document.getElementById(id);
+  const readList = k => { try { const v = JSON.parse(localStorage.getItem(k) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } };
+  const saveList = (k, set) => { try { localStorage.setItem(k, JSON.stringify(Array.from(set))); } catch (e) { /* ignora */ } };
+  const pins = new Set(readList(TOOLS_PINS_KEY));
+  const folds = new Set(readList(TOOLS_FOLD_KEY));
+  const cards = Array.from(root.querySelectorAll(':scope > section.tools-card')).map((el, i) => {
+    const label = el.getAttribute('aria-label') || '';
+    const meta = TOOLS_CATALOG[label] || { id: 'x' + i, cat: 'outros', kw: '' };
+    const h2 = el.querySelector(':scope > h2');
+    const title = h2 ? h2.textContent.trim() : label;
+    return { el, h2, id: meta.id, cat: meta.cat, title, hay: toolsNorm(title + ' ' + label + ' ' + meta.kw) };
+  });
+
+  // Botões ★ (favoritar) e ▾ (recolher) no título de cada cartão
+  cards.forEach(c => {
+    if (!c.h2) return;
+    const box = document.createElement('span'); box.className = 'tools-card-actions';
+    box.innerHTML = '<button type="button" class="tools-ico-btn" data-act="pin"></button>'
+      + '<button type="button" class="tools-ico-btn tools-fold-btn" data-act="fold"><span aria-hidden="true">▾</span></button>';
+    c.h2.appendChild(box);
+    c.pinBtn = box.firstChild; c.foldBtn = box.lastChild;
+    c.el.dataset.tid = c.id;
+  });
+
+  const paintCard = c => {
+    const pinned = pins.has(c.id), folded = folds.has(c.id);
+    c.el.style.order = pinned ? '-1' : '';
+    c.el.classList.toggle('is-collapsed', folded);
+    if (c.pinBtn) {
+      c.pinBtn.textContent = pinned ? '★' : '☆';
+      c.pinBtn.classList.toggle('is-on', pinned);
+      c.pinBtn.setAttribute('aria-pressed', pinned ? 'true' : 'false');
+      c.pinBtn.setAttribute('aria-label', (pinned ? 'Tirar das favoritas: ' : 'Favoritar: ') + c.title);
+      c.pinBtn.title = pinned ? 'Tirar das favoritas' : 'Favoritar (fica no topo)';
+    }
+    if (c.foldBtn) {
+      c.foldBtn.setAttribute('aria-expanded', folded ? 'false' : 'true');
+      c.foldBtn.setAttribute('aria-label', (folded ? 'Expandir: ' : 'Recolher: ') + c.title);
+      c.foldBtn.title = folded ? 'Expandir' : 'Recolher';
+    }
+  };
+
+  const apply = () => {
+    const v = TOOLS_STATE.view;
+    const terms = toolsNorm(v.q).split(/\s+/).filter(Boolean);
+    let shown = 0;
+    const visible = [];
+    cards.forEach(c => {
+      const okCat = v.cat === 'all' || (v.cat === 'fav' ? pins.has(c.id) : c.cat === v.cat);
+      const okQ = terms.every(t => c.hay.indexOf(t) !== -1);
+      const on = okCat && okQ;
+      c.el.hidden = !on;
+      if (on) { shown++; visible.push(c); }
+    });
+    root.querySelectorAll('.tools-fchip').forEach(b => {
+      const on = b.dataset.tf === v.cat;
+      b.classList.toggle('is-active', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    TOOLS_CATS.forEach(([k]) => {
+      const n = k === 'all' ? cards.length : k === 'fav' ? cards.filter(c => pins.has(c.id)).length : cards.filter(c => c.cat === k).length;
+      const el = root.querySelector('[data-tfc="' + k + '"]'); if (el) el.textContent = n;
+    });
+    // chips de categorias sem nenhum cartão somem (não acontece hoje, mas evita botão morto)
+    root.querySelectorAll('.tools-fchip').forEach(b => {
+      const k = b.dataset.tf; if (k === 'all' || k === 'fav') return;
+      b.hidden = !cards.some(c => c.cat === k);
+    });
+    const info = $('toolsNavInfo'), empty = $('toolsEmpty');
+    info.textContent = shown === cards.length ? cards.length + (cards.length === 1 ? ' ferramenta' : ' ferramentas')
+      : shown + ' de ' + cards.length + (shown === 1 ? ' ferramenta' : ' ferramentas');
+    if (shown === 0) {
+      empty.hidden = false;
+      empty.textContent = v.cat === 'fav' && !terms.length
+        ? 'Nenhuma favorita ainda. Toque na ☆ do título de uma ferramenta para deixá-la no topo.'
+        : 'Nenhuma ferramenta encontrada. Tente outra palavra ou volte para “Todas”.';
+    } else empty.hidden = true;
+    const fa = $('toolsFoldAll');
+    const anyOpen = visible.some(c => !folds.has(c.id));
+    fa.hidden = shown === 0;
+    fa.textContent = anyOpen ? 'Recolher todas' : 'Expandir todas';
+    fa.dataset.mode = anyOpen ? 'fold' : 'open';
+  };
+
+  cards.forEach(paintCard);
+  $('toolsFind').value = TOOLS_STATE.view.q;
+  apply();
+
+  let t = null;
+  $('toolsFind').addEventListener('input', e => {
+    clearTimeout(t); const val = e.target.value;
+    t = setTimeout(() => { TOOLS_STATE.view.q = val; apply(); }, 120);
+  });
+  $('toolsFind').addEventListener('keydown', e => {
+    if (e.key === 'Escape' && e.target.value) { e.target.value = ''; TOOLS_STATE.view.q = ''; apply(); e.stopPropagation(); }
+  });
+  root.querySelector('.tools-filter').addEventListener('click', e => {
+    const b = e.target.closest('[data-tf]'); if (!b) return;
+    TOOLS_STATE.view.cat = b.dataset.tf; apply();
+  });
+  root.addEventListener('click', e => {
+    const b = e.target.closest('.tools-ico-btn'); if (!b) return;
+    const card = cards.find(c => c.el.contains(b)); if (!card) return;
+    if (b.dataset.act === 'pin') {
+      if (pins.has(card.id)) pins.delete(card.id); else pins.add(card.id);
+      saveList(TOOLS_PINS_KEY, pins);
+    } else {
+      if (folds.has(card.id)) folds.delete(card.id); else folds.add(card.id);
+      saveList(TOOLS_FOLD_KEY, folds);
+    }
+    paintCard(card); apply();
+    // com o filtro "Favoritas", desfavoritar tira o cartão da lista: devolve o foco para a busca
+    if (card.el.hidden) $('toolsFind').focus();
+  });
+  $('toolsFoldAll').addEventListener('click', e => {
+    const fold = e.currentTarget.dataset.mode === 'fold';
+    cards.forEach(c => { if (c.el.hidden) return; if (fold) folds.add(c.id); else folds.delete(c.id); paintCard(c); });
+    saveList(TOOLS_FOLD_KEY, folds); apply();
+  });
+}
+
 function initToolsPanel() {
   const $ = id => document.getElementById(id);
   initToolsExtras();
   initToolsAtendimento();
   initSheetAnalyzer();
+  initToolsNav();
 
   // ---- Abas do cartão do relógio
   const setPane = name => {
@@ -14470,8 +14634,8 @@ const ARGO_ASSISTANT_INTENTS = [
   },
   {
     keys: ['agenda', 'calendario', 'lembrete', 'pagamento', 'feriado', 'hoje'],
-    reply: 'A Agenda Argo mostra feriados, datas de pagamento e as suas anotações do dia, e pode sincronizar entre aparelhos com um código de sincronização.',
-    action: { label: 'Abrir Agenda', run: () => argoAssistantGoTo('agenda'), reply: 'Abri a Agenda Argo.', mood: 'success' }
+    reply: () => argoAgendaIntroReply(),
+    actions: () => argoAgendaIntroActions()
   },
   {
     keys: ['noticia', 'noticias', 'portaria', 'instrucao normativa', 'mds', 'mec', 'novidade', 'novidades', 'normativo', 'normativos'],
@@ -14540,6 +14704,351 @@ const ARGO_ASSISTANT_INTENTS = [
   }
 ];
 
+/* ============================================================
+   ARGO ↔ AGENDA — o assistente responde com os dados reais da Agenda
+   (hoje, semana, feriados, pagamentos, dias úteis, anotações) e deixa a
+   anotação pronta na tela. Tudo roda neste aparelho: as respostas desta
+   parte NÃO passam pela IA nem entram na memória da conversa do assistente,
+   porque podem citar anotações pessoais.
+   ============================================================ */
+const ARGO_AG_MONTHS = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+const ARGO_AG_WEEKDAYS = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+const argoAgPad = n => String(n).padStart(2, '0');
+const argoAgCap = t => t ? t.charAt(0).toUpperCase() + t.slice(1) : t;
+
+function argoAgToday() { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
+function argoAgAddDays(d, n) { const r = new Date(d.getFullYear(), d.getMonth(), d.getDate()); r.setDate(r.getDate() + n); return r; }
+function argoAgDaysFrom(date) { return Math.round((date - argoAgToday()) / 86400000); }
+function argoAgWhen(days) {
+  if (days === 0) return 'hoje';
+  if (days === 1) return 'amanhã';
+  if (days === -1) return 'ontem';
+  return days > 0 ? 'em ' + days + ' dias' : 'há ' + (-days) + ' dias';
+}
+function argoAgShort(date) { return AGENDA_WEEKDAY_ABBR[date.getDay()] + ' ' + argoAgPad(date.getDate()) + '/' + argoAgPad(date.getMonth() + 1); }
+function argoAgKindWord(kind) { return { feriado: 'Feriado', facultativo: 'Ponto facultativo', pagamento: 'Pagamento', extra: 'Data' }[kind] || 'Data'; }
+function argoAgInfoText(key) {
+  const info = AGENDA_DATA_INFO[key]; if (!info) return '';
+  const kind = argoAgendaKind(info), title = agendaDayTitle(key), word = argoAgKindWord(kind);
+  return title.toLowerCase().indexOf(word.toLowerCase()) === 0 ? title : (kind === 'extra' ? title : word + ': ' + title);
+}
+function argoAgIsBusiness(m, d) {
+  const wd = new Date(AGENDA_YEAR, m, d).getDay();
+  if (wd === 0 || wd === 6) return false;
+  const info = AGENDA_DATA_INFO[agendaKeyFor(m, d)];
+  const kind = info ? argoAgendaKind(info) : '';
+  return kind !== 'feriado' && kind !== 'facultativo';
+}
+
+// Interpreta "hoje", "amanhã", "depois de amanhã", "sexta", "15/10", "dia 20 de novembro".
+function argoAgParseWhen(raw) {
+  const n = argoNorm(raw), today = argoAgToday(), y = today.getFullYear();
+  const mk = date => ({ date, key: date.getFullYear() === AGENDA_YEAR ? agendaIsoKey(date) : null });
+  let m;
+  if (/\bdepois de amanha\b/.test(n)) return mk(argoAgAddDays(today, 2));
+  if (/\bamanha\b/.test(n)) return mk(argoAgAddDays(today, 1));
+  if (/\bhoje\b/.test(n)) return mk(today);
+  if (/\bontem\b/.test(n)) return mk(argoAgAddDays(today, -1));
+  if ((m = String(raw).match(/(?:^|\D)(\d{1,2})\s*[\/.\-]\s*(\d{1,2})(?:\s*[\/.\-]\s*\d{2,4})?(?!\d)/))) {
+    const d = +m[1], mo = +m[2];
+    if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31) {
+      const date = new Date(y, mo - 1, d);
+      if (date.getMonth() === mo - 1) return mk(date);
+    }
+  }
+  if ((m = n.match(/\bdia (\d{1,2})(?: de ([a-z]+))?\b/))) {
+    const d = +m[1];
+    let mo = m[2] ? ARGO_AG_MONTHS.indexOf(m[2]) : -1;
+    if (!m[2]) { mo = today.getMonth(); if (d < today.getDate()) mo++; }
+    if (mo >= 0 && mo <= 11 && d >= 1 && d <= 31) {
+      const date = new Date(y, mo, d);
+      if (date.getMonth() === mo) return mk(date);
+    }
+  }
+  if ((m = n.match(/\b(segunda|terca|quarta|quinta|sexta|sabado|domingo)\b/))) {
+    const idx = ARGO_AG_WEEKDAYS.indexOf(m[1]);
+    const delta = ((idx - today.getDay() + 7) % 7) || 7;
+    return mk(argoAgAddDays(today, delta));
+  }
+  return null;
+}
+
+function argoAgParseMonth(n) {
+  for (let i = 0; i < 12; i++) if (new RegExp('\\b' + ARGO_AG_MONTHS[i] + '\\b').test(n)) return i;
+  const cur = argoAgToday().getMonth();
+  if (/\bproximo mes\b/.test(n)) return cur < 11 ? cur + 1 : null;
+  if (/\b(este|esse|neste|nesse|deste|desse|do|no) mes\b|\bmes atual\b/.test(n)) return cur;
+  return -1;
+}
+
+function argoAgUpcoming(kinds, count) {
+  const today = argoAgToday();
+  return Object.keys(AGENDA_DATA_INFO).sort().map(k => {
+    const d = agendaDateFromKey(k);
+    return { key: k, date: d, days: Math.round((d - today) / 86400000), info: AGENDA_DATA_INFO[k] };
+  }).filter(x => x.days >= 0 && kinds.indexOf(argoAgendaKind(x.info)) > -1).slice(0, count);
+}
+
+// ---- Ações do assistente sobre a Agenda ----
+function argoAgWhenReady(fn) {
+  argoAssistantGoTo('agenda');
+  let tries = 12;
+  const go = () => {
+    if (document.getElementById('agendaCalendarGrid') && typeof agendaRenderCalendar === 'function') fn();
+    else if (tries-- > 0) setTimeout(go, 80);
+  };
+  setTimeout(go, 60);
+}
+function argoAgendaOpenDay(key) {
+  if (!key) return;
+  if (argoAssistantCtrl && argoAssistantCtrl.close) argoAssistantCtrl.close();
+  argoAgWhenReady(() => {
+    const d = agendaDateFromKey(key);
+    agendaCurrentMonth = d.getMonth(); agendaFocusDay = d.getDate();
+    agendaRenderCalendar(); agendaFocusCell(agendaFocusDay);
+  });
+}
+function argoAgendaNewNote(key, text) {
+  if (!key || String(key).slice(0, 4) !== String(AGENDA_YEAR)) {
+    argoAviso('A agenda cobre só ' + AGENDA_YEAR + '. Essa data fica fora.', 'notfound'); return;
+  }
+  if (argoAssistantCtrl && argoAssistantCtrl.close) argoAssistantCtrl.close();
+  argoAgWhenReady(() => {
+    const d = agendaDateFromKey(key);
+    agendaCurrentMonth = d.getMonth(); agendaFocusDay = d.getDate();
+    agendaRenderCalendar();
+    agendaOpenNoteModal(key);
+    const input = document.getElementById('agendaNoteInput');
+    if (input && text) {
+      input.value = text;
+      if (typeof agendaUpdateNoteCounter === 'function') agendaUpdateNoteCounter();
+      try { input.setSelectionRange(text.length, text.length); } catch (e) { /* ignora */ }
+    }
+  });
+}
+// Abre o painel do Argo já com uma pergunta (usado pelos atalhos dentro da aba Agenda).
+function argoAgendaAskUi(text) {
+  if (!argoAssistantCtrl) return;
+  if (argoAssistantCtrl.open) argoAssistantCtrl.open();
+  setTimeout(() => argoAssistantCtrl.ask && argoAssistantCtrl.ask(text), 60);
+}
+
+// ---- Respostas ----
+function argoAgDayActions(key) {
+  return [
+    { label: 'Ver na Agenda', run: () => argoAgendaOpenDay(key), reply: 'Abri o dia na Agenda.', mood: 'success' },
+    { label: 'Anotar neste dia', run: () => argoAgendaNewNote(key, ''), reply: 'Abri a anotação desse dia.', mood: 'success' }
+  ];
+}
+
+function argoAgDescribeDay(w, askHoliday) {
+  if (!w.key) {
+    return { reply: 'A Agenda cobre só ' + AGENDA_YEAR + ', e ' + argoAgShort(w.date) + '/' + w.date.getFullYear() + ' fica fora dela.', mood: 'notfound', quickActions: [] };
+  }
+  const key = w.key, date = w.date, entries = agendaNotesCache[key] || [];
+  const rel = agendaRelativeLabel(key);
+  const lines = [argoAgCap(agendaLongDate(date)) + (rel ? ' (' + rel + ')' : '') + '.'];
+  const info = argoAgInfoText(key);
+  if (askHoliday && !(AGENDA_DATA_INFO[key] && argoAgendaKind(AGENDA_DATA_INFO[key]) === 'feriado')) lines.push('• Não é feriado.');
+  if (info) lines.push('• ' + info);
+  if (entries.length) {
+    lines.push('• Suas anotações (' + entries.length + '):');
+    entries.slice(0, 5).forEach(e => {
+      const t = agendaEntryTimeLabel(e.createdAt), txt = String(e.text || '').replace(/\s+/g, ' ');
+      lines.push('   – ' + (t ? t + ' ' : '') + (txt.length > 110 ? txt.slice(0, 109) + '…' : txt));
+    });
+    if (entries.length > 5) lines.push('   … e mais ' + (entries.length - 5) + '.');
+  }
+  if (!info && !entries.length && !askHoliday) {
+    const wd = date.getDay();
+    lines.push(wd === 0 || wd === 6 ? '• Fim de semana, nada marcado.' : '• Nada marcado para esse dia.');
+    if (!agendaSyncCode) lines.push('Suas anotações só aparecem aqui com a sincronização da Agenda ligada.');
+  }
+  return { reply: lines.join('\n'), mood: 'info', quickActions: argoAgDayActions(key) };
+}
+
+function argoAgDescribeWeek() {
+  const now = new Date();
+  const summary = agendaBuildWeekSummary(now);
+  if (!summary) return { reply: 'O ano virou — recarregue a página para ver a agenda de ' + now.getFullYear() + '.', mood: 'notfound', quickActions: [] };
+  const days = agendaWeekDates(now);
+  const lines = ['Semana de ' + argoAgShort(days[0]) + ' a ' + argoAgShort(days[6]) + '.'];
+  if (summary.weekEntries.length) {
+    summary.weekEntries.forEach(e => lines.push((e.isToday ? '📌 ' : '• ') + e.label + ' — ' + e.text));
+  } else {
+    lines.push('• Nada marcado nesta semana.');
+    const next = argoNextMilestone(now);
+    if (next && next.date.getFullYear() === AGENDA_YEAR) lines.push('Próximo marco: ' + agendaDayTitle(next.key) + ', ' + argoAgShort(next.date) + ' (' + argoAgWhen(next.days) + ').');
+  }
+  return { reply: lines.join('\n'), mood: 'info', quickActions: [
+    { label: 'Abrir Agenda', run: () => argoAgendaOpenDay(summary.todayKey), reply: 'Abri a Agenda.', mood: 'success' },
+    { label: 'Próximo feriado', run: () => argoAssistantAskInline('próximo feriado') }
+  ] };
+}
+
+function argoAgNextOf(kinds, noun) {
+  const list = argoAgUpcoming(kinds, 4);
+  if (!list.length) return { reply: 'Não encontrei mais ' + noun + ' cadastrado em ' + AGENDA_YEAR + '.', mood: 'notfound', quickActions: [] };
+  // Nome só quando acrescenta algo: "Pagamento" e "Ponto facultativo" repetiriam o rótulo.
+  const detail = x => {
+    const kind = argoAgendaKind(x.info), t = agendaDayTitle(x.key);
+    if (kind === 'feriado' || kind === 'extra') return t;
+    const par = t.match(/\(([^)]*)\)\s*$/);
+    return par ? par[1] : '';
+  };
+  const first = list[0], lines = [];
+  const d0 = detail(first), dKind = argoAgendaKind(first.info);
+  const nameAt = (x) => { const d = detail(x); return d ? ' (' + d + ')' : ''; };
+  if (first.days === 0) {
+    lines.push('Hoje é ' + noun + (d0 ? ': ' + d0 : '') + '.');
+    if (list[1]) lines.push('O seguinte: ' + agendaLongDate(list[1].date) + nameAt(list[1]) + ' — ' + argoAgWhen(list[1].days) + '.');
+  } else {
+    const named = (dKind === 'feriado' || dKind === 'extra') && d0;
+    lines.push('O próximo ' + noun + ' é ' + (named ? d0 + ', ' : '') + agendaLongDate(first.date) + (!named && d0 ? ' (' + d0 + ')' : '') + ' — ' + argoAgWhen(first.days) + '.');
+    const wd = first.date.getDay();
+    if (dKind !== 'pagamento' && (wd === 1 || wd === 5)) lines.push('Cai ' + (wd === 1 ? 'numa segunda' : 'numa sexta') + ': fim de semana prolongado.');
+    const more = list.slice(1, 3).map(x => argoAgShort(x.date) + nameAt(x));
+    if (more.length) lines.push('Depois: ' + more.join(' · ') + '.');
+  }
+  return { reply: lines.join('\n'), mood: 'info', quickActions: argoAgDayActions(first.key) };
+}
+
+function argoAgDescribeMonth(m, focusBusiness) {
+  const prefix = AGENDA_YEAR + '-' + argoAgPad(m + 1) + '-';
+  const keys = Object.keys(AGENDA_DATA_INFO).filter(k => k.indexOf(prefix) === 0).sort();
+  const monthName = AGENDA_MONTH_NAMES[m];
+  const total = agendaBusinessDays(m);
+  const lines = [];
+  const bizLine = 'Em ' + monthName.toLowerCase() + ' de ' + AGENDA_YEAR + ' há ' + total + ' dias úteis (sem sábados, domingos, feriados e pontos facultativos cadastrados).';
+  const today = argoAgToday();
+  let remaining = null;
+  if (today.getFullYear() === AGENDA_YEAR && today.getMonth() === m) {
+    remaining = 0;
+    for (let d = today.getDate() + 1; d <= agendaDaysInMonth(m); d++) if (argoAgIsBusiness(m, d)) remaining++;
+  }
+  if (focusBusiness) {
+    lines.push(bizLine);
+    if (remaining !== null) lines.push('Faltam ' + remaining + ' dias úteis depois de hoje.');
+  }
+  if (keys.length) {
+    if (!focusBusiness) lines.push(monthName + ' de ' + AGENDA_YEAR + ':');
+    keys.forEach(k => lines.push('• ' + argoAgShort(agendaDateFromKey(k)) + ' — ' + argoAgInfoText(k)));
+  } else if (!focusBusiness) {
+    lines.push('Sem feriados, facultativos nem pagamentos cadastrados em ' + monthName.toLowerCase() + '.');
+  }
+  if (!focusBusiness) {
+    lines.push(bizLine);
+    if (remaining !== null) lines.push('Faltam ' + remaining + ' dias úteis depois de hoje.');
+  }
+  const noteDays = Object.keys(agendaNotesCache).filter(k => k.indexOf(prefix) === 0 && agendaNotesCache[k] && agendaNotesCache[k].length).length;
+  if (noteDays) lines.push('Você tem anotações em ' + noteDays + (noteDays === 1 ? ' dia' : ' dias') + ' deste mês.');
+  return { reply: lines.join('\n'), mood: 'info', quickActions: [
+    { label: 'Abrir ' + monthName + ' na Agenda', run: () => { if (argoAssistantCtrl && argoAssistantCtrl.close) argoAssistantCtrl.close(); argoAgWhenReady(() => agendaJumpTo(m)); }, reply: 'Abri ' + monthName + ' na Agenda.', mood: 'success' }
+  ] };
+}
+
+// "anotar amanhã: ligar para o CRAS" → abre a anotação do dia já com o texto. Só guarda quando a pessoa confirma.
+function argoAgParseNote(raw) {
+  let t = String(raw).trim();
+  t = t.replace(/^\s*(?:por favor[,\s]*)?(?:me\s+)?(?:anotar|anota|anote|lembrar|lembre-me|lembre|lembrete|agendar|adicionar|criar|colocar|incluir)\b[\s:,\-]*/i, '');
+  t = t.replace(/^(?:na agenda|no calend[aá]rio|uma anota[cç][aã]o|um lembrete|anota[cç][aã]o|lembrete)\b[\s:,\-]*/i, '');
+  const datePhrase = /(?:^|\s)(?:(?:para|pra|em|no dia|de)\s+)?(?:depois de amanh[ãa]|amanh[ãa]|hoje|dia \d{1,2}\s*[\/.\-]\s*\d{1,2}(?:\s*[\/.\-]\s*\d{2,4})?|\d{1,2}\s*[\/.\-]\s*\d{1,2}(?:\s*[\/.\-]\s*\d{2,4})?|dia \d{1,2}(?: de [a-zçã]+)?|(?:segunda|ter[çc]a|quarta|quinta|sexta)(?:-feira)?|s[áa]bado|domingo)(?=[\s:,.\-]|$)/i;
+  t = t.replace(datePhrase, ' ').replace(/\s{2,}/g, ' ').replace(/^[\s:,\-]+|[\s:,\-]+$/g, '').replace(/^(?:que|de|para|pra)\s+/i, '');
+  return t.slice(0, 500);
+}
+
+function argoAgendaAsk(rawText) {
+  const raw = String(rawText || '');
+  const n = argoNorm(raw);
+  if (!n) return null;
+
+  // 1) criar anotação
+  if (/^(por favor )?(me )?(anotar|anota|anote|lembrar|lembre me|lembre|lembrete|agendar|adicionar|criar|colocar|incluir)\b/.test(n)
+      && /\b(agenda|calendario|anotacao|lembrete|lembrar|lembre|anotar|anota|anote|agendar)\b/.test(n)) {
+    const w = argoAgParseWhen(raw) || { date: argoAgToday(), key: agendaIsoKey(argoAgToday()) };
+    const text = argoAgParseNote(raw);
+    if (!w.key) return { reply: 'A Agenda cobre só ' + AGENDA_YEAR + '; essa data fica fora. Diga outra data.', mood: 'notfound', quickActions: [] };
+    const rel = agendaRelativeLabel(w.key);
+    return {
+      reply: 'Deixo a anotação pronta para ' + argoAgShort(w.date) + (rel ? ' (' + rel + ')' : '') + (text ? ':\n“' + text + '”' : '.') +
+        '\nEla só é guardada depois que você tocar em Adicionar.',
+      mood: 'success',
+      quickActions: [{ label: 'Abrir anotação de ' + argoAgShort(w.date), run: () => argoAgendaNewNote(w.key, text), reply: 'Abri a anotação. Confira o texto e toque em Adicionar.', mood: 'success' }]
+    };
+  }
+
+  // 2) próximo feriado / facultativo / pagamento
+  let m;
+  if ((m = n.match(/\bproxim[oa]s? (feriado|ponto facultativo|facultativo|pagamento|marco|data)\b/)) || (m = n.match(/\bquando (?:e|eh|cai|sera) (?:o |a )?(?:proximo |proxima )?(feriado|pagamento)\b/))) {
+    const w = m[1];
+    if (w === 'feriado') return argoAgNextOf(['feriado'], 'feriado');
+    if (w === 'pagamento') return argoAgNextOf(['pagamento'], 'pagamento');
+    if (w === 'marco' || w === 'data') return argoAgNextOf(['feriado', 'facultativo', 'pagamento', 'extra'], 'marco da agenda');
+    return argoAgNextOf(['facultativo'], 'ponto facultativo');
+  }
+
+  // 3) semana
+  if (/\bsemana\b/.test(n) && /\b(agenda|calendario|compromiss\w*|tem|marcad\w*|resumo|feriado|anotac\w*)\b/.test(n)) return argoAgDescribeWeek();
+
+  // 4) dias úteis ("quantos dias úteis faltam", "dias úteis em novembro")
+  const month = argoAgParseMonth(n);
+  const askBiz = /\bdias? uteis?\b/.test(n);
+  if (askBiz && (month !== -1 || /\b(quantos|quantas|restam|faltam)\b/.test(n))) {
+    const mm = (month === -1 || month === null) ? argoAgToday().getMonth() : month;
+    return argoAgDescribeMonth(mm, true);
+  }
+
+  // 5) um dia específico ("o que tem amanhã", "dia 20 de novembro tem algo?")
+  const when = argoAgParseWhen(raw);
+  if (when && /\b(agenda|compromiss\w*|o que tem|que tem|tem algo|tem alguma|tem feriado|e feriado|eh feriado|marcad\w*|anotac\w*|lembrete\w*|tem pagamento|dia de pagamento)\b/.test(n)) {
+    return argoAgDescribeDay(when, /\bferiado\b/.test(n));
+  }
+
+  // 6) mês inteiro ("feriados de novembro", "o que tem em dezembro")
+  if (month !== -1 && month !== null && /\b(agenda|calendario|feriados?|pagamentos?|facultativos?|compromiss\w*|tem|marcad\w*)\b/.test(n)) return argoAgDescribeMonth(month, false);
+
+  return null;
+}
+
+function argoAgendaIntroReply() {
+  const t = argoAgToday();
+  const base = 'A Agenda Argo mostra feriados, pontos facultativos, datas de pagamento e as suas anotações do dia, e sincroniza entre aparelhos com um código.';
+  if (t.getFullYear() !== AGENDA_YEAR) return base;
+  const info = argoAgInfoText(agendaIsoKey(t));
+  return base + '\nHoje (' + argoAgShort(t) + '): ' + (info || 'nada marcado nas datas oficiais') + '.\nPergunte, por exemplo: “o que tem amanhã?”, “próximo feriado”, “dias úteis em novembro” ou “anotar sexta: ligar para o CRAS”.';
+}
+function argoAgendaIntroActions() {
+  return [
+    { label: 'Abrir Agenda', run: () => argoAssistantGoTo('agenda'), reply: 'Abri a Agenda Argo.', mood: 'success' },
+    { label: 'O que tem hoje?', run: () => argoAssistantAskInline('o que tem hoje') },
+    { label: 'Próximo feriado', run: () => argoAssistantAskInline('próximo feriado') }
+  ];
+}
+
+// Aviso do Argo ao abrir a aba Agenda: só quando hoje ou amanhã tem feriado, facultativo ou pagamento
+// (uma vez por dia, por sessão — não repete a cada abertura da aba).
+function argoAgendaNudge() {
+  try {
+    if (typeof ArgoMascot === 'undefined') return;
+    const now = argoAgToday();
+    if (now.getFullYear() !== AGENDA_YEAR) return;
+    const todayKey = agendaIsoKey(now), tmr = argoAgAddDays(now, 1), tmrKey = agendaIsoKey(tmr);
+    if (sessionStorage.getItem('argo_agenda_nudge') === todayKey) return;
+    const pick = (key, when) => {
+      const info = AGENDA_DATA_INFO[key]; if (!info || key.slice(0, 4) !== String(AGENDA_YEAR)) return null;
+      const kind = argoAgendaKind(info);
+      if (kind === 'extra') return null;
+      const title = agendaDayTitle(key);
+      if (kind === 'pagamento') return { key, msg: (when === 'hoje' ? 'Hoje' : 'Amanhã') + ' é dia de pagamento no calendário.' };
+      return { key, msg: (when === 'hoje' ? 'Hoje' : 'Amanhã') + ' é ' + (kind === 'feriado' ? 'feriado' : 'ponto facultativo') + ': ' + title + '.' };
+    };
+    const hit = pick(todayKey, 'hoje') || pick(tmrKey, 'amanha');
+    sessionStorage.setItem('argo_agenda_nudge', todayKey);
+    if (!hit) return;
+    ArgoMascot.notify(hit.msg, { type: 'info', duration: 8000, actionLabel: 'Ver no calendário', onAction: () => argoAgendaOpenDay(hit.key) });
+  } catch (e) { /* aviso é opcional */ }
+}
+
 function argoPick(list) { return list[Math.floor(Math.random() * list.length)]; }
 
 // Dicas por aba (usadas pela intenção "dicas" e pelo primeiro botão do menu,
@@ -14547,7 +15056,7 @@ function argoPick(list) { return list[Math.floor(Math.random() * list.length)]; 
 const ARGO_TAB_TIPS = {
   all: 'Na busca, escreva bairro, serviço ou nome da unidade. Cada card tem "Gerar Guia" (ficha de encaminhamento), mapa e a estrela de favoritos.',
   favoritos: 'Aqui ficam as unidades marcadas com estrela. Para tirar uma, toque na estrela de novo no card.',
-  agenda: 'Use "Hoje" para voltar ao dia atual. Em PageUp/PageDown você troca de mês. Para ver as anotações em outros aparelhos, configure o código de sincronização.',
+  agenda: 'Use "Hoje" para voltar ao dia atual. Em PageUp/PageDown você troca de mês. Para ver as anotações em outros aparelhos, configure o código de sincronização. Pergunte ao Argo: "o que tem hoje?", "próximo feriado", "dias úteis em novembro" ou "anotar amanhã: ligar para o CRAS".',
   mapa: 'Toque num pino para ver a unidade, ou busque pelo nome. "Qual CRAS/CREAS atende o bairro?" mostra a unidade de referência. "Minha localização" lista as mais próximas.',
   tradutor: 'Escreva ou fale em português e escolha o idioma. Dá para salvar frases próprias para usar de novo.',
   pdftools: 'Una até 20 arquivos, divida ou extraia páginas, reduza o tamanho de um PDF, numere as páginas e converta entre PDF, Word e JPG. Nada sai do seu navegador.',
@@ -14583,6 +15092,16 @@ function argoAssistantDefaultQuickActions() {
   const active = document.querySelector('#filterBar .filter-chip.active');
   const cat = active ? active.dataset.cat : 'all';
   const list = [];
+  if (cat === 'agenda') {
+    return [
+      { label: 'Dicas desta aba', run: () => argoAssistantAskInline('dicas') },
+      { label: 'O que tem hoje?', run: () => argoAssistantAskInline('o que tem hoje') },
+      { label: 'Resumo da semana', run: () => argoAssistantAskInline('agenda da semana') },
+      { label: 'Próximo feriado', run: () => argoAssistantAskInline('próximo feriado') },
+      { label: 'Próximo pagamento', run: () => argoAssistantAskInline('próximo pagamento') },
+      { label: 'Anotar para hoje', run: () => argoAgendaNewNote(agendaIsoKey(new Date()), ''), reply: 'Abri a anotação de hoje.', mood: 'success' }
+    ];
+  }
   if (cat !== 'all') list.push({ label: 'Dicas desta aba', run: () => argoAssistantAskInline('dicas') });
   list.push(
     { label: 'Buscar equipamento', run: () => argoAssistantFocusSearch(), reply: 'Pronto! O cursor já está na busca 🔍', mood: 'success' },
@@ -14603,6 +15122,8 @@ function argoAssistantDefaultQuickActions() {
 function argoAssistantAsk(rawText) {
   const norm = argoNorm(rawText);
   if (!norm) return null;
+  const agendaAnswer = argoAgendaAsk(rawText);
+  if (agendaAnswer) return agendaAnswer;
   const padded = ' ' + norm + ' ';
   const tokens = norm.split(' ');
 
@@ -14897,6 +15418,7 @@ function renderAgendaCard() {
           .agenda-sub-extra { display: none; }
           .agenda-privacy { margin-bottom: 0.7rem; }
           .agenda-next-strip { font-size: 12.5px; padding: 6px 10px; gap: 6px; margin: 0 10px 8px; }
+          .agenda-argo-row { margin: 0 10px 8px; }
           .agenda-today-banner { margin: 0 10px 8px; }
           .agenda-year { padding: 2px 10px 8px 12px; }
           .agenda-monthbar { order: 3; flex: 1 1 100%; }
@@ -14931,7 +15453,14 @@ function renderAgendaCard() {
         .agenda-next-strip strong { font-weight:700; }
         .agenda-next-days { margin-left:auto; padding:1px 9px; border-radius:999px; background:var(--cover); color:#fff; font-size:11px; font-weight:700; }
         .agenda-next-btn { border:0; background:none; color:var(--blue-ink); font:inherit; font-weight:700; text-decoration:underline; cursor:pointer; padding:0; }
-        @media print { .agenda-next-strip, .agenda-tools, .agenda-today-banner, .agenda-nav-btn, .agenda-today-btn, .agenda-year, .agenda-up-box { display:none !important; } }
+        .agenda-argo-row { display:flex; align-items:center; flex-wrap:wrap; gap:6px 8px; margin:0 14px 10px 14px; padding:6px 10px; border-radius:12px; background:rgba(15,74,65,0.07); border:1px solid rgba(184,137,79,0.4); }
+        .agenda-argo-icon { display:inline-flex; width:30px; height:30px; flex:0 0 30px; }
+        .agenda-argo-icon svg { width:100%; height:100%; }
+        .agenda-argo-lead { font-size:12.5px; font-weight:700; color:var(--ink); margin-right:2px; }
+        .agenda-argo-chip { min-height:30px; padding:2px 11px; border-radius:999px; border:1px solid var(--gold); background:transparent; color:var(--blue-ink); font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+        .agenda-argo-chip:hover { background:rgba(184,137,79,0.18); }
+        .agenda-argo-chip:focus-visible { outline:2px solid var(--blue-ink); outline-offset:2px; }
+        @media print { .agenda-next-strip, .agenda-argo-row, .agenda-tools, .agenda-today-banner, .agenda-nav-btn, .agenda-today-btn, .agenda-year, .agenda-up-box { display:none !important; } }
 
         /* Em tela cheia a barra do topo já mostra o nome da aba: o cabeçalho do card sobra. */
         body.tab-focus .agenda-card .card-top { display: none; }
@@ -15049,6 +15578,16 @@ function renderAgendaCard() {
           </div>
 
           <div id="agendaNextStrip" class="agenda-next-strip" role="status"></div>
+
+          <div id="agendaArgoRow" class="agenda-argo-row" role="group" aria-label="Perguntar ao Argo sobre a agenda">
+            <span class="agenda-argo-icon" aria-hidden="true"></span>
+            <span class="agenda-argo-lead">Pergunte ao Argo</span>
+            <button type="button" class="agenda-argo-chip" data-q="o que tem hoje">O que tem hoje?</button>
+            <button type="button" class="agenda-argo-chip" data-q="próximo feriado">Próximo feriado</button>
+            <button type="button" class="agenda-argo-chip" data-q="próximo pagamento">Próximo pagamento</button>
+            <button type="button" class="agenda-argo-chip" data-q="dias úteis neste mês">Dias úteis</button>
+            <button type="button" class="agenda-argo-chip" data-act="note">Anotar hoje</button>
+          </div>
 
           <nav class="agenda-year" id="agendaYear" aria-label="Meses de ${AGENDA_YEAR}"></nav>
 
@@ -16303,6 +16842,17 @@ function initAgendaPanel() {
   agendaUpdateNotifyIndicator();
   agendaUpdateSyncIndicator(!!agendaUnsubscribe);
   agendaRenderTodayBanner();
+  const argoRow = document.getElementById('agendaArgoRow');
+  if (argoRow) {
+    const ic = argoRow.querySelector('.agenda-argo-icon');
+    if (ic && typeof ArgoMascot !== 'undefined' && typeof ArgoMascot.icon === 'function') ic.innerHTML = ArgoMascot.icon('info', 30);
+    argoRow.addEventListener('click', e => {
+      const b = e.target.closest('[data-q],[data-act]'); if (!b) return;
+      if (b.dataset.act === 'note') argoAgendaNewNote(agendaIsoKey(new Date()), '');
+      else argoAgendaAskUi(b.dataset.q);
+    });
+  }
+  setTimeout(argoAgendaNudge, 900);
   // Reconecta silenciosamente se já havia um código salvo neste navegador
   // (sem abrir o modal — só pede o código na primeira vez que o usuário
   // tentar guardar uma anotação ou tocar em 🔄).
@@ -18158,6 +18708,11 @@ function argoAssistantAskHybrid(rawText, meta) {
     const aviso = B.piiBlock(rawText);
     if (aviso) return { reply: aviso, mood: 'notfound', quickActions: [] };
   }
+
+  // Perguntas sobre a Agenda são respondidas aqui, com os dados do aparelho: nunca vão à IA
+  // nem entram na memória da conversa (podem citar anotações pessoais).
+  const agendaAnswer = argoAgendaAsk(rawText);
+  if (agendaAnswer) return agendaAnswer;
 
   let plan = { kind: 'none' };
   let local = null;
