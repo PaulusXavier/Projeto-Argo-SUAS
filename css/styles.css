@@ -6058,3 +6058,67 @@ details.card-fold[open] > *:not(summary) + *:not(summary) { margin-top: 1rem; }
 .sh-table th, .sh-table td { text-align: left; padding: 0.3rem 0.55rem; border-bottom: 1px solid var(--border-ui); white-space: nowrap; }
 .sh-table th { color: var(--text-muted); font-weight: 700; }
 .sheet-card .tools-row .btn-tech { flex: 0 0 auto; }
+
+
+/* ---- Painel de login: refinamentos visuais e de acessibilidade ---- */
+.login-panel { gap: 0; }
+.login-title { font-size: clamp(1.55rem, 1.2rem + 1vw, 1.9rem); }
+.login-sub { margin-bottom: 1.6rem; }
+
+/* Campo de senha: leve elevação ao focar e contorno visível para teclado */
+#loginPassword { min-height: 50px; }
+#loginPassword::placeholder { color: var(--text-muted); opacity: 0.75; }
+#loginPassword[aria-invalid="true"]:not(:disabled) {
+  border-color: #DC2626;
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.12);
+}
+.login-input-wrapper:focus-within > svg:first-child { color: var(--brand-primary); }
+.login-toggle-visibility:focus-visible,
+.login-forgot-link:focus-visible,
+.login-submit:focus-visible,
+.login-remember input[type="checkbox"]:focus-visible {
+  outline: 3px solid var(--brand-primary-light);
+  outline-offset: 2px;
+}
+.login-forgot-link { border-radius: 6px; }
+
+/* Botão Entrar: degradê sutil, elevação ao passar o mouse, estado travado claro */
+.login-submit {
+  min-height: 50px;
+  font-size: 0.95rem;
+  background: linear-gradient(180deg, var(--brand-primary-light), var(--brand-primary));
+  box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--brand-primary) 70%, transparent);
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+}
+.login-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px -8px color-mix(in srgb, var(--brand-primary) 75%, transparent);
+}
+.login-submit:disabled { cursor: not-allowed; box-shadow: none; transform: none; }
+
+/* Aviso de erro / contagem do bloqueio: o tempo vira uma "pílula" legível */
+.login-error { line-height: 1.4; }
+.login-error-countdown:not(:empty) {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(220, 38, 38, 0.14);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Telas baixas (celular na horizontal, janelas pequenas): compacta o painel */
+@media (max-height: 700px) {
+  .login-panel { padding-top: 1.6rem; padding-bottom: 1.4rem; }
+  .login-sub { margin-bottom: 1.1rem; }
+  .login-footnote { margin-top: 1rem; }
+}
+@media (max-width: 380px) {
+  .login-panel { padding: 1.6rem 1.15rem 1.4rem; }
+  .login-options-row { flex-direction: column; align-items: flex-start; gap: 0.2rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-submit, .login-submit:hover:not(:disabled) { transition: none; transform: none; }
+}
