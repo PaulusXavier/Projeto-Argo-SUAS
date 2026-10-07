@@ -210,7 +210,7 @@ function rememberRecord(exp, handoff) {
   return JSON.stringify(rec);
 }
 
-function rememberSessionSave(key) {
+function rememberSessionSave() {
   try {
     sessionStorage.setItem(REMEMBER_SESSION_KEY, rememberRecord(Date.now() + REMEMBER_SESSION_MAX_MS, false));
   } catch (e) { /* sessionStorage indisponível (modo privado) - segue sem lembrar */ }
@@ -428,7 +428,7 @@ function initAuth() {
   let lockoutTimer = null;
   let isSubmitting = false;
 
-  function showError(msg) {
+  function showError(msg, opts) {
     if (errorTextEl && msg) errorTextEl.textContent = msg;
     if (errorCountdownEl) errorCountdownEl.textContent = '';
     if (pwField) pwField.setAttribute('aria-invalid', 'true');
@@ -436,7 +436,9 @@ function initAuth() {
     errorEl.classList.remove('shake');
     void errorEl.offsetWidth;
     errorEl.classList.add('shake');
-    if (typeof argoLoginMascotReact === 'function') argoLoginMascotReact('error');
+    // Só reage como "senha errada" quando foi mesmo uma senha errada (não para
+    // campo vazio, falha técnica ou configuração inválida).
+    if (!(opts && opts.quiet) && typeof argoLoginMascotReact === 'function') argoLoginMascotReact('error');
   }
 
   function clearError() {
@@ -546,15 +548,31 @@ function initAuth() {
       e.preventDefault();
       if (isSubmitting) return;
 
+      // Outra aba pode ter errado a senha (ou iniciado um bloqueio) desde que
+      // esta foi aberta: relê o estado salvo e fica com o mais restritivo, para
+      // não dar para "zerar" as tentativas abrindo várias abas.
+      const saved = readAuthState();
+      authFailedAttempts = Math.max(authFailedAttempts, saved.attempts);
+      authLockoutLevel = Math.max(authLockoutLevel, saved.level);
+      if (saved.lockedUntil > authLockedUntil) authLockedUntil = saved.lockedUntil;
+
       const now = Date.now();
       if (now < authLockedUntil) {
         startLockoutCountdown();
         return;
       }
 
+      // Sem HTTPS (ex.: endereço http:// da rede local) o navegador não libera
+      // crypto.subtle. Antes isso gerava um erro silencioso e o botão ficava
+      // preso em "Verificando…".
+      if (!window.crypto || !window.crypto.subtle) {
+        showError('Este navegador não permite a verificação segura da senha. Abra o Argo SUAS por um endereço https:// ou use um navegador atualizado.', { quiet: true });
+        return;
+      }
+
       const value = (pwField.value || '').trim();
       if (!value) {
-        showError('Digite a senha da equipe para entrar.');
+        showError('Digite a senha da equipe para entrar.', { quiet: true });
         pwField.focus();
         return;
       }
@@ -562,21 +580,34 @@ function initAuth() {
       setLoading(true);
       let strongKeys = null;
       let passwordOk = false;
-      if (STRONG_AUTH) {
-        try {
+      let technicalFailure = false;
+      try {
+        if (STRONG_AUTH) {
           strongKeys = await strongDerive(value, APP_PASSWORD_STRONG);
           passwordOk = constantTimeEqualHex(strongKeys.verifierHex, String(APP_PASSWORD_STRONG.hash || ''));
-        } catch (err) {
-          console.error('Argo SUAS: configuração de senha forte inválida em js/auth-config.js', err);
+        } else if (APP_PASSWORD_HASH) {
+          passwordOk = constantTimeEqualHex(await sha256Hex(value), APP_PASSWORD_HASH);
+        } else {
+          throw new Error('auth-config.js ausente ou sem senha configurada');
         }
-      } else {
-        passwordOk = !!APP_PASSWORD_HASH && constantTimeEqualHex(await sha256Hex(value), APP_PASSWORD_HASH);
+      } catch (err) {
+        technicalFailure = true;
+        console.error('Argo SUAS: não foi possível verificar a senha (confira js/auth-config.js)', err);
+      }
+
+      // Falha técnica (arquivo de configuração ausente/inválido, erro do
+      // navegador) não é "senha errada": não gasta tentativa nem inicia bloqueio.
+      if (technicalFailure) {
+        setLoading(false);
+        showError('Não foi possível verificar a senha agora. Recarregue a página; se continuar, avise quem administra o Argo SUAS.', { quiet: true });
+        pwField.focus();
+        return;
       }
 
       if (passwordOk) {
         authFailedAttempts = 0;
         authLockoutLevel = 0;
-        writeAuthState(0, 0);
+        writeAuthState(0, 0, 0);
         errorEl.classList.remove('visible');
         if (errorCountdownEl) errorCountdownEl.textContent = '';
         pwField.setAttribute('aria-invalid', 'false');
@@ -593,7 +624,7 @@ function initAuth() {
         // momento do login — assim, desmarcá-la também derruba um "lembrar"
         // de uma sessão anterior nesta mesma aba.
         if (rememberEl && rememberEl.checked) {
-          rememberSessionSave(sessionEncKey);
+          rememberSessionSave();
         } else {
           rememberSessionClear();
         }
@@ -626,7 +657,7 @@ function initAuth() {
           writeAuthState(0, authLockedUntil, authLockoutLevel);
           startLockoutCountdown();
         } else {
-          writeAuthState(authFailedAttempts, 0);
+          writeAuthState(authFailedAttempts, 0, authLockoutLevel);
           // Avisa quando faltam poucas tentativas, para o bloqueio temporário não vir de surpresa.
           const remaining = AUTH_MAX_ATTEMPTS - authFailedAttempts;
           showError(remaining <= 2
