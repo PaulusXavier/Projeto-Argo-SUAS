@@ -9789,6 +9789,7 @@ function renderPdfToolsCard() {
 
         <nav class="pdftools-jump" aria-label="Ir direto para uma ferramenta">
           <span class="pdftools-jump-label">Ir para:</span>
+          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolEdit')">Editar</button>
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolMerge')">Unir</button>
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolSplit')">Dividir</button>
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolRemove')">Excluir</button>
@@ -9801,6 +9802,111 @@ function renderPdfToolsCard() {
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolPdfWord')">PDF ⇄ Word</button>
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolPdfJpg')">PDF ⇄ JPG</button>
         </nav>
+
+        <div class="pdftools-section-title">${ICONS.form}<span>Editar PDF</span><small>escrever, desenhar, realçar, cobrir e assinar</small></div>
+        <div class="pdftools-grid pdftools-grid-single" style="margin-bottom:1.4rem;">
+          <div class="pdftools-tool" id="pdftoolsToolEdit">
+            <div class="pdftools-tool-header">
+              <span class="pdftools-tool-icon">${ICONS.form}</span>
+              <div>
+                <div class="pdftools-tool-title">Editar PDF</div>
+                <div class="pdftools-tool-limit">Um PDF · até 60 MB</div>
+              </div>
+            </div>
+            <p class="pdftools-tool-desc">Abra o PDF, escreva textos, desenhe, realce trechos, cubra informações e coloque uma imagem ou assinatura em qualquer página. Depois baixe o arquivo editado. O texto original do PDF não é alterado: as edições ficam por cima.</p>
+            <label class="pdftools-dropzone" for="pdftoolsEditInput" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="pdftoolsHandleDrop(event, 'Edit')">
+              <input type="file" id="pdftoolsEditInput" accept=".pdf,application/pdf" onchange="pdftoolsEditPick(this.files[0], this)">
+              <div class="pdftools-dropzone-icon">${ICONS.pdf}</div>
+              <div class="pdftools-dropzone-text">Escolher um PDF para editar</div>
+              <div class="pdftools-dropzone-hint">ou arraste o arquivo até aqui</div>
+            </label>
+            <div class="pdftools-pickinfo" id="pdftoolsEditInfo"></div>
+
+            <div class="pdfedit" id="pdfEditor" hidden>
+              <div class="pdfedit-toolbar" role="toolbar" aria-label="Ferramentas de edição">
+                <button type="button" class="pdfedit-tool is-active" data-tool="move" aria-pressed="true" onclick="pdftoolsEditSetTool('move')" title="Mover e editar textos e imagens">✥ Mover</button>
+                <button type="button" class="pdfedit-tool" data-tool="text" aria-pressed="false" onclick="pdftoolsEditSetTool('text')" title="Escrever um texto na página">T Texto</button>
+                <button type="button" class="pdfedit-tool" data-tool="edittext" aria-pressed="false" onclick="pdftoolsEditSetTool('edittext')" title="Clicar num texto que já existe no PDF e reescrevê-lo">Ab Editar texto</button>
+                <button type="button" class="pdfedit-tool" data-tool="form" aria-pressed="false" onclick="pdftoolsEditSetTool('form')" title="Preencher os campos de formulário do próprio PDF">☑ Formulário</button>
+                <button type="button" class="pdfedit-tool" data-tool="pen" aria-pressed="false" onclick="pdftoolsEditSetTool('pen')" title="Desenhar à mão livre">✎ Caneta</button>
+                <button type="button" class="pdfedit-tool" data-tool="hl" aria-pressed="false" onclick="pdftoolsEditSetTool('hl')" title="Realçar um trecho">▭ Realçar</button>
+                <button type="button" class="pdfedit-tool" data-tool="cover" aria-pressed="false" onclick="pdftoolsEditSetTool('cover')" title="Cobrir um trecho com uma caixa de cor">■ Cobrir</button>
+                <button type="button" class="pdfedit-tool" data-tool="box" aria-pressed="false" onclick="pdftoolsEditSetTool('box')" title="Desenhar uma caixa (só o contorno)">▢ Caixa</button>
+                <button type="button" class="pdfedit-tool" data-tool="line" aria-pressed="false" onclick="pdftoolsEditSetTool('line')" title="Desenhar uma linha reta">╱ Linha</button>
+                <button type="button" class="pdfedit-tool" data-tool="stamp" aria-pressed="false" onclick="pdftoolsEditSetTool('stamp')" title="Carimbos prontos: certo, errado, bolinha e data de hoje">✓ Carimbo</button>
+                <button type="button" class="pdfedit-tool" data-tool="img" aria-pressed="false" onclick="pdftoolsEditSetTool('img')" title="Colocar uma imagem ou assinatura">▣ Imagem</button>
+                <button type="button" class="pdfedit-tool" data-tool="erase" aria-pressed="false" onclick="pdftoolsEditSetTool('erase')" title="Apagar um item que você adicionou">✕ Apagar</button>
+              </div>
+              <div class="pdfedit-options">
+                <label class="pdfedit-opt">Cor
+                  <select id="pdfEditColor" class="tools-input" onchange="pdftoolsEditOptChange()">
+                    <option value="#000000">Preto</option><option value="#1d4ed8">Azul</option><option value="#dc2626">Vermelho</option><option value="#16a34a">Verde</option><option value="#facc15">Amarelo</option><option value="#ffffff">Branco</option>
+                  </select>
+                </label>
+                <label class="pdfedit-opt">Tamanho
+                  <select id="pdfEditSize" class="tools-input" onchange="pdftoolsEditOptChange()">
+                    <option value="p">Pequeno</option><option value="m" selected>Médio</option><option value="g">Grande</option>
+                  </select>
+                </label>
+                <label class="pdfedit-opt" id="pdfEditHlWrap" hidden>Estilo
+                  <select id="pdfEditHlMode" class="tools-input" onchange="pdftoolsEditHlModeChange()"><option value="hl">Realce</option><option value="under">Sublinhado</option><option value="strike">Riscado</option></select>
+                </label>
+                <label class="pdfedit-opt">Fonte
+                  <select id="pdfEditFont" class="tools-input" onchange="pdftoolsEditOptChange()"><option value="h">Arial</option><option value="t">Times</option><option value="c">Courier</option></select>
+                </label>
+                <label class="pdfedit-check"><input type="checkbox" id="pdfEditBold" onchange="pdftoolsEditOptChange()"> <strong>Negrito</strong></label>
+                <label class="pdfedit-check"><input type="checkbox" id="pdfEditItalic" onchange="pdftoolsEditOptChange()"> <em>Itálico</em></label>
+                <span class="pdfedit-spacer"></span>
+                <button type="button" class="pdftools-btn-ghost pdfedit-mini" id="pdfEditUndo" onclick="pdftoolsEditUndo()" disabled title="Desfazer (Ctrl+Z)">↶ Desfazer</button>
+                <button type="button" class="pdftools-btn-ghost pdfedit-mini" id="pdfEditRedo" onclick="pdftoolsEditRedo()" disabled title="Refazer (Ctrl+Shift+Z)">↷ Refazer</button>
+              </div>
+              <div class="pdfedit-imgbar" id="pdfEditImgBar" hidden>
+                <button type="button" class="pdftools-btn-ghost pdfedit-mini" onclick="document.getElementById('pdfEditImgInput').click()">Escolher imagem...</button>
+                <input type="file" id="pdfEditImgInput" accept="image/png,image/jpeg,image/webp,image/gif" hidden onchange="pdftoolsEditPickImage(this.files[0], this)">
+                <label class="pdfedit-check"><input type="checkbox" id="pdfEditImgBg"> Tornar o fundo branco transparente (para assinatura em foto)</label>
+                <span class="pdfedit-imgname" id="pdfEditImgName"></span>
+              </div>
+              <div class="pdfedit-imgbar" id="pdfEditFormBar" hidden>
+                <label class="pdfedit-check"><input type="checkbox" id="pdfEditFlatten"> Travar o formulário ao baixar (os campos deixam de ser editáveis)</label>
+              </div>
+              <div class="pdfedit-imgbar" id="pdfEditStampBar" hidden>
+                <label class="pdfedit-opt">Carimbo
+                  <select id="pdfEditStamp" class="tools-input"><option value="check">✓ Marcar (certo)</option><option value="cross">✗ Cruz (errado)</option><option value="dot">● Bolinha (marcar opção)</option><option value="date">Data de hoje</option></select>
+                </label>
+              </div>
+              <p class="pdfedit-hint" id="pdfEditHint" aria-live="polite"></p>
+              <div class="pdfedit-nav">
+                <button type="button" class="pdftools-btn-ghost pdfedit-mini" id="pdfEditPrev" onclick="pdftoolsEditGo(pdftoolsEdit.page - 1)" aria-label="Página anterior">‹</button>
+                <label class="pdfedit-pagelabel">Página
+                  <input type="number" id="pdfEditPage" class="tools-input" min="1" value="1" inputmode="numeric" onchange="pdftoolsEditGo(Number(this.value))">
+                  <span id="pdfEditPageTotal">de 1</span>
+                </label>
+                <button type="button" class="pdftools-btn-ghost pdfedit-mini" id="pdfEditNext" onclick="pdftoolsEditGo(pdftoolsEdit.page + 1)" aria-label="Próxima página">›</button>
+                <span class="pdfedit-spacer"></span>
+                <button type="button" class="pdftools-btn-ghost pdfedit-mini" onclick="pdftoolsEditZoom(-0.25)" aria-label="Diminuir o zoom">−</button>
+                <span class="pdfedit-zoom" id="pdfEditZoomLabel">100%</span>
+                <button type="button" class="pdftools-btn-ghost pdfedit-mini" onclick="pdftoolsEditZoom(0.25)" aria-label="Aumentar o zoom">+</button>
+                <button type="button" class="pdftools-btn-ghost pdfedit-mini" onclick="pdftoolsEditZoomFit()" title="Voltar a ajustar a página à largura da tela">Ajustar</button>
+              </div>
+              <div class="pdfedit-wrap" id="pdfEditWrap">
+                <div class="pdfedit-stage" id="pdfEditStage" data-tool="move">
+                  <canvas id="pdfEditCanvas"></canvas>
+                  <svg id="pdfEditSvg" class="pdfedit-svg" aria-hidden="true"></svg>
+                  <div id="pdfEditLayer" class="pdfedit-layer" onpointerdown="pdftoolsEditDown(event)" onpointermove="pdftoolsEditMove(event)" onpointerup="pdftoolsEditUp(event)" onpointercancel="pdftoolsEditUp(event)" onclick="pdftoolsEditClick(event)"></div>
+                  <div id="pdfEditForm" class="pdfedit-form"></div>
+                </div>
+              </div>
+              <p class="pdfedit-note"><strong>Atenção:</strong> "Cobrir" esconde o trecho na tela, mas o texto original continua dentro do arquivo. Para sigilo de verdade, depois de editar use "Reduzir tamanho", que transforma as páginas em imagens.</p>
+            </div>
+
+            <div class="pdftools-actions">
+              <button type="button" class="pdftools-btn" id="pdftoolsEditBtn" disabled onclick="pdftoolsEditExport()">${ICONS.form} Baixar PDF editado</button>
+              <button type="button" class="pdftools-btn-ghost" id="pdftoolsEditClearBtn" onclick="pdftoolsEditClear()" title="Tirar o arquivo escolhido e começar de novo">Limpar</button>
+            </div>
+            <div class="pdftools-progress" id="pdftoolsEditProgress"><div class="pdftools-progress-fill" id="pdftoolsEditProgressFill"></div></div>
+            <div class="pdftools-status is-info" id="pdftoolsEditStatus"></div>
+          </div>
+        </div>
 
         <div class="pdftools-section-title">${ICONS.layers}<span>Unir e organizar</span><small>juntar, separar e numerar páginas</small></div>
         <div class="pdftools-tool" id="pdftoolsToolMerge" style="margin-bottom:1.1rem;">
@@ -17940,6 +18046,7 @@ function pdftoolsHandleDrop(event, kind) {
   if (kind === 'pdfword') { pdftoolsRunPdfToWord(files[0]); return; }
   if (kind === 'wordpdf') { pdftoolsRunWordToPdf(files[0]); return; }
   if (kind === 'pdfjpg') { pdftoolsRunPdfToJpg(files[0]); return; }
+  if (kind === 'Edit') { pdftoolsEditPick(files[0]); return; }
   if (['Split', 'Compress', 'Number', 'Rotate', 'Remove', 'Mark', 'Meta', 'Text'].includes(kind)) { pdftoolsExtraPick(kind, files[0]); return; }
 }
 
@@ -19174,6 +19281,1027 @@ function pdftoolsPrefsInit() {
   });
 }
 
+/* ---------- Editar PDF (texto, caneta, realce, cobrir, imagem/assinatura) ----------
+   A página é mostrada com o pdf.js; as edições ficam numa lista (pdftoolsEdit.items)
+   com posições normalizadas (0 a 1) em relação à página COMO APARECE NA TELA. Só na
+   hora de baixar elas são convertidas para o espaço do PDF (considerando a rotação
+   da página) e desenhadas por cima com a pdf-lib. O conteúdo original não é alterado. */
+const PDFEDIT_SIZES = { p: { text: 9, pen: 1.5, img: 0.14 }, m: { text: 12, pen: 3, img: 0.25 }, g: { text: 18, pen: 6, img: 0.4 } };
+const PDFEDIT_DEFAULT_COLOR = { text: '#000000', pen: '#1d4ed8', hl: '#facc15', cover: '#ffffff', box: '#dc2626', line: '#dc2626', edittext: '#000000', stamp: '#16a34a' };
+const PDFEDIT_HL_COLOR = { hl: '#facc15', under: '#dc2626', strike: '#dc2626' };
+const PDFEDIT_FONT_CSS = { h: 'Helvetica, Arial, sans-serif', t: '"Times New Roman", Times, serif', c: '"Courier New", Courier, monospace' };
+const PDFEDIT_BASE = { h: 0.95, t: 0.94, c: 0.87 }; // onde fica a linha de base dentro da caixa, por fonte
+const PDFEDIT_STAMP_SIZE = { p: 14, m: 20, g: 30 };
+const PDFEDIT_HINTS = {
+  move: 'Arraste pela alça ✥ para mover textos e imagens. Toque num texto para editá-lo.',
+  text: 'Toque na página para escrever. Toque fora do texto para terminar. Com um texto selecionado, cor, tamanho e negrito mudam nele.',
+  edittext: 'Toque num texto que já existe no PDF (as linhas editáveis aparecem contornadas) e reescreva-o. Não funciona em PDF escaneado.',
+  box: 'Arraste para desenhar uma caixa (só o contorno).',
+  line: 'Arraste para desenhar uma linha reta.',
+  pen: 'Desenhe com o dedo ou o mouse.',
+  hl: 'Arraste sobre um trecho para realçá-lo, ou toque numa linha de texto para realçá-la inteira.',
+  form: 'Preencha os campos destacados em azul diretamente na página. O que você digitar ou marcar entra no PDF ao baixar.',
+  stamp: 'Escolha o carimbo e toque na página para colocá-lo. Cor e tamanho valem para o carimbo.',
+  cover: 'Arraste para cobrir um trecho (branco apaga na vista; preto esconde). O texto original continua no arquivo.',
+  img: 'Escolha uma imagem (ex.: assinatura) e toque na página para colocá-la. Arraste o canto ◢ para mudar o tamanho.',
+  erase: 'Toque num item que você adicionou para apagá-lo.'
+};
+
+const pdftoolsEdit = {
+  file: null, bytes: null, pdf: null, pages: 0, page: 1, tool: 'move', zoom: 1,
+  items: [], undo: [], redo: [], nextId: 1, infos: {}, images: {}, pendingImg: null,
+  colors: Object.assign({}, PDFEDIT_DEFAULT_COLOR), size: 'm', bold: false, italic: false, font: 'h', dirty: false, activeText: null, textCache: {}, fieldCache: {}, formValues: {},
+  geom: null, renderTok: 0, renderTask: null, busy: false, drawing: false,
+  draw: null, fresh: null, focusSnap: null, focusText: '', bound: false, lastW: 0
+};
+
+function pdfEditEl(id) { return document.getElementById(id); }
+function pdfEditSnap() { return pdftoolsEdit.items.map(a => Object.assign({}, a)); }
+function pdfEditSvgEl(tag, attrs) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.keys(attrs).forEach(k => el.setAttribute(k, attrs[k]));
+  return el;
+}
+function pdfEditHexToRgb(hex) {
+  const n = parseInt(String(hex).replace('#', ''), 16) || 0;
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+}
+
+function pdfEditUpdateButtons() {
+  const st = pdftoolsEdit;
+  const u = pdfEditEl('pdfEditUndo'), r = pdfEditEl('pdfEditRedo');
+  if (u) u.disabled = !st.undo.length;
+  if (r) r.disabled = !st.redo.length;
+  const b = pdfEditEl('pdftoolsEditBtn');
+  if (b) b.disabled = st.busy || !st.pdf;
+  const p = pdfEditEl('pdfEditPrev'), n = pdfEditEl('pdfEditNext');
+  if (p) p.disabled = st.page <= 1;
+  if (n) n.disabled = st.page >= st.pages;
+}
+function pdfEditPushUndo(snap) {
+  const st = pdftoolsEdit;
+  st.dirty = true;
+  st.undo.push(snap);
+  if (st.undo.length > 60) st.undo.shift();
+  st.redo.length = 0;
+  pdfEditUpdateButtons();
+}
+function pdftoolsEditUndo() {
+  const st = pdftoolsEdit;
+  if (!st.undo.length) return;
+  st.redo.push(pdfEditSnap());
+  st.items = st.undo.pop();
+  pdfEditUpdateButtons();
+  pdftoolsEditDrawItems();
+}
+function pdftoolsEditRedo() {
+  const st = pdftoolsEdit;
+  if (!st.redo.length) return;
+  st.undo.push(pdfEditSnap());
+  st.items = st.redo.pop();
+  pdfEditUpdateButtons();
+  pdftoolsEditDrawItems();
+}
+
+function pdftoolsEditBind() {
+  const st = pdftoolsEdit;
+  if (st.bound) return;
+  st.bound = true;
+  let timer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const wrap = pdfEditEl('pdfEditWrap');
+      if (!st.pdf || !wrap || !wrap.offsetParent) return;
+      if (Math.abs(wrap.clientWidth - st.lastW) > 8) pdftoolsEditRender();
+    }, 200);
+  });
+  window.addEventListener('beforeunload', ev => {
+    if (st.dirty && (st.items.length || Object.keys(st.formValues).length)) { ev.preventDefault(); ev.returnValue = ''; }
+  });
+  document.addEventListener('keydown', ev => {
+    const stage = pdfEditEl('pdfEditStage');
+    if (!st.pdf || !stage || !stage.offsetParent) return;
+    if (!(ev.ctrlKey || ev.metaKey) || String(ev.key).toLowerCase() !== 'z') return;
+    const t = ev.target;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    ev.preventDefault();
+    if (ev.shiftKey) pdftoolsEditRedo(); else pdftoolsEditUndo();
+  });
+}
+
+async function pdftoolsEditPick(file, inputEl) {
+  const st = pdftoolsEdit;
+  const sid = 'pdftoolsEditStatus';
+  if (!file) return;
+  if (!pdftoolsIsPdfFile(file)) { pdftoolsSetStatus(sid, 'Escolha um arquivo PDF.', 'error'); if (inputEl) inputEl.value = ''; return; }
+  if (!pdftoolsCheckSingleFileSize(file, sid, inputEl)) return;
+  if ((st.items.length || Object.keys(st.formValues).length) && !confirm('Abrir outro arquivo descarta as edições feitas no atual. Continuar?')) { if (inputEl) inputEl.value = ''; return; }
+  pdftoolsSetStatus(sid, 'Lendo o arquivo...', 'info');
+  try {
+    const PDFLib = await ensurePdfLib();
+    const pdfjs = await ensurePdfJs();
+    const bytes = await file.arrayBuffer();
+    await PDFLib.PDFDocument.load(bytes); // falha cedo se estiver protegido por senha ou danificado
+    const pdf = await pdfjs.getDocument({ data: new Uint8Array(bytes.slice(0)) }).promise;
+    if (st.pdf && st.pdf.destroy) { try { st.pdf.destroy(); } catch (e) { /* segue */ } }
+    Object.assign(st, { file, bytes, pdf, pages: pdf.numPages, page: 1, items: [], undo: [], redo: [], infos: {}, images: {}, pendingImg: null, zoom: 1, geom: null, fresh: null, activeText: null, textCache: {}, fieldCache: {}, formValues: {}, dirty: false });
+    const info = pdfEditEl('pdftoolsEditInfo');
+    if (info) info.textContent = file.name + ' · ' + pdf.numPages + (pdf.numPages === 1 ? ' página' : ' páginas') + ' · ' + pdftoolsFormatBytes(file.size);
+    pdftoolsEditShowEditor();
+    pdftoolsSetStatus(sid, 'Arquivo pronto. Escolha uma ferramenta, edite e toque em "Baixar PDF editado".', 'info');
+  } catch (e) {
+    pdftoolsSetStatus(sid, 'Não foi possível abrir este PDF. Ele pode estar protegido por senha ou danificado.', 'error');
+  } finally {
+    if (inputEl) inputEl.value = '';
+  }
+}
+
+function pdftoolsEditShowEditor() {
+  const st = pdftoolsEdit;
+  const ed = pdfEditEl('pdfEditor');
+  if (!ed || !st.pdf) return;
+  ed.hidden = false;
+  const info = pdfEditEl('pdftoolsEditInfo');
+  if (info && st.file) info.textContent = st.file.name + ' · ' + st.pages + (st.pages === 1 ? ' página' : ' páginas') + ' · ' + pdftoolsFormatBytes(st.file.size);
+  const pg = pdfEditEl('pdfEditPage'); if (pg) pg.max = String(st.pages);
+  const tot = pdfEditEl('pdfEditPageTotal'); if (tot) tot.textContent = 'de ' + st.pages;
+  pdftoolsEditBind();
+  pdftoolsEditSetTool(st.tool || 'move');
+  pdfEditUpdateButtons();
+  pdftoolsEditRender();
+}
+
+// A aba pode ser montada de novo (troca de aba): reabre o editor com o que já estava aberto.
+function pdftoolsEditRestore() {
+  if (pdftoolsEdit.pdf) pdftoolsEditShowEditor();
+}
+
+function pdftoolsEditClear() {
+  const st = pdftoolsEdit;
+  if (st.busy) return;
+  if ((st.items.length || Object.keys(st.formValues).length) && !confirm('Limpar descarta as edições feitas. Continuar?')) return;
+  if (st.renderTask) { try { st.renderTask.cancel(); } catch (e) { /* segue */ } }
+  if (st.pdf && st.pdf.destroy) { try { st.pdf.destroy(); } catch (e) { /* segue */ } }
+  Object.assign(st, { file: null, bytes: null, pdf: null, pages: 0, page: 1, items: [], undo: [], redo: [], infos: {}, images: {}, pendingImg: null, geom: null, fresh: null, activeText: null, textCache: {}, fieldCache: {}, formValues: {}, dirty: false, renderTask: null, renderTok: st.renderTok + 1 });
+  const ed = pdfEditEl('pdfEditor'); if (ed) ed.hidden = true;
+  const info = pdfEditEl('pdftoolsEditInfo'); if (info) info.textContent = '';
+  const nm = pdfEditEl('pdfEditImgName'); if (nm) nm.textContent = '';
+  pdftoolsSetStatus('pdftoolsEditStatus', '', 'info');
+  pdftoolsSetProgress('Edit', 0, 0);
+  pdfEditUpdateButtons();
+}
+
+function pdftoolsEditSetTool(tool) {
+  const st = pdftoolsEdit;
+  st.tool = tool;
+  const stage = pdfEditEl('pdfEditStage');
+  if (stage) stage.dataset.tool = tool;
+  document.querySelectorAll('.pdfedit-tool').forEach(b => {
+    const on = b.dataset.tool === tool;
+    b.classList.toggle('is-active', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+  const colorSel = pdfEditEl('pdfEditColor'), sizeSel = pdfEditEl('pdfEditSize'), boldBox = pdfEditEl('pdfEditBold');
+  const textual = ['move', 'text', 'edittext'].includes(tool);
+  const usesColor = ['text', 'pen', 'hl', 'cover', 'box', 'line', 'edittext', 'stamp'].includes(tool) || tool === 'move';
+  const usesSize = ['text', 'pen', 'img', 'box', 'line', 'stamp'].includes(tool) || tool === 'move';
+  const ckey = tool === 'move' ? 'text' : tool;
+  if (colorSel) { colorSel.disabled = !usesColor; if (usesColor) colorSel.value = st.colors[ckey] || '#000000'; }
+  if (sizeSel) { sizeSel.disabled = !usesSize; sizeSel.value = st.size; }
+  if (boldBox) { boldBox.disabled = !textual; boldBox.checked = !!st.bold; }
+  const fontSel = pdfEditEl('pdfEditFont'), itBox = pdfEditEl('pdfEditItalic');
+  if (fontSel) { fontSel.disabled = !textual; fontSel.value = st.font; }
+  if (itBox) { itBox.disabled = !textual; itBox.checked = !!st.italic; }
+  const sbar = pdfEditEl('pdfEditStampBar'); if (sbar) sbar.hidden = tool !== 'stamp';
+  const fbar = pdfEditEl('pdfEditFormBar'); if (fbar) fbar.hidden = tool !== 'form';
+  const hlw = pdfEditEl('pdfEditHlWrap'); if (hlw) hlw.hidden = tool !== 'hl';
+  const hlm = pdfEditEl('pdfEditHlMode');
+  if (tool === 'hl' && hlm && colorSel && !colorSel.disabled) colorSel.value = st.colors.hl || PDFEDIT_HL_COLOR[hlm.value];
+  const bar = pdfEditEl('pdfEditImgBar'); if (bar) bar.hidden = tool !== 'img';
+  const hint = pdfEditEl('pdfEditHint'); if (hint) hint.textContent = PDFEDIT_HINTS[tool] || '';
+  if (tool === 'edittext') pdftoolsEditLoadText(st.page).then(() => { if (pdftoolsEdit.tool === 'edittext') pdftoolsEditDrawItems(); });
+  else if (tool === 'form') {
+    pdftoolsEditLoadFields(st.page).then(list => {
+      if (pdftoolsEdit.tool !== 'form') return;
+      pdftoolsEditDrawItems();
+      if (!list.length) { const h = pdfEditEl('pdfEditHint'); if (h) h.textContent = 'Esta página não tem campos de formulário preenchíveis. Use "Texto" para escrever sobre o PDF.'; }
+    });
+  }
+  else pdftoolsEditDrawItems();
+}
+
+// Muda cor, tamanho ou negrito. Se há um texto selecionado (o último em que se tocou), a mudança vale para ele.
+// Troca entre realce, sublinhado e riscado (cada um com uma cor padrão)
+function pdftoolsEditHlModeChange() {
+  const st = pdftoolsEdit, m = pdfEditEl('pdfEditHlMode'), cs = pdfEditEl('pdfEditColor');
+  if (!m) return;
+  st.colors.hl = PDFEDIT_HL_COLOR[m.value];
+  if (cs) cs.value = st.colors.hl;
+}
+
+function pdftoolsEditOptChange() {
+  const st = pdftoolsEdit;
+  const colorSel = pdfEditEl('pdfEditColor'), sizeSel = pdfEditEl('pdfEditSize'), boldBox = pdfEditEl('pdfEditBold');
+  const ckey = st.tool === 'move' ? 'text' : st.tool;
+  if (colorSel && !colorSel.disabled) st.colors[ckey] = colorSel.value;
+  if (sizeSel && !sizeSel.disabled) st.size = sizeSel.value;
+  if (boldBox && !boldBox.disabled) st.bold = boldBox.checked;
+  const fontSel = pdfEditEl('pdfEditFont'), itBox = pdfEditEl('pdfEditItalic');
+  if (fontSel && !fontSel.disabled) st.font = fontSel.value;
+  if (itBox && !itBox.disabled) st.italic = itBox.checked;
+  const a = st.activeText;
+  if (!a || !st.items.includes(a) || !['move', 'text', 'edittext'].includes(st.tool)) return;
+  pdfEditPushUndo(pdfEditSnap());
+  if (colorSel && !colorSel.disabled) a.color = colorSel.value;
+  if (sizeSel && !sizeSel.disabled && !a.src) a.size = PDFEDIT_SIZES[st.size].text;
+  if (boldBox && !boldBox.disabled) a.bold = boldBox.checked;
+  if (fontSel && !fontSel.disabled) a.font = fontSel.value;
+  if (itBox && !itBox.disabled) a.italic = itBox.checked;
+  const box = document.querySelector('#pdfEditLayer [data-id="' + a.id + '"] .pdfedit-textbox');
+  if (box && st.geom) { box.style.color = a.color; box.style.fontSize = (a.size * st.geom.scale) + 'px'; box.style.fontWeight = a.bold ? '700' : '400'; box.style.fontStyle = a.italic ? 'italic' : 'normal'; box.style.fontFamily = PDFEDIT_FONT_CSS[a.font || 'h']; }
+}
+
+function pdftoolsEditGo(n) {
+  const st = pdftoolsEdit;
+  if (!st.pdf) return;
+  n = Math.max(1, Math.min(st.pages, Math.round(Number(n) || 1)));
+  st.page = n;
+  const pg = pdfEditEl('pdfEditPage'); if (pg) pg.value = String(n);
+  pdfEditUpdateButtons();
+  pdftoolsEditRender();
+}
+
+function pdftoolsEditZoom(delta) {
+  const st = pdftoolsEdit;
+  st.zoom = Math.max(0.5, Math.min(3, Math.round((st.zoom + delta) * 4) / 4));
+  const lb = pdfEditEl('pdfEditZoomLabel'); if (lb) lb.textContent = Math.round(st.zoom * 100) + '%';
+  pdftoolsEditRender();
+}
+
+function pdftoolsEditZoomFit() {
+  const st = pdftoolsEdit;
+  st.zoom = 1;
+  const lb = pdfEditEl('pdfEditZoomLabel'); if (lb) lb.textContent = '100%';
+  const wrap = pdfEditEl('pdfEditWrap'); if (wrap) { wrap.scrollLeft = 0; }
+  pdftoolsEditRender();
+}
+
+async function pdftoolsEditPageInfo(pn) {
+  const st = pdftoolsEdit;
+  if (st.infos[pn]) return st.infos[pn];
+  const page = await st.pdf.getPage(pn);
+  const base = page.getViewport({ scale: 1 });
+  const v = page.view;
+  const info = { x0: v[0], y0: v[1], w: v[2] - v[0], h: v[3] - v[1], rot: ((page.rotate % 360) + 360) % 360, Wd: base.width, Hd: base.height };
+  st.infos[pn] = info;
+  return info;
+}
+
+async function pdftoolsEditRender() {
+  const st = pdftoolsEdit;
+  if (!st.pdf) return;
+  const tok = ++st.renderTok;
+  if (st.renderTask) { try { st.renderTask.cancel(); } catch (e) { /* segue */ } st.renderTask = null; }
+  const stage = pdfEditEl('pdfEditStage'), wrap = pdfEditEl('pdfEditWrap'), canvas = pdfEditEl('pdfEditCanvas');
+  if (!stage || !wrap || !canvas) return;
+  try {
+    const pn = st.page;
+    const info = await pdftoolsEditPageInfo(pn);
+    const page = await st.pdf.getPage(pn);
+    if (tok !== st.renderTok) return;
+    st.lastW = wrap.clientWidth;
+    const fit = Math.min(Math.max(240, (wrap.clientWidth || 320) - 4), 1100);
+    const cssW = fit * st.zoom;
+    const scale = cssW / info.Wd;
+    const cssH = info.Hd * scale;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let rs = scale * dpr;
+    const maxPx = 14e6; // evita estourar a memória do celular em zoom alto
+    if (info.Wd * rs * info.Hd * rs > maxPx) rs = Math.sqrt(maxPx / (info.Wd * info.Hd));
+    const vp = page.getViewport({ scale: rs });
+    canvas.width = Math.ceil(vp.width);
+    canvas.height = Math.ceil(vp.height);
+    canvas.style.width = cssW + 'px';
+    canvas.style.height = cssH + 'px';
+    stage.style.width = cssW + 'px';
+    stage.style.height = cssH + 'px';
+    st.geom = { cssW, cssH, scale };
+    if (st.tool === 'edittext') await pdftoolsEditLoadText(pn);
+    await pdftoolsEditLoadFields(pn);
+    if (tok !== st.renderTok) return;
+    pdftoolsEditDrawItems();
+    const g = canvas.getContext('2d');
+    g.fillStyle = '#fff';
+    g.fillRect(0, 0, canvas.width, canvas.height);
+    const task = page.render({ canvasContext: g, viewport: vp });
+    st.renderTask = task;
+    await task.promise;
+    if (st.renderTask === task) st.renderTask = null;
+  } catch (e) {
+    if (e && e.name === 'RenderingCancelledException') return;
+    pdftoolsSetStatus('pdftoolsEditStatus', 'Não foi possível mostrar esta página.', 'error');
+  }
+}
+
+/* ---- desenho dos itens (SVG para formas, DOM para texto e imagem) ---- */
+function pdftoolsEditDrawItems() {
+  const st = pdftoolsEdit, g = st.geom;
+  const svg = pdfEditEl('pdfEditSvg'), layer = pdfEditEl('pdfEditLayer');
+  if (!g || !svg || !layer) return;
+  const ae = document.activeElement;
+  if (ae && layer.contains(ae)) { st.drawing = true; try { ae.blur(); } finally { st.drawing = false; } }
+  svg.setAttribute('viewBox', '0 0 ' + g.cssW + ' ' + g.cssH);
+  svg.style.width = g.cssW + 'px';
+  svg.style.height = g.cssH + 'px';
+  svg.textContent = '';
+  layer.textContent = '';
+  const runs = st.tool === 'edittext' ? st.textCache[st.page] : null;
+  if (runs) {
+    runs.forEach(r => svg.appendChild(pdfEditSvgEl('rect', { x: r.x * g.cssW - 1, y: (r.base - r.fs * 0.88) * g.cssH / pdftoolsEdit.infos[st.page].Hd - 1, width: r.w * g.cssW + 2, height: r.fs * 1.2 * g.cssH / pdftoolsEdit.infos[st.page].Hd + 2, fill: 'rgba(59,130,246,0.08)', stroke: '#3b82f6', 'stroke-width': 1, 'stroke-dasharray': '3 2', rx: 2 })));
+  }
+  st.items.forEach(a => {
+    if (a.page !== st.page) return;
+    if (a.type === 'box') svg.appendChild(pdfEditSvgEl('rect', { x: a.x * g.cssW, y: a.y * g.cssH, width: a.w * g.cssW, height: a.h * g.cssH, fill: 'none', stroke: a.color, 'stroke-width': a.sw * g.scale, 'stroke-linejoin': 'round' }));
+    else if (a.type === 'pen') svg.appendChild(pdftoolsEditPenEl(a));
+    else if (a.type === 'hl' || a.type === 'cover') {
+      if (a.type === 'hl' && (a.mode === 'under' || a.mode === 'strike')) {
+        const ly = (a.mode === 'under' ? a.y + a.h : a.y + a.h / 2) * g.cssH;
+        svg.appendChild(pdfEditSvgEl('line', { x1: a.x * g.cssW, y1: ly, x2: (a.x + a.w) * g.cssW, y2: ly, stroke: a.color, 'stroke-width': 1.5 * g.scale, 'stroke-linecap': 'round' }));
+      } else svg.appendChild(pdfEditSvgEl('rect', { x: a.x * g.cssW, y: a.y * g.cssH, width: a.w * g.cssW, height: a.h * g.cssH, fill: a.color, 'fill-opacity': a.type === 'hl' ? 0.4 : 1 }));
+    }
+    else if (a.type === 'text') layer.appendChild(pdftoolsEditMakeText(a));
+    else if (a.type === 'img') layer.appendChild(pdftoolsEditMakeImg(a));
+  });
+  pdftoolsEditDrawForm();
+}
+
+function pdftoolsEditPenEl(a) {
+  const g = pdftoolsEdit.geom;
+  const pts = a.pts.length === 1 ? [a.pts[0], a.pts[0]] : a.pts;
+  const d = pts.map((p, i) => (i ? 'L' : 'M') + (p[0] * g.cssW).toFixed(1) + ' ' + (p[1] * g.cssH).toFixed(1)).join(' ');
+  return pdfEditSvgEl('path', { d, fill: 'none', stroke: a.color, 'stroke-width': a.w * g.scale, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
+}
+
+function pdftoolsEditMakeGrip(a, wrap, mode) {
+  const grip = document.createElement('span');
+  grip.className = mode === 'resize' ? 'pdfedit-resize' : 'pdfedit-grip';
+  grip.textContent = mode === 'resize' ? '◢' : '✥';
+  grip.setAttribute('aria-hidden', 'true');
+  grip.addEventListener('pointerdown', e => pdftoolsEditGripDown(e, a, wrap, grip, mode));
+  return grip;
+}
+
+function pdftoolsEditGripDown(e, a, wrap, grip, mode) {
+  const st = pdftoolsEdit, g = st.geom;
+  if (!g) return;
+  e.preventDefault();
+  e.stopPropagation();
+  try { grip.setPointerCapture(e.pointerId); } catch (err) { /* segue */ }
+  const snap = pdfEditSnap();
+  const sx = e.clientX, sy = e.clientY, ox = a.x, oy = a.y, ow = a.w;
+  let moved = false;
+  const mv = ev => {
+    const dx = (ev.clientX - sx) / g.cssW, dy = (ev.clientY - sy) / g.cssH;
+    if (mode === 'resize') {
+      a.w = Math.max(0.03, Math.min(1, ow + dx));
+      wrap.style.width = (a.w * g.cssW) + 'px';
+    } else {
+      a.x = Math.min(0.98, Math.max(-0.02, ox + dx));
+      a.y = Math.min(0.98, Math.max(-0.02, oy + dy));
+      wrap.style.left = (a.x * g.cssW) + 'px';
+      wrap.style.top = (a.y * g.cssH) + 'px';
+    }
+    moved = true;
+  };
+  const up = () => {
+    grip.removeEventListener('pointermove', mv);
+    grip.removeEventListener('pointerup', up);
+    grip.removeEventListener('pointercancel', up);
+    if (moved) pdfEditPushUndo(snap);
+  };
+  grip.addEventListener('pointermove', mv);
+  grip.addEventListener('pointerup', up);
+  grip.addEventListener('pointercancel', up);
+}
+
+function pdftoolsEditMakeText(a) {
+  const st = pdftoolsEdit, g = st.geom;
+  const wrap = document.createElement('div');
+  wrap.className = 'pdfedit-item pdfedit-text';
+  wrap.dataset.id = a.id;
+  wrap.style.left = (a.x * g.cssW) + 'px';
+  wrap.style.top = (a.y * g.cssH) + 'px';
+  const box = document.createElement('div');
+  box.className = 'pdfedit-textbox';
+  box.contentEditable = 'true';
+  box.spellcheck = false;
+  box.setAttribute('role', 'textbox');
+  box.setAttribute('aria-multiline', 'true');
+  box.setAttribute('aria-label', 'Texto na página');
+  box.style.fontSize = (a.size * g.scale) + 'px';
+  box.style.color = a.color;
+  box.style.fontWeight = a.bold ? '700' : '400';
+  box.style.fontStyle = a.italic ? 'italic' : 'normal';
+  box.style.fontFamily = PDFEDIT_FONT_CSS[a.font || 'h'];
+  box.textContent = a.text;
+  box.addEventListener('focus', () => {
+    st.focusSnap = pdfEditSnap(); st.focusText = a.text; st.activeText = a;
+    const cs = pdfEditEl('pdfEditColor'), bs = pdfEditEl('pdfEditBold'), ss = pdfEditEl('pdfEditSize');
+    if (cs && !cs.disabled && Array.from(cs.options).some(o => o.value === a.color)) cs.value = a.color;
+    if (bs && !bs.disabled) bs.checked = !!a.bold;
+    const fs2 = pdfEditEl('pdfEditFont'), is2 = pdfEditEl('pdfEditItalic');
+    if (fs2 && !fs2.disabled) fs2.value = a.font || 'h';
+    if (is2 && !is2.disabled) is2.checked = !!a.italic;
+    if (ss && !ss.disabled) { const k = Object.keys(PDFEDIT_SIZES).find(x => PDFEDIT_SIZES[x].text === a.size); if (k) ss.value = k; }
+  });
+  box.addEventListener('input', () => { a.text = (box.innerText || '').replace(/\n$/, ''); });
+  box.addEventListener('paste', ev => {
+    ev.preventDefault();
+    const t = (ev.clipboardData || window.clipboardData).getData('text') || '';
+    document.execCommand('insertText', false, t.replace(/\r/g, ''));
+  });
+  box.addEventListener('keydown', ev => { if (ev.key === 'Escape') box.blur(); });
+  box.addEventListener('blur', () => {
+    if (!st.items.includes(a)) return; // item antigo (já desfeito/refeito)
+    const fresh = st.fresh && st.fresh.id === a.id ? st.fresh : null;
+    if (!String(a.text).trim()) {
+      st.items = st.items.filter(x => x !== a);
+      if (!fresh && st.focusSnap) pdfEditPushUndo(st.focusSnap);
+      if (fresh) st.fresh = null;
+      if (!st.drawing) pdftoolsEditDrawItems();
+    } else if (fresh) {
+      pdfEditPushUndo(fresh.snap);
+      st.fresh = null;
+    } else if (a.text !== st.focusText && st.focusSnap) {
+      pdfEditPushUndo(st.focusSnap);
+    }
+    st.focusSnap = null;
+  });
+  wrap.append(pdftoolsEditMakeGrip(a, wrap, 'move'), box);
+  return wrap;
+}
+
+function pdftoolsEditMakeImg(a) {
+  const st = pdftoolsEdit, g = st.geom;
+  const rec = st.images[a.imgId];
+  const wrap = document.createElement('div');
+  wrap.className = 'pdfedit-item pdfedit-img';
+  wrap.dataset.id = a.id;
+  wrap.style.left = (a.x * g.cssW) + 'px';
+  wrap.style.top = (a.y * g.cssH) + 'px';
+  wrap.style.width = (a.w * g.cssW) + 'px';
+  const img = document.createElement('img');
+  img.alt = 'Imagem inserida';
+  img.draggable = false;
+  if (rec) img.src = rec.dataUrl;
+  wrap.append(img, pdftoolsEditMakeGrip(a, wrap, 'move'), pdftoolsEditMakeGrip(a, wrap, 'resize'));
+  return wrap;
+}
+
+/* ---- ponteiro: desenhar (caneta, realce, cobrir) e tocar (texto, imagem, apagar) ---- */
+function pdftoolsEditPoint(e) {
+  const r = pdfEditEl('pdfEditLayer').getBoundingClientRect();
+  return { u: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), v: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)) };
+}
+
+function pdftoolsEditDown(e) {
+  const st = pdftoolsEdit, g = st.geom;
+  const t = st.tool;
+  if (!g || !['pen', 'hl', 'cover', 'box', 'line'].includes(t)) return;
+  if (e.button !== undefined && e.button !== 0) return;
+  const layer = pdfEditEl('pdfEditLayer'), svg = pdfEditEl('pdfEditSvg');
+  const p = pdftoolsEditPoint(e);
+  const color = st.colors[t] || PDFEDIT_DEFAULT_COLOR[t];
+  const sw = PDFEDIT_SIZES[st.size].pen;
+  e.preventDefault();
+  try { layer.setPointerCapture(e.pointerId); } catch (err) { /* segue */ }
+  if (t === 'pen' || t === 'line') {
+    // a linha reta é um traço de dois pontos
+    const a = { type: 'pen', pts: t === 'line' ? [[p.u, p.v], [p.u, p.v]] : [[p.u, p.v]], w: sw, color };
+    st.draw = { snap: pdfEditSnap(), a, isLine: t === 'line', el: pdftoolsEditPenEl(a), last: [e.clientX, e.clientY], start: [e.clientX, e.clientY] };
+  } else {
+    const a = { type: t, x: p.u, y: p.v, w: 0, h: 0, color };
+    if (t === 'hl') a.mode = (pdfEditEl('pdfEditHlMode') || {}).value || 'hl';
+    const attrs = t === 'box' ? { fill: 'none', stroke: color, 'stroke-width': sw * g.scale } : { fill: color, 'fill-opacity': t === 'hl' ? 0.4 : 1 };
+    if (t === 'box') a.sw = sw;
+    st.draw = { snap: pdfEditSnap(), a, x0: p.u, y0: p.v, el: pdfEditSvgEl('rect', attrs) };
+  }
+  svg.appendChild(st.draw.el);
+}
+
+function pdftoolsEditMove(e) {
+  const st = pdftoolsEdit, d = st.draw, g = st.geom;
+  if (!d || !g) return;
+  const p = pdftoolsEditPoint(e);
+  if (d.a.type === 'pen') {
+    if (d.isLine) { d.a.pts[1] = [p.u, p.v]; }
+    else {
+      if (Math.hypot(e.clientX - d.last[0], e.clientY - d.last[1]) < 1.5) return;
+      d.last = [e.clientX, e.clientY];
+      d.a.pts.push([p.u, p.v]);
+    }
+    const old = d.el;
+    d.el = pdftoolsEditPenEl(d.a);
+    old.replaceWith(d.el);
+  } else {
+    d.a.x = Math.min(d.x0, p.u); d.a.y = Math.min(d.y0, p.v);
+    d.a.w = Math.abs(p.u - d.x0); d.a.h = Math.abs(p.v - d.y0);
+    d.el.setAttribute('x', d.a.x * g.cssW); d.el.setAttribute('y', d.a.y * g.cssH);
+    d.el.setAttribute('width', d.a.w * g.cssW); d.el.setAttribute('height', d.a.h * g.cssH);
+  }
+}
+
+function pdftoolsEditUp(e) {
+  const st = pdftoolsEdit, d = st.draw;
+  if (!d) return;
+  st.draw = null;
+  if (d.el && d.el.parentNode) d.el.remove();
+  const a = d.a, g = st.geom;
+  let tiny = false;
+  if (a.type !== 'pen') tiny = a.w * g.cssW < 4 || a.h * g.cssH < 4;
+  else if (d.isLine) tiny = Math.hypot((a.pts[1][0] - a.pts[0][0]) * g.cssW, (a.pts[1][1] - a.pts[0][1]) * g.cssH) < 4;
+  if (tiny) { if (a.type === 'hl') pdftoolsEditHighlightRun({ u: d.x0, v: d.y0 }); return; }
+  a.id = st.nextId++;
+  a.page = st.page;
+  pdfEditPushUndo(d.snap);
+  st.items.push(a);
+  pdftoolsEditDrawItems();
+}
+
+function pdfEditDistToSeg(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay;
+  const len2 = dx * dx + dy * dy;
+  let t = len2 ? ((px - ax) * dx + (py - ay) * dy) / len2 : 0;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+
+function pdftoolsEditClick(e) {
+  const st = pdftoolsEdit, g = st.geom;
+  if (!g || !st.pdf) return;
+  const layer = pdfEditEl('pdfEditLayer');
+  const p = pdftoolsEditPoint(e);
+  if (st.tool === 'text') {
+    if (e.target !== layer) return;
+    const a = { id: st.nextId++, page: st.page, type: 'text', x: p.u, y: p.v, size: PDFEDIT_SIZES[st.size].text, color: st.colors.text || '#000000', bold: !!st.bold, italic: !!st.italic, font: st.font, text: '' };
+    st.fresh = { id: a.id, snap: pdfEditSnap() };
+    st.items.push(a);
+    pdftoolsEditDrawItems();
+    const box = layer.querySelector('[data-id="' + a.id + '"] .pdfedit-textbox');
+    if (box) box.focus();
+  } else if (st.tool === 'stamp') {
+    if (e.target !== layer) return;
+    pdftoolsEditPlaceStamp(p);
+  } else if (st.tool === 'edittext') {
+    if (e.target !== layer) return;
+    pdftoolsEditStartTextEdit(p);
+  } else if (st.tool === 'img') {
+    if (e.target !== layer) return;
+    const rec = st.pendingImg && st.images[st.pendingImg];
+    if (!rec) { pdftoolsSetStatus('pdftoolsEditStatus', 'Escolha primeiro uma imagem no botão "Escolher imagem...".', 'error'); return; }
+    const info = st.infos[st.page];
+    const w = PDFEDIT_SIZES[st.size].img;
+    const hN = w * rec.ar * (info.Wd / info.Hd);
+    const a = { id: st.nextId++, page: st.page, type: 'img', imgId: st.pendingImg, x: Math.max(0, Math.min(1 - w, p.u - w / 2)), y: Math.max(0, Math.min(1 - hN, p.v - hN / 2)), w };
+    pdfEditPushUndo(pdfEditSnap());
+    st.items.push(a);
+    pdftoolsEditDrawItems();
+    pdftoolsSetStatus('pdftoolsEditStatus', '', 'info');
+  } else if (st.tool === 'erase') {
+    const px = e.clientX, py = e.clientY;
+    const mine = st.items.filter(a => a.page === st.page);
+    for (let i = mine.length - 1; i >= 0; i--) {
+      const a = mine[i];
+      let hit = false;
+      if (a.type === 'text' || a.type === 'img') {
+        const el = layer.querySelector('[data-id="' + a.id + '"]');
+        if (el) { const r = el.getBoundingClientRect(); hit = px >= r.left - 4 && px <= r.right + 4 && py >= r.top - 4 && py <= r.bottom + 4; }
+      } else if (a.type === 'hl' || a.type === 'cover') {
+        hit = p.u >= a.x && p.u <= a.x + a.w && p.v >= a.y && p.v <= a.y + a.h;
+      } else if (a.type === 'box') {
+        const tx = 8 / g.cssW, ty = 8 / g.cssH;
+        const outer = p.u >= a.x - tx && p.u <= a.x + a.w + tx && p.v >= a.y - ty && p.v <= a.y + a.h + ty;
+        const inner = p.u > a.x + tx && p.u < a.x + a.w - tx && p.v > a.y + ty && p.v < a.y + a.h - ty;
+        hit = outer && !inner;
+      } else if (a.type === 'pen') {
+        const tol = Math.max(10, a.w * g.scale) / 2 + 6;
+        const cx = p.u * g.cssW, cy = p.v * g.cssH;
+        const pts = a.pts.length === 1 ? [a.pts[0], a.pts[0]] : a.pts;
+        for (let k = 1; k < pts.length && !hit; k++) {
+          hit = pdfEditDistToSeg(cx, cy, pts[k - 1][0] * g.cssW, pts[k - 1][1] * g.cssH, pts[k][0] * g.cssW, pts[k][1] * g.cssH) <= tol;
+        }
+      }
+      if (hit) {
+        pdfEditPushUndo(pdfEditSnap());
+        st.items = st.items.filter(x => x !== a && !(a.grp && x.grp === a.grp));
+        pdftoolsEditDrawItems();
+        return;
+      }
+    }
+  }
+}
+
+/* ---- editar texto que já existe no PDF ----
+   Lê as linhas de texto da página (pdf.js), e ao tocar numa delas cobre o trecho com a cor do
+   fundo e coloca no lugar um texto editável, com o mesmo conteúdo e tamanho. */
+async function pdftoolsEditLoadText(pn) {
+  const st = pdftoolsEdit;
+  if (!st.pdf) return [];
+  if (st.textCache[pn]) return st.textCache[pn];
+  const runs = [];
+  try {
+    const info = await pdftoolsEditPageInfo(pn);
+    const page = await st.pdf.getPage(pn);
+    const vp = page.getViewport({ scale: 1 });
+    const tc = await page.getTextContent();
+    tc.items.forEach((it, idx) => {
+      if (!it.str || !it.str.trim()) return;
+      const tx = window.pdfjsLib.Util.transform(vp.transform, it.transform);
+      const fs = Math.hypot(tx[0], tx[1]);
+      if (!(fs > 2) || Math.abs(tx[1]) > fs * 0.02 || tx[0] <= 0) return; // só texto na horizontal
+      runs.push({ idx, str: it.str, x: tx[4] / info.Wd, base: tx[5], w: it.width / info.Wd, fs });
+    });
+  } catch (e) { /* sem texto: segue vazio */ }
+  st.textCache[pn] = runs;
+  return runs;
+}
+
+// Cor do fundo ao redor do trecho (mediana de 4 pontos logo fora dele)
+function pdfEditSampleBg(xu, yTopPt, wu, hPt, info) {
+  const canvas = pdfEditEl('pdfEditCanvas');
+  if (!canvas) return '#ffffff';
+  const g = canvas.getContext('2d');
+  const kx = canvas.width / info.Wd, ky = canvas.height / info.Hd;
+  const pts = [[xu * info.Wd - 2, yTopPt + hPt / 2], [(xu + wu) * info.Wd + 2, yTopPt + hPt / 2], [(xu + wu / 2) * info.Wd, yTopPt - 2], [(xu + wu / 2) * info.Wd, yTopPt + hPt + 2]];
+  const cols = pts.map(q => {
+    const x = Math.max(0, Math.min(canvas.width - 1, Math.round(q[0] * kx)));
+    const y = Math.max(0, Math.min(canvas.height - 1, Math.round(q[1] * ky)));
+    const d = g.getImageData(x, y, 1, 1).data;
+    return [d[0], d[1], d[2]];
+  }).sort((a, b) => (a[0] + a[1] + a[2]) - (b[0] + b[1] + b[2]));
+  const m = cols[1]; // mediana (evita pegar um pedaço de letra vizinha)
+  return '#' + m.map(v => v.toString(16).padStart(2, '0')).join('');
+}
+
+function pdfEditFindRun(runs, p, info) {
+  const ux = p.u * info.Wd, vy = p.v * info.Hd;
+  let best = null, bestArea = Infinity;
+  runs.forEach(r => {
+    const x0 = r.x * info.Wd - 3, x1 = (r.x + r.w) * info.Wd + 3;
+    const y0 = r.base - r.fs * 0.95, y1 = r.base + r.fs * 0.3;
+    if (ux >= x0 && ux <= x1 && vy >= y0 && vy <= y1) {
+      const area = (x1 - x0) * (y1 - y0);
+      if (area < bestArea) { best = r; bestArea = area; }
+    }
+  });
+  return best;
+}
+
+// Toque simples com o realce: marca a linha de texto inteira sob o dedo
+async function pdftoolsEditHighlightRun(p) {
+  const st = pdftoolsEdit, pn = st.page;
+  const runs = await pdftoolsEditLoadText(pn);
+  const info = st.infos[pn];
+  if (!info || pn !== st.page) return;
+  const r = pdfEditFindRun(runs, p, info);
+  if (!r) return;
+  pdfEditPushUndo(pdfEditSnap());
+  st.items.push({ id: st.nextId++, page: pn, type: 'hl', x: r.x - 1 / info.Wd, y: (r.base - r.fs * 0.88) / info.Hd, w: r.w + 2 / info.Wd, h: (r.fs * 1.2) / info.Hd, color: st.colors.hl || '#facc15', mode: (pdfEditEl('pdfEditHlMode') || {}).value || 'hl' });
+  pdftoolsEditDrawItems();
+}
+
+async function pdftoolsEditStartTextEdit(p) {
+  const st = pdftoolsEdit;
+  const pn = st.page;
+  const info = st.infos[pn];
+  const runs = await pdftoolsEditLoadText(pn);
+  if (!info || pn !== st.page) return;
+  if (!runs.length) { pdftoolsSetStatus('pdftoolsEditStatus', 'Esta página não tem texto selecionável (parece escaneada). Use "Cobrir" e depois "Texto".', 'error'); return; }
+  const best = pdfEditFindRun(runs, p, info);
+  if (!best) return;
+  const layer = pdfEditEl('pdfEditLayer');
+  const key = pn + ':' + best.idx;
+  const done = st.items.find(a => a.type === 'text' && a.src === key);
+  let target = done;
+  if (!done) {
+    const fs = best.fs;
+    const topPt = best.base - fs * 0.88;
+    const bg = pdfEditSampleBg(best.x, topPt, best.w, fs * 1.2, info);
+    const lum = pdfEditHexToRgb(bg).reduce((s, v, i) => s + v * [0.299, 0.587, 0.114][i], 0);
+    const cover = { id: st.nextId++, page: pn, type: 'cover', x: best.x - 1 / info.Wd, y: topPt / info.Hd, w: best.w + 2 / info.Wd, h: (fs * 1.2) / info.Hd, color: bg, src: key };
+    target = { id: st.nextId++, page: pn, type: 'text', x: best.x, y: (best.base - fs * 0.95) / info.Hd, size: Math.round(fs * 10) / 10, color: lum < 0.4 ? '#ffffff' : '#000000', bold: !!st.bold, italic: !!st.italic, font: st.font, text: best.str, src: key };
+    pdfEditPushUndo(pdfEditSnap());
+    st.items.push(cover, target);
+    pdftoolsEditDrawItems();
+  }
+  const box = layer.querySelector('[data-id="' + target.id + '"] .pdfedit-textbox');
+  if (box) {
+    box.focus();
+    const range = document.createRange();
+    range.selectNodeContents(box);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+}
+
+/* ---- preencher campos de formulário do PDF ----
+   Os campos (AcroForm) são lidos pelo pdf.js e mostrados como caixas sobre a página.
+   Ao baixar, os valores são gravados nos campos de verdade com a pdf-lib. */
+async function pdftoolsEditLoadFields(pn) {
+  const st = pdftoolsEdit;
+  if (!st.pdf) return [];
+  if (st.fieldCache[pn]) return st.fieldCache[pn];
+  const list = [];
+  try {
+    const page = await st.pdf.getPage(pn);
+    const vp = page.getViewport({ scale: 1 });
+    const anns = await page.getAnnotations({ intent: 'display' });
+    anns.forEach(an => {
+      if (an.subtype !== 'Widget' || !an.fieldName || an.readOnly || an.pushButton || an.fieldType === 'Sig') return;
+      if (an.annotationFlags && (an.annotationFlags & 2)) return; // oculto
+      const r = vp.convertToViewportRectangle(an.rect);
+      const f = { name: an.fieldName, rect: [Math.min(r[0], r[2]), Math.min(r[1], r[3]), Math.abs(r[2] - r[0]), Math.abs(r[3] - r[1])] };
+      if (an.fieldType === 'Tx') {
+        f.type = 'text'; f.multi = !!an.multiLine; f.maxLen = an.maxLen || 0;
+        f.init = Array.isArray(an.fieldValue) ? an.fieldValue.join(' ') : (an.fieldValue || '');
+      } else if (an.fieldType === 'Btn') {
+        if (an.checkBox) { f.type = 'check'; f.init = !!an.fieldValue && an.fieldValue !== 'Off'; }
+        else if (an.radioButton) { f.type = 'radio'; f.bv = an.buttonValue; f.init = an.fieldValue; }
+        else return;
+      } else if (an.fieldType === 'Ch') {
+        f.type = 'choice';
+        f.options = (an.options || []).map(o => ({ v: o.exportValue, d: o.displayValue }));
+        f.init = Array.isArray(an.fieldValue) ? (an.fieldValue[0] || '') : (an.fieldValue || '');
+      } else return;
+      list.push(f);
+    });
+  } catch (e) { /* sem campos */ }
+  st.fieldCache[pn] = list;
+  return list;
+}
+
+function pdftoolsEditFormSet(name, value) {
+  const st = pdftoolsEdit;
+  st.formValues[name] = value;
+  st.dirty = true;
+  pdfEditUpdateButtons();
+}
+
+function pdftoolsEditDrawForm() {
+  const st = pdftoolsEdit, g = st.geom;
+  const host = pdfEditEl('pdfEditForm');
+  if (!host || !g) return;
+  host.textContent = '';
+  const active = st.tool === 'form';
+  const info = st.infos[st.page];
+  if (!info) return;
+  (st.fieldCache[st.page] || []).forEach(f => {
+    const has = Object.prototype.hasOwnProperty.call(st.formValues, f.name);
+    if (!active && !has) return; // fora do modo formulário, só mostra o que foi preenchido
+    const val = has ? st.formValues[f.name] : f.init;
+    let el;
+    if (f.type === 'text') {
+      el = document.createElement(f.multi ? 'textarea' : 'input');
+      if (!f.multi) el.type = 'text';
+      el.value = val || '';
+      if (f.maxLen) el.maxLength = f.maxLen;
+      el.addEventListener('input', () => pdftoolsEditFormSet(f.name, el.value));
+    } else if (f.type === 'check') {
+      el = document.createElement('input');
+      el.type = 'checkbox';
+      el.checked = !!val;
+      el.addEventListener('change', () => pdftoolsEditFormSet(f.name, el.checked));
+    } else if (f.type === 'radio') {
+      el = document.createElement('input');
+      el.type = 'radio';
+      el.name = 'pdfform_' + st.page + '_' + f.name;
+      el.checked = val === f.bv;
+      el.addEventListener('change', () => { if (el.checked) pdftoolsEditFormSet(f.name, f.bv); });
+    } else {
+      el = document.createElement('select');
+      const blank = document.createElement('option'); blank.value = ''; blank.textContent = ''; el.appendChild(blank);
+      f.options.forEach(o => { const op = document.createElement('option'); op.value = o.v; op.textContent = o.d || o.v; el.appendChild(op); });
+      el.value = val || '';
+      el.addEventListener('change', () => pdftoolsEditFormSet(f.name, el.value));
+    }
+    el.className = 'pdfedit-field' + (active ? '' : ' is-static');
+    if (!active) el.tabIndex = -1;
+    el.setAttribute('aria-label', 'Campo ' + f.name);
+    el.style.left = (f.rect[0] * g.scale) + 'px';
+    el.style.top = (f.rect[1] * g.scale) + 'px';
+    el.style.width = (f.rect[2] * g.scale) + 'px';
+    el.style.height = (f.rect[3] * g.scale) + 'px';
+    el.style.fontSize = Math.max(8, Math.min(f.multi ? 14 : f.rect[3] * 0.62, 16) * g.scale) + 'px';
+    host.appendChild(el);
+  });
+}
+
+/* ---- carimbos: certo, errado, bolinha e data ---- */
+function pdftoolsEditPlaceStamp(p) {
+  const st = pdftoolsEdit, info = st.infos[st.page];
+  if (!info) return;
+  const kind = (pdfEditEl('pdfEditStamp') || {}).value || 'check';
+  const color = st.colors.stamp || '#16a34a';
+  const S = PDFEDIT_STAMP_SIZE[st.size];
+  const grp = 'g' + st.nextId;
+  const at = (px, py) => [p.u + (px - 0.5) * S / info.Wd, p.v + (py - 0.5) * S / info.Hd];
+  const base = { page: st.page, type: 'pen', color, grp };
+  const mk = (pts, w) => Object.assign({ id: st.nextId++, pts, w }, base);
+  const list = [];
+  if (kind === 'check') list.push(mk([at(0.1, 0.55), at(0.38, 0.85), at(0.9, 0.15)], Math.max(1.5, S * 0.14)));
+  else if (kind === 'cross') { list.push(mk([at(0.15, 0.15), at(0.85, 0.85)], Math.max(1.5, S * 0.14))); list.push(mk([at(0.85, 0.15), at(0.15, 0.85)], Math.max(1.5, S * 0.14))); }
+  else if (kind === 'dot') list.push(mk([at(0.5, 0.5)], S * 0.55));
+  else {
+    const size = PDFEDIT_SIZES[st.size].text;
+    list.push({ id: st.nextId++, page: st.page, type: 'text', x: Math.max(0, p.u), y: Math.max(0, p.v - size * 0.5 / info.Hd), size, color, bold: !!st.bold, italic: !!st.italic, font: st.font, text: new Date().toLocaleDateString('pt-BR') });
+  }
+  pdfEditPushUndo(pdfEditSnap());
+  st.items.push(...list);
+  pdftoolsEditDrawItems();
+}
+
+/* ---- imagem / assinatura ---- */
+async function pdftoolsEditPickImage(file, inputEl) {
+  const st = pdftoolsEdit;
+  if (!file) return;
+  try {
+    const url = URL.createObjectURL(file);
+    let img;
+    try { img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; }); }
+    finally { URL.revokeObjectURL(url); }
+    const k = Math.min(1, 1400 / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.max(1, Math.round(img.naturalWidth * k)), h = Math.max(1, Math.round(img.naturalHeight * k));
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const cx = c.getContext('2d');
+    const clean = !!(pdfEditEl('pdfEditImgBg') && pdfEditEl('pdfEditImgBg').checked);
+    const isJpeg = /jpe?g/i.test(file.type) && !clean;
+    if (isJpeg) { cx.fillStyle = '#fff'; cx.fillRect(0, 0, w, h); }
+    cx.drawImage(img, 0, 0, w, h);
+    if (clean) {
+      // fundo claro vira transparente (com transição suave), útil para foto de assinatura
+      const data = cx.getImageData(0, 0, w, h);
+      const px = data.data;
+      for (let i = 0; i < px.length; i += 4) {
+        const lum = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+        if (lum >= 235) px[i + 3] = 0;
+        else if (lum > 170) px[i + 3] = Math.round(px[i + 3] * (235 - lum) / 65);
+      }
+      cx.putImageData(data, 0, 0);
+    }
+    const mime = isJpeg ? 'image/jpeg' : 'image/png';
+    const dataUrl = c.toDataURL(mime, 0.9);
+    const id = 'img' + (st.nextId++);
+    st.images[id] = { dataUrl, mime, ar: h / w };
+    st.pendingImg = id;
+    const nm = pdfEditEl('pdfEditImgName'); if (nm) nm.textContent = file.name;
+    pdftoolsSetStatus('pdftoolsEditStatus', 'Imagem pronta. Toque na página para colocá-la.', 'info');
+  } catch (e) {
+    pdftoolsSetStatus('pdftoolsEditStatus', 'Não foi possível ler esta imagem. Use JPG ou PNG.', 'error');
+  } finally {
+    if (inputEl) inputEl.value = '';
+  }
+}
+
+/* ---- baixar: converte as edições para o espaço do PDF e desenha com a pdf-lib ---- */
+// (xd, yd) em pontos, a partir do canto superior esquerdo da página COMO APARECE -> coordenadas do PDF.
+function pdfEditToPdf(info, xd, yd) {
+  let x, y;
+  if (info.rot === 90) { x = yd; y = xd; }
+  else if (info.rot === 180) { x = info.w - xd; y = yd; }
+  else if (info.rot === 270) { x = info.w - yd; y = info.h - xd; }
+  else { x = xd; y = info.h - yd; }
+  return [info.x0 + x, info.y0 + y];
+}
+
+function pdfEditSafeText(font, s) {
+  let out = '', bad = 0;
+  for (const ch of String(s).replace(/\r/g, '').replace(/\t/g, '    ')) {
+    if (ch === '\n') { out += ch; continue; }
+    try { font.widthOfTextAtSize(ch, 10); out += ch; } catch (e) { out += '?'; bad++; }
+  }
+  return { text: out, bad };
+}
+
+async function pdftoolsEditExport() {
+  const st = pdftoolsEdit;
+  if (!st.pdf || st.busy) return;
+  const sid = 'pdftoolsEditStatus';
+  const formNames = Object.keys(st.formValues);
+  if (!st.items.length && !formNames.length) { pdftoolsSetStatus(sid, 'Faça pelo menos uma edição antes de baixar.', 'error'); return; }
+  st.busy = true;
+  pdfEditUpdateButtons();
+  pdftoolsSetStatus(sid, 'Aplicando as edições...', 'info');
+  try {
+    const PDFLib = await ensurePdfLib();
+    const { StandardFonts, rgb, degrees, LineCapStyle } = PDFLib;
+    const doc = await PDFLib.PDFDocument.load(st.bytes);
+    let formFail = 0;
+    if (formNames.length) {
+      const form = doc.getForm();
+      formNames.forEach(name => {
+        const v = st.formValues[name];
+        try {
+          const f = form.getField(name);
+          if (f instanceof PDFLib.PDFTextField) f.setText(String(v));
+          else if (f instanceof PDFLib.PDFCheckBox) { if (v) f.check(); else f.uncheck(); }
+          else if (f instanceof PDFLib.PDFRadioGroup || f instanceof PDFLib.PDFDropdown || f instanceof PDFLib.PDFOptionList) {
+            if (v === '' || v == null) { if (f.clear) f.clear(); } else f.select(v);
+          } else formFail++;
+        } catch (e) { formFail++; }
+      });
+      try { form.updateFieldAppearances(await doc.embedFont(StandardFonts.Helvetica)); } catch (e) { formFail++; }
+      const flat = pdfEditEl('pdfEditFlatten');
+      if (flat && flat.checked) { try { form.flatten(); } catch (e) { formFail++; } }
+    }
+    const fontCache = {};
+    const FAMILIES = { h: ['Helvetica', 'HelveticaBold', 'HelveticaOblique', 'HelveticaBoldOblique'], t: ['TimesRoman', 'TimesRomanBold', 'TimesRomanItalic', 'TimesRomanBoldItalic'], c: ['Courier', 'CourierBold', 'CourierOblique', 'CourierBoldOblique'] };
+    const getFont = async a => {
+      const fam = a.font || 'h';
+      const idx = a.bold && a.italic ? 3 : a.bold ? 1 : a.italic ? 2 : 0;
+      const key = fam + idx;
+      if (!fontCache[key]) fontCache[key] = await doc.embedFont(StandardFonts[FAMILIES[fam][idx]]);
+      return fontCache[key];
+    };
+    const embedded = {};
+    const pagesWith = Array.from(new Set(st.items.map(a => a.page))).sort((a, b) => a - b);
+    let badChars = 0, done = 0;
+    for (const pn of pagesWith) {
+      const info = await pdftoolsEditPageInfo(pn);
+      const page = doc.getPage(pn - 1);
+      const mine = st.items.filter(a => a.page === pn);
+      // mesma ordem da tela: formas por baixo; imagens e textos por cima, na ordem em que foram criados
+      const ordered = mine.filter(a => a.type === 'pen' || a.type === 'hl' || a.type === 'cover' || a.type === 'box')
+        .concat(mine.filter(a => a.type === 'img' || a.type === 'text'));
+      for (const a of ordered) {
+        const col = pdfEditHexToRgb(a.color);
+        if (a.type === 'hl' || a.type === 'cover') {
+          const p1 = pdfEditToPdf(info, a.x * info.Wd, a.y * info.Hd);
+          const p2 = pdfEditToPdf(info, (a.x + a.w) * info.Wd, (a.y + a.h) * info.Hd);
+          if (a.type === 'hl' && (a.mode === 'under' || a.mode === 'strike')) {
+            const ly = a.mode === 'under' ? a.y + a.h : a.y + a.h / 2;
+            const l1 = pdfEditToPdf(info, a.x * info.Wd, ly * info.Hd), l2 = pdfEditToPdf(info, (a.x + a.w) * info.Wd, ly * info.Hd);
+            page.drawLine({ start: { x: l1[0], y: l1[1] }, end: { x: l2[0], y: l2[1] }, thickness: 1.5, color: rgb(col[0], col[1], col[2]), lineCap: LineCapStyle.Round });
+          } else page.drawRectangle({ x: Math.min(p1[0], p2[0]), y: Math.min(p1[1], p2[1]), width: Math.abs(p2[0] - p1[0]), height: Math.abs(p2[1] - p1[1]), color: rgb(col[0], col[1], col[2]), opacity: a.type === 'hl' ? 0.4 : 1, borderWidth: 0 });
+        } else if (a.type === 'box') {
+          const p1 = pdfEditToPdf(info, a.x * info.Wd, a.y * info.Hd);
+          const p2 = pdfEditToPdf(info, (a.x + a.w) * info.Wd, (a.y + a.h) * info.Hd);
+          page.drawRectangle({ x: Math.min(p1[0], p2[0]), y: Math.min(p1[1], p2[1]), width: Math.abs(p2[0] - p1[0]), height: Math.abs(p2[1] - p1[1]), borderColor: rgb(col[0], col[1], col[2]), borderWidth: a.sw });
+        } else if (a.type === 'pen') {
+          const pts = a.pts.map(p => pdfEditToPdf(info, p[0] * info.Wd, p[1] * info.Hd));
+          let moved = false;
+          for (let i = 1; i < pts.length; i++) {
+            if (pts[i][0] === pts[i - 1][0] && pts[i][1] === pts[i - 1][1]) continue;
+            page.drawLine({ start: { x: pts[i - 1][0], y: pts[i - 1][1] }, end: { x: pts[i][0], y: pts[i][1] }, thickness: a.w, color: rgb(col[0], col[1], col[2]), lineCap: LineCapStyle.Round });
+            moved = true;
+          }
+          if (!moved) page.drawCircle({ x: pts[0][0], y: pts[0][1], size: a.w / 2, color: rgb(col[0], col[1], col[2]), borderWidth: 0 });
+        } else if (a.type === 'text') {
+          const useFont = await getFont(a);
+          const safe = pdfEditSafeText(useFont, a.text);
+          badChars += safe.bad;
+          safe.text.split('\n').forEach((line, i) => {
+            if (!line) return;
+            const pt = pdfEditToPdf(info, a.x * info.Wd, a.y * info.Hd + a.size * (PDFEDIT_BASE[a.font || 'h'] + 1.2 * i));
+            page.drawText(line, { x: pt[0], y: pt[1], size: a.size, font: useFont, color: rgb(col[0], col[1], col[2]), rotate: degrees(info.rot) });
+          });
+        } else if (a.type === 'img') {
+          const rec = st.images[a.imgId];
+          if (!rec) continue;
+          if (!embedded[a.imgId]) {
+            const b64 = rec.dataUrl.split(',')[1];
+            const bin = atob(b64);
+            const bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            embedded[a.imgId] = rec.mime === 'image/jpeg' ? await doc.embedJpg(bytes) : await doc.embedPng(bytes);
+          }
+          const wPt = a.w * info.Wd, hPt = wPt * rec.ar;
+          const pt = pdfEditToPdf(info, a.x * info.Wd, a.y * info.Hd + hPt);
+          page.drawImage(embedded[a.imgId], { x: pt[0], y: pt[1], width: wPt, height: hPt, rotate: degrees(info.rot) });
+        }
+      }
+      pdftoolsSetProgress('Edit', ++done, pagesWith.length);
+    }
+    const out = new Blob([await doc.save()], { type: 'application/pdf' });
+    pdftoolsDownloadBlob(out, pdftoolsBaseName(st.file) + '-editado.pdf');
+    const total = st.items.length + formNames.length;
+    let msg = 'PDF editado baixado · ' + total + (total === 1 ? ' edição' : ' edições') + ' · ' + pdftoolsFormatBytes(out.size) + '.';
+    if (badChars) msg += ' ' + badChars + ' caractere(s) que a fonte do PDF não aceita foram trocados por "?".';
+    if (formFail) msg += ' Alguns campos do formulário não puderam ser gravados (' + formFail + ').';
+    st.dirty = false;
+    pdftoolsSetStatus(sid, msg, 'success');
+  } catch (e) {
+    pdftoolsSetProgress('Edit', 0, 0);
+    pdftoolsSetStatus(sid, 'Não foi possível aplicar as edições neste PDF.', 'error');
+  } finally {
+    st.busy = false;
+    pdfEditUpdateButtons();
+  }
+}
+
 /* ---------- PDF → Word (texto) ---------- */
 function pdftoolsEscapeXml(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -19595,6 +20723,7 @@ function pdftoolsJump(id) {
 
 function initPdfToolsPanel() {
   pdftoolsPrefsInit();
+  pdftoolsEditRestore();
   pdftoolsRenderMergeList();
   pdftoolsRenderJpgPdfList();
 }
