@@ -71,8 +71,8 @@
       ]
     },
     {
-      "name": "Unificar PDF",
-      "short_name": "Unificar PDF",
+      "name": "Central de PDF",
+      "short_name": "Central de PDF",
       "url": "./index.html#aba=pdftools",
       "icons": [
         {
