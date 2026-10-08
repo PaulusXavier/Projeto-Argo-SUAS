@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "check": "node scripts/verificar.mjs",
+    "test:territorio": "node scripts/teste-territorio.mjs",
     "build": "node scripts/build.mjs"
   },
   "devDependencies": {
