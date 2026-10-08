@@ -34,7 +34,8 @@
     idleMs: 15000,          // silêncio máximo entre pedaços do streaming
     maxPergunta: 500,
     maxHistorico: 6,        // mensagens (3 trocas) enviadas à IA
-    maxContexto: 5,         // fichas do diretório enviadas à IA
+    maxContexto: 7,         // fichas do diretório enviadas à IA (pergunta comum)
+    maxContextoAmplo: 10,   // idem, para perguntas de panorama ("quantos", "todos", "liste"...)
     minGapMs: 1200,         // intervalo mínimo entre perguntas à IA
     porMinuto: 8            // limite local (o Worker também limita)
   };
@@ -596,25 +597,94 @@
     if (session.aiTimes.length >= CFG.porMinuto) return 'Muitas perguntas seguidas. Aguarde um minuto e pergunte de novo.';
     return '';
   }
-  function aiContext(text, tabCat) {
-    var q = parseQuery(text);
-    if (!q.strong.length && !q.syn.length) return [];
+  // Pergunta de panorama: quantos / todos / liste / quais / comparar... A resposta depende de
+  // VÁRIAS unidades (ou do total), não de uma só.
+  var RE_AMPLA = /\b(quantos|quantas|quantidade|total|todos|todas|toda a rede|lista|listar|liste|relacao|quais|qual a diferenca|diferenca|diferencas|comparar|compare|comparacao|panorama|resumo da rede|cada um|cada uma|existem|existe algum|ha algum|tem algum|mais proximo|opcoes)\b/;
+  function isAmpla(text) { return RE_AMPLA.test(norm(text)); }
+  // Tira da pergunta as palavras de "quantidade/lista" (e o genérico "unidades", "rede"), que não
+  // distinguem equipamento nenhum e só atrapalham a busca pelo assunto de verdade.
+  var RE_AMPLA_LIMPA = new RegExp(RE_AMPLA.source.replace(/^\\b\(/, '\\b(unidade|unidades|equipamento|equipamentos|rede|atendem|atende|existem|') , 'g');
+  function semPalavrasAmplas(text) { return norm(text).replace(RE_AMPLA_LIMPA, ' ').replace(/\s+/g, ' ').trim(); }
+
+  var CAT_ROTULO = {
+    bancos: 'Bancos (Caixa Econômica)', trabalho: 'Trabalho, emprego e qualificação', juridico: 'Justiça e defensoria',
+    educacao: 'Educação', cultura: 'Cultura e lazer', saude: 'Saúde', hospitalar: 'Hospitais e urgência',
+    social: 'Assistência social', alimentar: 'Segurança alimentar', delegacias: 'Delegacias e segurança',
+    interior: 'Interior de Roraima', tea: 'TEA/PCD', idoso: 'Pessoa idosa', mulher: 'Proteção à mulher',
+    conselho: 'Conselhos Tutelares', conselhosdireitos: 'Conselhos de direitos', documentacao: 'Documentação',
+    migracao: 'Migração e refúgio', defesacivil: 'Defesa Civil', informes: 'Informes e benefícios',
+    habitacao: 'Habitação', mobilidade: 'Mobilidade', previdencia: 'Previdência'
+  };
+  function grupoDe(d) {
+    var g = cleanText(d.group);
+    if (g) return g;
+    var c = Array.isArray(d.cat) && d.cat.length ? d.cat[0] : '';
+    return CAT_ROTULO[c] || 'Outros';
+  }
+
+  // Visão geral do diretório (contagem por grupo). Vai junto das perguntas de panorama para a IA
+  // responder "quantos" com o número real, em vez de contar fichas soltas.
+  var panoramaCache = null;
+  function panorama() {
+    if (panoramaCache && panoramaCache.n === data.length) return panoramaCache.txt;
+    var cont = {}, ordem = [];
+    data.forEach(function (d) { var g = grupoDe(d); if (!cont[g]) { cont[g] = 0; ordem.push(g); } cont[g]++; });
+    var txt = 'O diretório tem ' + data.length + ' equipamentos, em ' + ordem.length + ' grupos: ' +
+      ordem.map(function (g) { return g + ' (' + cont[g] + ')'; }).join('; ') + '.';
+    panoramaCache = { n: data.length, txt: txt };
+    return txt;
+  }
+
+  function aiContext(text, tabCat, ampla) {
+    var q = parseQuery(ampla ? (semPalavrasAmplas(text) || text) : text);
+    if (!q.strong.length && !q.syn.length) return { fichas: [], total: 0 };
     var r = searchDirectory(q, tabCat);
-    var pick = r.rows.filter(function (x, i) { return i < CFG.maxContexto && (x.score >= r.rows[0].score * 0.4); });
-    return pick.map(function (x) {
+    if (!r.rows.length) return { fichas: [], total: 0 };
+    var lim = ampla ? CFG.maxContextoAmplo : CFG.maxContexto;
+    // Pergunta de panorama que cita uma sigla/tipo que é o nome do GRUPO (CAPS, UBS, CRAS, CREAS...):
+    // as unidades desse grupo vêm primeiro, com a busca por palavra só para desempatar.
+    if (ampla) {
+      var fortes = asSet(q.strong);
+      r.rows.forEach(function (x) {
+        // só sigla escrita em MAIÚSCULAS no nome do grupo ("CAPS (Boa Vista)"), para "pessoa", "saúde"... não puxarem grupos
+        var siglas = (cleanText(grupoDe(x.u.d)).match(/\b[A-ZÁÉÍÓÚÂÊÔÃÕÇ]{3,6}\b/g) || []).map(norm);
+        if (siglas.some(function (t) { return fortes[t]; })) x.score += 100;
+      });
+      r.rows.sort(function (a, b) { return b.score - a.score; });
+    }
+    var corte = r.rows[0].score * (ampla && r.rows[0].score > 100 ? 0.0 : 0.4);
+    var todos = r.rows.filter(function (x) { return x.score >= corte; });
+    if (ampla && r.rows[0].score > 100) todos = todos.filter(function (x) { return x.score > 100; });
+    var fichas = todos.slice(0, lim).map(function (x) {
       var u = slim(x.u.d);
-      return { nome: u.fullName || u.name, grupo: u.group, endereco: u.address, horario: u.hours, telefones: u.phones.join(', '), servicos: cut(u.services, 320) };
+      return {
+        nome: u.fullName || u.name, grupo: grupoDe(x.u.d), endereco: u.address, horario: u.hours,
+        telefones: u.phones.join(', '), servicos: cut(u.services, ampla ? 200 : 320),
+        descricao: cut(cleanText(x.u.d.desc), ampla ? 120 : 220)
+      };
     });
+    return { fichas: fichas, total: todos.length };
   }
   function buildPayload(text, opts) {
     opts = opts || {};
     var hist = session.history.slice(-CFG.maxHistorico);
     // a pergunta atual já entra separada: não repete a última mensagem do usuário
     if (hist.length && hist[hist.length - 1].papel === 'usuario' && hist[hist.length - 1].texto === text.slice(0, CFG.maxPergunta)) hist = hist.slice(0, -1);
+    var ampla = isAmpla(text);
+    var ctx = aiContext(text, opts.tabCat, ampla);
+    var pan = '';
+    if (ampla) {
+      pan = panorama();
+      if (ctx.fichas.length) {
+        pan += ' Para esta pergunta foram anexadas ' + ctx.fichas.length + ' fichas' +
+          (ctx.total > ctx.fichas.length ? ' de cerca de ' + ctx.total + ' que combinam (lista parcial)' : ' (todas as que combinam)') + '.';
+      }
+    }
     return {
       v: 2, stream: true,
       pergunta: String(text).trim().slice(0, CFG.maxPergunta),
-      contexto: aiContext(text, opts.tabCat),
+      contexto: ctx.fichas,
+      panorama: pan,
       historico: hist,
       pagina: String(opts.tabName || '').slice(0, 80)
     };
@@ -810,7 +880,7 @@
     glossary: glossaryScore, compose: { directory: composeDirectory, glossary: composeGlossary },
     remember: remember, reset: reset, session: session,
     aiOn: aiOn, aiGate: aiGate, buildPayload: buildPayload, streamAI: streamAI,
-    verifyPhones: verifyPhones, cleanAI: cleanAI, mentionedUnits: mentionedUnits, telHref: telHref, slim: slim,
+    verifyPhones: verifyPhones, panorama: panorama, isAmpla: isAmpla, cleanAI: cleanAI, mentionedUnits: mentionedUnits, telHref: telHref, slim: slim,
     config: CFG, emergencia: EMERGENCIA, glossarioLista: GLOSSARIO
   };
 });
