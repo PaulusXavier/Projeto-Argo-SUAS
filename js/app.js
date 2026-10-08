@@ -6163,7 +6163,8 @@ function toolsExtrasHtml() {
     </div>
     <div id="pcRows" class="pc-rows" aria-label="Rendas mensais da família"></div>
     <div class="tools-row"><button type="button" class="btn-tech btn-secondary" id="pcAdd">+ Adicionar renda</button>
-    <button type="button" class="btn-tech btn-secondary" id="pcCopy">Copiar resultado</button></div>
+    <button type="button" class="btn-tech btn-secondary" id="pcCopy">Copiar resultado</button>
+    <button type="button" class="btn-tech btn-whatsapp" id="pcWa">${ICONS.whatsapp} WhatsApp</button></div>
     <div id="pcOut" class="pc-out" role="status" aria-live="polite"></div>
     <p class="tools-hint">Conte a renda bruta mensal de quem mora na casa. Em geral não entram BPC, Bolsa Família e auxílios assistenciais. Os valores de referência são de 2026 e podem ser editados acima.</p>
   </section>
@@ -6174,6 +6175,8 @@ function toolsExtrasHtml() {
       <label class="tools-lbl">Calcular até<input id="ageRef" class="tools-input" type="date"></label>
     </div>
     <div id="ageOut" class="pc-out" role="status" aria-live="polite"></div>
+    <div class="tools-row"><button type="button" class="btn-tech btn-secondary" data-copy="ageOut">Copiar resultado</button>
+    <button type="button" class="btn-tech btn-whatsapp" data-wa="ageOut" data-wat="Idade e datas">${ICONS.whatsapp} WhatsApp</button></div>
     <p class="tools-hint">Útil para checar faixa etária de serviços (crianças, adolescentes, idosos) e idade em meses de bebês.</p>
   </section>
   <section class="tech-card tools-card" aria-label="Gerador de QR Code">
@@ -6204,7 +6207,56 @@ function toolsExtrasHtml() {
       <label class="tools-lbl">Sentido<select id="ddDir" class="tools-input"><option value="1">Depois da data</option><option value="-1">Antes da data</option></select></label>
     </div>
     <div id="ddOut" class="pc-out" role="status" aria-live="polite"></div>
+    <div class="tools-row"><button type="button" class="btn-tech btn-secondary" data-copy="ddOut">Copiar resultado</button>
+    <button type="button" class="btn-tech btn-whatsapp" data-wa="ddOut" data-wat="Prazo">${ICONS.whatsapp} WhatsApp</button></div>
     <p class="tools-hint">A contagem começa no dia seguinte à data de partida. Em dias úteis, saem sábados, domingos, feriados e pontos facultativos cadastrados na Agenda. Confira a regra do prazo no normativo ou no ofício.</p>
+  </section>
+  <section class="tech-card tools-card" aria-label="Conferir NIS e CPF">
+    <h2>Conferir NIS e CPF</h2>
+    <label class="tools-lbl">Número do NIS ou do CPF<input id="docIn" class="tools-input" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="20" placeholder="ex.: 123.456.789-09"></label>
+    <div id="docOut" class="pc-out" role="status" aria-live="polite"></div>
+    <div class="tools-row"><button type="button" class="btn-tech btn-secondary" data-copy="docOut">Copiar resultado</button>
+    <button type="button" class="btn-tech btn-secondary" id="docClear">Limpar</button></div>
+    <p class="tools-hint">Confere só o formato e o dígito verificador, para pegar erro de digitação na hora do atendimento. Não diz se o número existe no CadÚnico nem de quem é. Nada é salvo nem enviado.</p>
+  </section>
+  <section class="tech-card tools-card" aria-label="Valor por extenso">
+    <h2>Valor por extenso</h2>
+    <label class="tools-lbl">Valor em reais (R$)<input id="exIn" class="tools-input" inputmode="decimal" autocomplete="off" placeholder="ex.: 1.621,50"></label>
+    <div id="exOut" class="pc-out" role="status" aria-live="polite"></div>
+    <div class="tools-row"><button type="button" class="btn-tech btn-secondary" id="exCopy">Copiar valor e extenso</button>
+    <button type="button" class="btn-tech btn-whatsapp" id="exWa">${ICONS.whatsapp} WhatsApp</button></div>
+    <p class="tools-hint">Para recibos, declarações e ofícios (por exemplo, benefício eventual). Aceita 1.621,50, 1621,5 ou 1621.50, até R$ 999 bilhões.</p>
+  </section>
+  <section class="tech-card tools-card" aria-label="Link de WhatsApp">
+    <h2>Link de WhatsApp</h2>
+    <label class="tools-lbl">Telefone com DDD<input id="waNum" class="tools-input" type="tel" inputmode="tel" autocomplete="off" maxlength="25" placeholder="ex.: (95) 99999-0000"></label>
+    <label class="tools-lbl">Mensagem pronta (opcional)<textarea id="waMsg" class="tools-input qr-text" rows="2" maxlength="300" placeholder="ex.: Olá! Aqui é do CRAS. Pode falar agora?"></textarea></label>
+    <div class="tools-chips" aria-label="Modelos de mensagem">${WA_MODELOS.map((m, k) => '<button type="button" class="tools-chip" data-wam="' + k + '">' + m[0] + '</button>').join('')}</div>
+    <div id="waOut" class="pc-out" role="status" aria-live="polite"></div>
+    <div class="tools-row">
+      <button type="button" class="btn-tech btn-primary" id="waOpen" disabled>Abrir conversa</button>
+      <button type="button" class="btn-tech btn-secondary" id="waCopy" disabled>Copiar link</button>
+      <button type="button" class="btn-tech btn-secondary" id="waQr" disabled>Gerar QR Code</button>
+    </div>
+    <p class="tools-hint">Abre o WhatsApp sem precisar salvar o contato. Os modelos são sugestões: ajuste ao seu serviço antes de enviar. Para outro país, comece com + e o código (ex.: +58…). O número não é salvo nem enviado a servidor: só vai para o WhatsApp quando você toca em Abrir conversa.</p>
+  </section>
+  <section class="tech-card tools-card" aria-label="Formatar texto">
+    <h2>Formatar texto</h2>
+    <label class="tools-lbl">Texto<textarea id="txIn" class="tools-input qr-text" rows="4" autocomplete="off" spellcheck="false" placeholder="Cole aqui nomes, endereços ou trechos de planilha"></textarea></label>
+    <div class="tools-row">
+      <button type="button" class="btn-tech btn-secondary" data-tx="nome">Nome próprio</button>
+      <button type="button" class="btn-tech btn-secondary" data-tx="upper">MAIÚSCULAS</button>
+      <button type="button" class="btn-tech btn-secondary" data-tx="lower">minúsculas</button>
+      <button type="button" class="btn-tech btn-secondary" data-tx="espacos">Limpar espaços</button>
+      <button type="button" class="btn-tech btn-secondary" data-tx="acentos">Tirar acentos</button>
+    </div>
+    <div class="tools-row">
+      <button type="button" class="btn-tech btn-secondary" id="txUndo" disabled>Desfazer</button>
+      <button type="button" class="btn-tech btn-secondary" id="txCopy">Copiar</button>
+      <button type="button" class="btn-tech btn-secondary" id="txClear">Limpar</button>
+    </div>
+    <div id="txInfo" class="tools-hint" role="status" aria-live="polite">0 caracteres · 0 palavras</div>
+    <p class="tools-hint">Útil para padronizar nomes antes de lançar no sistema ou conferir uma lista. O texto fica só na tela, sem salvar.</p>
   </section>
   <section class="tech-card tools-card sheet-card" aria-label="Analisador de planilha">
     <h2>Analisador de planilha</h2>
@@ -6339,6 +6391,247 @@ function initToolsAtendimento() {
   ['ddStart', 'ddN', 'ddKind', 'ddDir'].forEach(id => $(id).addEventListener('input', ddCalc));
   document.querySelectorAll('[data-dd]').forEach(b => b.addEventListener('click', () => { $('ddN').value = b.dataset.dd; ddCalc(); }));
   ddCalc();
+}
+
+// Valor por extenso (reais e centavos), de R$ 0,01 até R$ 999.999.999.999,99.
+// Devolve '' para valor zero/inválido e null quando passa do limite.
+function pcExtenso(valor) {
+  const UN = ['zero', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove', 'dez', 'onze', 'doze', 'treze', 'catorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove'];
+  const DEZ = ['', '', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'];
+  const CEN = ['', 'cento', 'duzentos', 'trezentos', 'quatrocentos', 'quinhentos', 'seiscentos', 'setecentos', 'oitocentos', 'novecentos'];
+  const ESC = [['', ''], ['mil', 'mil'], ['milhão', 'milhões'], ['bilhão', 'bilhões']];
+  const ate999 = n => {
+    if (n === 100) return 'cem';
+    const c = Math.floor(n / 100), r = n % 100, p = [];
+    if (c) p.push(CEN[c]);
+    if (r) p.push(r < 20 ? UN[r] : DEZ[Math.floor(r / 10)] + (r % 10 ? ' e ' + UN[r % 10] : ''));
+    return p.join(' e ');
+  };
+  const inteiro = n => {
+    if (n === 0) return 'zero';
+    const g = []; let x = n;
+    while (x > 0) { g.push(x % 1000); x = Math.floor(x / 1000); }
+    const partes = []; let ultimo = 0;
+    for (let i = g.length - 1; i >= 0; i--) {
+      if (!g[i]) continue;
+      ultimo = g[i];
+      if (i === 1) partes.push(g[i] === 1 ? 'mil' : ate999(g[i]) + ' mil');
+      else if (i >= 2) partes.push(ate999(g[i]) + ' ' + ESC[i][g[i] === 1 ? 0 : 1]);
+      else partes.push(ate999(g[i]));
+    }
+    if (partes.length === 1) return partes[0];
+    const fim = partes.pop();
+    // "mil e duzentos", "um milhão e um", mas "mil trezentos e vinte"
+    return partes.join(' ') + (ultimo < 100 || ultimo % 100 === 0 ? ' e ' : ' ') + fim;
+  };
+  const cents = Math.round(Number(valor) * 100);
+  if (!isFinite(cents) || cents <= 0) return '';
+  const reais = Math.floor(cents / 100), cts = cents % 100, out = [];
+  if (reais > 999999999999) return null;
+  if (reais) {
+    const de = reais >= 1000000 && reais % 1000000 === 0;
+    out.push(inteiro(reais) + (de ? ' de ' : ' ') + (reais === 1 ? 'real' : 'reais'));
+  }
+  if (cts) out.push(inteiro(cts) + (cts === 1 ? ' centavo' : ' centavos'));
+  return out.join(' e ');
+}
+
+function initToolsDocs() {
+  const $ = id => document.getElementById(id);
+  if (!$('docIn') || !$('exIn')) return;
+  const hint = t => '<p class="tools-hint">' + t + '</p>';
+  const warn = t => '<p class="pc-warn">' + t + '</p>';
+  const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
+  const fmtCpf = d => d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
+  const fmtNis = d => d.replace(/^(\d{3})(\d{5})(\d{2})(\d)$/, '$1.$2.$3-$4');
+  const row = (erro, tipo, num, ok) => '<li class="' + (erro ? 'pc-no' : 'pc-yes') + '"><b>' + (erro ? 'Não confere' : 'Confere') + '</b>'
+    + '<span><strong>' + tipo + ': ' + num + '</strong><small>' + cap(erro || ok) + '</small></span></li>';
+
+  // ---------- NIS / CPF avulso (usa as mesmas conferências do analisador de planilha)
+  const docCalc = () => {
+    const d = sheetDigits($('docIn').value), out = $('docOut');
+    if (!d) { out.innerHTML = hint('Digite ou cole o número para conferir.'); return; }
+    if (d.length > 11) { out.innerHTML = warn('Tem ' + d.length + ' dígitos. NIS e CPF têm 11.'); return; }
+    if (d.length < 9) { out.innerHTML = warn('Faltam dígitos: você digitou ' + d.length + ' e NIS e CPF têm 11.'); return; }
+    let html = '<ul class="pc-faixas">';
+    if (d.length === 11) {
+      html += row(sheetCheckNis(d), 'NIS', fmtNis(d), 'tamanho e dígito verificador corretos')
+        + row(sheetCheckCpf(d), 'CPF', fmtCpf(d), 'tamanho e dígito verificador corretos') + '</ul>'
+        + hint('Com 11 dígitos não dá para saber se o número é NIS ou CPF; veja qual dos dois confere.');
+    } else {
+      const full = d.padStart(11, '0');
+      html += row(sheetCheckCpf(d), 'CPF', fmtCpf(full), 'dígito verificador correto') + '</ul>'
+        + hint('Com ' + d.length + ' dígitos só vale como CPF com zeros à esquerda apagados (o Excel faz isso). NIS tem 11 dígitos.');
+    }
+    out.innerHTML = html;
+  };
+  $('docIn').addEventListener('input', docCalc);
+  $('docClear').addEventListener('click', () => { $('docIn').value = ''; docCalc(); $('docIn').focus(); });
+  docCalc();
+
+  // ---------- Valor por extenso
+  let exLast = '';
+  const exCalc = () => {
+    const raw = $('exIn').value, out = $('exOut'), v = pcParse(raw);
+    exLast = '';
+    if (!String(raw).trim()) { out.innerHTML = hint('Digite o valor para ver por extenso.'); return; }
+    if (!v) { out.innerHTML = warn('Digite um valor maior que zero.'); return; }
+    const t = pcExtenso(v);
+    if (t === null) { out.innerHTML = warn('Valor grande demais. O máximo é R$ 999 bilhões.'); return; }
+    if (!t) { out.innerHTML = warn('Valor menor que um centavo.'); return; }
+    const money = pcMoney(Math.round(v * 100) / 100).replace(/\u00a0/g, ' ');
+    exLast = money + ' (' + t + ')';
+    out.innerHTML = '<div class="pc-big pc-big-text"><span>' + money + '</span><strong>' + t + '</strong></div>'
+      + (Math.abs(v * 100 - Math.round(v * 100)) > 1e-6 ? warn('O valor foi arredondado para centavos.') : '');
+  };
+  $('exIn').addEventListener('input', exCalc);
+  $('exCopy').addEventListener('click', () => {
+    if (!exLast) { argoAviso('Digite um valor antes de copiar.', 'info'); return; }
+    (navigator.clipboard ? navigator.clipboard.writeText(exLast) : Promise.reject())
+      .then(() => argoAviso('Valor por extenso copiado.', 'success'))
+      .catch(() => argoAviso('Não consegui copiar. Selecione o texto e copie manualmente.', 'error'));
+  });
+  exCalc();
+}
+
+const WA_MODELOS = [
+  ['Confirmar atendimento', 'Olá! Aqui é do CRAS. Estamos entrando em contato para confirmar o seu atendimento. Pode nos responder por aqui?'],
+  ['Pedir comparecimento', 'Olá! Aqui é do CRAS. Pedimos que compareça à unidade para um atendimento. Leve um documento com foto e, se tiver, o CPF e o NIS.'],
+  ['Atualizar Cadastro Único', 'Olá! Aqui é do CRAS. O Cadastro Único da sua família precisa ser atualizado. Procure a unidade com documento com foto e comprovante de residência.'],
+  ['Não consegui falar', 'Olá! Aqui é do CRAS. Tentamos falar com você e não conseguimos. Pode nos retornar quando puder?']
+];
+
+// Texto limpo do resultado de um cartão (não depende do layout da tela).
+function toolsOutText(out) {
+  const t = el => el.textContent.replace(/\s+/g, ' ').trim();
+  const linhas = [];
+  Array.from(out.children).forEach(c => {
+    if (c.classList.contains('pc-big')) { const sp = c.querySelector('span'), st = c.querySelector('strong'); linhas.push((sp ? t(sp) + ': ' : '') + (st ? t(st) : '')); }
+    else if (c.tagName === 'UL') Array.from(c.children).forEach(li => {
+      const partes = Array.from(li.querySelectorAll('b, strong, small')).map(t).filter(Boolean);
+      linhas.push(partes.length ? partes.join(' · ') : t(li));
+    });
+    else if (t(c)) linhas.push(t(c));
+  });
+  return linhas.join('\n');
+}
+
+// Copia texto e avisa o resultado (usado pelos cartões de ferramentas).
+function toolsCopyText(text, okMsg) {
+  (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject())
+    .then(() => argoAviso(okMsg || 'Copiado.', 'success'))
+    .catch(() => argoAviso('Não consegui copiar. Selecione o texto e copie manualmente.', 'error'));
+}
+
+// Nome próprio: "MARIA DA SILVA" -> "Maria da Silva" (preposições ficam em minúscula).
+function toolsNomeProprio(t) {
+  const peq = new Set(['da', 'de', 'do', 'das', 'dos', 'e', 'di', 'du']);
+  return String(t).toLowerCase().replace(/\p{L}[\p{L}'’]*/gu, (w, i) => (i > 0 && peq.has(w)) ? w : w.charAt(0).toUpperCase() + w.slice(1));
+}
+
+// Telefone brasileiro -> { ok, d (DDD + número), fmt, msg }
+function toolsFone(raw) {
+  const txt = String(raw || '').trim();
+  let d = txt.replace(/\D/g, '');
+  if (!d) return { ok: false, msg: '' };
+  // "+" com outro país (ex.: +58 para Venezuela): vale como está, sem DDD brasileiro
+  if (txt.charAt(0) === '+' && !d.startsWith('55')) {
+    if (d.length < 8 || d.length > 15) return { ok: false, msg: 'Número de outro país: use de 8 a 15 dígitos, começando pelo código do país.' };
+    return { ok: true, d, wa: d, fmt: '+' + d, msg: 'Número de outro país: confira o código do país antes de enviar.' };
+  }
+  if (d.length >= 12 && d.startsWith('55')) d = d.slice(2);
+  d = d.replace(/^0+/, '');
+  if (d.length < 10) return { ok: false, msg: 'Faltam dígitos: use DDD + número (10 ou 11 dígitos).' };
+  if (d.length > 11) return { ok: false, msg: 'Dígitos demais: use DDD + número (10 ou 11 dígitos).' };
+  if (Number(d.slice(0, 2)) < 11) return { ok: false, msg: 'DDD inválido.' };
+  const num = d.slice(2), fmt = '(' + d.slice(0, 2) + ') ' + num.slice(0, num.length - 4) + '-' + num.slice(-4);
+  const aviso = d.length === 11 && d[2] !== '9' ? 'Celular com 11 dígitos começa com 9 depois do DDD. Confira.' : '';
+  return { ok: true, d, wa: '55' + d, fmt, msg: aviso };
+}
+
+function initToolsMore() {
+  const $ = id => document.getElementById(id);
+  if (!$('waNum') || !$('txIn')) return;
+  const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  // ---------- Botões "Copiar resultado" dos cartões de cálculo
+  $('toolsRoot').addEventListener('click', e => {
+    const b = e.target.closest('[data-copy]'); if (!b) return;
+    const out = $(b.dataset.copy);
+    if (!out || !out.querySelector('.pc-big, .pc-faixas')) { argoAviso('Faça o cálculo antes de copiar.', 'info'); return; }
+    toolsCopyText(toolsOutText(out), 'Resultado copiado.');
+  });
+
+  // ---------- Enviar resultados por WhatsApp (idade, prazos, renda per capita, extenso)
+  const waSend = (titulo, texto) => argoWhatsappSend('*' + titulo + '*\n' + texto);
+  $('toolsRoot').addEventListener('click', e => {
+    const b = e.target.closest('[data-wa]'); if (!b) return;
+    const out = $(b.dataset.wa);
+    if (!out || !out.querySelector('.pc-big, .pc-faixas')) { argoAviso('Faça o cálculo antes de enviar.', 'info'); return; }
+    waSend(b.dataset.wat || 'Argo SUAS', toolsOutText(out));
+  });
+  $('pcWa').addEventListener('click', () => {
+    if (!pcLastText) { argoAviso('Preencha a renda e o número de pessoas antes de enviar.', 'info'); return; }
+    waSend('Renda per capita', pcLastText);
+  });
+  $('exWa').addEventListener('click', () => {
+    const o = $('exOut'); if (!o.querySelector('.pc-big')) { argoAviso('Digite um valor antes de enviar.', 'info'); return; }
+    waSend('Valor por extenso', toolsOutText(o));
+  });
+
+  // ---------- Link de WhatsApp
+  let waLink = '';
+  const waCalc = () => {
+    const f = toolsFone($('waNum').value), msg = $('waMsg').value.trim(), out = $('waOut');
+    waLink = '';
+    ['waOpen', 'waCopy', 'waQr'].forEach(id => { $(id).disabled = true; });
+    if (!f.ok) { out.innerHTML = f.msg ? '<p class="pc-warn">' + f.msg + '</p>' : '<p class="tools-hint">Digite o telefone com DDD.</p>'; return; }
+    waLink = 'https://wa.me/' + f.wa + (msg ? '?text=' + encodeURIComponent(msg) : '');
+    ['waOpen', 'waCopy', 'waQr'].forEach(id => { $(id).disabled = false; });
+    out.innerHTML = '<div class="pc-big pc-big-text"><span>WhatsApp de</span><strong>' + esc(f.fmt) + '</strong></div>'
+      + '<p class="tools-hint wa-link">' + esc(waLink) + '</p>' + (f.msg ? '<p class="pc-warn">' + f.msg + '</p>' : '');
+  };
+  $('toolsRoot').addEventListener('click', e => {
+    const b = e.target.closest('[data-wam]'); if (!b) return;
+    $('waMsg').value = WA_MODELOS[Number(b.dataset.wam)][1]; waCalc(); $('waMsg').focus();
+  });
+  $('waNum').addEventListener('input', waCalc);
+  $('waMsg').addEventListener('input', waCalc);
+  $('waOpen').addEventListener('click', () => { const f = toolsFone($('waNum').value); if (f.ok) argoWhatsappSend($('waMsg').value, { phone: f.wa }) || (!$('waMsg').value.trim() && window.open('https://wa.me/' + f.wa, '_blank')); });
+  $('waCopy').addEventListener('click', () => { if (waLink) toolsCopyText(waLink, 'Link copiado.'); });
+  $('waQr').addEventListener('click', () => {
+    if (!waLink || !$('qrText')) return;
+    $('qrText').value = waLink; $('qrText').dispatchEvent(new Event('input', { bubbles: true }));
+    const card = $('qrText').closest('section');
+    if (card) { card.hidden = false; card.classList.remove('is-collapsed'); card.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    argoAviso('QR Code gerado com o link do WhatsApp.', 'success');
+  });
+  waCalc();
+
+  // ---------- Formatar texto
+  const tx = $('txIn'); let before = null;
+  const info = () => {
+    const t = tx.value, words = (t.trim().match(/\S+/g) || []).length;
+    $('txInfo').textContent = t.length.toLocaleString('pt-BR') + (t.length === 1 ? ' caractere' : ' caracteres') + ' · ' + words.toLocaleString('pt-BR') + (words === 1 ? ' palavra' : ' palavras');
+  };
+  const ops = {
+    nome: toolsNomeProprio,
+    upper: t => t.toLocaleUpperCase('pt-BR'),
+    lower: t => t.toLocaleLowerCase('pt-BR'),
+    espacos: t => t.replace(/[ \t\u00a0]+/g, ' ').split('\n').map(l => l.trim()).join('\n').replace(/\n{3,}/g, '\n\n').trim(),
+    acentos: t => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').normalize('NFC')
+  };
+  $('toolsRoot').addEventListener('click', e => {
+    const b = e.target.closest('[data-tx]'); if (!b) return;
+    if (!tx.value) { argoAviso('Cole um texto primeiro.', 'info'); tx.focus(); return; }
+    before = tx.value; tx.value = ops[b.dataset.tx](tx.value);
+    $('txUndo').disabled = false; info();
+  });
+  $('txUndo').addEventListener('click', () => { if (before == null) return; tx.value = before; before = null; $('txUndo').disabled = true; info(); });
+  $('txCopy').addEventListener('click', () => { if (!tx.value) { argoAviso('Não há texto para copiar.', 'info'); return; } toolsCopyText(tx.value, 'Texto copiado.'); });
+  $('txClear').addEventListener('click', () => { tx.value = ''; before = null; $('txUndo').disabled = true; info(); tx.focus(); });
+  tx.addEventListener('input', () => { before = null; $('txUndo').disabled = true; info(); });
+  info();
 }
 
 let pcLastText = '';
@@ -6572,6 +6865,10 @@ const TOOLS_CATALOG = {
   'Gerador de QR Code': { id: 'qr', cat: 'atend', kw: 'link whatsapp codigo imagem png' },
   'Contador de atendimentos': { id: 'contador', cat: 'atend', kw: 'rma mensal contagem resumo mes atendimentos' },
   'Calculadora de prazos': { id: 'prazos', cat: 'atend', kw: 'dias uteis corridos feriados vencimento data' },
+  'Conferir NIS e CPF': { id: 'documentos', cat: 'atend', kw: 'nis cpf pis digito verificador validar conferir documento numero digitacao cadunico' },
+  'Valor por extenso': { id: 'extenso', cat: 'calculo', kw: 'reais dinheiro recibo oficio declaracao escrever numero texto moeda centavos beneficio eventual' },
+  'Link de WhatsApp': { id: 'whatsapp', cat: 'atend', kw: 'wa.me zap whatsapp telefone celular contato mensagem link ddd conversa' },
+  'Formatar texto': { id: 'texto', cat: 'dados', kw: 'maiuscula minuscula nome proprio acento acentos espacos limpar caracteres palavras contar padronizar' },
   'Analisador de planilha': { id: 'planilha', cat: 'dados', kw: 'csv excel xlsx xls duplicados repetidos base familias nis coluna contar' },
   'Bloco de notas': { id: 'notas', cat: 'notas', kw: 'anotacao nota texto pdf txt lista tarefas checklist fixar' }
 };
@@ -6716,6 +7013,8 @@ function initToolsPanel() {
   const $ = id => document.getElementById(id);
   initToolsExtras();
   initToolsAtendimento();
+  initToolsDocs();
+  initToolsMore();
   initSheetAnalyzer();
   initToolsNav();
 
@@ -9218,12 +9517,37 @@ function renderWhatsappButton(id, name) {
   return `<button type="button" class="btn-tech btn-whatsapp" onclick="share('${id}')" title="Enviar os dados desta unidade por WhatsApp" aria-label="Enviar os dados de ${safeName} por WhatsApp">${ICONS.whatsapp} WhatsApp</button>`;
 }
 
+// Envio por WhatsApp (wa.me) usado por unidades, anotações e ferramentas.
+// - texto longo demais para o link: copia tudo e abre o WhatsApp para colar;
+// - pop-up bloqueado: copia o texto e avisa (com "noopener" o navegador não deixa saber se abriu);
+// - phone (opcional, só dígitos com país): abre direto a conversa daquele número.
+function argoWhatsappSend(text, opts) {
+  const t = String(text || '').trim();
+  if (!t) return false;
+  const phone = opts && opts.phone ? String(opts.phone).replace(/\D/g, '') : '';
+  const base = 'https://wa.me/' + phone;
+  const url = base + '?text=' + encodeURIComponent(t);
+  const copiar = () => (navigator.clipboard ? navigator.clipboard.writeText(t).then(() => true, () => false) : Promise.resolve(false));
+  if (url.length > 6000) {
+    copiar().then(ok => argoAviso(ok ? 'Texto longo demais para o link. Copiei tudo: abra o WhatsApp e cole.' : 'Texto longo demais para o link do WhatsApp. Envie em partes menores.', 'info'));
+    window.open(base, '_blank');
+    return false;
+  }
+  const w = window.open(url, '_blank');
+  if (!w) {
+    copiar().then(ok => argoAviso(ok ? 'O navegador bloqueou a abertura do WhatsApp. Copiei o texto: cole lá.' : 'O navegador bloqueou a abertura do WhatsApp. Libere os pop-ups deste site.', 'info'));
+    return false;
+  }
+  try { w.opener = null; } catch (e) { /* ignora */ }
+  return true;
+}
+
 function share(id) {
   const i = DATA.find(x => x.id === id);
   if (!i) return; // segurança: item não encontrado (ex.: dado alterado entre a renderização e o clique)
   const mapLink = getUnitMapLink(i);
   const t = `*UNIDADE:* ${i.fullName || i.name}\n*ENDEREÇO:* ${stripHtml(i.address)}\n*LOCALIZAÇÃO:* ${mapLink}\n*HORÁRIO:* ${stripHtml(i.hours || 'Não informado')}\n*CONTATO:* ${stripHtml((i.phones || []).join(' / ') || 'Não informado')}${i.website ? `\n*SITE:* ${i.website}` : ''}`;
-  window.open(`https://wa.me/?text=${encodeURIComponent(t)}`, '_blank', 'noopener,noreferrer');
+  argoWhatsappSend(t);
 }
 
 async function fitPrintNote() {
@@ -12843,8 +13167,12 @@ function shareGeneralNote(id) {
   }
   const notes = getNotesIndex();
   const title = (notes.find(n => n.id === id) || {}).title || 'Anotação';
+  if (!window.__argoWaNotaOk) {
+    if (!confirm('Esta anotação pode conter dados de pessoas atendidas. Depois de enviada, a mensagem fica guardada no WhatsApp, fora do Argo SUAS. Enviar mesmo assim?')) return;
+    window.__argoWaNotaOk = true;
+  }
   const t = `*${title.toUpperCase()}*\n\n${note}`;
-  window.open(`https://wa.me/?text=${encodeURIComponent(t)}`, '_blank', 'noopener,noreferrer');
+  argoWhatsappSend(t);
 }
 
 async function printGeneralNote(id) {
@@ -14606,7 +14934,9 @@ document.addEventListener('keydown', e => {
     const focusSearch = document.getElementById('tabFocusSearch');
     const wrap = document.getElementById('tabFocusSearchWrap');
     let target = null;
-    if (isTabFocusOpen()) {
+    const toolsFind = document.getElementById('toolsFind');
+    if (toolsFind && toolsFind.offsetParent !== null) target = toolsFind;
+    else if (isTabFocusOpen()) {
       if (wrap && wrap.style.display !== 'none' && focusSearch) target = focusSearch;
       else if (document.getElementById('noticiasFilter')) target = document.getElementById('noticiasFilter');
       else target = document.getElementById('tabFocusJump');
@@ -15069,7 +15399,7 @@ const ARGO_ASSISTANT_INTENTS = [
   {
     keys: ['anotacao', 'anotacoes', 'bloco de notas', 'calculadora', 'relogio', 'ferramentas', 'novo caso'],
     reply: 'Em "Minhas Anotações" você cria uma anotação por caso ou atendimento, registra os dados de quem foi atendido (ficam cifrados neste aparelho) e pode gerar a guia ou enviar por WhatsApp.',
-    action: { label: 'Abrir Ferramentas', run: () => argoAssistantGoTo('ferramentas'), reply: 'Abri as Ferramentas (calculadora, relógio e bloco de notas).', mood: 'success' }
+    action: { label: 'Abrir Ferramentas', run: () => argoAssistantGoTo('ferramentas'), reply: 'Abri as Ferramentas (relógio, calculadoras, prazos, planilha e bloco de notas).', mood: 'success' }
   },
   {
     keys: ['mapa', 'territorio', 'localizacao', 'onde fica', 'proximidade', 'perto de mim', 'mais perto', 'rota'],
@@ -15480,7 +15810,7 @@ const ARGO_TAB_TIPS = {
   tradutor: 'Escreva ou fale em português e escolha o idioma. Dá para salvar frases próprias para usar de novo.',
   pdftools: 'Una até 20 arquivos, divida ou extraia páginas, reduza o tamanho de um PDF, numere as páginas e converta entre PDF, Word e JPG. Nada sai do seu navegador.',
   appsext: 'Cada atalho abre um app do autor em nova aba, com login e sincronização independentes.',
-  ferramentas: 'Relógio de Boa Vista com cronômetro, temporizador e alarme, calculadora com memória, renda per capita, idade, QR Code, contador de atendimentos, prazos em dias úteis, analisador de planilha (duplicados, NIS/CPF e datas) e bloco de notas cifrado neste aparelho.',
+  ferramentas: 'Relógio de Boa Vista com cronômetro, temporizador e alarme, calculadora com memória, renda per capita, idade, QR Code, contador de atendimentos, prazos em dias úteis, conferência de NIS e CPF, valor por extenso, link de WhatsApp, formatador de texto, analisador de planilha (duplicados, NIS/CPF e datas) e bloco de notas cifrado neste aparelho.',
   noticias: 'Toque num tema rápido (Bolsa Família, CadÚnico…), filtre por Normativos ou por período e use a estrela para salvar o que quer ler depois.',
   cras: 'Procure por bairro para saber qual equipe de referência atende. A planilha de atendimentos abre em tela cheia.',
   cas: 'Aqui ficam os registros de atendimento do CAS. Use a busca para localizar um registro.',
