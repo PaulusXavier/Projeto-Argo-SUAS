@@ -20,7 +20,8 @@ Fluxo do dia a dia para um app que muda sempre. Complementa o [README](../README
 | Mudar lógica, abas ou telas | `js/app.js` (+ `index.html` se for estrutura) |
 | Mudar visual | `css/styles.css` |
 | Mexer na aparência do mascote/painel de conversa | `js/argo-mascot.js` |
-| Mexer na inteligência do assistente (busca, glossário, IA) | `js/argo-cerebro.js` e o bloco "IA NO MASCOTE" no fim de `js/app.js` |
+| Mexer na inteligência do assistente (busca, glossário, memória) | `js/argo-cerebro.js` e o bloco "IA NO MASCOTE" no fim de `js/app.js` |
+| Mexer na IA, nas normas citadas ou no prompt | **repositório `paulus`** (`client/`, `worker/`, `knowledge/`). Depois: `npm run build` lá e copie `dist/paulus.v1.js` → `js/paulus.v1.js` e `dist/conhecimento.json` → `assets/conhecimento.json` aqui. Se mudou `worker/` ou `knowledge/`, publique o Worker de novo |
 | Adicionar página avulsa | nova `.html` em `ferramentas/` |
 | Adicionar ícone/imagem | `assets/img/` |
 
