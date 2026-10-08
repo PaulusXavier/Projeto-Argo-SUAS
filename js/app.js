@@ -21087,8 +21087,10 @@ function initSheetAnalyzer() {
         fichas reais do diretório, mesmo sem internet;
      3) dúvida conceitual do SUAS → base offline com a norma de referência;
      4) pedidos de navegação do app (abas, ferramentas) → respostas prontas;
-     5) o que sobrou → IA em streaming (se houver internet e ARGO_IA.url),
-        com o histórico da conversa e até 5 fichas do diretório;
+     5) o que sobrou → IA em streaming pelo Paulus (se houver internet e ARGO_IA.url),
+        com o histórico da conversa e até 5 fichas do diretório; o Paulus
+        acrescenta trechos de norma com citação e, se a IA falhar, usa a base
+        de normas offline;
      6) se a IA falhar, vale a resposta pronta.
    Sai do aparelho (só no passo 5): o texto da pergunta, as últimas mensagens
    da conversa e fichas do diretório público. Perguntas com documento,
@@ -21097,7 +21099,9 @@ function initSheetAnalyzer() {
    A conversa fica só na memória da página e é apagada ao trancar o app.
    ============================================================ */
 const ARGO_IA = {
-  url: 'https://argo-ia.paulo-ae18.workers.dev'   // endereço do Worker; vazio = IA desligada
+  // Worker do Paulus (repositório "paulus", wrangler.toml name = "paulus-ia"); vazio = IA desligada.
+  // O Paulus responde com citação de norma e é o mesmo cérebro dos outros apps (Anona, Toth, Umbrella).
+  url: 'https://paulus-ia.paulo-ae18.workers.dev'
 };
 
 let argoBrainReady = false;
@@ -21105,6 +21109,11 @@ function argoBrain() {
   if (typeof ArgoCerebro === 'undefined') return null;
   if (!argoBrainReady) {
     ArgoCerebro.init({ data: typeof DATA !== 'undefined' ? DATA : [], ia: { url: ARGO_IA.url } });
+    // Paulus (js/paulus.v1.js): faz a ida à IA e traz a base de normas offline (assets/conhecimento.json).
+    // Se o arquivo não carregar, o app segue com o transporte antigo do ArgoCerebro.
+    if (typeof Paulus !== 'undefined' && ARGO_IA.url) {
+      Paulus.init({ app: 'argo', endpoint: ARGO_IA.url, conhecimentoUrl: 'assets/conhecimento.json' });
+    }
     argoBrainReady = true;
   }
   return ArgoCerebro;
@@ -21199,6 +21208,62 @@ function argoAssistantAskHybrid(rawText, meta) {
   return local;
 }
 
+// Trechos de norma que o Paulus consultou (documento + artigo), sem repetir. Texto honesto:
+// são os trechos que a base achou para a pergunta, não garantia de que a IA usou todos.
+function argoFontesTexto(fontes) {
+  const vistos = new Set();
+  const itens = [];
+  (Array.isArray(fontes) ? fontes : []).forEach(f => {
+    const nome = [f && f.documento, f && f.referencia].filter(Boolean).join(', ');
+    if (nome && !vistos.has(nome)) { vistos.add(nome); itens.push(nome); }
+  });
+  return itens.length ? 'Normas consultadas: ' + itens.slice(0, 3).join('; ') + '.' : '';
+}
+
+// Ida à IA pelo Paulus. Mantém o contrato do mascote: resolve { txt, fontes, offline } ou rejeita com
+// err.partial (texto que já chegou) e err.userMessage (aviso para mostrar no lugar da resposta).
+// A conversa e as fichas continuam sendo as do ArgoCerebro (payload); o Paulus só faz a ida à IA,
+// a conferência de dado pessoal/socorro e a base de normas.
+function argoStreamIA(B, rawText, payload, hooks) {
+  if (typeof Paulus === 'undefined' || !Paulus.perguntar) {
+    return B.streamAI(payload, hooks).then(txt => ({ txt, fontes: [], offline: false }));
+  }
+  let acc = '';
+  let fontes = [];
+  const falha = (msg, userMessage) => {
+    const e = new Error(msg);
+    e.partial = acc;
+    if (userMessage) e.userMessage = userMessage;
+    return e;
+  };
+  return Paulus.perguntar(rawText, {
+    aba: payload.pagina,
+    semAcoes: true,                 // "abrir/buscar" já foram tratados pelo Argo antes de chegar aqui
+    fichas: payload.contexto,
+    historico: payload.historico,
+    sinal: hooks.signal,
+    onToken: (pedaco, tudo) => { acc = tudo; if (hooks.onDelta) hooks.onDelta(pedaco, tudo); },
+    onFontes: f => { fontes = f; }
+  }).then(r => {
+    if (hooks.signal && hooks.signal.aborted) throw falha('interrompida');
+    if (r.tipo === 'ia') {
+      const txt = B.cleanAI(r.texto);
+      if (!txt) throw falha('vazia');
+      return { txt, fontes: r.fontes && r.fontes.length ? r.fontes : fontes, offline: false };
+    }
+    // IA indisponível: se nada chegou ainda, a base de normas pode ter o trecho certo
+    if (r.tipo === 'norma' && !acc) {
+      return { txt: B.cleanAI(r.texto), fontes: r.fontes || [], offline: true };
+    }
+    if (r.tipo === 'erro' || r.tipo === 'bloqueio') throw falha(r.tipo, r.texto);
+    if (r.tipo === 'crise') {
+      const tels = (r.telefones || []).map(t => t.numero + ' ' + t.nome).join(' · ');
+      throw falha('crise', r.texto + (tels ? '\n' + tels : ''));
+    }
+    throw falha(r.tipo || 'sem_resposta');
+  });
+}
+
 function argoAskAI(rawText, tab, fallbackResult) {
   const B = argoBrain();
   const bloqueio = B.piiBlock(rawText);
@@ -21211,13 +21276,18 @@ function argoAskAI(rawText, tab, fallbackResult) {
     reply: '', mood: 'info', badge: 'IA',
     stream: {
       fallback: fallbackResult || { reply: 'Não consegui consultar a IA agora. Posso procurar o termo direto no diretório.', mood: 'notfound', quickActions: [{ label: 'Buscar "' + rawText.slice(0, 22) + '" nos equipamentos', run: () => argoAssistantSearch(rawText), reply: 'Pronto! Joguei essa busca no diretório.', mood: 'success' }] },
-      run: (onDelta, signal) => B.streamAI(payload, { onDelta, signal }).then(txt => {
+      run: (onDelta, signal) => argoStreamIA(B, rawText, payload, { onDelta, signal }).then(({ txt, fontes, offline }) => {
         const units = B.mentionedUnits(txt, ctxNames);
         B.remember(rawText, txt, units);
         const bad = B.verifyPhones(txt);
+        const fonteTxt = argoFontesTexto(fontes);
+        let note = 'Confira os dados com a unidade antes de encaminhar.';
+        if (offline) note = 'Trecho da base de normas do Paulus (sem IA agora). Confira o texto oficial vigente.';
+        if (fonteTxt) note += ' ' + fonteTxt;
+        if (bad) note = '⚠️ Um número citado não consta no diretório. Confirme com a unidade antes de usar.' + (fonteTxt ? ' ' + fonteTxt : '');
         return {
           text: txt,
-          note: bad ? '⚠️ Um número citado não consta no diretório. Confirme com a unidade antes de usar.' : 'Confira os dados com a unidade antes de encaminhar.',
+          note,
           units: argoUnitsForUi(units),
           followups: units.length ? ['Qual o telefone?', 'Qual o horário?'] : []
         };
