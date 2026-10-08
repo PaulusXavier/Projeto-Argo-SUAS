@@ -10190,9 +10190,27 @@ const TRADUTOR_BANK_ROWS = [
   ['Volte aqui na próxima sexta-feira, das 8h às 12h.', 'Regrese aquí el próximo viernes, de 8 a 12 horas.', 'Please come back next Friday, between 8 a.m. and 12 p.m.', 'Revenez ici vendredi prochain, entre 8 h et 12 h.'],
   ['Assine aqui, por favor.', 'Firme aquí, por favor.', 'Please sign here.', 'Veuillez signer ici.'],
   ['O atendimento é gratuito.', 'La atención es gratuita.', 'The service is free of charge.', 'Le service est gratuit.'],
-  ['Obrigado pela visita. Até a próxima!', 'Gracias por su visita. ¡Hasta la próxima!', 'Thank you for visiting. See you next time!', 'Merci de votre visite. À bientôt !']
+  ['Obrigado pela visita. Até a próxima!', 'Gracias por su visita. ¡Hasta la próxima!', 'Thank you for visiting. See you next time!', 'Merci de votre visite. À bientôt !'],
+  // Respostas comuns de quem é atendido (5º item = true): não aparecem na lista de
+  // frases rápidas do técnico, mas são reconhecidas na tradução (inclusive de
+  // espanhol/inglês/francês para português) e funcionam sem internet.
+  ['Sim.', 'Sí.', 'Yes.', 'Oui.', true],
+  ['Não.', 'No.', 'No.', 'Non.', true],
+  ['Não entendi.', 'No entendí.', 'I did not understand.', 'Je n’ai pas compris.', true],
+  ['Não falo português.', 'No hablo portugués.', 'I do not speak Portuguese.', 'Je ne parle pas portugais.', true],
+  ['Preciso de ajuda.', 'Necesito ayuda.', 'I need help.', 'J’ai besoin d’aide.', true],
+  ['Não tenho documentos.', 'No tengo documentos.', 'I do not have documents.', 'Je n’ai pas de documents.', true],
+  ['Cheguei há pouco tempo ao Brasil.', 'Llegué hace poco tiempo a Brasil.', 'I arrived in Brazil recently.', 'Je suis arrivé(e) récemment au Brésil.', true],
+  ['Não tenho onde morar.', 'No tengo dónde vivir.', 'I have nowhere to live.', 'Je n’ai pas de logement.', true],
+  ['Preciso de alimentos.', 'Necesito alimentos.', 'I need food.', 'J’ai besoin de nourriture.', true],
+  ['Meu filho está doente.', 'Mi hijo está enfermo.', 'My son is sick.', 'Mon fils est malade.', true],
+  ['Não tenho renda no momento.', 'No tengo ingresos en este momento.', 'I have no income at the moment.', 'Je n’ai pas de revenus pour le moment.', true],
+  ['Moro com a minha família.', 'Vivo con mi familia.', 'I live with my family.', 'Je vis avec ma famille.', true],
+  ['Pode me ajudar com o Cadastro Único?', '¿Puede ayudarme con el Cadastro Único?', 'Can you help me with the Cadastro Único?', 'Pouvez-vous m’aider avec le Cadastro Único ?', true],
+  ['Onde fica o banheiro?', '¿Dónde queda el baño?', 'Where is the restroom?', 'Où sont les toilettes ?', true],
+  ['Obrigado(a).', 'Gracias.', 'Thank you.', 'Merci.', true]
 ];
-const TRADUTOR_PHRASES = TRADUTOR_BANK_ROWS.map(r => r[0]);
+const TRADUTOR_PHRASES = TRADUTOR_BANK_ROWS.filter(r => !r[4]).map(r => r[0]);
 
 // Chave de comparação sem acento, pontuação e maiúsculas: quem digita a frase
 // do banco um pouco diferente (sem "!" ou sem acento) ainda acerta.
@@ -10201,6 +10219,16 @@ function tradutorNormKey(t) {
     .replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
 const TRADUTOR_BANK = new Map(TRADUTOR_BANK_ROWS.map(r => [tradutorNormKey(r[0]), { es: r[1], en: r[2], fr: r[3] }]));
+// Busca em qualquer idioma ("es|necesito ayuda" → todas as versões da frase), para
+// traduzir de volta para o português (e entre estrangeiros) também sem internet.
+const TRADUTOR_BANK_REV = new Map();
+TRADUTOR_BANK_ROWS.forEach(r => {
+  const all = { pt: r[0], es: r[1], en: r[2], fr: r[3] };
+  Object.keys(all).forEach(l => {
+    const k = l + '|' + tradutorNormKey(all[l]);
+    if (!TRADUTOR_BANK_REV.has(k)) TRADUTOR_BANK_REV.set(k, all);
+  });
+});
 
 /* Aba "Tradutor" — comunicação em texto e voz com estrangeiros
    (espanhol, inglês e francês), muito usada no atendimento a
@@ -10213,6 +10241,11 @@ const TRADUTOR_BANK = new Map(TRADUTOR_BANK_ROWS.map(r => [tradutorNormKey(r[0])
    fica salvo em lugar nenhum. */
 let tradutorRecognition = null;
 let tradutorListening = false;
+let tradutorConvAuto = false;      // modo conversa: ler a tradução em voz alta uma vez
+let tradutorDetectTimer = null;    // pausa antes de checar o idioma digitado
+let tradutorDetectIgnore = '';     // idioma que a pessoa mandou "manter"
+let tradutorSpeakToken = 0;        // identifica a fala atual (evita eventos de falas antigas)
+const TRADUTOR_SILENCE_MS = 2500;  // silêncio que encerra o microfone e traduz sozinho
 
 // O serviço gratuito MyMemory limita cada pedido a ~500 caracteres. Por isso
 // textos maiores são divididos em partes (por frase) de até
@@ -10572,6 +10605,13 @@ function renderTranslatorCard() {
           <span>Traduzir para:</span> ${targetChips}
         </div>
 
+        <div class="tradutor-convo" role="group" aria-label="Conversa por voz">
+          <span>Conversa por voz:</span>
+          <button type="button" class="tradutor-convo-btn" id="tradutorConvoPt" onclick="tradutorConvoStart('pt')" title="Você fala em português: a tradução sai sozinha e é lida em voz alta para a pessoa">🎙 Falar em Português</button>
+          <button type="button" class="tradutor-convo-btn" id="tradutorConvoForeign" onclick="tradutorConvoStart('foreign')" title="A pessoa fala: a tradução em português aparece na tela">🎙 Falar em Espanhol</button>
+        </div>
+        <div class="tradutor-detect" id="tradutorDetect" hidden role="status" aria-live="polite"></div>
+
         <div class="tradutor-panes">
           <div class="tradutor-pane">
             <div class="tradutor-pane-head">
@@ -10579,7 +10619,7 @@ function renderTranslatorCard() {
               <div class="tradutor-pane-tools">
                 <button type="button" class="tradutor-icon-btn" id="tradutorMicBtn" onclick="tradutorToggleMic()" title="Falar para digitar" aria-label="Falar para digitar">${ICONS.mic}</button>
                 <button type="button" class="tradutor-icon-btn" id="tradutorCopyFrom" onclick="tradutorCopy('from')" title="Copiar texto" aria-label="Copiar texto">${ICONS.copy}</button>
-                <button type="button" class="tradutor-speak-btn" id="tradutorSpeakFrom" onclick="tradutorSpeak('from')">${ICONS.volume} Ouvir</button>
+                <button type="button" class="tradutor-speak-btn" id="tradutorSpeakFrom" onclick="tradutorSpeakToggle('from')">${ICONS.volume} Ouvir</button>
               </div>
             </div>
             <textarea id="tradutorInput" placeholder="Digite ou fale aqui o texto em português..." oninput="tradutorHandleInput()" onkeydown="tradutorHandleInputKey(event)" maxlength="${TRADUTOR_MAX_CHARS}"></textarea>
@@ -10592,7 +10632,7 @@ function renderTranslatorCard() {
                 <button type="button" class="tradutor-icon-btn" id="tradutorCopyTo" onclick="tradutorCopy('to')" title="Copiar tradução" aria-label="Copiar tradução">${ICONS.copy}</button>
                 <button type="button" class="tradutor-speak-btn" id="tradutorCheckBtn" onclick="tradutorBackCheck()" disabled title="Traduz o resultado de volta para conferir se o sentido se manteve">Conferir</button>
                 <button type="button" class="tradutor-speak-btn" id="tradutorBigBtn" onclick="tradutorBigFromOutput()" disabled title="Mostra a tradução em letras grandes, para a pessoa ler">Tela grande</button>
-                <button type="button" class="tradutor-speak-btn" id="tradutorSpeakTo" onclick="tradutorSpeak('to')" disabled>${ICONS.volume} Ouvir</button>
+                <button type="button" class="tradutor-speak-btn" id="tradutorSpeakTo" onclick="tradutorSpeakToggle('to')" disabled>${ICONS.volume} Ouvir</button>
               </div>
             </div>
             <textarea id="tradutorOutput" placeholder="A tradução aparece aqui..." readonly></textarea>
@@ -10656,6 +10696,8 @@ function tradutorSyncSpeakLabels() {
     b.setAttribute('aria-pressed', String(on));
   });
   if (to !== 'pt') tradutorLastTarget = to;
+  tradutorSyncConvoLabels();
+  tradutorRunDetect();
 }
 
 // Atalho "Traduzir para": troca o idioma de destino com um toque e, se já
@@ -10774,8 +10816,11 @@ function tradutorUpdateCharCount() {
 }
 
 function tradutorHandleInput() {
+  tradutorConvAuto = false; // digitou à mão: o modo conversa não deve ler em voz alta
   tradutorClearStatus();
   tradutorUpdateCharCount();
+  clearTimeout(tradutorDetectTimer);
+  tradutorDetectTimer = setTimeout(tradutorRunDetect, 450);
 }
 
 function tradutorHandleInputKey(e) {
@@ -10790,6 +10835,9 @@ function tradutorClear() {
   const outputEl = document.getElementById('tradutorOutput');
   const speakTo = document.getElementById('tradutorSpeakTo');
   if (tradutorListening && tradutorRecognition) tradutorRecognition.stop();
+  tradutorConvAuto = false;
+  tradutorStopSpeaking();
+  tradutorDetectIgnore = '';
   if (inputEl) { inputEl.value = ''; inputEl.focus(); }
   if (outputEl) outputEl.value = '';
   if (speakTo) speakTo.disabled = true;
@@ -10888,21 +10936,21 @@ async function tradutorTranslate() {
     return;
   }
 
-  // Frases padrão: tradução revisada, instantânea e que funciona offline.
-  if (from === 'pt') {
-    const hit = TRADUTOR_BANK.get(tradutorNormKey(text));
-    if (hit && hit[to]) {
-      output.value = hit[to];
-      tradutorSetStatus('Tradução pronta (frase padrão revisada — funciona sem internet).', 'success');
-      tradutorLogTurn(from, to, text, hit[to]);
-      tradutorMaybeAutoSpeak();
-      return;
-    }
+  // Frases padrão: tradução revisada, instantânea e que funciona offline
+  // (em qualquer idioma de origem, não só do português).
+  const hit = TRADUTOR_BANK_REV.get(from + '|' + tradutorNormKey(text));
+  if (hit && hit[to]) {
+    output.value = hit[to];
+    tradutorSetStatus('Tradução pronta (frase padrão revisada — funciona sem internet).', 'success');
+    tradutorLogTurn(from, to, text, hit[to]);
+    tradutorMaybeAutoSpeak();
+    return;
   }
 
   // Falha rápido e com mensagem clara quando o aparelho está sem internet,
   // em vez de esperar o fetch estourar em timeout.
   if (!navigator.onLine) {
+    tradutorConvAuto = false;
     tradutorSetStatus('Sem conexão com a internet. A tradução de texto livre precisa estar online (frases padrão, voz e microfone continuam funcionando offline).', 'error');
     return;
   }
@@ -10917,6 +10965,7 @@ async function tradutorTranslate() {
     tradutorLogTurn(from, to, text, translated);
     tradutorMaybeAutoSpeak();
   } catch (e) {
+    tradutorConvAuto = false;
     if (e && e.message === 'quota') {
       tradutorSetStatus('O serviço de tradução gratuito atingiu o limite diário de uso. Use as frases padrão (funcionam sem o serviço) ou tente mais tarde.', 'error');
     } else {
@@ -11073,7 +11122,9 @@ function tradutorShowBig(text, langCode) {
 // frase).
 function tradutorMaybeAutoSpeak() {
   const autoSpeak = document.getElementById('tradutorAutoSpeak');
-  if (autoSpeak && autoSpeak.checked) tradutorSpeak('to');
+  const forced = tradutorConvAuto;
+  tradutorConvAuto = false; // vale uma vez só
+  if (forced || (autoSpeak && autoSpeak.checked)) tradutorSpeak('to');
 }
 
 // Em alguns navegadores (principalmente Chrome no primeiro uso da página),
@@ -11107,13 +11158,15 @@ function tradutorPickVoice(langCode) {
   return voices.find(x => norm(x).startsWith(langCode)) || null;
 }
 
-async function tradutorSpeakText(text, langCode) {
+async function tradutorSpeakText(text, langCode, btnId) {
   if (!('speechSynthesis' in window)) {
     tradutorSetStatus('Este navegador não tem suporte a voz.', 'error');
     return;
   }
   if (!text || !text.trim() || !TRADUTOR_LANGS[langCode]) return;
+  const myToken = ++tradutorSpeakToken;
   await tradutorEnsureVoices();
+  if (myToken !== tradutorSpeakToken) return; // a pessoa tocou em Parar enquanto as vozes carregavam
   const slow = document.getElementById('tradutorSlowSpeech');
   window.speechSynthesis.cancel();
   const utter = new SpeechSynthesisUtterance(text);
@@ -11121,14 +11174,50 @@ async function tradutorSpeakText(text, langCode) {
   if (voice) { utter.voice = voice; utter.lang = voice.lang; }
   else utter.lang = TRADUTOR_LANGS[langCode].voice;
   utter.rate = (slow && slow.checked) ? 0.7 : 1;
-  utter.onerror = () => tradutorSetStatus('Não foi possível reproduzir o áudio.', 'error');
+  utter.onstart = () => { if (myToken === tradutorSpeakToken) tradutorSpeakUi(btnId || null); };
+  utter.onend = () => { if (myToken === tradutorSpeakToken) tradutorSpeakUi(null); };
+  utter.onerror = (ev) => {
+    if (myToken !== tradutorSpeakToken) return;
+    tradutorSpeakUi(null);
+    if (ev && (ev.error === 'interrupted' || ev.error === 'canceled')) return; // foi só um "parar"
+    tradutorSetStatus('Não foi possível reproduzir o áudio.', 'error');
+  };
   window.speechSynthesis.speak(utter);
+}
+
+// Enquanto a voz fala, o botão "Ouvir" vira "Parar".
+function tradutorSpeakUi(btnId) {
+  ['tradutorSpeakFrom', 'tradutorSpeakTo'].forEach(id => {
+    const b = document.getElementById(id);
+    if (!b) return;
+    if (id === btnId) {
+      if (!b.dataset.orig) b.dataset.orig = b.innerHTML;
+      b.innerHTML = '⏹ Parar';
+      b.classList.add('is-speaking');
+    } else if (b.dataset.orig) {
+      b.innerHTML = b.dataset.orig;
+      delete b.dataset.orig;
+      b.classList.remove('is-speaking');
+    }
+  });
+}
+
+function tradutorStopSpeaking() {
+  tradutorSpeakToken++;
+  try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (e) { /* ignora */ }
+  tradutorSpeakUi(null);
+}
+
+function tradutorSpeakToggle(which) {
+  const b = document.getElementById(which === 'from' ? 'tradutorSpeakFrom' : 'tradutorSpeakTo');
+  if (b && b.classList.contains('is-speaking')) { tradutorStopSpeaking(); return; }
+  return tradutorSpeak(which);
 }
 
 function tradutorSpeak(which) {
   const langCode = which === 'from' ? document.getElementById('tradutorFrom').value : document.getElementById('tradutorTo').value;
   const text = which === 'from' ? document.getElementById('tradutorInput').value : document.getElementById('tradutorOutput').value;
-  return tradutorSpeakText(text, langCode);
+  return tradutorSpeakText(text, langCode, which === 'from' ? 'tradutorSpeakFrom' : 'tradutorSpeakTo');
 }
 
 /* Entrada de voz: transcreve a fala direto no campo de origem, no
@@ -11153,6 +11242,8 @@ function tradutorToggleMic() {
 
   const baseText = inputEl.value.trim() ? inputEl.value.trim() + ' ' : '';
   let tradutorGotFinalResult = false;
+  let silenceTimer = null;
+  let hadError = false;
   tradutorRecognition = new SpeechRecognitionCtor();
   tradutorRecognition.lang = TRADUTOR_LANGS[fromSel.value].rec || TRADUTOR_LANGS[fromSel.value].voice;
   tradutorRecognition.interimResults = true;
@@ -11161,7 +11252,8 @@ function tradutorToggleMic() {
   tradutorRecognition.onstart = () => {
     tradutorListening = true;
     if (micBtn) micBtn.classList.add('is-listening');
-    tradutorSetStatus('Ouvindo... fale agora.', '');
+    tradutorSetStatus('Ouvindo... fale agora. Quando você parar de falar, traduzo sozinho.', '');
+    tradutorSyncConvoLabels();
   };
 
   tradutorRecognition.onresult = (event) => {
@@ -11174,10 +11266,23 @@ function tradutorToggleMic() {
     }
     inputEl.value = baseText + finalChunk + interimChunk;
     tradutorUpdateCharCount();
+    // Parou de falar por um instante: encerra o microfone, que traduz em seguida.
+    clearTimeout(silenceTimer);
+    silenceTimer = setTimeout(() => {
+      try { if (tradutorRecognition) tradutorRecognition.stop(); } catch (e) { /* já parou */ }
+    }, TRADUTOR_SILENCE_MS);
   };
 
-  tradutorRecognition.onerror = () => {
-    tradutorSetStatus('Não foi possível captar o áudio. Tente novamente.', 'error');
+  tradutorRecognition.onerror = (ev) => {
+    hadError = true;
+    clearTimeout(silenceTimer);
+    tradutorConvAuto = false;
+    const code = ev && ev.error;
+    tradutorSetStatus(
+      code === 'not-allowed' || code === 'service-not-allowed' ? 'O microfone está bloqueado. Permita o uso do microfone nas configurações do navegador.' :
+      code === 'no-speech' ? 'Não ouvi nada. Toque no microfone de novo e fale mais perto.' :
+      code === 'audio-capture' ? 'Nenhum microfone foi encontrado neste aparelho.' :
+      'Não foi possível captar o áudio. Tente novamente.', 'error');
   };
 
   // Ao parar de ouvir (o técnico toca no microfone de novo para encerrar),
@@ -11185,10 +11290,14 @@ function tradutorToggleMic() {
   // sozinho — antes era preciso tocar no microfone para parar e depois
   // ainda tocar em "Traduzir" separadamente.
   tradutorRecognition.onend = () => {
+    clearTimeout(silenceTimer);
     tradutorListening = false;
     if (micBtn) micBtn.classList.remove('is-listening');
-    tradutorClearStatus();
-    if (tradutorGotFinalResult && inputEl.value.trim()) tradutorTranslate();
+    tradutorSyncConvoLabels();
+    if (!hadError) tradutorClearStatus(); // mantém a mensagem de erro na tela
+    const said = inputEl.value.trim() !== baseText.trim();
+    if ((tradutorGotFinalResult || said) && inputEl.value.trim() && !hadError) tradutorTranslate();
+    else tradutorConvAuto = false;
   };
 
   try {
@@ -11196,6 +11305,133 @@ function tradutorToggleMic() {
   } catch (e) {
     tradutorSetStatus('Não foi possível ativar o microfone.', 'error');
   }
+}
+
+/* ---- Conversa por voz ----
+   Dois botões: "Falar em Português" (a tradução sai sozinha e é lida em voz alta
+   para a pessoa) e "Falar em <idioma>" (a pessoa responde e a tradução em português
+   aparece na tela). O microfone encerra sozinho quando a fala para. */
+function tradutorConvoForeign() {
+  const f = (document.getElementById('tradutorFrom') || {}).value;
+  const t = (document.getElementById('tradutorTo') || {}).value;
+  if (f && f !== 'pt') return f;
+  if (t && t !== 'pt') return t;
+  return tradutorLastTarget || 'es';
+}
+
+function tradutorSyncConvoLabels() {
+  const ptBtn = document.getElementById('tradutorConvoPt');
+  const fBtn = document.getElementById('tradutorConvoForeign');
+  const fromSel = document.getElementById('tradutorFrom');
+  if (!ptBtn || !fBtn || !fromSel) return;
+  const foreign = tradutorConvoForeign();
+  const fromIsPt = fromSel.value === 'pt';
+  const ptLive = tradutorListening && fromIsPt;
+  const fLive = tradutorListening && !fromIsPt;
+  ptBtn.textContent = ptLive ? '⏹ Ouvindo… toque para encerrar' : '🎙 Falar em Português';
+  fBtn.textContent = fLive ? '⏹ Ouvindo… toque para encerrar' : '🎙 Falar em ' + TRADUTOR_LANGS[foreign].label;
+  ptBtn.classList.toggle('is-live', ptLive);
+  fBtn.classList.toggle('is-live', fLive);
+  ptBtn.setAttribute('aria-pressed', String(ptLive));
+  fBtn.setAttribute('aria-pressed', String(fLive));
+  const supported = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  ptBtn.disabled = !supported || fLive;
+  fBtn.disabled = !supported || ptLive;
+}
+
+function tradutorConvoStart(who) {
+  const fromSel = document.getElementById('tradutorFrom');
+  const toSel = document.getElementById('tradutorTo');
+  const inputEl = document.getElementById('tradutorInput');
+  const outputEl = document.getElementById('tradutorOutput');
+  if (!fromSel || !toSel || !inputEl || !outputEl) return;
+  if (tradutorListening && tradutorRecognition) { tradutorRecognition.stop(); return; } // tocar de novo encerra
+  const foreign = tradutorConvoForeign();
+  tradutorStopSpeaking(); // a voz do aparelho não pode "entrar" no microfone
+  fromSel.value = who === 'pt' ? 'pt' : foreign;
+  toSel.value = who === 'pt' ? foreign : 'pt';
+  tradutorSyncSpeakLabels();
+  inputEl.value = '';
+  outputEl.value = '';
+  tradutorDetectIgnore = '';
+  tradutorHideBackCheck();
+  tradutorUpdateCharCount();
+  tradutorSyncOutputButtons();
+  tradutorConvAuto = (who === 'pt'); // o que você fala é lido para a pessoa; a resposta dela só aparece na tela
+  tradutorToggleMic();
+}
+
+/* ---- Aviso de idioma ----
+   Se o texto digitado/colado parece estar em outro idioma que não o de origem
+   escolhido, mostra um aviso com "Trocar e traduzir". A checagem é local (lista de
+   palavras que só existem em um dos idiomas) e não envia nada a lugar nenhum. */
+const TRADUTOR_DETECT_VOCAB = {
+  pt: 'o os um uma uns umas do dos da das no nos na nas ao aos pelo pela com sem para por que nao voce voces eu ele ela nosso nossa meu minha meus minhas seu sua seus suas e esta estou estao sao tem tenho temos tenha preciso precisa precisamos obrigado obrigada muito muita tambem quando onde como porque aqui la ja ainda mais menos filho filha filhos filhas casa documento documentos ajuda moradia comida trabalho escola bom dia boa tarde noite desculpe favor gostaria posso pode fazer fiz fui vou foi ser estar mora moro moram nome telefone endereco',
+  es: 'el los las un una unos unas del al con sin para por que no usted ustedes yo ella nosotros mi mis tu tus su sus es esta estoy estan son tiene tengo tenemos necesito necesita gracias muy tambien cuando donde como porque aqui alli ya todavia mas menos hijo hija hijos hijas casa documento documentos ayuda vivienda comida trabajo escuela buen dia buenos dias buenas tardes noches perdon favor quisiera puedo puede hacer hice fui voy fue ser vive vivo viven nombre telefono direccion hola cedula pasaporte cuantos cuantas cual quien',
+  en: 'the a an of to in on with without for and or not you i he she we they my your his her our their is are am have has had need needs thanks thank very also when where how because here there already more less son daughter children child house home document documents help housing food work school good morning afternoon evening sorry please would like can could do did go went be live lives name phone address hello what who which',
+  fr: 'le la les un une des du de en dans sur avec sans pour et ou ne pas vous je tu il elle nous ils elles mon ma mes ton ta tes son sa ses est sont suis ai avez avons besoin merci tres aussi quand ou comment parce ici deja plus moins fils fille enfants enfant maison document documents aide logement nourriture travail ecole bonjour bonsoir bonne journee pardon voudrais peux peut faire fait vais etre habite habitez nom telephone adresse salut quel quelle qui'
+};
+let tradutorDetectIndex = null;
+
+function tradutorStripAccents(t) {
+  return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+function tradutorDetectLang(text) {
+  if (!tradutorDetectIndex) {
+    tradutorDetectIndex = new Map(); // palavra → conjunto de idiomas que a usam
+    Object.keys(TRADUTOR_DETECT_VOCAB).forEach(l => {
+      tradutorStripAccents(TRADUTOR_DETECT_VOCAB[l]).split(/\s+/).forEach(w => {
+        if (!w) return;
+        if (!tradutorDetectIndex.has(w)) tradutorDetectIndex.set(w, new Set());
+        tradutorDetectIndex.get(w).add(l);
+      });
+    });
+  }
+  const raw = String(text || '').toLowerCase();
+  const score = { pt: 0, es: 0, en: 0, fr: 0 };
+  if (/[ñ¿¡]/.test(raw)) score.es += 3;
+  if (/[ãõ]/.test(raw)) score.pt += 3;
+  if (/[èùœ]|\b(?:l|d|j|qu|n|s)['’][a-zàâéèêëîïôûù]/.test(raw)) score.fr += 2;
+  tradutorStripAccents(raw).split(/[^a-z0-9]+/).forEach(w => {
+    const langs = tradutorDetectIndex.get(w);
+    if (langs && langs.size === 1) score[Array.from(langs)[0]]++; // só palavras exclusivas de um idioma
+  });
+  const ranked = Object.keys(score).sort((a, b) => score[b] - score[a]);
+  const top = ranked[0], second = ranked[1];
+  return (score[top] >= 2 && score[top] - score[second] >= 1) ? top : '';
+}
+
+function tradutorRunDetect() {
+  const box = document.getElementById('tradutorDetect');
+  const input = document.getElementById('tradutorInput');
+  const fromSel = document.getElementById('tradutorFrom');
+  if (!box || !input || !fromSel) return;
+  const text = input.value.trim();
+  if (text.length < 6 || tradutorListening) { box.hidden = true; return; }
+  const code = tradutorDetectLang(text);
+  if (!code || code === fromSel.value || code === tradutorDetectIgnore) { box.hidden = true; return; }
+  box.hidden = false;
+  box.innerHTML = '🔎 O texto parece estar em <strong>' + escapeHtml(TRADUTOR_LANGS[code].label) +
+    '</strong>, mas o idioma de origem é ' + escapeHtml(TRADUTOR_LANGS[fromSel.value].label) + '. ' +
+    '<button type="button" class="tradutor-detect-go" onclick="tradutorApplyDetected(\'' + code + '\')">Trocar e traduzir</button>' +
+    '<button type="button" class="tradutor-detect-skip" onclick="tradutorDismissDetect(\'' + code + '\')">Manter</button>';
+}
+
+function tradutorApplyDetected(code) {
+  const fromSel = document.getElementById('tradutorFrom');
+  const toSel = document.getElementById('tradutorTo');
+  if (!fromSel || !toSel || !TRADUTOR_LANGS[code]) return;
+  fromSel.value = code;
+  if (toSel.value === code) toSel.value = code === 'pt' ? (tradutorLastTarget || 'es') : 'pt';
+  tradutorSyncSpeakLabels(); // atualiza rótulos e esconde o aviso
+  tradutorTranslate();
+}
+
+function tradutorDismissDetect(code) {
+  tradutorDetectIgnore = code || '';
+  const box = document.getElementById('tradutorDetect');
+  if (box) box.hidden = true;
 }
 
 function tradutorCopy(which) {
@@ -11331,6 +11567,10 @@ function initTranslatorPanel() {
   if (micBtn && !(window.SpeechRecognition || window.webkitSpeechRecognition)) {
     micBtn.disabled = true;
     micBtn.title = 'Reconhecimento de voz não disponível neste navegador';
+    ['tradutorConvoPt', 'tradutorConvoForeign'].forEach(id => {
+      const b = document.getElementById(id);
+      if (b) { b.disabled = true; b.title = 'Reconhecimento de voz não disponível neste navegador'; }
+    });
   }
 }
 
@@ -19856,3 +20096,78 @@ function argoAskAI(rawText, tab, fallbackResult) {
     }
   };
 }
+
+
+/* ======================= Dinâmica da navegação =======================
+   1) Ao trocar de aba, o conteúdo desliza de leve para o lado certo
+      (frente = próxima aba na ordem do menu; trás = anterior).
+   2) No celular, em modo destaque, deslizar o dedo para os lados nas
+      abas de lista (CRAS, RAPS, SUAS…) vai para a aba anterior/seguinte.
+      Fica desligado em campos de texto, tabelas, mapa, agenda e em
+      qualquer área que role na horizontal, para não atrapalhar. */
+(function initNavDynamics() {
+  const grid = document.getElementById('grid');
+  const main = document.getElementById('mainContent');
+  if (!grid || !main || typeof navAllChips !== 'function') return;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const SLIDE = ['grid-slide-next', 'grid-slide-prev'];
+  const active = document.querySelector('#filterBar .filter-chip.active');
+  let lastCat = (active && active.dataset.cat) || 'all';
+
+  function slide(dir) {
+    if (reduce.matches) return;
+    grid.classList.remove(...SLIDE);
+    void grid.offsetWidth; // reinicia a animação se ela já estava rodando
+    grid.classList.add(dir > 0 ? SLIDE[0] : SLIDE[1]);
+  }
+  grid.addEventListener('animationend', e => {
+    if (e.target === grid) grid.classList.remove(...SLIDE);
+  });
+
+  navAllChips().forEach(chip => chip.addEventListener('click', () => {
+    const cat = chip.dataset.cat;
+    if (!cat || cat === lastCat) return;
+    const order = navAllChips().map(c => c.dataset.cat);
+    const dir = order.indexOf(cat) >= order.indexOf(lastCat) ? 1 : -1;
+    lastCat = cat;
+    slide(dir);
+  }));
+
+  /* ---- deslizar para trocar de aba (celular, modo destaque) ---- */
+  const SWIPE_BLOCK = 'input, textarea, select, button, a, summary, label, table, pre, canvas, [contenteditable], ' +
+    '.leaflet-container, [data-no-swipe], #agendaBook, #agendaCalendarGrid, .pdftools-fileitem, .tab-focus-bar, #notesRoot';
+  const LIST_ONLY = ['pdftools', 'tradutor', 'noticias', 'mapa', 'agenda', 'appsext', 'ferramentas', 'anotacoes'];
+  let sx = 0, sy = 0, st = 0, tracking = false;
+
+  function scrollsSideways(el) {
+    for (let n = el; n && n !== main; n = n.parentElement) {
+      if (n.scrollWidth > n.clientWidth + 4) {
+        const ox = getComputedStyle(n).overflowX;
+        if (ox === 'auto' || ox === 'scroll') return true;
+      }
+    }
+    return false;
+  }
+
+  main.addEventListener('touchstart', e => {
+    tracking = false;
+    if (!isTabFocusOpen() || e.touches.length !== 1) return;
+    if (LIST_ONLY.includes(lastCat)) return;
+    const t = e.target;
+    if (!t.closest || t.closest(SWIPE_BLOCK) || scrollsSideways(t)) return;
+    const sel = window.getSelection && window.getSelection();
+    if (sel && String(sel).length) return; // há texto selecionado
+    tracking = true;
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY; st = Date.now();
+  }, { passive: true });
+
+  main.addEventListener('touchend', e => {
+    if (!tracking) return;
+    tracking = false;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - sx, dy = t.clientY - sy;
+    if (Date.now() - st > 600 || Math.abs(dx) < 90 || Math.abs(dy) > Math.abs(dx) * 0.5) return;
+    const btn = document.getElementById(dx < 0 ? 'tabFocusNext' : 'tabFocusPrev');
+    if (btn) btn.click();
+  }, { passive: true });
+})();
