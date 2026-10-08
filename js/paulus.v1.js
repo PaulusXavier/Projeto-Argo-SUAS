@@ -230,6 +230,8 @@ const SKINS = {
 
 
 
+
+
 const AVISO_PESSOAL = 'Para proteger as famílias, não consigo analisar mensagens com nome, documento, telefone ou endereço residencial. Reescreva a pergunta sem identificar ninguém.';
 
 const PADRAO = {
@@ -450,6 +452,8 @@ async function pedirIA(texto, opcoes) {
     fichas: fichas,
     stream: true
   };
+  // Visão geral do diretório (totais por grupo), montada pelo app. Só vai quando o app a manda.
+  if (typeof opcoes.panorama === 'string' && opcoes.panorama.trim()) corpo.panorama = opcoes.panorama.trim().slice(0, 3000);
 
   const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
   let timer = null;
