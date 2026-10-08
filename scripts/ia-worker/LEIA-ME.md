@@ -1,3 +1,6 @@
+> **Substituído pelo Paulus.** O Argo agora usa o Worker do repositório `paulus` (`ARGO_IA.url` em `js/app.js`).
+> Este Worker e este passo a passo ficam só como referência; não precisa mais publicá-lo.
+
 # IA gratuita do mascote Argo (opcional)
 
 O mascote funciona sem IA. Ele responde sozinho (no próprio aparelho, até sem internet) a:
