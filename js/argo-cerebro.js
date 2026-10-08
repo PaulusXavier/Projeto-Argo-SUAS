@@ -810,7 +810,7 @@
     glossary: glossaryScore, compose: { directory: composeDirectory, glossary: composeGlossary },
     remember: remember, reset: reset, session: session,
     aiOn: aiOn, aiGate: aiGate, buildPayload: buildPayload, streamAI: streamAI,
-    verifyPhones: verifyPhones, mentionedUnits: mentionedUnits, telHref: telHref, slim: slim,
+    verifyPhones: verifyPhones, cleanAI: cleanAI, mentionedUnits: mentionedUnits, telHref: telHref, slim: slim,
     config: CFG, emergencia: EMERGENCIA, glossarioLista: GLOSSARIO
   };
 });
