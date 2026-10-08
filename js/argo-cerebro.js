@@ -1095,3 +1095,4 @@
     config: CFG, emergencia: EMERGENCIA, glossarioLista: GLOSSARIO
   };
 });
+
