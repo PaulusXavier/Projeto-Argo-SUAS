@@ -1,8 +1,8 @@
 /*!
  * ArgoMascot — mascote-barquinho (tema Argo Navis) + sistema de avisos.
- * Visual "fofinho de livro antigo": casco de madeira arredondado com friso
- * dourado, velas de pergaminho remendadas, olhos redondos com brilho,
- * bochechas rosadas, ondinhas e bandeirinha na cor do humor.
+ * Visual "livro antigo" sobrio: casco de madeira com friso dourado, velas de
+ * pergaminho (a pequena leva a constelacao Argo), olhos redondos que
+ * acompanham o mouse, barco que balanca, ondinhas e bandeirinha na cor do humor.
  * Sem dependências. Usa as mesmas variáveis de tema do app (--brand-primary,
  * --bg-card, --text-main, --radius-ui, --shadow-*) quando existirem, com
  * fallback para as mesmas cores caso seja usado fora do Argo SUAS.
@@ -109,9 +109,7 @@
     }
 
     // ---- Rosto e pose por humor ----
-    var cheeks =
-      '<ellipse cx="31.5" cy="44.2" rx="3.4" ry="2.2" fill="' + BLUSH + '" opacity=".7"/>' +
-      '<ellipse cx="52.5" cy="44.2" rx="3.4" ry="2.2" fill="' + BLUSH + '" opacity=".7"/>';
+    var cheeks = ''; // sem bochechas rosadas: visual mais sobrio, menos "fofinho"
     var face, arms, extra = '';
 
     if (mood === 'success') {
@@ -124,19 +122,19 @@
         '<path d="M14 18 Q15 23 20 24 Q15 25 14 30 Q13 25 8 24 Q13 23 14 18 Z" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width="1" stroke-linejoin="round"/>' +
         '<path d="M78 5 Q79 9 83 10 Q79 11 78 15 Q77 11 73 10 Q77 9 78 5 Z" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width="1" stroke-linejoin="round"/>';
     } else if (mood === 'error') {
-      face = '<g class="argo-mascot-blink">' + eye(36.5, 39, 2.6) + eye(47.5, 39, 2.6) + '</g>' +
+      face = '<g class="argo-mascot-look"><g class="argo-mascot-blink">' + eye(36.5, 39, 2.6) + eye(47.5, 39, 2.6) + '</g></g>' +
         stroke('M32 33.6 L39.6 35.8', 2) + stroke('M52 33.6 L44.4 35.8', 2) +
         stroke('M38 48.2 Q42 43.6 46 48.2', 2.2) +
         '<path d="M33 43.4 Q30.4 47 33 49.4 Q35.6 47 33 43.4 Z" fill="#8FD3F4" stroke="' + EYE + '" stroke-width="1" stroke-opacity=".5"/>';
       arms = arm(23, 63, 21, 61) + arm(61, 63, 63, 61);
       extra = '<path d="M58 22 Q55.6 26 58 28.6 Q60.4 26 58 22 Z" fill="#8FD3F4" stroke="' + EYE + '" stroke-width="1" stroke-opacity=".5"/>';
     } else if (mood === 'notfound') {
-      face = '<g class="argo-mascot-blink">' + eye(36.5, 39, 2.3) + eye(47.5, 38.6, 3.2) + '</g>' +
+      face = '<g class="argo-mascot-look"><g class="argo-mascot-blink">' + eye(36.5, 39, 2.3) + eye(47.5, 38.6, 3.2) + '</g></g>' +
         stroke('M44 32.6 Q47.6 29.4 51.6 32.6', 2) +
         '<ellipse cx="42" cy="46.4" rx="2.3" ry="2.9" fill="' + MOUTH + '" stroke="' + EYE + '" stroke-width="1.8"/>';
       arms = arm(23, 63, 21, 61) + arm(61, 62, 53.5, 50.5);
     } else { // info
-      face = '<g class="argo-mascot-blink">' + eye(36.5, 39, 2.7) + eye(47.5, 39, 2.7) + '</g>' +
+      face = '<g class="argo-mascot-look"><g class="argo-mascot-blink">' + eye(36.5, 39, 2.7) + eye(47.5, 39, 2.7) + '</g></g>' +
         stroke('M37.4 44.4 Q42 49.2 46.6 44.4', 2.2);
       arms = arm(23, 63, 21, 61) + '<g class="argo-mascot-wave">' + arm(60, 62, 70.5, 43) + '</g>';
     }
@@ -178,6 +176,7 @@
         '</defs>' +
         // ondinha de fundo
         '<path d="M5 105 ' + wave + '" fill="none" stroke="' + SEA + '" stroke-width="3" stroke-linecap="round" opacity=".55"/>' +
+        '<g class="argo-mascot-rock">' +
         // mastro à direita, com bolinha dourada no topo
         '<line x1="104" y1="68" x2="104" y2="6" stroke="' + INK + '" stroke-width="5.4" stroke-linecap="round"/>' +
         '<line x1="104" y1="68" x2="104" y2="6" stroke="' + WOOD_DK + '" stroke-width="2.6" stroke-linecap="round"/>' +
@@ -185,6 +184,10 @@
         '<path d="M100 14 C82 16 70 30 72 54 Q87 59 100 55 Z" fill="' + PARCH + '" stroke="' + INK + '" stroke-width="2.4" stroke-linejoin="round"/>' +
         '<path d="M96 28 Q84 30 77 38" fill="none" stroke="' + WOOD_DK + '" stroke-width="1.2" stroke-dasharray="2 3" stroke-linecap="round" opacity=".6"/>' +
         '<path d="M108 18 Q119 32 121 52 L108 52 Z" fill="' + PARCH_DK + '" stroke="' + INK + '" stroke-width="2.2" stroke-linejoin="round"/>' +
+        // constelacao (tema Argo Navis) na vela pequena
+        '<path d="M112.4 27.5 L116.2 35.5 L113 44.6 M116.2 35.5 L119 46" fill="none" stroke="' + INK + '" stroke-width=".9" stroke-linecap="round" opacity=".55"/>' +
+        '<circle cx="112.4" cy="27.5" r="1.7" fill="' + GOLD_DK + '"/><circle cx="116.2" cy="35.5" r="2.2" fill="' + GOLD_DK + '"/>' +
+        '<circle cx="113" cy="44.6" r="1.5" fill="' + GOLD_DK + '"/><circle cx="119" cy="46" r="1.4" fill="' + GOLD_DK + '"/>' +
         // remendo costurado na cor do humor
         '<rect x="82" y="34" width="12" height="12" rx="3" fill="' + accent + '" transform="rotate(-8 88 40)"/>' +
         '<rect x="83.6" y="35.6" width="8.8" height="8.8" rx="2" fill="none" stroke="#fff" stroke-width="1" stroke-dasharray="1.6 1.6" opacity=".85" transform="rotate(-8 88 40)"/>' +
@@ -205,9 +208,12 @@
           '<circle cx="22" cy="60" r="1.3" fill="' + GOLD_DK + '"/><circle cx="43" cy="60" r="1.3" fill="' + GOLD_DK + '"/>' +
           '<circle cx="87" cy="60" r="1.3" fill="' + GOLD_DK + '"/><circle cx="108" cy="60" r="1.3" fill="' + GOLD_DK + '"/>' +
         '</g>' +
-        // ondinhas da frente com espuma
+        '</g>' +
+        // ondinhas da frente com espuma (vao de um lado a outro, bem de leve)
+        '<g class="argo-mascot-swell">' +
         '<path d="M5 106 ' + wave + ' C125 113 100 116 65 116 C30 116 5 113 5 106 Z" fill="' + SEA + '" stroke="' + INK + '" stroke-width="2" stroke-linejoin="round" opacity=".92"/>' +
         '<path d="M10 108.4 q5 -3 10 0 M52 108.4 q5 -3 10 0 M96 108.4 q5 -3 10 0" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>' +
+        '</g>' +
         // bandeirinha de ponta, balançando
         '<g class="argo-mascot-flag">' +
           '<path d="M106 3 H126 L121.5 8.5 L126 14 H106 Z" fill="' + accent + '" stroke="' + INK + '" stroke-width="1.8" stroke-linejoin="round"/>' +
@@ -217,6 +223,38 @@
         extra +
       '</svg>'
     );
+  }
+
+  // ---------------------------------------------------------------------
+  // Olhar: os olhos do comandante acompanham o mouse (so em telas com mouse;
+  // desligado com "reduzir movimento"). Mexe so nos olhos dos mascotes que
+  // estao na pagina, em no maximo um quadro por vez — sem custo para a pagina.
+  // ---------------------------------------------------------------------
+  var lookBound = false;
+  function bindLook() {
+    if (lookBound || typeof window === 'undefined' || !window.matchMedia) return;
+    lookBound = true;
+    var fine = window.matchMedia('(pointer: fine)');
+    var calm = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (!fine.matches || calm.matches) return;
+    var raf = 0, nx = 0, ny = 0;
+    function apply() {
+      raf = 0;
+      var t = 'translate(' + (nx * 1.9).toFixed(2) + 'px,' + (ny * 1.3).toFixed(2) + 'px)';
+      var els = document.querySelectorAll('.argo-mascot-look');
+      for (var i = 0; i < els.length; i++) els[i].style.transform = t;
+    }
+    function aim(x, y) {
+      nx = Math.max(-1, Math.min(1, (x / window.innerWidth - 0.5) * 2));
+      ny = Math.max(-1, Math.min(1, (y / window.innerHeight - 0.5) * 2));
+      if (!raf) raf = window.requestAnimationFrame(apply);
+    }
+    window.addEventListener('pointermove', function (e) {
+      if (e.pointerType && e.pointerType !== 'mouse' && e.pointerType !== 'pen') return;
+      aim(e.clientX, e.clientY);
+    }, { passive: true });
+    // Mouse saiu da janela: olhos voltam ao centro.
+    document.documentElement.addEventListener('mouseleave', function () { nx = 0; ny = 0; if (!raf) raf = window.requestAnimationFrame(apply); });
   }
 
   function ensureStyles() {
@@ -233,7 +271,12 @@
       '.argo-mascot-blink{transform-origin:42px 39px;animation:argoMascotBlink 5s infinite}' +
       '@keyframes argoMascotBlink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.1)}}' +
       '@keyframes argoMascotFlag{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}' +
-      '@media (prefers-reduced-motion: reduce){.argo-mascot-bob,.argo-mascot-flag,.argo-mascot-wave,.argo-mascot-wave2,.argo-mascot-blink{animation:none}.argo-mascot-toast{transition:none}}' +
+      '.argo-mascot-rock{transform-origin:65px 104px;animation:argoMascotRock 4.2s ease-in-out infinite}' +
+      '@keyframes argoMascotRock{0%,100%{transform:rotate(-1.3deg)}50%{transform:rotate(1.3deg)}}' +
+      '.argo-mascot-swell{animation:argoMascotSwell 3.6s ease-in-out infinite}' +
+      '@keyframes argoMascotSwell{0%,100%{transform:translateX(-2.5px)}50%{transform:translateX(2.5px)}}' +
+      '.argo-mascot-look{transition:transform .14s ease-out}' +
+      '@media (prefers-reduced-motion: reduce){.argo-mascot-bob,.argo-mascot-flag,.argo-mascot-wave,.argo-mascot-wave2,.argo-mascot-blink,.argo-mascot-rock,.argo-mascot-swell{animation:none}.argo-mascot-look{transition:none;transform:none!important}.argo-mascot-toast{transition:none}}' +
       '@media print{.argo-mascot-toast{display:none!important}}' +
       'body:has(#argoUpdateToast) .argo-mascot-toast{bottom:calc(76px + env(safe-area-inset-bottom,0px))}' +
 
@@ -389,6 +432,7 @@
     tag.id = STYLE_ID;
     tag.textContent = css;
     document.head.appendChild(tag);
+    bindLook();
   }
 
   // ---------------------------------------------------------------------
