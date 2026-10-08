@@ -1,7 +1,7 @@
 // Este número é substituído automaticamente em cada build/deploy (scripts/build.mjs),
 // e é essa mudança de versão que dispara a atualização nos aparelhos. Só precisa
 // trocar à mão se for publicar a pasta SEM passar pelo build.
-const CACHE_VERSION = 'v152';
+const CACHE_VERSION = 'v153';
 const CACHE_NAME = `rede-apoio-bv-${CACHE_VERSION}`;
 
 // Cache separado e SEM número de versão, para conteúdo pesado de fora do
