@@ -2046,6 +2046,185 @@
 
   .pdftools-privacy svg { color: var(--brand-pdftools); flex-shrink: 0; }
 
+  /* Central de PDF: atalhos no topo e títulos de seção */
+  .pdftools-jump {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 1.1rem;
+  }
+
+  .pdftools-jump-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-right: 0.15rem;
+  }
+
+  .pdftools-jump-btn {
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    min-height: 36px;
+    padding: 0.3rem 0.85rem;
+    border-radius: 999px;
+    border: 1.5px solid var(--border-ui);
+    background: var(--bg-main);
+    color: var(--brand-pdftools);
+    cursor: pointer;
+    transition: border-color 0.2s var(--ease), background 0.2s var(--ease);
+  }
+
+  .pdftools-jump-btn:hover,
+  .pdftools-jump-btn:focus-visible {
+    border-color: var(--brand-pdftools);
+    background: rgba(29, 78, 216, 0.08);
+  }
+
+  .pdftools-jump-btn:focus-visible {
+    outline: 2px solid var(--brand-pdftools-light);
+    outline-offset: 2px;
+  }
+
+  .pdftools-section-title {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0 0 0.7rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1.5px solid var(--border-ui);
+    font-weight: 800;
+    font-size: 0.95rem;
+    color: var(--text-main);
+  }
+
+  .pdftools-section-title svg {
+    color: var(--brand-pdftools);
+    align-self: center;
+    flex-shrink: 0;
+  }
+
+  .pdftools-section-title small {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .pdftools-pages {
+    margin: 0.7rem 0 0.2rem;
+    border: 1px solid var(--border-ui);
+    border-radius: 10px;
+    background: var(--bg-card);
+    padding: 0.55rem;
+  }
+
+  .pdftools-pages[hidden] { display: none; }
+
+  .pdftools-pages-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 0.45rem;
+  }
+
+  .pdftools-pages-count { color: var(--brand-pdftools); }
+
+  .pdftools-pages-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
+    gap: 0.4rem;
+    max-height: 250px;
+    overflow-y: auto;
+    padding: 2px;
+  }
+
+  .pdftools-pg {
+    font: inherit;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.3rem 0.2rem;
+    border: 2px solid var(--border-ui);
+    border-radius: 8px;
+    background: var(--bg-main);
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .pdftools-pg-img {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 84px;
+    background: rgba(29, 78, 216, 0.05);
+    border-radius: 4px;
+  }
+
+  .pdftools-pg-img img { max-width: 100%; max-height: 84px; background: #fff; }
+
+  .pdftools-pg-n { font-size: 0.72rem; font-weight: 800; }
+
+  .pdftools-pg:hover { border-color: var(--brand-pdftools-light); }
+
+  .pdftools-pg:focus-visible {
+    outline: 2px solid var(--brand-pdftools-light);
+    outline-offset: 2px;
+  }
+
+  .pdftools-pg[aria-pressed="true"] {
+    border-color: var(--brand-pdftools);
+    background: rgba(29, 78, 216, 0.12);
+    color: var(--brand-pdftools);
+    box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.18);
+  }
+
+  .pdftools-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.45rem;
+  }
+
+  .pdftools-chip {
+    font: inherit;
+    font-size: 0.72rem;
+    font-weight: 700;
+    min-height: 32px;
+    padding: 0.2rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-ui);
+    background: var(--bg-card);
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .pdftools-chip:hover,
+  .pdftools-chip:focus-visible {
+    color: var(--brand-pdftools);
+    border-color: var(--brand-pdftools);
+  }
+
+  .pdftools-tool { scroll-margin-top: 5.5rem; }
+
+  .pdftools-tool-title:focus { outline: none; }
+
+  .pdftools-tool-flash {
+    border-color: var(--brand-pdftools) !important;
+    box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.18);
+  }
+
+  @media (min-width: 861px) {
+    .pdftools-grid-single { grid-template-columns: minmax(0, 1fr); }
+  }
+
   .pdftools-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
