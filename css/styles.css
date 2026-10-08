@@ -2678,6 +2678,144 @@
   .pdftools-btn-ghost:hover:not(:disabled) { border-color: var(--brand-pdftools-light); color: var(--brand-pdftools); }
   .pdftools-btn-ghost:disabled { opacity: 0.45; cursor: not-allowed; }
 
+  /* ---------- Editar PDF ---------- */
+  .pdfedit { margin-top: 0.8rem; }
+  .pdfedit[hidden] { display: none; }
+  .pdfedit-toolbar { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.55rem; }
+  .pdfedit-tool {
+    appearance: none;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    border: 1.5px solid var(--border-ui);
+    background: var(--bg-card);
+    color: var(--text-muted);
+    border-radius: 9px;
+    padding: 0.45rem 0.7rem;
+    cursor: pointer;
+    transition: 0.15s var(--ease);
+  }
+  .pdfedit-tool:hover { border-color: var(--brand-pdftools-light); color: var(--brand-pdftools); }
+  .pdfedit-tool.is-active {
+    background: var(--brand-pdftools);
+    border-color: var(--brand-pdftools);
+    color: #fff;
+  }
+  .pdfedit-options, .pdfedit-nav, .pdfedit-imgbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .pdfedit-opt, .pdfedit-pagelabel {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--text-muted);
+  }
+  .pdfedit-opt select { width: auto; }
+  .pdfedit-pagelabel input { width: 4.2rem; text-align: center; }
+  .pdfedit-spacer { flex: 1 1 auto; }
+  .pdfedit-mini { padding: 0.4rem 0.7rem; font-size: 0.78rem; }
+  .pdfedit-zoom { font-size: 0.76rem; font-weight: 700; color: var(--text-muted); min-width: 2.6rem; text-align: center; }
+  .pdfedit-check { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.74rem; color: var(--text-muted); }
+  .pdfedit-imgname { font-size: 0.72rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 14rem; }
+  .pdfedit-hint { font-size: 0.76rem; color: var(--text-muted); margin: 0 0 0.5rem; min-height: 1.1em; }
+  .pdfedit-note { font-size: 0.72rem; color: var(--text-muted); line-height: 1.5; margin: 0.6rem 0 0.2rem; }
+  .pdfedit-wrap {
+    overflow: auto;
+    max-height: 78vh;
+    border: 1px solid var(--border-ui);
+    border-radius: 10px;
+    background: #9aa3b2;
+    padding: 0.6rem;
+    text-align: center;
+  }
+  .pdfedit-stage { position: relative; display: inline-block; margin: 0 auto; background: #fff; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3); text-align: left; line-height: 0; }
+  .pdfedit-stage canvas { display: block; }
+  .pdfedit-svg, .pdfedit-layer { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+  .pdfedit-svg { pointer-events: none; }
+  .pdfedit-layer { overflow: visible; touch-action: pan-x pan-y pinch-zoom; }
+  .pdfedit-stage[data-tool="text"] .pdfedit-layer { cursor: text; }
+  .pdfedit-stage[data-tool="pen"] .pdfedit-layer,
+  .pdfedit-stage[data-tool="hl"] .pdfedit-layer,
+  .pdfedit-stage[data-tool="cover"] .pdfedit-layer,
+  .pdfedit-stage[data-tool="box"] .pdfedit-layer,
+  .pdfedit-stage[data-tool="line"] .pdfedit-layer { cursor: crosshair; touch-action: none; }
+  .pdfedit-stage[data-tool="stamp"] .pdfedit-layer { cursor: copy; }
+  .pdfedit-stage[data-tool="edittext"] .pdfedit-layer { cursor: text; }
+  .pdfedit-stage[data-tool="erase"] .pdfedit-layer { cursor: pointer; }
+  .pdfedit-stage[data-tool="img"] .pdfedit-layer { cursor: copy; }
+  .pdfedit-stage[data-tool="pen"] .pdfedit-item,
+  .pdfedit-stage[data-tool="hl"] .pdfedit-item,
+  .pdfedit-stage[data-tool="cover"] .pdfedit-item,
+  .pdfedit-stage[data-tool="box"] .pdfedit-item,
+  .pdfedit-stage[data-tool="line"] .pdfedit-item,
+  .pdfedit-stage[data-tool="stamp"] .pdfedit-item,
+  .pdfedit-stage[data-tool="erase"] .pdfedit-item,
+  .pdfedit-stage[data-tool="img"] .pdfedit-textbox { pointer-events: none; }
+  .pdfedit-item { position: absolute; line-height: 1; }
+  .pdfedit-textbox {
+    min-width: 1.5em;
+    min-height: 1.2em;
+    white-space: pre;
+    line-height: 1.2;
+    font-family: Helvetica, Arial, sans-serif;
+    outline: 1px dashed transparent;
+    outline-offset: 1px;
+    cursor: text;
+    caret-color: currentColor;
+  }
+  .pdfedit-text:hover .pdfedit-textbox,
+  .pdfedit-textbox:focus { outline-color: var(--brand-pdftools-light); }
+  .pdfedit-img img { display: block; width: 100%; height: auto; user-select: none; -webkit-user-drag: none; }
+  .pdfedit-img { outline: 1px dashed transparent; }
+  .pdfedit-img:hover { outline-color: var(--brand-pdftools-light); }
+  .pdfedit-grip, .pdfedit-resize {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: var(--brand-pdftools);
+    color: #fff;
+    font-size: 13px;
+    line-height: 1;
+    border-radius: 6px;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    z-index: 2;
+  }
+  .pdfedit-grip { left: 0; top: -24px; }
+  .pdfedit-resize { right: -6px; bottom: -6px; cursor: nwse-resize; }
+  .pdfedit-text:hover .pdfedit-grip,
+  .pdfedit-text:focus-within .pdfedit-grip,
+  .pdfedit-img:hover .pdfedit-grip,
+  .pdfedit-img:hover .pdfedit-resize { display: inline-flex; }
+  @media (hover: none) {
+    .pdfedit-grip, .pdfedit-resize { display: inline-flex; width: 28px; height: 28px; }
+    .pdfedit-grip { top: -30px; }
+  }
+  .pdfedit-stage[data-tool="pen"] .pdfedit-grip,
+  .pdfedit-stage[data-tool="hl"] .pdfedit-grip,
+  .pdfedit-stage[data-tool="cover"] .pdfedit-grip,
+  .pdfedit-stage[data-tool="box"] .pdfedit-grip,
+  .pdfedit-stage[data-tool="line"] .pdfedit-grip,
+  .pdfedit-stage[data-tool="stamp"] .pdfedit-grip,
+  .pdfedit-stage[data-tool="erase"] .pdfedit-grip,
+  .pdfedit-stage[data-tool="pen"] .pdfedit-resize,
+  .pdfedit-stage[data-tool="hl"] .pdfedit-resize,
+  .pdfedit-stage[data-tool="cover"] .pdfedit-resize,
+  .pdfedit-stage[data-tool="box"] .pdfedit-resize,
+  .pdfedit-stage[data-tool="line"] .pdfedit-resize,
+  .pdfedit-stage[data-tool="stamp"] .pdfedit-resize,
+  .pdfedit-stage[data-tool="erase"] .pdfedit-resize { display: none !important; }
+
   .pdftools-status {
     margin-top: 0.65rem;
     font-size: 0.76rem;
@@ -6833,3 +6971,24 @@ button, a, summary, select, label, .filter-chip, .quick-nav-btn { touch-action: 
 .tradutor-speak-btn.is-speaking { background: rgba(220, 38, 38, 0.12); color: #DC2626; }
 
 @media (prefers-reduced-motion: reduce) { .tradutor-convo-btn.is-live { animation: none; } }
+
+  .pdfedit-opt[hidden] { display: none; }
+  .pdfedit-form { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+  .pdfedit-field {
+    position: absolute;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0 3px;
+    border: 1.5px solid #3b82f6;
+    border-radius: 2px;
+    background: rgba(219, 234, 254, 0.92);
+    color: #111;
+    font-family: Helvetica, Arial, sans-serif;
+    line-height: 1.15;
+    pointer-events: auto;
+    accent-color: #1d4ed8;
+  }
+  textarea.pdfedit-field { padding: 3px; resize: none; }
+  .pdfedit-field:focus { outline: 2px solid #1d4ed8; outline-offset: 0; background: #fff; }
+  .pdfedit-field.is-static { pointer-events: none; border-color: transparent; background: #fff; }
+  .pdfedit-stage[data-tool="form"] .pdfedit-layer { pointer-events: none; }
