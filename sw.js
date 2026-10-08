@@ -1,12 +1,12 @@
 // Este número é substituído automaticamente em cada build/deploy (scripts/build.mjs),
 // e é essa mudança de versão que dispara a atualização nos aparelhos. Só precisa
 // trocar à mão se for publicar a pasta SEM passar pelo build.
-const CACHE_VERSION = 'v146';
+const CACHE_VERSION = 'v152';
 const CACHE_NAME = `rede-apoio-bv-${CACHE_VERSION}`;
 
 // Cache separado e SEM número de versão, para conteúdo pesado de fora do
 // domínio do app: bibliotecas de PDF (cdnjs, baixadas na 1ª vez que a aba
-// "Unificar / Converter PDF" é usada), tiles do mapa (OpenStreetMap, usados
+// "Central de PDF" é usada), tiles do mapa (OpenStreetMap, usados
 // em ferramentas/mapa-vila-jardim.html) e o SDK do Firebase (gstatic, baixado na 1ª vez que a
 // aba "Agenda Argo" configura uma sincronização). Antes, esses
 // arquivos entravam no mesmo cache versionado (CACHE_NAME) e eram apagados a
