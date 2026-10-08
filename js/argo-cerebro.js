@@ -575,8 +575,8 @@
   // ---------------------------------------------------------------------
   // Memória da conversa
   // ---------------------------------------------------------------------
-  var session = { history: [], units: [], aiTimes: [], lastAi: 0 };
-  function reset() { session.history = []; session.units = []; }
+  var session = { history: [], units: [], aiTimes: [], lastAi: 0, terrUlt: null, pendente: '' };
+  function reset() { session.history = []; session.units = []; session.terrUlt = null; session.pendente = ''; }
   function remember(userText, botText, units) {
     userText = String(userText || '').trim();
     if (userText && !piiBlock(userText)) session.history.push({ papel: 'usuario', texto: userText.slice(0, CFG.maxPergunta) });
@@ -688,6 +688,26 @@
       };
     });
   }
+  // Município do interior citado na pergunta: a IA recebe os CRAS/CREAS dele com a área de abrangência.
+  function municipioFichas(text) {
+    var n = norm(text);
+    if (!/\b(cras|creas|assistencia social|cadunico|cadastro unico|bolsa familia|paif)\b/.test(n)) return [];
+    if (!munIdx) munIdx = buildMunicipios();
+    var padded = ' ' + n + ' ', chave = '';
+    for (var i = 0; i < munIdx.keys.length; i++) if (padded.indexOf(' ' + munIdx.keys[i] + ' ') > -1) { chave = munIdx.keys[i]; break; }
+    if (!chave) return [];
+    var loc = munIdx.locais[chave], m = loc ? loc.mun : munIdx.by[chave], out = [];
+    m.cras.concat(m.creas).forEach(function (x) {
+      var sl = slim(x.d);
+      out.push({
+        nome: sl.name, grupo: grupoDe(x.d), endereco: sl.address, horario: sl.hours, telefones: sl.phones.join(', '),
+        servicos: 'MUNICÍPIO: ' + m.nome + (x.abr ? ' | ÁREA DE ABRANGÊNCIA (lista oficial): ' + x.abr : '') + ' | ' + cut(sl.services, 120),
+        descricao: ''
+      });
+    });
+    if (!m.creas.length) out.push({ nome: 'Sem CREAS cadastrado em ' + m.nome, grupo: 'Aviso', endereco: '', horario: '', telefones: '', servicos: 'Não há CREAS cadastrado no diretório para ' + m.nome + '.', descricao: '' });
+    return out;
+  }
   function buildPayload(text, opts) {
     opts = opts || {};
     var hist = session.history.slice(-CFG.maxHistorico);
@@ -695,10 +715,12 @@
     if (hist.length && hist[hist.length - 1].papel === 'usuario' && hist[hist.length - 1].texto === text.slice(0, CFG.maxPergunta)) hist = hist.slice(0, -1);
     var ampla = isAmpla(text);
     var ctx = aiContext(text, opts.tabCat, ampla);
-    var terr = territorioFichas(text);
+    var terr = municipioFichas(text), soMun = terr.length > 0;
+    if (!soMun) terr = territorioFichas(text);
     if (terr.length) {
       var nomes = asSet(terr.map(function (f) { return f.nome; }));
-      ctx = { fichas: terr.concat(ctx.fichas.filter(function (f) { return !nomes[f.nome]; })).slice(0, 10), total: ctx.total };
+      // município do interior: só as unidades dele (as outras fichas viram ruído)
+      ctx = { fichas: soMun ? terr.slice(0, 10) : terr.concat(ctx.fichas.filter(function (f) { return !nomes[f.nome]; })).slice(0, 10), total: ctx.total };
     }
     var pan = '';
     if (ampla) {
@@ -748,6 +770,25 @@
       .replace(/^\s*\*\s+/gm, '- ')
       .replace(/\n{3,}/g, '\n\n')
       .trim().slice(0, 2400);
+  }
+  // A IA termina a resposta com "SUGESTÕES: a | b | c". Isso vira botões e não aparece no texto.
+  var RE_SUG = /\n?[ \t]*(?:\*\*)?sugest(?:õ|o)es(?:\*\*)?[ \t]*:[ \t]*([\s\S]*)$/i;
+  function separarSugestoes(text) {
+    var t = String(text || ''), m = t.match(RE_SUG);
+    if (!m) return { texto: t.trim(), sugestoes: [] };
+    var sug = m[1].split(/\s*\|\s*|\n\s*[-•*]\s*/).map(function (x) { return x.replace(/^[\s\-•*"“]+|[\s"”]+$/g, '').trim(); })
+      .filter(function (x) { return x.length >= 6 && x.length <= 60 && /[a-zà-ú]/i.test(x); });
+    return { texto: t.slice(0, m.index).trim(), sugestoes: uniq(sug).slice(0, 3) };
+  }
+  // durante o streaming: esconde o rótulo "SUGESTÕES:" (inclusive parcial, como "SUGEST") no fim
+  function ocultarSugestoes(full) {
+    var t = String(full || ''), i = t.search(/\n?[ \t]*(?:\*\*)?sugest/i);
+    if (i > -1) return t.slice(0, i).replace(/\s+$/, '');
+    // rótulo ainda incompleto na última linha ("SUG", "**Suges"): também fica escondido
+    var nl = t.lastIndexOf('\n'), ult = nl > -1 ? t.slice(nl + 1) : '';
+    var alvo = ult.replace(/[*\s]/g, '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (alvo.length >= 3 && 'sugestoes:'.indexOf(alvo) === 0) return t.slice(0, nl).replace(/\s+$/, '');
+    return t;
   }
   function mentionedUnits(text, ctxNames) {
     var n = ' ' + norm(text) + ' ', out = [];
@@ -917,7 +958,7 @@
     return achou;
   }
   var RE_COBERTURA = /\b(atende|atendem|atendimento|atendido|atendida|atendo|referencia|abrange|abrangem|cobre|cobertura|territorio|pertence|pertencem|responsavel|jurisdicao)\b/;
-  var RE_MORADIA = /\b(bairro|moro|mora|moramos|morador|moradora|moradores|residente|resido|reside|regiao|comunidade)\b/;
+  var RE_MORADIA = /\b(bairro|moro|mora|moram|morando|morar|moramos|morador|moradora|moradores|moradia|vive|vivem|vivendo|residente|residindo|resido|reside|regiao|comunidade)\b/;
   function territory(text) {
     var n = norm(text);
     if (!n || n.length > 200) return null;
@@ -973,7 +1014,7 @@
       }
       // "qual cras atende o meu bairro?" sem dizer o bairro: pergunta de volta
       var soPergunta = n.split(' ').filter(function (t) { return !STOP[t] && !/^(cras|bairro|atende|atendem|meu|minha|qual|quais|moro|mora|regiao|casa)$/.test(t); }).length === 0;
-      if (hasCras && (meuBairro || soPergunta)) return {
+      if (hasCras && (meuBairro || (soPergunta && (RE_COBERTURA.test(n) || RE_MORADIA.test(n))))) return {
         reply: 'Me diga o **nome do bairro** onde a família mora que eu mostro qual ' + KIND + ' é a referência.',
         mood: 'info', followups: ['Moro no Caimbé', 'Qual CRAS atende o Centro?'], badge: 'Território'
       };
@@ -987,7 +1028,7 @@
       }
       return null;
     }
-    var lines = [], units = [], seen = {}, aviso = false;
+    var lines = [], units = [], seen = {}, aviso = false, crJunto = false;
     hits.slice(0, 4).forEach(function (h) {
       // nome exato do bairro vence; se outro bairro tem o mesmo nome "curto", mostra os dois
       var exact = h.items.filter(function (i) { return !i.alias; });
@@ -1009,6 +1050,7 @@
         aviso = true;
       }
     });
+    session.terrUlt = hits.length === 1 ? { kind: KIND, ref: hits[0].items[0].label } : null;
     if (corrigido) lines.unshift('Entendi o bairro como **' + hits[0].items[0].label + '**.');
     var full = units.map(function (u) { return slim(data.filter(function (d) { return d.id === u.id; })[0]); });
     if (full.length === 1) {
@@ -1016,13 +1058,228 @@
       if (f.address) lines.push('Endereço: ' + cut(f.address, 200));
       if (f.hours) lines.push('Horário: ' + cut(f.hours, 160));
       if (f.phones.length) lines.push('Telefone: ' + f.phones.slice(0, 2).join(' · '));
+      if (KIND === 'CRAS' && hits.length === 1) {
+        if (!terrAll.CREAS) terrAll.CREAS = buildTerritory('CREAS');
+        var cr = (terrAll.CREAS.keys[hits[0].key] || []).filter(function (i) { return !i.alias; });
+        var crU = cr.length ? cr[0].unit : null;
+        var crD = crU && data.filter(function (d) { return d.id === crU.id; })[0];
+        if (crD) { var cs = slim(crD); lines.push('CREAS de referência: **' + cs.name + '**' + (cs.address ? ' · ' + cut(cs.address, 90) : '') + (cs.phones.length ? ' · ' + cs.phones.slice(0, 2).join(' / ') : '')); crJunto = true; }
+      }
       var tec = tecnicoDe(hits.length === 1 ? hits[0].items[0].label : '', f.id);
       if (tec) lines.push('Técnico(a) de referência no bairro: ' + tec + '.');
     }
     lines.push('Confirme com a unidade antes de encaminhar: a divisão dos territórios pode mudar e algumas ruas ficam no limite entre dois ' + KIND + '.');
     var fu = [];
-    if (full.length === 1) { fu.push(KIND === 'CRAS' ? 'Qual o CREAS do bairro ' + hits[0].items[0].label + '?' : 'Qual o CRAS do bairro ' + hits[0].items[0].label + '?'); fu.push('Quais outros bairros o ' + full[0].name + ' atende?'); fu.push('Qual o telefone?'); }
+    if (full.length === 1) { if (KIND === 'CREAS') fu.push('Qual o CRAS do bairro ' + hits[0].items[0].label + '?'); else if (!crJunto) fu.push('Qual o CREAS do bairro ' + hits[0].items[0].label + '?'); fu.push('Quais outros bairros o ' + full[0].name + ' atende?'); fu.push('Qual o telefone?'); }
     return { reply: lines.join('\n'), mood: 'success', followups: fu.slice(0, 3), badge: 'Território', units: full.slice(0, 5), unitsAll: full };
+  }
+
+
+  // ---------------------------------------------------------------------
+  // Interior: "qual CRAS/CREAS atende o município X?" (e vilas, como Vila São Silvestre)
+  // Usa o grupo (município) e a "Área de abrangência" das fichas do interior.
+  // ---------------------------------------------------------------------
+  var munIdx = null;
+  function buildMunicipios() {
+    var by = {}, locais = {}, keys = [];
+    data.forEach(function (d) {
+      if (!/^CRE?AS\b/i.test(d.name || '') || !d.group || /^Boa Vista/i.test(d.group)) return;
+      var k = norm(d.group);
+      var m = by[k] = by[k] || { nome: d.group, key: k, cras: [], creas: [] };
+      var kind = /^CREAS/i.test(d.name) ? 'creas' : 'cras';
+      var ab = cleanText(d.desc).match(/Área de abrangência:\s*([^.]+)\./i);
+      var abr = ab ? ab[1].trim() : '';
+      m[kind].push({ d: d, abr: abr });
+      var v = abr.match(/^(vila [^,]+?)(?:\s+e adjac[eê]ncias)?$/i);
+      if (kind === 'cras' && v) locais[norm(v[1])] = { mun: m, unit: d, label: v[1] };
+    });
+    keys = Object.keys(by).concat(Object.keys(locais)).sort(function (a, b) { return b.length - a.length; });
+    return { by: by, locais: locais, keys: keys };
+  }
+  function unitLine(x) {
+    var sl = slim(x.d), partes = ['**' + sl.name + '**'];
+    if (x.abr) partes.push(x.abr.charAt(0).toLowerCase() + x.abr.slice(1));
+    if (sl.address) partes.push(cut(sl.address, 90));
+    var raw = (Array.isArray(x.d.phones) ? x.d.phones : []).join(' ');
+    if (sl.phones.length) partes.push(sl.phones.slice(0, 2).join(' / '));
+    else if (/sem coordena/i.test(raw)) partes.push('sem coordenação no momento');
+    else partes.push('telefone não cadastrado');
+    return '- ' + partes.join(' · ');
+  }
+  function municipio(text) {
+    var n = norm(text);
+    if (!n || n.length > 200) return null;
+    var temCras = /\bcras\b/.test(n), temCreas = /\bcreas\b/.test(n);
+    var temServico = /\b(cadunico|cad unico|cadastro unico|bolsa familia|paif|assistencia social)\b/.test(n);
+    var cue = temCras || temCreas || ((RE_COBERTURA.test(n) || RE_MORADIA.test(n) || /\b(municipio|cidade)\b/.test(n)) && temServico);
+    if (!cue) return null;
+    if (!munIdx) munIdx = buildMunicipios();
+    var padded = ' ' + n + ' ', achou = null, chave = '';
+    for (var i = 0; i < munIdx.keys.length; i++) {
+      if (padded.indexOf(' ' + munIdx.keys[i] + ' ') > -1) { chave = munIdx.keys[i]; break; }
+    }
+    if (!chave) {
+      // erro de digitação ("pacaraina", "rorainopoles"): só com 1 ou 2 letras de diferença e sem empate
+      var tk = n.split(' ').filter(function (w) { return w && !STOP[w] && !FUZZ_IGNORA[w]; }), melhor = '', md = 99, emp = false;
+      for (var len = 1; len <= 3; len++) for (var a = 0; a + len <= tk.length; a++) {
+        var fr = tk.slice(a, a + len).join(' ');
+        if (fr.length < 6) continue;
+        var lim = fr.length >= 10 ? 2 : 1;
+        munIdx.keys.forEach(function (k) {
+          if (Math.abs(k.length - fr.length) > lim) return;
+          var d = lev(fr, k);
+          if (d > lim) return;
+          if (d < md) { md = d; melhor = k; emp = false; } else if (d === md && k !== melhor) emp = true;
+        });
+      }
+      if (melhor && !emp) chave = melhor;
+    }
+    if (!chave) return null;
+    var loc = munIdx.locais[chave], m = loc ? loc.mun : munIdx.by[chave];
+    // "CRAS Bonfim" / "telefone do CREAS Caroebe": é o nome da unidade, quem responde é o diretório
+    var cobre = RE_COBERTURA.test(n) || RE_MORADIA.test(n) || /\b(qual|quais|onde|municipio|cidade)\b/.test(n);
+    var nomeUnidade = [temCras ? 'cras ' : '', temCreas ? 'creas ' : ''].filter(Boolean).some(function (pre) {
+      return data.some(function (d) { return norm(d.name) === pre.trim() + ' ' + chave; });
+    });
+    if (nomeUnidade && !/\b(qual|quais|atende|atendem|moro|mora|bairro|municipio|cidade)\b/.test(n)) return null;
+    var quer = temCras && !temCreas ? ['cras'] : (temCreas && !temCras ? ['creas'] : ['cras', 'creas']);
+    var lines = [], units = [];
+    if (loc) {
+      lines.push('**' + loc.label + '** (' + m.nome + ') é atendida pelo CRAS abaixo:');
+      lines.push(unitLine({ d: loc.unit, abr: '' }));
+      units.push(loc.unit);
+      quer = quer.filter(function (k) { return k === 'creas'; });
+      if (quer.length) { lines.push('CREAS de ' + m.nome + ':'); }
+    } else {
+      lines.push('Em **' + m.nome + '**:');
+    }
+    quer.forEach(function (k) {
+      var rot = k.toUpperCase();
+      if (!m[k].length) {
+        lines.push('- ' + rot + ': não há ' + rot + ' cadastrado no diretório para ' + m.nome + '. Confirme com a coordenação do SUAS qual é a referência da região.');
+        return;
+      }
+      m[k].forEach(function (x) { lines.push(unitLine(x)); units.push(x.d); });
+    });
+    lines.push('Confirme com a unidade antes de encaminhar: horários e áreas de abrangência podem mudar.');
+    session.terrUlt = { kind: quer.length === 1 ? quer[0].toUpperCase() : 'CRAS', ref: loc ? loc.label : m.nome };
+    var full = units.slice(0, 5).map(slim);
+    return { reply: lines.join('\n'), mood: 'success', followups: full.length ? ['Qual o telefone?', 'Como chegar?'] : [], badge: 'Território', units: full, unitsAll: units.map(slim) };
+  }
+
+  // ---------------------------------------------------------------------
+  // Encaminhamento por perfil, para toda a aba de assistência social:
+  // acolhimento, violência, pessoa idosa, benefícios eventuais, CAS.
+  // Só aponta unidades que existem no diretório e usa o que a ficha diz.
+  // ---------------------------------------------------------------------
+  function porId(ids) {
+    return ids.map(function (id) { return data.filter(function (d) { return d.id === id; })[0]; }).filter(Boolean);
+  }
+  function encaminhar(text, dir) {
+    var n = norm(text);
+    if (!n || n.length > 260) return null;
+    if (/^(o que|oque|que e|qual a diferenca|como funciona|para que serve|defina)\b/.test(n) || /\b(o que (e|sao|significa)|oque (e|sao)|que sao|significa|definicao|conceito|direitos)\b/.test(n)) return null;
+    // resposta curta a uma pergunta anterior ("14 anos, menina"): junta com o assunto pendente
+    if (session.pendente === 'acolhimento') {
+      if (n.length <= 70 && !/\b(acolh|abrig)/.test(n) && /\b(crianca|bebe|menin\w*|adolescente|jovem|idos\w*|rua|adulto|adultos|homem|mulher|filh\w*|garot\w*|rapaz|\d+\s*anos?)\b/.test(n)) n = 'preciso de acolhimento ' + n;
+      else if (!/\b(acolh|abrig)/.test(n)) session.pendente = '';
+    }
+    // nome de unidade bem identificado ("endereço da Casa de Passagem"): quem responde é o diretório
+    if (dir && dir.mode === 'single' && dir.confidence >= 0.85) return null;
+    var idade = (n.match(/\b(\d{1,3})\s*(anos|ano|a)\b/) || [])[1]; idade = idade ? parseInt(idade, 10) : null;
+    var acolh = /\b(acolh\w*|abrig\w*|vaga|casa de passagem|desabrig\w*)\b/.test(n);
+    var rua = /\b(situacao de rua|morador de rua|moradora de rua|em situacao de rua|dormindo na rua|vivendo na rua)\b/.test(n);
+    var enc = /\b(encaminh\w*|onde|para onde|preciso|precisa|tem|existe|quero|caso|familia|atendimento|levar|mandar|procurar)\b/.test(n);
+    var crianca = /\b(crianca|criancas|bebe|menininho|menininha|infantil)\b/.test(n) || (idade !== null && idade < 12);
+    var adolesc = /\b(adolescente|adolescentes|menor|jovem)\b/.test(n) || (idade !== null && idade >= 12 && idade < 18);
+    var fem = /\b(menina|feminino|feminina|filha|garota|mulher)\b/.test(n), masc = /\b(menino|masculino|masculina|filho|garoto|rapaz|homem)\b/.test(n);
+    var idoso = /\b(idoso|idosa|idosos|idosas|pessoa idosa|terceira idade|velhinho|velhinha)\b/.test(n) || (idade !== null && idade >= 60);
+    var violencia = /\b(violencia|agredid\w*|agress\w*|ameac\w*|apanh\w*|maria da penha|espanc\w*)\b/.test(n);
+    var sexual = /\b(sexual|abuso sexual|estupro|abusad\w*|escuta especializada)\b/.test(n);
+    var mulher = /\b(mulher|mulheres|esposa|companheira|namorada|ex mulher|agredida|ameacada|espancada|violentada|abusada|perseguida)\b/.test(n);
+    var r = null;
+
+    if ((crianca || adolesc) && sexual) {
+      r = { ids: ['cai-18-de-maio'], t: 'crianças e adolescentes vítimas ou testemunhas de violência sexual' };
+    } else if (mulher && violencia && !(crianca && !mulher)) {
+      r = { ids: ['casa-da-mulher-brasileira'], t: 'mulher em situação de violência', extra: 'Em risco imediato, ligue 190. O 180 orienta e registra denúncia.' };
+    } else if (idoso && (acolh || rua)) {
+      r = { ids: ['ciapi'], t: 'pessoa idosa', extra: 'Não há abrigo para pessoa idosa cadastrado no diretório. O CIAPI é a unidade de atenção à pessoa idosa; confirme com ele ou com o CREAS a referência para acolhimento.', semAbrigo: true };
+    } else if (acolh && (crianca || adolesc) && enc) {
+      var ids;
+      if (crianca && !adolesc) ids = ['casa-acolhimento-infantil-viva-crianca', 'abrigo-pedra-pintada'];
+      else if (fem && !masc) ids = ['abrigo-feminino-pastor-josue'];
+      else if (masc && !fem) ids = ['abrigo-masculino-setrabes'];
+      else ids = ['abrigo-feminino-pastor-josue', 'abrigo-masculino-setrabes'];
+      r = { ids: ids, t: crianca && !adolesc ? 'acolhimento de criança' : 'acolhimento de adolescente', extra: 'O acolhimento de crianças e adolescentes é feito sob medida protetiva. Confirme o fluxo e a existência de vaga com a unidade antes de encaminhar.' };
+    } else if (acolh && (rua || /\b(adulto|adultos|homem|mulher|pessoa)\b/.test(n)) && enc) {
+      r = { ids: ['casa-de-passagem-setrabes'], t: 'adulto em situação de rua (acolhimento temporário)', extra: 'Confirme critérios e vaga com a unidade antes de encaminhar.' };
+    } else if (idoso && enc) {
+      r = { ids: ['ciapi'], t: 'pessoa idosa' };
+    } else if (/\b(beneficio eventual|beneficios eventuais|cesta da familia|cesta basica|passe livre|auxilio funeral|colo de mae|auxilio natalidade)\b/.test(n)) {
+      r = { ids: ['ceac'], t: 'benefícios eventuais e programas sociais do Estado' };
+    } else if (/\b(capoeira|jiu jitsu|futsal|bale|ritbox|ginastica ritmica)\b/.test(n)) {
+      r = { ids: ['cas-cidade-satelite'], t: 'atividades esportivas e culturais' };
+    }
+    if (!r && (crianca || adolesc) && violencia && !mulher && enc && !/\b(o que fazer|como (denunciar|proceder|agir|atuar)|denunciar|denuncia|fluxo|procedimento|notificar|notificacao)\b/.test(n)) {
+      session.pendente = 'violencia-crianca';
+      return { reply: 'Para indicar a unidade certa, preciso saber: a violência foi **sexual**?\n- **Sim:** o CAI 18 de Maio atende crianças e adolescentes vítimas ou testemunhas de violência sexual.\n- **Não** (física, psicológica, negligência...): a referência é o CREAS do bairro, junto com o Conselho Tutelar.', mood: 'info', followups: ['Foi violência sexual', 'Foi outro tipo de violência'], badge: 'Rede socioassistencial', units: [], unitsAll: [] };
+    }
+    if (!r && acolh && enc && !(crianca || adolesc || rua || idoso || mulher || violencia)) {
+      session.pendente = 'acolhimento';
+      return { reply: 'Para indicar o acolhimento certo, preciso saber o perfil de quem precisa:\n- **criança** ou **adolescente** (diga a idade e se é menino ou menina)\n- **adulto em situação de rua**\n- **pessoa idosa**\n- **mulher em situação de violência**', mood: 'info', followups: ['Menina de 14 anos', 'Criança de 6 anos', 'Adulto em situação de rua'], badge: 'Rede socioassistencial', units: [], unitsAll: [] };
+    }
+    if (!r) return null;
+    session.pendente = '';
+    var us = porId(r.ids);
+    if (!us.length) return null;
+    var lines = ['Para **' + r.t + '**, a referência no diretório ' + (us.length > 1 ? 'são:' : 'é:')];
+    us.forEach(function (d) {
+      var sl = slim(d);
+      lines.push('- **' + sl.name + '**' + (sl.address ? ' · ' + cut(sl.address, 90) : '') + (sl.phones.length ? ' · ' + sl.phones.slice(0, 2).join(' / ') : ''));
+      if (sl.services && !r.semAbrigo) lines.push('  ' + cut(sl.services, 140));
+    });
+    if (r.extra) lines.push(r.extra);
+    return { reply: lines.join('\n'), mood: 'success', followups: ['Qual o telefone?', 'Qual o horário?'], badge: 'Rede socioassistencial', units: us.map(slim).slice(0, 5), unitsAll: us.map(slim) };
+  }
+
+  // Respostas curtas a uma pergunta que o Argo acabou de fazer (violência contra criança/adolescente)
+  function seguimentoPendente(text) {
+    var n = norm(text);
+    if (!session.pendente || !n || n.length > 80) return null;
+    if (session.pendente === 'violencia-crianca') {
+      if (/\b(sexual|abuso sexual|estupro|sim|foi sim)\b/.test(n) && !/\b(nao|outro|outra|fisica|negligencia|psicologica)\b/.test(n)) {
+        session.pendente = '';
+        return encaminhar('crianca vitima de violencia sexual', null);
+      }
+      if (/\b(nao|outro|outra|fisica|negligencia|psicologica|abandono|maus tratos)\b/.test(n)) {
+        session.pendente = 'creas-bairro';
+        return { reply: 'Para outras violências contra criança ou adolescente, a referência é o **CREAS** do território (Proteção Social Especial), junto com o **Conselho Tutelar**.\nDiga o **bairro** onde a família mora que eu mostro o CREAS.', mood: 'info', followups: ['Moro no Caimbé', 'Moro no Centro'], badge: 'Rede socioassistencial', units: [], unitsAll: [] };
+      }
+      return null;
+    }
+    if (session.pendente === 'creas-bairro') {
+      var r = municipio('qual creas atende ' + text) || territory('qual creas atende ' + text);
+      if (r && r.mood !== 'notfound' && r.mood !== 'info') { session.pendente = ''; return r; }
+    }
+    return null;
+  }
+
+  // "e o CREAS?", "e no Alvorada?", "e em Bonfim?": continua o último assunto de território
+  function seguimentoTerr(text) {
+    var ult = session.terrUlt, n = norm(text);
+    if (!ult || !ult.ref || !n || n.length > 60) return null;
+    var q = parseQuery(text);
+    if (q.fone || q.end || q.hora || q.serv) return null;
+    var troca = n.match(/^(?:e\s+)?(?:o\s+|a\s+|no\s+|na\s+|se\s+for\s+(?:o\s+|a\s+)?)?(cras|creas)(?:\s+de\s+referencia|\s+dele|\s+dela|\s+la|\s+dai)?$/);
+    var cand = troca ? 'qual ' + troca[1] + ' atende ' + ult.ref : null;
+    if (!cand) {
+      var o = n.match(/^e\s+(?:se\s+(?:for|fosse|moram?)\s+)?(?:o\s+|a\s+|no\s+|na\s+|em\s+|de\s+|do\s+|da\s+)?(.{3,40})$/);
+      if (!o) return null;
+      cand = 'qual ' + ult.kind.toLowerCase() + ' atende ' + o[1];
+    }
+    var r = municipio(cand) || territory(cand);
+    return r && r.mood !== 'notfound' && r.mood !== 'info' ? r : null;
   }
 
   // ---------------------------------------------------------------------
@@ -1034,9 +1291,18 @@
     var c = crisis(text);
     if (c) return { kind: 'crisis', result: withCrisisUnits(c) };
     // "qual CRAS atende o bairro X?": responde pela lista de cobertura das fichas
+    var pend = seguimentoPendente(text);
+    if (pend) return { kind: 'directory', result: pend, dir: { units: pend.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
+    if (session.pendente === 'violencia-crianca' || session.pendente === 'creas-bairro') session.pendente = '';
+    var seg = seguimentoTerr(text);
+    if (seg) return { kind: 'directory', result: seg, dir: { units: seg.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
+    var mun = municipio(text);
+    if (mun) return { kind: 'directory', result: mun, dir: { units: mun.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
     var terr = territory(text);
     if (terr) return { kind: 'directory', result: terr, dir: { units: terr.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
     var dir = directory(text, session, opts.tabCat);
+    var enc = encaminhar(text, dir);
+    if (enc) return { kind: 'directory', result: enc, dir: { units: enc.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
     var con = glossaryScore(text);
     var out = { kind: 'none', dir: dir, con: con };
     // pergunta de contato sobre unidade(s) encontradas, ou nome bem identificado: o diretório responde
@@ -1081,7 +1347,7 @@
   function init(opts) {
     opts = opts || {};
     data = Array.isArray(opts.data) ? opts.data : [];
-    index = null; vocab = null; expCache = {}; gloIndex = null; phoneIdx = null; terrIdx = null; terrAll = null;
+    index = null; vocab = null; expCache = {}; gloIndex = null; phoneIdx = null; terrIdx = null; terrAll = null; munIdx = null;
     if (opts.ia) for (var k in opts.ia) if (Object.prototype.hasOwnProperty.call(CFG, k)) CFG[k] = opts.ia[k];
   }
 
@@ -1091,8 +1357,7 @@
     glossary: glossaryScore, compose: { directory: composeDirectory, glossary: composeGlossary },
     remember: remember, reset: reset, session: session,
     aiOn: aiOn, aiGate: aiGate, buildPayload: buildPayload, streamAI: streamAI,
-    verifyPhones: verifyPhones, panorama: panorama, isAmpla: isAmpla, cleanAI: cleanAI, mentionedUnits: mentionedUnits, telHref: telHref, slim: slim,
+    verifyPhones: verifyPhones, panorama: panorama, isAmpla: isAmpla, cleanAI: cleanAI, separarSugestoes: separarSugestoes, ocultarSugestoes: ocultarSugestoes, mentionedUnits: mentionedUnits, telHref: telHref, slim: slim,
     config: CFG, emergencia: EMERGENCIA, glossarioLista: GLOSSARIO
   };
 });
-
