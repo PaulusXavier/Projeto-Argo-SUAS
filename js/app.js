@@ -3778,7 +3778,7 @@ function toolsTmSet(min) {
   return true;
 }
 
-// ---- Notas em PDF (usa a mesma pdf-lib da aba "Unificar / Converter PDF"; sem enviar nada a servidor)
+// ---- Notas em PDF (usa a mesma pdf-lib da aba "Central de PDF"; sem enviar nada a servidor)
 async function toolsNotesToPdf(notes) {
   const PDFLib = await ensurePdfLib();
   const doc = await PDFLib.PDFDocument.create();
@@ -9447,14 +9447,15 @@ function updateNoteListItemPreview(id, value, note) {
 }
 
 function renderPdfToolsCard() {
+  const extra = pdftoolsExtraToolsHtml();
   return `
     <div class="tech-card pdftools-card">
       <div class="card-top">
         <div style="display:flex; align-items:center; gap:0.55rem;">
           <span class="pdftools-badge">${ICONS.pdf}</span>
-          <h2 style="margin:0;">Ferramentas de Arquivo</h2>
+          <h2 style="margin:0;">Central de PDF</h2>
         </div>
-        <span class="subtitle">🗂️ Unificar, converter e transformar arquivos PDF</span>
+        <span class="subtitle">🗂️ Unir, dividir, girar, marcar, converter e reduzir PDFs</span>
       </div>
       <div class="card-body">
         <div class="pdftools-privacy">
@@ -9462,7 +9463,23 @@ function renderPdfToolsCard() {
           <span>Tudo acontece aqui no seu navegador — nenhum arquivo é enviado a servidor algum. Na primeira vez que usar cada função, o app baixa uma pequena biblioteca (leva poucos segundos e precisa de internet só nesse momento).</span>
         </div>
 
-        <div class="pdftools-tool" style="margin-bottom:1.1rem;">
+        <nav class="pdftools-jump" aria-label="Ir direto para uma ferramenta">
+          <span class="pdftools-jump-label">Ir para:</span>
+          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolMerge')">Unir</button>
+          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolSplit')">Dividir</button>
+          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolRemove')">Excluir</button>
+          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolRotate')">Girar</button>
+          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolNumber')">Numerar</button>
+          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolMark')">Marca d'água</button>
+          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolMeta')">Dados ocultos</button>
+          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolText')">Texto</button>
+          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolCompress')">Reduzir</button>
+          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolPdfWord')">PDF ⇄ Word</button>
+          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolPdfJpg')">PDF ⇄ JPG</button>
+        </nav>
+
+        <div class="pdftools-section-title">${ICONS.layers}<span>Unir e organizar</span><small>juntar, separar e numerar páginas</small></div>
+        <div class="pdftools-tool" id="pdftoolsToolMerge" style="margin-bottom:1.1rem;">
           <div class="pdftools-tool-header">
             <span class="pdftools-tool-icon">${ICONS.layers}</span>
             <div>
@@ -9518,8 +9535,24 @@ function renderPdfToolsCard() {
           <div class="pdftools-result" id="pdftoolsMergeResult" hidden></div>
         </div>
 
+        <div class="pdftools-grid" style="margin-bottom:1.4rem;">
+${extra.split}
+${extra.remove}
+${extra.rotate}
+${extra.number}
+        </div>
+
+        <div class="pdftools-section-title">${ICONS.filebinary}<span>Outras ferramentas</span><small>marca d'água, dados ocultos, texto e tamanho</small></div>
+        <div class="pdftools-grid" style="margin-bottom:1.4rem;">
+${extra.mark}
+${extra.meta}
+${extra.text}
+${extra.compress}
+        </div>
+
+        <div class="pdftools-section-title">${ICONS.pdf}<span>Converter formatos</span><small>PDF, Word e imagens</small></div>
         <div class="pdftools-grid">
-          <div class="pdftools-tool">
+          <div class="pdftools-tool" id="pdftoolsToolPdfWord">
             <div class="pdftools-tool-header">
               <span class="pdftools-tool-icon">${ICONS.filebinary}</span>
               <div>
@@ -9538,7 +9571,7 @@ function renderPdfToolsCard() {
             <div class="pdftools-status is-info" id="pdftoolsPdfWordStatus"></div>
           </div>
 
-          <div class="pdftools-tool">
+          <div class="pdftools-tool" id="pdftoolsToolWordPdf">
             <div class="pdftools-tool-header">
               <span class="pdftools-tool-icon">${ICONS.form}</span>
               <div>
@@ -9557,7 +9590,7 @@ function renderPdfToolsCard() {
             <div class="pdftools-status is-info" id="pdftoolsWordPdfStatus"></div>
           </div>
 
-          <div class="pdftools-tool">
+          <div class="pdftools-tool" id="pdftoolsToolPdfJpg">
             <div class="pdftools-tool-header">
               <span class="pdftools-tool-icon">${ICONS.image}</span>
               <div>
@@ -9576,7 +9609,7 @@ function renderPdfToolsCard() {
             <div class="pdftools-status is-info" id="pdftoolsPdfJpgStatus"></div>
           </div>
 
-          <div class="pdftools-tool">
+          <div class="pdftools-tool" id="pdftoolsToolJpgPdf">
             <div class="pdftools-tool-header">
               <span class="pdftools-tool-icon">${ICONS.image}</span>
               <div>
@@ -9591,13 +9624,25 @@ function renderPdfToolsCard() {
               <div class="pdftools-dropzone-text">Escolher imagens</div>
               <div class="pdftools-dropzone-hint">JPG ou PNG</div>
             </label>
+            <div class="pdftools-actions" style="margin-top:0.5rem;">
+              <button type="button" class="pdftools-btn-ghost" onclick="document.getElementById('pdftoolsJpgPdfCamera').click()" title="Abre a câmera do celular para fotografar um documento">${ICONS.image} Tirar foto com a câmera</button>
+              <input type="file" id="pdftoolsJpgPdfCamera" accept="image/*" capture="environment" hidden onchange="pdftoolsAddJpgPdfFiles(this.files); this.value=''">
+            </div>
             <ul class="pdftools-filelist" id="pdftoolsJpgPdfList"></ul>
+            <div class="pdftools-opts pdftools-opts-row">
+              <label class="pdftools-opt-label">Tamanho da página
+                <select id="pdftoolsJpgPdfPage" class="tools-input"><option value="a4" selected>A4 (imagem centralizada)</option><option value="imagem">Do tamanho da imagem</option></select>
+              </label>
+              <label class="pdftools-opt-label">Nome do arquivo final
+                <input type="text" id="pdftoolsJpgPdfFilename" class="tools-input" placeholder="imagens-convertidas" maxlength="80" autocomplete="off">
+              </label>
+            </div>
             <div class="pdftools-actions">
               <button type="button" class="pdftools-btn" id="pdftoolsJpgPdfBtn" disabled onclick="pdftoolsRunJpgToPdf()">${ICONS.pdf} Converter e baixar</button>
+              <button type="button" class="pdftools-btn-ghost" id="pdftoolsJpgPdfClearBtn" disabled onclick="pdftoolsClearJpgPdfFiles()">Limpar lista</button>
             </div>
             <div class="pdftools-status is-info" id="pdftoolsJpgPdfStatus"></div>
           </div>
-          ${pdftoolsExtraToolsHtml()}
         </div>
       </div>
     </div>
@@ -9606,6 +9651,7 @@ function renderPdfToolsCard() {
 
 // Dividir/extrair páginas, reduzir tamanho e numerar páginas. Cada um recebe
 // um PDF, mostra o nome e as páginas, e só roda quando a pessoa aperta o botão.
+// Devolve os três blocos separados para o card organizá-los por seção.
 function pdftoolsExtraToolsHtml() {
   const drop = (kind, input, label, hint) => `
             <label class="pdftools-dropzone" for="${input}" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="pdftoolsHandleDrop(event, '${kind}')">
@@ -9614,15 +9660,18 @@ function pdftoolsExtraToolsHtml() {
               <div class="pdftools-dropzone-text">${label}</div>
               <div class="pdftools-dropzone-hint">${hint}</div>
             </label>
-            <div class="pdftools-pickinfo" id="pdftools${kind}Info"></div>`;
+            <div class="pdftools-pickinfo" id="pdftools${kind}Info"></div>
+            <div class="pdftools-pages" id="pdftools${kind}Pages" hidden></div>`;
   const tail = (id, btnLabel, fn) => `
             <div class="pdftools-actions">
               <button type="button" class="pdftools-btn" id="pdftools${id}Btn" disabled onclick="${fn}()">${btnLabel}</button>
+              <button type="button" class="pdftools-btn-ghost" id="pdftools${id}ClearBtn" onclick="pdftoolsExtraClear('${id}')" title="Tirar o arquivo escolhido e começar de novo">Limpar</button>
             </div>
             <div class="pdftools-progress" id="pdftools${id}Progress"><div class="pdftools-progress-fill" id="pdftools${id}ProgressFill"></div></div>
             <div class="pdftools-status is-info" id="pdftools${id}Status"></div>`;
-  return `
-          <div class="pdftools-tool">
+  return {
+    split: `
+          <div class="pdftools-tool" id="pdftoolsToolSplit">
             <div class="pdftools-tool-header">
               <span class="pdftools-tool-icon">${ICONS.layers}</span>
               <div>
@@ -9634,13 +9683,15 @@ function pdftoolsExtraToolsHtml() {
             ${drop('Split', 'pdftoolsSplitInput', 'Escolher um PDF', 'para extrair ou separar páginas')}
             <div class="pdftools-opts">
               <label class="pdftools-opt"><input type="radio" name="pdftoolsSplitMode" value="range" checked> Extrair estas páginas em um PDF</label>
-              <input type="text" id="pdftoolsSplitRange" class="tools-input" placeholder="ex.: 1-3, 5, 8-" aria-label="Páginas a extrair" autocomplete="off" onfocus="document.querySelector('input[name=pdftoolsSplitMode][value=range]').checked = true">
+              <input type="text" id="pdftoolsSplitRange" class="tools-input" placeholder="ex.: 1-3, 5, 8-" aria-label="Páginas a extrair" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();pdftoolsRunSplit();}" onfocus="document.querySelector('input[name=pdftoolsSplitMode][value=range]').checked = true">
               <label class="pdftools-opt"><input type="radio" name="pdftoolsSplitMode" value="each"> Separar cada página em um arquivo (.zip)</label>
+              <div class="pdftools-chips" role="group" aria-label="Atalhos de páginas"><button type="button" class="pdftools-chip" onclick="pdftoolsSetRange('pdftoolsSplitRange', 'ímpares')">Ímpares</button><button type="button" class="pdftools-chip" onclick="pdftoolsSetRange('pdftoolsSplitRange', 'pares')">Pares</button><button type="button" class="pdftools-chip" onclick="pdftoolsSetRange('pdftoolsSplitRange', 'primeira')">Primeira</button><button type="button" class="pdftools-chip" onclick="pdftoolsSetRange('pdftoolsSplitRange', 'última')">Última</button></div>
             </div>
             ${tail('Split', ICONS.layers + ' Dividir e baixar', 'pdftoolsRunSplit')}
           </div>
-
-          <div class="pdftools-tool">
+`,
+    compress: `
+          <div class="pdftools-tool" id="pdftoolsToolCompress">
             <div class="pdftools-tool-header">
               <span class="pdftools-tool-icon">${ICONS.filebinary}</span>
               <div>
@@ -9660,8 +9711,9 @@ function pdftoolsExtraToolsHtml() {
             </div>
             ${tail('Compress', ICONS.filebinary + ' Reduzir e baixar', 'pdftoolsRunCompress')}
           </div>
-
-          <div class="pdftools-tool">
+`,
+    number: `
+          <div class="pdftools-tool" id="pdftoolsToolNumber">
             <div class="pdftools-tool-header">
               <span class="pdftools-tool-icon">${ICONS.form}</span>
               <div>
@@ -9683,7 +9735,100 @@ function pdftoolsExtraToolsHtml() {
               </label>
             </div>
             ${tail('Number', ICONS.form + ' Numerar e baixar', 'pdftoolsRunNumber')}
-          </div>`;
+          </div>
+`,
+    rotate: `
+          <div class="pdftools-tool" id="pdftoolsToolRotate">
+            <div class="pdftools-tool-header">
+              <span class="pdftools-tool-icon">${ICONS.layers}</span>
+              <div>
+                <div class="pdftools-tool-title">Girar páginas</div>
+                <div class="pdftools-tool-limit">Um PDF · até 60 MB</div>
+              </div>
+            </div>
+            <p class="pdftools-tool-desc">Corrige páginas escaneadas de lado ou de cabeça para baixo. Deixe o campo vazio para girar todas ou informe só algumas (ex.: 2, 4-6, pares).</p>
+            ${drop('Rotate', 'pdftoolsRotateInput', 'Escolher um PDF', 'o texto original é mantido')}
+            <div class="pdftools-opts pdftools-opts-row">
+              <label class="pdftools-opt-label">Páginas
+                <input type="text" id="pdftoolsRotateRange" class="tools-input" placeholder="todas" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();pdftoolsRunRotate();}">
+              </label>
+              <label class="pdftools-opt-label">Girar
+                <select id="pdftoolsRotateAngle" class="tools-input"><option value="90">90° à direita</option><option value="180">180°</option><option value="270">90° à esquerda</option></select>
+              </label>
+            </div>
+              <div class="pdftools-chips" role="group" aria-label="Atalhos de páginas"><button type="button" class="pdftools-chip" onclick="pdftoolsSetRange('pdftoolsRotateRange', 'ímpares')">Ímpares</button><button type="button" class="pdftools-chip" onclick="pdftoolsSetRange('pdftoolsRotateRange', 'pares')">Pares</button><button type="button" class="pdftools-chip" onclick="pdftoolsSetRange('pdftoolsRotateRange', 'primeira')">Primeira</button><button type="button" class="pdftools-chip" onclick="pdftoolsSetRange('pdftoolsRotateRange', 'última')">Última</button></div>
+            ${tail('Rotate', ICONS.layers + ' Girar e baixar', 'pdftoolsRunRotate')}
+          </div>
+`,
+    remove: `
+          <div class="pdftools-tool" id="pdftoolsToolRemove">
+            <div class="pdftools-tool-header">
+              <span class="pdftools-tool-icon">${ICONS.filebinary}</span>
+              <div>
+                <div class="pdftools-tool-title">Excluir páginas</div>
+                <div class="pdftools-tool-limit">Um PDF · até 60 MB</div>
+              </div>
+            </div>
+            <p class="pdftools-tool-desc">Tira páginas em branco ou desnecessárias e baixa o PDF com as demais, na mesma ordem.</p>
+            ${drop('Remove', 'pdftoolsRemoveInput', 'Escolher um PDF', 'para tirar páginas')}
+            <div class="pdftools-opts">
+              <input type="text" id="pdftoolsRemoveRange" class="tools-input" placeholder="páginas a excluir, ex.: 2, 5-7" aria-label="Páginas a excluir" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();pdftoolsRunRemove();}">
+              <div class="pdftools-chips" role="group" aria-label="Atalhos de páginas"><button type="button" class="pdftools-chip" onclick="pdftoolsSetRange('pdftoolsRemoveRange', 'ímpares')">Ímpares</button><button type="button" class="pdftools-chip" onclick="pdftoolsSetRange('pdftoolsRemoveRange', 'pares')">Pares</button><button type="button" class="pdftools-chip" onclick="pdftoolsSetRange('pdftoolsRemoveRange', 'primeira')">Primeira</button><button type="button" class="pdftools-chip" onclick="pdftoolsSetRange('pdftoolsRemoveRange', 'última')">Última</button></div>
+            </div>
+            ${tail('Remove', ICONS.filebinary + ' Excluir e baixar', 'pdftoolsRunRemove')}
+          </div>
+`,
+    mark: `
+          <div class="pdftools-tool" id="pdftoolsToolMark">
+            <div class="pdftools-tool-header">
+              <span class="pdftools-tool-icon">${ICONS.form}</span>
+              <div>
+                <div class="pdftools-tool-title">Marca d'água</div>
+                <div class="pdftools-tool-limit">Um PDF · até 60 MB</div>
+              </div>
+            </div>
+            <p class="pdftools-tool-desc">Escreve um texto em diagonal sobre todas as páginas, como CÓPIA, CONFIDENCIAL ou USO INTERNO. Útil antes de enviar documentos.</p>
+            ${drop('Mark', 'pdftoolsMarkInput', 'Escolher um PDF', 'o texto original é mantido')}
+            <div class="pdftools-opts pdftools-opts-row">
+              <label class="pdftools-opt-label">Texto
+                <input type="text" id="pdftoolsMarkText" class="tools-input" value="CÓPIA" maxlength="30" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();pdftoolsRunMark();}">
+              </label>
+              <label class="pdftools-opt-label">Intensidade
+                <select id="pdftoolsMarkOpacity" class="tools-input"><option value="0.12">Suave</option><option value="0.22" selected>Média</option><option value="0.4">Forte</option></select>
+              </label>
+            </div>
+            ${tail('Mark', ICONS.form + ' Aplicar e baixar', 'pdftoolsRunMark')}
+          </div>
+`,
+    meta: `
+          <div class="pdftools-tool" id="pdftoolsToolMeta">
+            <div class="pdftools-tool-header">
+              <span class="pdftools-tool-icon">${ICONS.filebinary}</span>
+              <div>
+                <div class="pdftools-tool-title">Limpar dados ocultos</div>
+                <div class="pdftools-tool-limit">Um PDF · até 60 MB</div>
+              </div>
+            </div>
+            <p class="pdftools-tool-desc">Apaga título, autor, assunto, palavras-chave e o programa que criou o arquivo. Bom antes de enviar documentos para fora, pois esses dados podem revelar quem e onde o PDF foi feito. O conteúdo das páginas não muda.</p>
+            ${drop('Meta', 'pdftoolsMetaInput', 'Escolher um PDF', 'o conteúdo das páginas é mantido')}
+            ${tail('Meta', ICONS.filebinary + ' Limpar e baixar', 'pdftoolsRunMeta')}
+          </div>
+`,
+    text: `
+          <div class="pdftools-tool" id="pdftoolsToolText">
+            <div class="pdftools-tool-header">
+              <span class="pdftools-tool-icon">${ICONS.form}</span>
+              <div>
+                <div class="pdftools-tool-title">Extrair texto (.txt)</div>
+                <div class="pdftools-tool-limit">Um PDF · até 60 MB</div>
+              </div>
+            </div>
+            <p class="pdftools-tool-desc">Copia todo o texto do PDF para um arquivo .txt, página por página. Funciona em PDFs com texto selecionável; documentos escaneados (fotos) não têm texto para copiar.</p>
+            ${drop('Text', 'pdftoolsTextInput', 'Escolher um PDF', 'texto simples, sem formatação')}
+            ${tail('Text', ICONS.form + ' Extrair e baixar', 'pdftoolsRunText')}
+          </div>
+`
+  };
 }
 
 const TRADUTOR_LANGS = {
@@ -14306,7 +14451,7 @@ const NAV_RECENT_KEY = 'argo_recent_tabs_v1';
 const NAV_DEFAULT_SHORTCUTS = ['agenda', 'mapa', 'tradutor', 'pdftools', 'appsext', 'noticias'];
 const NAV_SHORT_LABELS = {
   agenda: 'Agenda Argo', mapa: 'Mapa dos Equipamentos', tradutor: 'Tradutor (Es / En / Fr)',
-  pdftools: 'Unificar / Converter PDF', appsext: 'Aplicativos', ferramentas: 'Ferramentas', noticias: 'Notícias do MDS, MEC e Saúde',
+  pdftools: 'Central de PDF', appsext: 'Aplicativos', ferramentas: 'Ferramentas', noticias: 'Notícias do MDS, MEC e Saúde',
   saude: 'RAPS', hospitalar: 'Hospitais', social: 'SUAS', informes: 'Programas', cas: 'CAS', cras: 'CRAS'
 };
 const NAV_QUICK_MAX = 6;
@@ -14315,7 +14460,7 @@ const NAV_QUICK_META = {
   agenda:   { title: 'Agenda Argo',           sub: 'Calendário e lembretes' },
   mapa:     { title: 'Mapa dos Equipamentos', sub: 'Rede em Boa Vista' },
   tradutor: { title: 'Tradutor',              sub: 'Es · En · Fr' },
-  pdftools: { title: 'PDF',                   sub: 'Unificar / Converter' },
+  pdftools: { title: 'Central de PDF',         sub: 'Unir, dividir, converter' },
   appsext:  { title: 'Aplicativos',           sub: 'Toth, Umbrela, Anona…' },
   noticias: { title: 'Notícias',              sub: 'MDS, MEC e Saúde' }
 };
@@ -14903,8 +15048,8 @@ const ARGO_ASSISTANT_INTENTS = [
   },
   {
     keys: ['pdf', 'unir', 'juntar', 'unificar', 'converter', 'word', 'jpg'],
-    reply: 'Em "Unificar / Converter PDF" você une até 20 arquivos (PDFs e fotos), divide ou extrai páginas, reduz o tamanho de um PDF, numera as páginas e converte PDF ⇄ Word/JPG. Tudo acontece no seu navegador — nada é enviado para a internet.',
-    action: { label: 'Abrir Unificar / Converter PDF', run: () => argoAssistantGoTo('pdftools'), reply: 'Abri a aba de PDF para você.', mood: 'success' }
+    reply: 'Na "Central de PDF" você une até 20 arquivos (PDFs e fotos), divide ou extrai páginas, exclui ou gira páginas, aplica marca d\'água, reduz o tamanho de um PDF, numera as páginas e converte PDF ⇄ Word/JPG. Tudo acontece no seu navegador — nada é enviado para a internet.',
+    action: { label: 'Abrir a Central de PDF', run: () => argoAssistantGoTo('pdftools'), reply: 'Abri a Central de PDF para você.', mood: 'success' }
   },
   {
     keys: ['agenda', 'calendario', 'lembrete', 'pagamento', 'feriado', 'hoje'],
@@ -15382,7 +15527,7 @@ function argoAssistantDefaultQuickActions() {
     { label: 'Notícias', run: () => argoAssistantGoTo('noticias'), reply: 'Abri as Notícias.', mood: 'success' },
     { label: 'Agenda Argo', run: () => argoAssistantGoTo('agenda'), reply: 'Abri a Agenda Argo.', mood: 'success' },
     { label: 'Mapa', run: () => argoAssistantGoTo('mapa'), reply: 'Abri o Mapa dos Equipamentos.', mood: 'success' },
-    { label: 'Unificar PDF', run: () => argoAssistantGoTo('pdftools'), reply: 'Abri a aba de PDF.', mood: 'success' },
+    { label: 'Central de PDF', run: () => argoAssistantGoTo('pdftools'), reply: 'Abri a Central de PDF.', mood: 'success' },
     { label: 'Atalhos do teclado', run: () => argoAssistantAskInline('atalhos') }
   );
   return list.slice(0, 6);
@@ -17225,7 +17370,7 @@ function pdftoolsHandleDrop(event, kind) {
   if (kind === 'pdfword') { pdftoolsRunPdfToWord(files[0]); return; }
   if (kind === 'wordpdf') { pdftoolsRunWordToPdf(files[0]); return; }
   if (kind === 'pdfjpg') { pdftoolsRunPdfToJpg(files[0]); return; }
-  if (kind === 'Split' || kind === 'Compress' || kind === 'Number') { pdftoolsExtraPick(kind, files[0]); return; }
+  if (['Split', 'Compress', 'Number', 'Rotate', 'Remove', 'Mark', 'Meta', 'Text'].includes(kind)) { pdftoolsExtraPick(kind, files[0]); return; }
 }
 
 // Limite para os conversores de um arquivo só (PDF→Word, Word→PDF, PDF→JPG):
@@ -17277,7 +17422,12 @@ function pdftoolsParsePageRange(text, total) {
     const t = part.trim();
     if (!t) continue;
     let m;
-    if ((m = t.match(/^(\d+)$/))) {
+    const kw = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (/^impares?$/.test(kw)) { for (let i = 0; i < total; i += 2) out.push(i); }
+    else if (/^pares?$/.test(kw)) { for (let i = 1; i < total; i += 2) out.push(i); }
+    else if (/^(ultima|final)$/.test(kw)) { out.push(total - 1); }
+    else if (/^primeira$/.test(kw)) { out.push(0); }
+    else if ((m = t.match(/^(\d+)$/))) {
       const n = Number(m[1]);
       if (n < 1 || n > total) return { error: `a página ${n} não existe (o arquivo tem ${total})` };
       out.push(n - 1);
@@ -17289,7 +17439,7 @@ function pdftoolsParsePageRange(text, total) {
       if (to < from) return { error: `o intervalo "${t}" está ao contrário` };
       for (let n = from; n <= to; n++) out.push(n - 1);
     } else {
-      return { error: `não entendi "${t}" — use, por exemplo, 1-3, 5` };
+      return { error: `não entendi "${t}" — use, por exemplo, 1-3, 5, pares ou última` };
     }
   }
   if (!out.length) return { error: 'nenhuma página escolhida' };
@@ -17783,8 +17933,16 @@ async function pdftoolsPrepareImage(file, rotation) {
 
 // Uma página A4 por imagem, na posição (retrato ou paisagem) que melhor
 // aproveita a foto, com margem de 24 pt.
-function pdftoolsAddImagePage(doc, embeddedJpg, prepared) {
+function pdftoolsAddImagePage(doc, embeddedJpg, prepared, mode) {
   const A4_W = 595.28, A4_H = 841.89, margin = 24;
+  if (mode === 'imagem') {
+    // Página do tamanho da imagem (sem margens), limitando o lado maior ao de uma folha A4.
+    const k = Math.min(1, A4_H / Math.max(prepared.width, prepared.height));
+    const w = prepared.width * k, h = prepared.height * k;
+    const pg = doc.addPage([w, h]);
+    pg.drawImage(embeddedJpg, { x: 0, y: 0, width: w, height: h });
+    return;
+  }
   const landscape = prepared.width > prepared.height * 1.05;
   const pageW = landscape ? A4_H : A4_W;
   const pageH = landscape ? A4_W : A4_H;
@@ -17850,6 +18008,8 @@ function pdftoolsRenderJpgPdfList() {
     </li>
   `).join('');
   if (btn) btn.disabled = pdftoolsJpgPdfState.files.length === 0;
+  const clr = document.getElementById('pdftoolsJpgPdfClearBtn');
+  if (clr) clr.disabled = pdftoolsJpgPdfState.files.length === 0;
   pdftoolsSetStatus('pdftoolsJpgPdfStatus', pdftoolsJpgPdfState.files.length ? `${pdftoolsJpgPdfState.files.length} de ${PDFTOOLS_JPGPDF_MAX_FILES} imagem(ns) · ${pdftoolsFormatBytes(totalBytes)} de 40 MB.` : '', 'info');
 }
 
@@ -17859,6 +18019,11 @@ function pdftoolsMoveJpgPdfFile(id, dir) {
   if (idx < 0 || target < 0 || target >= pdftoolsJpgPdfState.files.length) return;
   const [item] = pdftoolsJpgPdfState.files.splice(idx, 1);
   pdftoolsJpgPdfState.files.splice(target, 0, item);
+  pdftoolsRenderJpgPdfList();
+}
+
+function pdftoolsClearJpgPdfFiles() {
+  pdftoolsJpgPdfState.files = [];
   pdftoolsRenderJpgPdfList();
 }
 
@@ -17883,6 +18048,10 @@ async function pdftoolsRunJpgToPdf() {
   if (btn) btn.disabled = true;
   pdftoolsSetStatus('pdftoolsJpgPdfStatus', 'Carregando biblioteca e convertendo...', 'info');
   let currentName = '';
+  const pageEl = document.getElementById('pdftoolsJpgPdfPage');
+  const pageMode = pageEl && pageEl.value === 'imagem' ? 'imagem' : 'a4';
+  const nameEl = document.getElementById('pdftoolsJpgPdfFilename');
+  const outName = ((nameEl && nameEl.value || '').replace(/[\\/:*?"<>|]+/g, '').replace(/\.pdf$/i, '').trim()) || 'imagens-convertidas';
   try {
     const PDFLib = await ensurePdfLib();
     const doc = await PDFLib.PDFDocument.create();
@@ -17890,12 +18059,12 @@ async function pdftoolsRunJpgToPdf() {
       currentName = item.file.name;
       const prepared = await pdftoolsPrepareImage(item.file, item.rotation || 0);
       const jpg = await doc.embedJpg(prepared.bytes);
-      pdftoolsAddImagePage(doc, jpg, prepared);
+      pdftoolsAddImagePage(doc, jpg, prepared, pageMode);
     }
     currentName = '';
     const bytes = await doc.save();
-    pdftoolsDownloadBlob(new Blob([bytes], { type: 'application/pdf' }), 'imagens-convertidas.pdf');
-    pdftoolsSetStatus('pdftoolsJpgPdfStatus', `PDF gerado com sucesso! (${doc.getPageCount()} páginas · ${pdftoolsFormatBytes(bytes.length)})`, 'success');
+    pdftoolsDownloadBlob(new Blob([bytes], { type: 'application/pdf' }), outName + '.pdf');
+    pdftoolsSetStatus('pdftoolsJpgPdfStatus', `PDF gerado com sucesso! "${outName}.pdf" (${doc.getPageCount()} páginas · ${pdftoolsFormatBytes(bytes.length)})`, 'success');
   } catch (e) {
     pdftoolsSetStatus('pdftoolsJpgPdfStatus', currentName
       ? `Não foi possível ler a imagem "${currentName}". Remova-a da lista e tente de novo.`
@@ -17952,7 +18121,7 @@ async function pdftoolsRunPdfToJpg(file, inputEl) {
 
 
 /* ---------- Dividir / reduzir / numerar (um PDF por vez) ---------- */
-const pdftoolsExtra = { Split: null, Compress: null, Number: null, busy: false };
+const pdftoolsExtra = { Split: null, Compress: null, Number: null, Rotate: null, Remove: null, Mark: null, Meta: null, Text: null, busy: false };
 
 function pdftoolsExtraSetBusy(kind, busy) {
   pdftoolsExtra.busy = busy;
@@ -17967,6 +18136,7 @@ async function pdftoolsExtraPick(kind, file, inputEl) {
   if (!pdftoolsCheckSingleFileSize(file, statusId, inputEl)) return;
   pdftoolsSetStatus(statusId, 'Lendo o arquivo...', 'info');
   pdftoolsExtra[kind] = null;
+  pdftoolsPickerHide(kind);
   pdftoolsExtraSetBusy(kind, false);
   try {
     const PDFLib = await ensurePdfLib();
@@ -17977,6 +18147,7 @@ async function pdftoolsExtraPick(kind, file, inputEl) {
     if (info) info.textContent = file.name + ' · ' + doc.getPageCount() + (doc.getPageCount() === 1 ? ' página' : ' páginas') + ' · ' + pdftoolsFormatBytes(file.size);
     pdftoolsSetStatus(statusId, 'Arquivo pronto. Ajuste as opções e toque no botão.', 'info');
     pdftoolsExtraSetBusy(kind, false);
+    if (PDFTOOLS_PICKER_INPUT[kind]) pdftoolsRenderPagePicker(kind);
   } catch (e) {
     const info = document.getElementById('pdftools' + kind + 'Info');
     if (info) info.textContent = '';
@@ -17984,6 +18155,118 @@ async function pdftoolsExtraPick(kind, file, inputEl) {
   } finally {
     if (inputEl) inputEl.value = '';
   }
+}
+
+/* ---------- Escolher páginas tocando nas miniaturas (Dividir, Excluir, Girar) ---------- */
+const PDFTOOLS_PICKER_INPUT = { Split: 'pdftoolsSplitRange', Remove: 'pdftoolsRemoveRange', Rotate: 'pdftoolsRotateRange' };
+const pdftoolsPickers = { Split: { tok: 0, sel: new Set() }, Remove: { tok: 0, sel: new Set() }, Rotate: { tok: 0, sel: new Set() } };
+const PDFTOOLS_PICKER_THUMBS_MAX = 60; // acima disso, as demais páginas aparecem só com o número
+
+// {0,1,2,4} -> "1-3, 5"
+function pdftoolsRangeText(set) {
+  const a = Array.from(set).sort((x, y) => x - y);
+  const out = [];
+  for (let i = 0; i < a.length; i++) {
+    let j = i;
+    while (j + 1 < a.length && a[j + 1] === a[j] + 1) j++;
+    out.push(j > i + 1 ? (a[i] + 1) + '-' + (a[j] + 1) : a.slice(i, j + 1).map(n => n + 1).join(', '));
+    i = j;
+  }
+  return out.join(', ');
+}
+
+function pdftoolsPickerPaint(kind) {
+  const box = document.getElementById('pdftools' + kind + 'Pages');
+  if (!box) return;
+  const sel = pdftoolsPickers[kind].sel;
+  box.querySelectorAll('.pdftools-pg').forEach(b => b.setAttribute('aria-pressed', sel.has(Number(b.dataset.i)) ? 'true' : 'false'));
+  const cnt = box.querySelector('.pdftools-pages-count');
+  if (cnt) cnt.textContent = sel.size ? sel.size + (sel.size === 1 ? ' página escolhida' : ' páginas escolhidas') : 'nenhuma escolhida';
+}
+
+function pdftoolsPickerHide(kind) {
+  if (!pdftoolsPickers[kind]) return;
+  pdftoolsPickers[kind].tok++;
+  pdftoolsPickers[kind].sel = new Set();
+  const box = document.getElementById('pdftools' + kind + 'Pages');
+  if (box) { box.hidden = true; box.innerHTML = ''; }
+}
+
+async function pdftoolsRenderPagePicker(kind) {
+  const st = pdftoolsExtra[kind];
+  const box = document.getElementById('pdftools' + kind + 'Pages');
+  const input = document.getElementById(PDFTOOLS_PICKER_INPUT[kind]);
+  if (!st || !box || !input) return;
+  const pk = pdftoolsPickers[kind];
+  const tok = ++pk.tok;
+  pk.sel = new Set();
+  let html = '<div class="pdftools-pages-head"><span>Toque nas páginas para escolher</span><span class="pdftools-pages-count" aria-live="polite">nenhuma escolhida</span></div><div class="pdftools-pages-grid">';
+  for (let i = 0; i < st.pages; i++) {
+    html += '<button type="button" class="pdftools-pg" data-i="' + i + '" aria-pressed="false" aria-label="Página ' + (i + 1) + '"><span class="pdftools-pg-img"></span><span class="pdftools-pg-n">' + (i + 1) + '</span></button>';
+  }
+  box.innerHTML = html + '</div>';
+  box.hidden = false;
+  box.onclick = e => {
+    const b = e.target.closest('.pdftools-pg');
+    if (!b) return;
+    const i = Number(b.dataset.i);
+    if (pk.sel.has(i)) pk.sel.delete(i); else pk.sel.add(i);
+    pdftoolsSetRange(PDFTOOLS_PICKER_INPUT[kind], pdftoolsRangeText(pk.sel), true);
+    pdftoolsPickerPaint(kind);
+  };
+  // digitar no campo também marca as miniaturas
+  input.oninput = () => {
+    const txt = input.value;
+    if (!String(txt).trim()) pk.sel = new Set();
+    else {
+      const r = pdftoolsParsePageRange(txt, st.pages);
+      if (r.error) return;
+      pk.sel = new Set(r.indices);
+    }
+    pdftoolsPickerPaint(kind);
+  };
+  try {
+    const pdfjs = await ensurePdfJs();
+    const doc = await pdfjs.getDocument({ data: new Uint8Array(st.bytes.slice(0)) }).promise;
+    const H = 84;
+    const n = Math.min(st.pages, PDFTOOLS_PICKER_THUMBS_MAX);
+    for (let i = 0; i < n; i++) {
+      if (pk.tok !== tok) break; // outro arquivo foi escolhido (ou "Limpar")
+      const page = await doc.getPage(i + 1);
+      const base = page.getViewport({ scale: 1 });
+      const vp = page.getViewport({ scale: H / Math.max(base.width, base.height) });
+      const c = document.createElement('canvas'); c.width = Math.ceil(vp.width); c.height = Math.ceil(vp.height);
+      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+      await page.render({ canvasContext: g, viewport: vp }).promise;
+      const holder = box.querySelector('.pdftools-pg[data-i="' + i + '"] .pdftools-pg-img');
+      if (holder) { const img = document.createElement('img'); img.alt = ''; img.src = c.toDataURL('image/jpeg', 0.6); holder.appendChild(img); }
+    }
+    doc.destroy && doc.destroy();
+  } catch (e) { /* sem miniaturas: o seletor continua funcionando só com os números */ }
+}
+
+function pdftoolsSetRange(inputId, value, noFocus) {
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  el.value = value;
+  if (inputId === 'pdftoolsSplitRange') {
+    const r = document.querySelector('input[name="pdftoolsSplitMode"][value="range"]');
+    if (r) r.checked = true;
+  }
+  if (inputId && !noFocus) el.focus();
+  if (!noFocus) el.dispatchEvent(new Event('input'));
+}
+
+function pdftoolsExtraClear(kind) {
+  if (pdftoolsExtra.busy) return;
+  pdftoolsExtra[kind] = null;
+  pdftoolsPickerHide(kind);
+  const btn = document.getElementById('pdftools' + kind + 'Btn');
+  if (btn) btn.disabled = true;
+  const info = document.getElementById('pdftools' + kind + 'Info');
+  if (info) info.textContent = '';
+  pdftoolsSetStatus('pdftools' + kind + 'Status', '', 'info');
+  pdftoolsSetProgress(kind, 0, 0);
 }
 
 function pdftoolsBaseName(file) { return file.name.replace(/\.pdf$/i, '') || 'documento'; }
@@ -18131,6 +18414,194 @@ async function pdftoolsRunNumber() {
     pdftoolsSetProgress('Number', 0, 0);
     pdftoolsExtraSetBusy('Number', false);
   }
+}
+
+/* ---------- Girar / excluir páginas e marca d'água ---------- */
+async function pdftoolsRunRotate() {
+  const st = pdftoolsExtra.Rotate;
+  if (!st || pdftoolsExtra.busy) return;
+  const id = 'pdftoolsRotateStatus';
+  const text = document.getElementById('pdftoolsRotateRange').value;
+  const delta = Number(document.getElementById('pdftoolsRotateAngle').value) || 90;
+  let indices = null;
+  if (String(text).trim()) {
+    const r = pdftoolsParsePageRange(text, st.pages);
+    if (r.error) { pdftoolsSetStatus(id, 'Páginas: ' + r.error + '.', 'error'); return; }
+    indices = r.indices;
+  }
+  pdftoolsExtraSetBusy('Rotate', true);
+  pdftoolsSetStatus(id, 'Girando páginas...', 'info');
+  try {
+    const PDFLib = await ensurePdfLib();
+    const doc = await PDFLib.PDFDocument.load(st.bytes);
+    const pages = doc.getPages();
+    const alvo = indices ? Array.from(new Set(indices)) : pages.map((_, i) => i); // sem repetir: girar duas vezes a mesma página desfaria o giro
+    alvo.forEach(i => {
+      const cur = ((pages[i].getRotation().angle % 360) + 360) % 360;
+      pages[i].setRotation(PDFLib.degrees((cur + delta) % 360));
+    });
+    const out = new Blob([await doc.save()], { type: 'application/pdf' });
+    pdftoolsDownloadBlob(out, pdftoolsBaseName(st.file) + '-girado.pdf');
+    pdftoolsSetStatus(id, alvo.length + (alvo.length === 1 ? ' página girada' : ' páginas giradas') + ' · ' + pdftoolsFormatBytes(out.size) + '.', 'success');
+  } catch (e) {
+    pdftoolsSetStatus(id, 'Não foi possível girar este PDF.', 'error');
+  } finally {
+    pdftoolsExtraSetBusy('Rotate', false);
+  }
+}
+
+async function pdftoolsRunRemove() {
+  const st = pdftoolsExtra.Remove;
+  if (!st || pdftoolsExtra.busy) return;
+  const id = 'pdftoolsRemoveStatus';
+  const text = document.getElementById('pdftoolsRemoveRange').value;
+  if (!String(text).trim()) { pdftoolsSetStatus(id, 'Digite as páginas que quer excluir, por exemplo 2, 5-7.', 'error'); return; }
+  const r = pdftoolsParsePageRange(text, st.pages);
+  if (r.error) { pdftoolsSetStatus(id, 'Páginas: ' + r.error + '.', 'error'); return; }
+  const unicos = Array.from(new Set(r.indices));
+  if (unicos.length >= st.pages) { pdftoolsSetStatus(id, 'Não dá para excluir todas as páginas. Deixe ao menos uma.', 'error'); return; }
+  pdftoolsExtraSetBusy('Remove', true);
+  pdftoolsSetStatus(id, 'Excluindo páginas...', 'info');
+  try {
+    const PDFLib = await ensurePdfLib();
+    const doc = await PDFLib.PDFDocument.load(st.bytes);
+    unicos.sort((a, b) => b - a).forEach(i => doc.removePage(i));
+    const out = new Blob([await doc.save()], { type: 'application/pdf' });
+    pdftoolsDownloadBlob(out, pdftoolsBaseName(st.file) + '-sem-paginas.pdf');
+    pdftoolsSetStatus(id, unicos.length + (unicos.length === 1 ? ' página excluída' : ' páginas excluídas') + ' · restam ' + doc.getPageCount() + ' · ' + pdftoolsFormatBytes(out.size) + '.', 'success');
+  } catch (e) {
+    pdftoolsSetStatus(id, 'Não foi possível excluir páginas deste PDF.', 'error');
+  } finally {
+    pdftoolsExtraSetBusy('Remove', false);
+  }
+}
+
+async function pdftoolsRunMark() {
+  const st = pdftoolsExtra.Mark;
+  if (!st || pdftoolsExtra.busy) return;
+  const id = 'pdftoolsMarkStatus';
+  const text = document.getElementById('pdftoolsMarkText').value.trim();
+  const opacity = Number(document.getElementById('pdftoolsMarkOpacity').value) || 0.22;
+  if (!text) { pdftoolsSetStatus(id, 'Digite o texto da marca d\'água.', 'error'); return; }
+  pdftoolsExtraSetBusy('Mark', true);
+  pdftoolsSetStatus(id, 'Aplicando marca d\'água...', 'info');
+  try {
+    const PDFLib = await ensurePdfLib();
+    const { StandardFonts, rgb, degrees } = PDFLib;
+    const doc = await PDFLib.PDFDocument.load(st.bytes);
+    const font = await doc.embedFont(StandardFonts.HelveticaBold);
+    const pages = doc.getPages();
+    const base = font.widthOfTextAtSize(text, 100); // erro aqui = caractere não suportado pela fonte
+    pages.forEach(page => {
+      const W = page.getWidth(), H = page.getHeight();
+      const rot = ((page.getRotation().angle % 360) + 360) % 360;
+      const Wd = (rot === 90 || rot === 270) ? H : W;
+      const Hd = (rot === 90 || rot === 270) ? W : H;
+      const a = Math.atan2(Hd, Wd); // diagonal da página como aparece na tela
+      const diag = Math.sqrt(Wd * Wd + Hd * Hd);
+      const size = Math.max(14, Math.min(120, (diag * 0.7 / base) * 100));
+      const tw = font.widthOfTextAtSize(text, size);
+      const xd = Wd / 2 - (tw / 2) * Math.cos(a) + (size * 0.35) * Math.sin(a);
+      const yd = Hd / 2 - (tw / 2) * Math.sin(a) - (size * 0.35) * Math.cos(a);
+      let x = xd, y = yd;
+      if (rot === 90) { x = W - yd; y = xd; }
+      else if (rot === 180) { x = W - xd; y = H - yd; }
+      else if (rot === 270) { x = yd; y = H - xd; }
+      page.drawText(text, { x, y, size, font, color: rgb(0.45, 0.45, 0.45), opacity, rotate: degrees(a * 180 / Math.PI + rot) });
+    });
+    const out = new Blob([await doc.save()], { type: 'application/pdf' });
+    pdftoolsDownloadBlob(out, pdftoolsBaseName(st.file) + '-marca-dagua.pdf');
+    pdftoolsSetStatus(id, 'Marca d\'água aplicada em ' + pages.length + (pages.length === 1 ? ' página' : ' páginas') + ' · ' + pdftoolsFormatBytes(out.size) + '.', 'success');
+  } catch (e) {
+    pdftoolsSetStatus(id, 'Não foi possível aplicar a marca d\'água. Use apenas letras, números e acentos comuns.', 'error');
+  } finally {
+    pdftoolsExtraSetBusy('Mark', false);
+  }
+}
+
+async function pdftoolsRunMeta() {
+  const st = pdftoolsExtra.Meta;
+  if (!st || pdftoolsExtra.busy) return;
+  const id = 'pdftoolsMetaStatus';
+  pdftoolsExtraSetBusy('Meta', true);
+  pdftoolsSetStatus(id, 'Limpando dados ocultos...', 'info');
+  try {
+    const PDFLib = await ensurePdfLib();
+    const doc = await PDFLib.PDFDocument.load(st.bytes, { updateMetadata: false });
+    const achados = [];
+    const t = (doc.getTitle() || '').trim(), a = (doc.getAuthor() || '').trim(), su = (doc.getSubject() || '').trim();
+    const k = (doc.getKeywords() || '').trim(), c = (doc.getCreator() || '').trim(), pr = (doc.getProducer() || '').trim();
+    if (t) achados.push('título'); if (a) achados.push('autor'); if (su) achados.push('assunto');
+    if (k) achados.push('palavras-chave'); if (c || pr) achados.push('programa criador');
+    doc.setTitle(''); doc.setAuthor(''); doc.setSubject(''); doc.setKeywords([]); doc.setCreator(''); doc.setProducer('');
+    // metadados XMP (cópia dos dados acima que alguns programas guardam à parte)
+    const xmp = doc.catalog.get(PDFLib.PDFName.of('Metadata'));
+    if (xmp) { doc.catalog.delete(PDFLib.PDFName.of('Metadata')); achados.push('metadados XMP'); }
+    const out = new Blob([await doc.save({ updateFieldAppearances: false })], { type: 'application/pdf' });
+    pdftoolsDownloadBlob(out, pdftoolsBaseName(st.file) + '-limpo.pdf');
+    pdftoolsSetStatus(id, (achados.length ? 'Removido: ' + achados.join(', ') : 'Este arquivo não tinha dados ocultos preenchidos') + ' · ' + pdftoolsFormatBytes(out.size) + '.', 'success');
+  } catch (e) {
+    pdftoolsSetStatus(id, 'Não foi possível limpar este PDF.', 'error');
+  } finally {
+    pdftoolsExtraSetBusy('Meta', false);
+  }
+}
+
+async function pdftoolsRunText() {
+  const st = pdftoolsExtra.Text;
+  if (!st || pdftoolsExtra.busy) return;
+  const id = 'pdftoolsTextStatus';
+  pdftoolsExtraSetBusy('Text', true);
+  pdftoolsSetProgress('Text', 0, 0);
+  pdftoolsSetStatus(id, 'Lendo o texto...', 'info');
+  try {
+    const pdfjs = await ensurePdfJs();
+    const doc = await pdfjs.getDocument({ data: new Uint8Array(st.bytes.slice(0)) }).promise;
+    const blocos = [];
+    let chars = 0;
+    for (let i = 1; i <= doc.numPages; i++) {
+      const page = await doc.getPage(i);
+      const tc = await page.getTextContent();
+      let linha = '';
+      tc.items.forEach(it => { linha += it.str; if (it.hasEOL) linha += '\n'; else if (it.str && !/\s$/.test(it.str)) linha += ' '; });
+      const limpo = linha.replace(/[ \t]+\n/g, '\n').replace(/[ \t]{2,}/g, ' ').trim();
+      chars += limpo.length;
+      blocos.push('--- Página ' + i + ' ---\n' + limpo);
+      pdftoolsSetProgress('Text', i, doc.numPages);
+    }
+    doc.destroy && doc.destroy();
+    if (chars < 5) { pdftoolsSetStatus(id, 'Este PDF não tem texto para copiar: parece ser escaneado (só imagens). Para isso seria preciso um programa de OCR.', 'error'); return; }
+    const blob = new Blob(['\ufeff' + blocos.join('\n\n') + '\n'], { type: 'text/plain;charset=utf-8' });
+    pdftoolsDownloadBlob(blob, pdftoolsBaseName(st.file) + '.txt');
+    pdftoolsSetStatus(id, 'Texto de ' + blocos.length + (blocos.length === 1 ? ' página' : ' páginas') + ' salvo (' + chars.toLocaleString('pt-BR') + ' caracteres).', 'success');
+  } catch (e) {
+    pdftoolsSetStatus(id, 'Não foi possível ler o texto deste PDF.', 'error');
+  } finally {
+    pdftoolsSetProgress('Text', 0, 0);
+    pdftoolsExtraSetBusy('Text', false);
+  }
+}
+
+// Lembra, neste aparelho, as últimas opções usadas (texto da marca d'água,
+// formato da numeração, qualidade da redução, giro). Só guarda escolhas — nunca arquivos.
+const PDFTOOLS_PREF_FIELDS = ['pdftoolsMarkText', 'pdftoolsMarkOpacity', 'pdftoolsNumFmt', 'pdftoolsNumPos', 'pdftoolsCompressLevel', 'pdftoolsRotateAngle', 'pdftoolsJpgPdfPage'];
+const PDFTOOLS_PREF_KEY = 'argo_pdftools_prefs_v1';
+function pdftoolsPrefsLoad() {
+  try { return JSON.parse(localStorage.getItem(PDFTOOLS_PREF_KEY) || '{}') || {}; } catch (e) { return {}; }
+}
+function pdftoolsPrefsInit() {
+  const saved = pdftoolsPrefsLoad();
+  PDFTOOLS_PREF_FIELDS.forEach(fid => {
+    const el = document.getElementById(fid);
+    if (!el) return;
+    const v = saved[fid];
+    if (typeof v === 'string' && v && (el.tagName !== 'SELECT' || Array.from(el.options).some(o => o.value === v))) el.value = v;
+    el.addEventListener('change', () => {
+      const cur = pdftoolsPrefsLoad();
+      cur[fid] = el.value;
+      try { localStorage.setItem(PDFTOOLS_PREF_KEY, JSON.stringify(cur)); } catch (e) { /* sem armazenamento: segue sem lembrar */ }
+    });
+  });
 }
 
 /* ---------- PDF → Word (texto) ---------- */
@@ -18539,7 +19010,21 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
   }
 }
 
+// Atalhos do topo da Central de PDF: rolam até a ferramenta e levam o foco ao
+// título dela (teclado e leitor de tela). Respeita "reduzir movimento".
+function pdftoolsJump(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  el.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
+  const t = el.querySelector('.pdftools-tool-title');
+  if (t) { t.setAttribute('tabindex', '-1'); t.focus({ preventScroll: true }); }
+  el.classList.add('pdftools-tool-flash');
+  setTimeout(() => el.classList.remove('pdftools-tool-flash'), 1400);
+}
+
 function initPdfToolsPanel() {
+  pdftoolsPrefsInit();
   pdftoolsRenderMergeList();
   pdftoolsRenderJpgPdfList();
 }
