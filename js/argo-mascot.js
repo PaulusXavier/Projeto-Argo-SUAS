@@ -94,6 +94,12 @@
     mascotUid += 1;
     var hullGradId = 'argoMascot' + mascotUid + 'Hull';
     var sailGradId = 'argoMascot' + mascotUid + 'Sail';
+    var haloGradId = 'argoMascot' + mascotUid + 'Halo';
+    var glossGradId = 'argoMascot' + mascotUid + 'Gloss';
+    var waterGradId = 'argoMascot' + mascotUid + 'Water';
+    var hullClipId = 'argoMascot' + mascotUid + 'Clip';
+    var lite = size < 36; // ícones pequenos: sem enfeites animados (leve para listas/chat)
+    var HULL_D = 'M9 49 Q36 63 65 63 Q94 63 121 47 Q121 82 98 97 Q86 103 65 103 Q44 103 32 97 Q9 82 9 49 Z';
 
     function stroke(d, w, col) {
       return '<path d="' + d + '" fill="none" stroke="' + (col || EYE) + '" stroke-width="' + (w || 2.2) + '" stroke-linecap="round" stroke-linejoin="round"/>';
@@ -121,7 +127,8 @@
       '<path d="M41 36.6 Q42 35.4 43 36.6 M31 36.2 L27.8 36.8 M53 36.2 L56.2 36.8" fill="none" stroke="' + PILOT.frame + '" stroke-width="1.2" stroke-linecap="round"/>' +
       '<path d="M33 37.6 L35.6 37 M45 37.6 L47.6 37" stroke="#fff" stroke-width=".9" stroke-linecap="round" opacity=".55"/>' +
       '<path d="M33.2 41.6 H38 M45.2 41.6 H50" stroke="' + CYAN + '" stroke-width=".8" stroke-linecap="round" opacity=".9"/>' +
-      '<circle cx="28.4" cy="36.2" r="1.1" fill="' + CYAN + '" stroke="' + PILOT.frame + '" stroke-width=".5"/>';
+      '<circle cx="28.4" cy="36.2" r="1.1" fill="' + CYAN + '" stroke="' + PILOT.frame + '" stroke-width=".5"/>' +
+      '<path class="argo-fx argo-mascot-glint" d="M33.4 34.6 Q33.7 37 36 37.4 Q33.7 37.8 33.4 40.2 Q33.1 37.8 30.8 37.4 Q33.1 37 33.4 34.6 Z" fill="#fff"/>';
 
     // ---- Rosto e pose por humor ----
     var cheeks = '<ellipse cx="31.4" cy="46" rx="2.8" ry="1.8" fill="' + BLUSH + '" opacity=".6"/><ellipse cx="52.6" cy="46" rx="2.8" ry="1.8" fill="' + BLUSH + '" opacity=".6"/>';
@@ -134,20 +141,27 @@
       arms = '<g class="argo-mascot-wave2">' + arm(24, 62, 13, 41) + '</g>' +
              '<g class="argo-mascot-wave">' + arm(60, 62, 71, 41) + '</g>';
       extra =
-        '<path d="M14 18 Q15 23 20 24 Q15 25 14 30 Q13 25 8 24 Q13 23 14 18 Z" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width="1" stroke-linejoin="round"/>' +
-        '<path d="M78 5 Q79 9 83 10 Q79 11 78 15 Q77 11 73 10 Q77 9 78 5 Z" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width="1" stroke-linejoin="round"/>';
+        '<g class="argo-fx">' + [[12, 0, GOLD, 0], [30, -4, '#FF8FA3', .35], [52, -6, SEA, .7], [74, -4, '#7ED9A0', 1.05], [96, -6, GOLD, 1.4], [118, 0, '#FF8FA3', .2], [104, 2, SEA, .9]].map(function (c) {
+          return '<rect class="argo-mascot-confetti" x="' + c[0] + '" y="' + c[1] + '" width="3.2" height="5.4" rx="1" fill="' + c[2] + '" stroke="' + NAVY + '" stroke-width=".6" style="animation-delay:' + c[3] + 's"/>';
+        }).join('') + '</g>' +
+        '<path class="argo-mascot-pop" d="M14 18 Q15 23 20 24 Q15 25 14 30 Q13 25 8 24 Q13 23 14 18 Z" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width="1" stroke-linejoin="round"/>' +
+        '<path class="argo-mascot-pop" style="animation-delay:.5s" d="M78 5 Q79 9 83 10 Q79 11 78 15 Q77 11 73 10 Q77 9 78 5 Z" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width="1" stroke-linejoin="round"/>';
     } else if (mood === 'error') {
       face = '<g class="argo-mascot-look"><g class="argo-mascot-blink">' + eye(36.5, 39, 2.6) + eye(47.5, 39, 2.6) + '</g></g>' +
         stroke('M32 33.6 L39.6 35.8', 2) + stroke('M52 33.6 L44.4 35.8', 2) +
         stroke('M38 48.2 Q42 43.6 46 48.2', 2.2) +
         '<path d="M33 43.4 Q30.4 47 33 49.4 Q35.6 47 33 43.4 Z" fill="#8FD3F4" stroke="' + EYE + '" stroke-width="1" stroke-opacity=".5"/>';
       arms = arm(23, 63, 21, 61) + arm(61, 63, 63, 61);
-      extra = '<path d="M58 22 Q55.6 26 58 28.6 Q60.4 26 58 22 Z" fill="#8FD3F4" stroke="' + EYE + '" stroke-width="1" stroke-opacity=".5"/>';
+      extra = '<path class="argo-mascot-drip" d="M58 22 Q55.6 26 58 28.6 Q60.4 26 58 22 Z" fill="#8FD3F4" stroke="' + EYE + '" stroke-width="1" stroke-opacity=".5"/>';
     } else if (mood === 'notfound') {
       face = '<g class="argo-mascot-look"><g class="argo-mascot-blink">' + eye(36.5, 39, 2.3) + eye(47.5, 38.6, 3.2) + '</g></g>' +
         stroke('M44 32.6 Q47.6 29.4 51.6 32.6', 2) +
         '<ellipse cx="42" cy="46.4" rx="2.3" ry="2.9" fill="' + MOUTH + '" stroke="' + EYE + '" stroke-width="1.8"/>';
       arms = arm(23, 63, 21, 61) + arm(61, 62, 53.5, 50.5);
+      extra = '<g class="argo-fx argo-mascot-qmark"><circle cx="63" cy="15.6" r="1.2" fill="#fff" stroke="' + NAVY + '" stroke-width=".8"/>' +
+        '<circle cx="67" cy="11.4" r="1.8" fill="#fff" stroke="' + NAVY + '" stroke-width=".9"/>' +
+        '<ellipse cx="76" cy="3" rx="7.4" ry="6" fill="#fff" stroke="' + NAVY + '" stroke-width="1.5"/>' +
+        '<text x="76" y="6.6" font-size="9.4" font-weight="800" fill="' + accent + '" text-anchor="middle" font-family="Trebuchet MS,Verdana,sans-serif">?</text></g>';
     } else { // info
       face = '<g class="argo-mascot-look"><g class="argo-mascot-blink">' + eye(36.5, 39, 2.7) + eye(47.5, 39, 2.7) + '</g></g>' +
         '<path d="M36.2 46.4 Q42 53.4 47.8 46.4 Q42 47.8 36.2 46.4 Z" fill="#fff" stroke="' + EYE + '" stroke-width="1.7" stroke-linejoin="round"/>';
@@ -169,7 +183,7 @@
       // pin Ψ dourado (psicologia) no peito
       '<circle cx="30.6" cy="60.4" r="3" fill="' + GOLD + '" stroke="' + INK + '" stroke-width="1.1"/>' +
       '<path d="M29.1 58.6 Q29.1 61.6 30.6 61.6 Q32.1 61.6 32.1 58.6 M30.6 58.2 V62.6" fill="none" stroke="' + INK + '" stroke-width=".9" stroke-linecap="round"/>' +
-      '<g transform="translate(42 54) scale(1.13) translate(-42 -54)">' +
+      '<g class="argo-mascot-head"><g transform="translate(42 54) scale(1.13) translate(-42 -54)">' +
       '<ellipse cx="27.2" cy="39.5" rx="2.4" ry="3.6" fill="' + PILOT.skin + '" stroke="' + INK + '" stroke-width="1.6"/>' +
       '<ellipse cx="56.8" cy="39.5" rx="2.4" ry="3.6" fill="' + PILOT.skin + '" stroke="' + INK + '" stroke-width="1.6"/>' +
       // rosto um pouco alongado, com queixo firme e barba rala por baixo
@@ -177,10 +191,11 @@
       '<path d="M31.4 47.6 Q36 52.4 42 52.6 Q48 52.4 52.6 47.6 Q50 52.6 42 53 Q34 52.6 31.4 47.6 Z" fill="' + PILOT.skinDk + '" opacity=".38"/>' +
       cheeks + face + glasses +
       // cabelo preto curto, com topete volumoso caído para o lado e costeletas
+      '<g class="argo-mascot-hair">' +
       '<path d="M26.6 36 Q23.8 15.5 41 14.6 Q59.6 14 57.4 36 Q56.6 29 53.6 26.4 Q49.6 28.4 45.4 23.6 Q42.4 28.8 36.6 27.8 Q31 27.4 29.6 36 Q28.2 37 26.6 36 Z" fill="' + PILOT.hair + '" stroke="' + INK + '" stroke-width="1.6" stroke-linejoin="round"/>' +
       '<path d="M37.4 26.6 Q36.6 31.6 40.4 32.4 Q39 29.4 41.4 26.8 Z" fill="' + PILOT.hair + '"/>' +
       '<path d="M32.5 20.4 Q41 16.6 51.5 21" fill="none" stroke="#5A4638" stroke-width="1.3" stroke-linecap="round" opacity=".7"/>' +
-      '</g>' +
+      '</g></g></g>' +
       arms;
 
     var bob = mood === 'error' ? '' : ' argo-mascot-bob';
@@ -188,7 +203,7 @@
     var HULL_DY = 8; // casco um pouco mais baixo: o comandante aparece da cintura para cima
 
     return (
-      '<svg class="argo-mascot-icon' + bob + '" width="' + size + '" height="' + size +
+      '<svg class="argo-mascot-icon' + bob + (lite ? ' argo-mascot-lite' : '') + ' argo-mascot-m-' + mood + '" width="' + size + '" height="' + size +
       '" viewBox="0 0 130 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">' +
         '<defs>' +
           '<linearGradient id="' + hullGradId + '" x1="0" y1="0" x2="0" y2="1">' +
@@ -201,11 +216,27 @@
             '<stop offset="60%" stop-color="#F4EBD0"/>' +
             '<stop offset="100%" stop-color="#BFE3E4"/>' +
           '</linearGradient>' +
+          '<radialGradient id="' + haloGradId + '" cx=".5" cy=".5" r=".5">' +
+            '<stop offset="0%" style="stop-color:' + accent + ';stop-opacity:.34"/>' +
+            '<stop offset="60%" style="stop-color:' + accent + ';stop-opacity:.10"/>' +
+            '<stop offset="100%" style="stop-color:' + accent + ';stop-opacity:0"/>' +
+          '</radialGradient>' +
+          '<linearGradient id="' + glossGradId + '" x1="0" y1="0" x2="0" y2="1">' +
+            '<stop offset="0%" stop-color="#fff" stop-opacity=".34"/><stop offset="42%" stop-color="#fff" stop-opacity=".08"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/>' +
+          '</linearGradient>' +
+          '<linearGradient id="' + waterGradId + '" x1="0" y1="0" x2="0" y2="1">' +
+            '<stop offset="0%" stop-color="#9BE0F7"/><stop offset="100%" stop-color="#3C9FCB"/>' +
+          '</linearGradient>' +
+          '<clipPath id="' + hullClipId + '"><path d="' + HULL_D + '"/></clipPath>' +
         '</defs>' +
+        // aura suave na cor do humor + gaivota passando ao fundo
+        '<ellipse class="argo-mascot-halo" cx="65" cy="64" rx="64" ry="50" fill="url(#' + haloGradId + ')"/>' +
+        '<g class="argo-fx"><g class="argo-mascot-gull"><path d="M0 0 q3 -3.6 6 0 q3 -3.6 6 0" fill="none" stroke="#8FAFBF" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></g></g>' +
         // ondinha de fundo
-        '<path d="M5 105 ' + wave + '" fill="none" stroke="' + SEA + '" stroke-width="3" stroke-linecap="round" opacity=".55"/>' +
+        '<path class="argo-mascot-swell2" d="M5 105 ' + wave + '" fill="none" stroke="' + SEA + '" stroke-width="3" stroke-linecap="round" opacity=".55"/>' +
         '<g class="argo-mascot-rock">' +
         // cordame e vela grande do Argo (antes do mastro, que fica na frente)
+        '<g class="argo-mascot-sail">' +
         '<path d="M104 8 L121 46" stroke="' + NAVY + '" stroke-width=".9" stroke-linecap="round" opacity=".55"/>' +
         '<path d="M75 22 L116 15.6 C119 30 118 42 113 52 C105 64 92 66 82 60 C70 52 68 34 75 22 Z" fill="url(#' + sailGradId + ')" stroke="' + NAVY + '" stroke-width="2.4" stroke-linejoin="round"/>' +
         '<path d="M96 19 Q92 44 96 65 M85 22 Q80 42 86 60" fill="none" stroke="' + NAVY + '" stroke-width="1" opacity=".16" stroke-linecap="round"/>' +
@@ -213,22 +244,25 @@
         '<path d="M72 21.4 L118 14.6" stroke="' + MAST + '" stroke-width="2.4" stroke-linecap="round"/>' +
         // constelação Argo Navis (estrelas ligadas por linhas de luz) na vela
         '<path d="M80 34 L87 28 L95 35 L90 42 M95 35 L100 29" fill="none" stroke="' + HULL + '" stroke-width="1" stroke-linecap="round" opacity=".6"/>' +
-        '<circle cx="80" cy="34" r="1.7" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width=".6"/><circle cx="87" cy="28" r="2.1" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width=".6"/>' +
-        '<circle cx="95" cy="35" r="2.3" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width=".6"/><circle cx="90" cy="42" r="1.6" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width=".6"/>' +
-        '<circle cx="100" cy="29" r="1.5" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width=".6"/>' +
+        [[80, 34, 1.7, 0], [87, 28, 2.1, .5], [95, 35, 2.3, 1], [90, 42, 1.6, 1.5], [100, 29, 1.5, 2]].map(function (t) {
+          return '<circle class="argo-fx argo-mascot-glow" style="animation-delay:' + t[3] + 's" cx="' + t[0] + '" cy="' + t[1] + '" r="' + (t[2] * 2.6).toFixed(1) + '" fill="' + GOLD + '" opacity=".25"/>' +
+                 '<circle class="argo-mascot-star" style="animation-delay:' + t[3] + 's" cx="' + t[0] + '" cy="' + t[1] + '" r="' + t[2] + '" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width=".6"/>';
+        }).join('') +
         // chip na cor do humor (o "remendo" virou um microchip com pinos)
         '<path d="M86 47 v-2.4 M89 47 v-2.4 M92 47 v-2.4 M86 58 v2.4 M89 58 v2.4 M92 58 v2.4 M83.4 50 h-2.4 M83.4 53 h-2.4 M83.4 56 h-2.4 M94.6 50 h2.4 M94.6 53 h2.4 M94.6 56 h2.4" stroke="' + NAVY + '" stroke-width="1.1" stroke-linecap="round"/>' +
-        '<rect x="83.4" y="46.6" width="11.2" height="11.2" rx="2.6" fill="' + accent + '" stroke="' + NAVY + '" stroke-width="1.4"/>' +
+        '<rect class="argo-mascot-chip" x="83.4" y="46.6" width="11.2" height="11.2" rx="2.6" fill="' + accent + '" stroke="' + NAVY + '" stroke-width="1.4"/>' +
         '<rect x="85.6" y="48.8" width="6.8" height="6.8" rx="1.6" fill="none" stroke="#fff" stroke-width=".9" stroke-dasharray="1.4 1.4" opacity=".85"/>' +
         '<circle cx="89" cy="52.2" r="1.3" fill="#fff"/>' +
+        '</g>' +
         // mastro à direita, com bolinha dourada no topo
         '<line x1="104" y1="70" x2="104" y2="6" stroke="' + NAVY + '" stroke-width="5.4" stroke-linecap="round"/>' +
         '<line x1="104" y1="70" x2="104" y2="6" stroke="' + MAST + '" stroke-width="2.6" stroke-linecap="round"/>' +
-        // o comandante
-        pilot +
+        // o comandante (respira devagar)
+        '<g class="argo-mascot-breathe">' + pilot + '</g>' +
         // casco do Argo: proa de cavalo-marinho, popa em voluta, escudos redondos e friso dourado com LED
         '<g transform="translate(0 ' + HULL_DY + ')">' +
           // proa: pescoço curvo + cabeça fofa com crina dourada
+          '<g class="argo-mascot-prow">' +
           '<path d="M19 62 Q4 56 7 36 Q8 27 14 24" fill="none" stroke="' + NAVY + '" stroke-width="9.4" stroke-linecap="round"/>' +
           '<path d="M19 62 Q4 56 7 36 Q8 27 14 24" fill="none" stroke="' + HULL + '" stroke-width="6" stroke-linecap="round"/>' +
           '<path d="M16 60.4 Q3 54 5.6 36" fill="none" stroke="' + GOLD + '" stroke-width="1.3" stroke-linecap="round"/>' +
@@ -240,34 +274,40 @@
           '<circle cx="5.8" cy="22.8" r=".8" fill="' + NAVY + '"/>' +
           '<circle cx="13.4" cy="18.4" r="2" fill="' + NAVY + '"/><circle cx="14" cy="17.7" r=".75" fill="#fff"/>' +
           '<ellipse cx="14.6" cy="22.4" rx="2" ry="1.2" fill="' + BLUSH + '" opacity=".75"/>' +
+          '</g>' +
           // popa em voluta dourada
-          '<path d="M115 52 Q127 50 126 38 Q125 31 119.4 33.4 Q117.6 36.6 120.8 38" fill="none" stroke="' + NAVY + '" stroke-width="6.4" stroke-linecap="round"/>' +
-          '<path d="M115 52 Q127 50 126 38 Q125 31 119.4 33.4 Q117.6 36.6 120.8 38" fill="none" stroke="' + GOLD + '" stroke-width="3.2" stroke-linecap="round"/>' +
+          '<g class="argo-mascot-stern"><path d="M115 52 Q127 50 126 38 Q125 31 119.4 33.4 Q117.6 36.6 120.8 38" fill="none" stroke="' + NAVY + '" stroke-width="6.4" stroke-linecap="round"/>' +
+          '<path d="M115 52 Q127 50 126 38 Q125 31 119.4 33.4 Q117.6 36.6 120.8 38" fill="none" stroke="' + GOLD + '" stroke-width="3.2" stroke-linecap="round"/></g>' +
           // casco
           '<path d="M9 49 Q36 63 65 63 Q94 63 121 47 Q121 82 98 97 Q86 103 65 103 Q44 103 32 97 Q9 82 9 49 Z" fill="url(#' + hullGradId + ')" stroke="' + NAVY + '" stroke-width="2.8" stroke-linejoin="round"/>' +
+          '<path d="' + HULL_D + '" fill="url(#' + glossGradId + ')"/>' +
+          '<g class="argo-fx" clip-path="url(#' + hullClipId + ')"><path class="argo-mascot-shine" d="M-4 44 H8 L-6 108 H-18 Z" fill="#fff" opacity=".28"/></g>' +
           '<path d="M13 92 Q40 98 65 98 Q90 98 117 90" fill="none" stroke="' + HULL_LT + '" stroke-width="1.2" stroke-linecap="round" opacity=".45"/>' +
           // trilhas de circuito (luz ciano) no casco
           '<path d="M22 91 H34 L37 88 H46 M84 88 H93 L96 91 H108" fill="none" stroke="' + CYAN + '" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round" opacity=".75"/>' +
-          '<circle cx="46" cy="88" r="1.2" fill="' + CYAN + '"/><circle cx="84" cy="88" r="1.2" fill="' + CYAN + '"/>' +
+          '<circle class="argo-mascot-led" cx="46" cy="88" r="1.2" fill="' + CYAN + '"/><circle class="argo-mascot-led" style="animation-delay:.9s" cx="84" cy="88" r="1.2" fill="' + CYAN + '"/>' +
           // escudos redondos ao longo do casco, com ferro dourado no centro
-          [30, 47.5, 65, 82.5, 100].map(function (x) {
+          [30, 47.5, 65, 82.5, 100].map(function (x, i) {
             return '<circle cx="' + x + '" cy="80" r="7.4" fill="' + SHIELD + '" stroke="' + NAVY + '" stroke-width="1.8"/>' +
                    '<circle cx="' + x + '" cy="80" r="5.4" fill="none" stroke="' + GOLD + '" stroke-width="1.1"/>' +
-                   '<circle cx="' + x + '" cy="80" r="2.1" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width=".7"/>' +
+                   '<circle class="argo-mascot-boss" style="animation-delay:' + (i * 0.28).toFixed(2) + 's" cx="' + x + '" cy="80" r="2.1" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width=".7"/>' +
                    '<path d="M' + (x - 4.6) + ' ' + 77 + ' Q' + (x - 3.2) + ' ' + 74.6 + ' ' + (x - 0.6) + ' ' + 74.6 + '" fill="none" stroke="#fff" stroke-width="1" stroke-linecap="round" opacity=".5"/>';
           }).join('') +
           // friso dourado no topo do casco, com fita de LED ciano
           '<path d="M9 49 Q36 63 65 63 Q94 63 121 47" fill="none" stroke="' + NAVY + '" stroke-width="6.6" stroke-linecap="round"/>' +
           '<path d="M9 49 Q36 63 65 63 Q94 63 121 47" fill="none" stroke="' + GOLD + '" stroke-width="3.8" stroke-linecap="round"/>' +
-          '<path d="M14 52 Q38 65.4 65 65.4 Q92 65.4 116 50.6" fill="none" stroke="' + CYAN + '" stroke-width="1.3" stroke-linecap="round" opacity=".95"/>' +
+          '<path d="M14 52 Q38 65.4 65 65.4 Q92 65.4 116 50.6" fill="none" stroke="' + CYAN + '" stroke-width="1.3" stroke-linecap="round" opacity=".95" class="argo-mascot-ledstrip"/>' +
           '<path d="M20 50.4 Q40 60 62 60.4" fill="none" stroke="#fff" stroke-width="1.2" stroke-linecap="round" opacity=".5"/>' +
         '</g>' +
         '</g>' +
         // ondinhas da frente com espuma (vao de um lado a outro, bem de leve)
         '<g class="argo-mascot-swell">' +
-        '<path d="M5 106 ' + wave + ' C125 113 100 116 65 116 C30 116 5 113 5 106 Z" fill="' + SEA + '" stroke="' + NAVY + '" stroke-width="2" stroke-linejoin="round" opacity=".92"/>' +
+        '<path d="M5 106 ' + wave + ' C125 113 100 116 65 116 C30 116 5 113 5 106 Z" fill="url(#' + waterGradId + ')" stroke="' + NAVY + '" stroke-width="2" stroke-linejoin="round" opacity=".92"/>' +
         '<path d="M10 108.4 q5 -3 10 0 M52 108.4 q5 -3 10 0 M96 108.4 q5 -3 10 0" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>' +
         '</g>' +
+        '<g class="argo-fx">' + [[26, 103, 1.5, 0], [52, 106, 1.2, .9], [80, 104, 1.6, 1.7], [106, 106, 1.3, .4]].map(function (b) {
+          return '<circle class="argo-mascot-bubble" style="animation-delay:' + b[3] + 's" cx="' + b[0] + '" cy="' + b[1] + '" r="' + b[2] + '" fill="#fff" fill-opacity=".75" stroke="#BFE9F7" stroke-width=".6"/>';
+        }).join('') + '</g>' +
         // bandeirinha de ponta, balançando
         '<g class="argo-mascot-flag">' +
           '<path d="M106 3 H126 L121.5 8.5 L126 14 H106 Z" fill="' + accent + '" stroke="' + NAVY + '" stroke-width="1.8" stroke-linejoin="round"/>' +
@@ -329,8 +369,67 @@
       '@keyframes argoMascotRock{0%,100%{transform:rotate(-1.3deg)}50%{transform:rotate(1.3deg)}}' +
       '.argo-mascot-swell{animation:argoMascotSwell 3.6s ease-in-out infinite}' +
       '@keyframes argoMascotSwell{0%,100%{transform:translateX(-2.5px)}50%{transform:translateX(2.5px)}}' +
+      // ---- vida extra: respira, mexe a cabeça/cabelo, vela enfuna, estrelas brilham ----
+      '.argo-mascot-breathe{transform-origin:42px 74px;animation:argoMascotBreathe 3.6s ease-in-out infinite}' +
+      '@keyframes argoMascotBreathe{0%,100%{transform:scale(1,1)}50%{transform:scale(1.012,1.024)}}' +
+      '.argo-mascot-head{transform-origin:42px 54px;animation:argoMascotHead 5.2s ease-in-out infinite}' +
+      '@keyframes argoMascotHead{0%,100%{transform:rotate(-1.6deg)}50%{transform:rotate(1.6deg)}}' +
+      '.argo-mascot-hair{transform-origin:42px 28px;animation:argoMascotHair 2.9s ease-in-out infinite .4s}' +
+      '@keyframes argoMascotHair{0%,100%{transform:rotate(-1.8deg)}50%{transform:rotate(1.8deg)}}' +
+      '.argo-mascot-prow{transform-origin:19px 62px;animation:argoMascotProw 3.4s ease-in-out infinite}' +
+      '@keyframes argoMascotProw{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(2.6deg)}}' +
+      '.argo-mascot-stern{transform-origin:115px 52px;animation:argoMascotStern 2.8s ease-in-out infinite}' +
+      '@keyframes argoMascotStern{0%,100%{transform:rotate(2.4deg)}50%{transform:rotate(-3.4deg)}}' +
+      '.argo-mascot-sail{transform-origin:104px 40px;animation:argoMascotSail 3.8s ease-in-out infinite}' +
+      '@keyframes argoMascotSail{0%,100%{transform:scaleX(1) skewY(0)}50%{transform:scaleX(1.035) skewY(-.9deg)}}' +
+      '.argo-mascot-star,.argo-mascot-glow,.argo-mascot-boss,.argo-mascot-bubble,.argo-mascot-pop,.argo-mascot-glint,.argo-mascot-confetti,.argo-mascot-halo{transform-box:fill-box;transform-origin:center}' +
+      '.argo-mascot-star{animation:argoMascotTwinkle 2.4s ease-in-out infinite}' +
+      '@keyframes argoMascotTwinkle{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:.85}}' +
+      '.argo-mascot-glow{animation:argoMascotGlow 2.4s ease-in-out infinite}' +
+      '@keyframes argoMascotGlow{0%,100%{opacity:.08;transform:scale(.8)}50%{opacity:.4;transform:scale(1.2)}}' +
+      '.argo-mascot-chip{animation:argoMascotChip 1.8s ease-in-out infinite}' +
+      '@keyframes argoMascotChip{0%,100%{opacity:1}50%{opacity:.62}}' +
+      '.argo-mascot-ledstrip{animation:argoMascotLed 2.2s ease-in-out infinite}' +
+      '.argo-mascot-led{animation:argoMascotLed 1.6s ease-in-out infinite}' +
+      '@keyframes argoMascotLed{0%,100%{opacity:.5}50%{opacity:1}}' +
+      '.argo-mascot-boss{animation:argoMascotBoss 3s ease-in-out infinite}' +
+      '@keyframes argoMascotBoss{0%,65%,100%{transform:scale(1)}80%{transform:scale(1.55)}}' +
+      '.argo-mascot-shine{animation:argoMascotShine 6.5s ease-in-out infinite}' +
+      '@keyframes argoMascotShine{0%,45%{transform:translateX(-6px);opacity:0}55%{opacity:1}90%,100%{transform:translateX(164px);opacity:0}}' +
+      '.argo-mascot-bubble{animation:argoMascotBubble 2.8s ease-in infinite}' +
+      '@keyframes argoMascotBubble{0%{transform:translateY(0) scale(.5);opacity:0}20%{opacity:.9}100%{transform:translateY(-17px) scale(1.15);opacity:0}}' +
+      '.argo-mascot-swell2{animation:argoMascotSwell2 4.4s ease-in-out infinite}' +
+      '@keyframes argoMascotSwell2{0%,100%{transform:translateX(3px)}50%{transform:translateX(-3px)}}' +
+      '.argo-mascot-halo{animation:argoMascotHalo 4s ease-in-out infinite}' +
+      '@keyframes argoMascotHalo{0%,100%{opacity:.65;transform:scale(1)}50%{opacity:1;transform:scale(1.07)}}' +
+      '.argo-mascot-gull{animation:argoMascotGull 16s linear infinite 2s;opacity:0}' +
+      '@keyframes argoMascotGull{0%{transform:translate(-16px,14px);opacity:0}6%{opacity:.9}50%{transform:translate(66px,3px)}94%{opacity:.9}100%{transform:translate(148px,12px);opacity:0}}' +
+      '.argo-mascot-glint{animation:argoMascotGlint 7s ease-in-out infinite 1s;transform:scale(0);opacity:0}' +
+      '@keyframes argoMascotGlint{0%,86%,100%{transform:scale(0) rotate(0);opacity:0}92%{transform:scale(1.25) rotate(25deg);opacity:1}97%{transform:scale(.6) rotate(45deg);opacity:.6}}' +
+      '.argo-mascot-pop{animation:argoMascotSpark 1.7s ease-in-out infinite}' +
+      '@keyframes argoMascotSpark{0%,100%{transform:scale(.7) rotate(0);opacity:.7}50%{transform:scale(1.3) rotate(25deg);opacity:1}}' +
+      '.argo-mascot-confetti{animation:argoMascotConfetti 2.6s ease-in infinite;opacity:0}' +
+      '@keyframes argoMascotConfetti{0%{transform:translateY(-4px) rotate(0);opacity:0}15%{opacity:1}100%{transform:translateY(50px) rotate(280deg);opacity:0}}' +
+      '.argo-mascot-drip{animation:argoMascotDrip 2.2s ease-in infinite;opacity:0}' +
+      '@keyframes argoMascotDrip{0%{transform:translateY(0);opacity:0}15%{opacity:1}100%{transform:translateY(16px);opacity:0}}' +
+      '.argo-mascot-qmark{animation:argoMascotQ 2.6s ease-in-out infinite}' +
+      '@keyframes argoMascotQ{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-3px) scale(1.07)}}' +
+      // erro: o barquinho treme de nervoso
+      '.argo-mascot-m-error .argo-mascot-rock{animation-duration:.9s}' +
+      // sucesso: balança mais animado
+      '.argo-mascot-m-success .argo-mascot-rock{animation-duration:2.2s}.argo-mascot-m-success .argo-mascot-bob{animation-duration:1.6s}' +
+      // ícones pequenos (chat/listas): só o essencial, bem leve
+      '.argo-mascot-lite .argo-fx,.argo-mascot-lite .argo-mascot-halo,.argo-mascot-lite .argo-mascot-bubble,.argo-mascot-lite .argo-mascot-glow{display:none}' +
+      '.argo-mascot-lite .argo-mascot-breathe,.argo-mascot-lite .argo-mascot-head,.argo-mascot-lite .argo-mascot-hair,.argo-mascot-lite .argo-mascot-prow,.argo-mascot-lite .argo-mascot-stern,.argo-mascot-lite .argo-mascot-sail,.argo-mascot-lite .argo-mascot-star,.argo-mascot-lite .argo-mascot-chip,.argo-mascot-lite .argo-mascot-ledstrip,.argo-mascot-lite .argo-mascot-led,.argo-mascot-lite .argo-mascot-boss,.argo-mascot-lite .argo-mascot-swell2{animation:none}' +
+      // entrada animada do ícone no aviso e empolgação ao passar o mouse no botão do assistente
+      '.argo-mascot-toast.argo-mascot-visible .argo-mascot-toast-icon{animation:argoMascotPopIn .7s cubic-bezier(.3,1.5,.5,1) both}' +
+      '@keyframes argoMascotPopIn{0%{transform:scale(.3) rotate(-14deg)}60%{transform:scale(1.2) rotate(7deg)}100%{transform:scale(1) rotate(0)}}' +
+      '.argo-assistant-fab:hover .argo-mascot-bob{animation:argoMascotHop .7s ease-in-out infinite}' +
+      '@keyframes argoMascotHop{0%,100%{transform:translateY(0) scale(1,1)}40%{transform:translateY(-5px) scale(1.04,.97)}70%{transform:translateY(0) scale(.97,1.03)}}' +
+      '.argo-assistant-fab:hover .argo-mascot-wave,.argo-assistant-fab:hover .argo-mascot-wave2{animation-duration:.55s}' +
+      '.argo-assistant-fab:hover .argo-mascot-rock{animation-duration:1.4s}' +
       '.argo-mascot-look{transition:transform .14s ease-out}' +
-      '@media (prefers-reduced-motion: reduce){.argo-mascot-bob,.argo-mascot-flag,.argo-mascot-wave,.argo-mascot-wave2,.argo-mascot-blink,.argo-mascot-rock,.argo-mascot-swell{animation:none}.argo-mascot-look{transition:none;transform:none!important}.argo-mascot-toast{transition:none}}' +
+      '@media (prefers-reduced-motion: reduce){.argo-mascot-icon,.argo-mascot-icon *,.argo-mascot-toast-icon{animation:none!important}.argo-mascot-bob,.argo-mascot-flag,.argo-mascot-wave,.argo-mascot-wave2,.argo-mascot-blink,.argo-mascot-rock,.argo-mascot-swell{animation:none}.argo-mascot-look{transition:none;transform:none!important}.argo-mascot-toast{transition:none}}' +
       '@media print{.argo-mascot-toast{display:none!important}}' +
       'body:has(#argoUpdateToast) .argo-mascot-toast{bottom:calc(76px + env(safe-area-inset-bottom,0px))}' +
 
