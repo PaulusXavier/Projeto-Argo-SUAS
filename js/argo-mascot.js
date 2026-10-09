@@ -308,12 +308,12 @@
       // o app está trancado na tela de login (:has, já usado no toast).
       // -----------------------------------------------------------------
       '.argo-assistant-fab{position:fixed;left:max(16px,env(safe-area-inset-left));bottom:calc(16px + env(safe-area-inset-bottom));'+
-        'width:56px;height:56px;border-radius:50%;background:var(--bg-card,#151F35);border:1px solid rgba(127,127,127,0.18);'+
+        'width:64px;height:64px;border-radius:50%;background:var(--bg-card,#151F35);border:1px solid rgba(127,127,127,0.18);'+
         'box-shadow:var(--shadow-lg,0 24px 48px -12px rgba(0,0,0,.4));display:flex;align-items:center;justify-content:center;'+
         'padding:0;cursor:pointer;z-index:9997;transition:transform .18s ease;touch-action:manipulation}' +
       '.argo-assistant-fab:hover{transform:translateY(-2px) scale(1.04)}' +
       '.argo-assistant-fab[aria-expanded="true"]{transform:scale(.9)}' +
-      '.argo-assistant-fab .argo-mascot-icon{width:34px;height:34px}' +
+      '.argo-assistant-fab .argo-mascot-icon{width:40px;height:40px}' +
 
       '.argo-assistant-hint{position:fixed;left:calc(16px + env(safe-area-inset-left) + 64px);bottom:calc(30px + env(safe-area-inset-bottom));'+
         'display:flex;align-items:center;gap:8px;max-width:230px;background:var(--bg-card,#151F35);color:var(--text-main,#F1F5F9);'+
@@ -324,19 +324,19 @@
         'font-size:13px;padding:4px 6px;border-radius:8px}' +
       '.argo-assistant-hint-x:hover{opacity:1;background:rgba(127,127,127,.14)}' +
 
-      '.argo-assistant-panel{position:fixed;left:max(16px,env(safe-area-inset-left));bottom:calc(82px + env(safe-area-inset-bottom));'+
-        'width:min(380px,calc(100vw - 32px));max-height:min(74vh,600px);display:flex;flex-direction:column;overflow:hidden;'+
+      '.argo-assistant-panel{position:fixed;left:max(16px,env(safe-area-inset-left));bottom:calc(90px + env(safe-area-inset-bottom));'+
+        'width:min(480px,calc(100vw - 32px));height:min(78vh,680px);max-height:calc(100vh - 100px);transform-origin:bottom left;display:flex;flex-direction:column;overflow:hidden;'+
         'background:var(--bg-card,#151F35);color:var(--text-main,#F1F5F9);border-radius:var(--radius-ui,12px);'+
         'box-shadow:var(--shadow-lg,0 24px 48px -12px rgba(0,0,0,.4));border:1px solid rgba(127,127,127,0.18);'+
-        'opacity:0;transform:translateY(10px) scale(.98);pointer-events:none;transition:opacity .18s ease,transform .18s ease;z-index:9998}' +
+        'opacity:0;transform:translateY(14px) scale(.85);pointer-events:none;transition:opacity .22s ease,transform .22s cubic-bezier(.2,.9,.3,1.1),width .22s ease,height .22s ease;z-index:9998}' +
       '.argo-assistant-panel.argo-assistant-open{opacity:1;transform:translateY(0) scale(1);pointer-events:auto}' +
 
       '.argo-assistant-head{display:flex;align-items:center;gap:10px;padding:14px 8px 14px 14px;'+
         'border-bottom:1px solid rgba(127,127,127,.16);flex:0 0 auto}' +
-      '.argo-assistant-head .argo-mascot-icon{width:32px;height:32px;flex:0 0 auto}' +
+      '.argo-assistant-head .argo-mascot-icon{width:48px;height:48px;flex:0 0 auto}.argo-assistant-mascot-btn{flex:0 0 auto;border:none;background:transparent;padding:2px;margin:0;cursor:pointer;border-radius:50%;transition:transform .18s ease;touch-action:manipulation}.argo-assistant-mascot-btn:hover{transform:scale(1.1) rotate(-4deg)}.argo-assistant-mascot-btn:focus-visible{outline:3px solid var(--brand-primary,#0091C2);outline-offset:2px}' +
       '.argo-assistant-head-text{display:flex;flex-direction:column;flex:1;min-width:0}' +
-      '.argo-assistant-head-text strong{font-size:14px}' +
-      '.argo-assistant-head-text span{font-size:11px;color:var(--text-muted,#A7B7CC)}' +
+      '.argo-assistant-head-text strong{font-size:16px}' +
+      '.argo-assistant-head-text span{font-size:12px;color:var(--text-muted,#A7B7CC)}' +
       // Área de toque maior (mínimo 36px) e touch-action:manipulation: sem
       // isso, alguns navegadores de celular esperam ~300ms antes de disparar
       // o clique (para diferenciar de duplo-toque/zoom), o que pode parecer
@@ -348,13 +348,13 @@
         'opacity:.6;cursor:pointer;font-size:15px;padding:6px 8px;border-radius:8px;touch-action:manipulation}' +
       '.argo-assistant-close:hover{opacity:1;background:rgba(127,127,127,.14)}' +
 
-      '.argo-assistant-log{flex:1;overflow-y:auto;padding:12px 12px 4px;display:flex;flex-direction:column;gap:10px;min-height:70px}' +
-      '.argo-assistant-msg{display:flex;gap:8px;max-width:96%;min-width:0}' +
+      '.argo-assistant-log{flex:1;overflow-y:auto;padding:14px 16px 6px;display:flex;flex-direction:column;gap:12px;min-height:70px}' +
+      '.argo-assistant-msg{display:flex;gap:8px;max-width:94%;min-width:0}' +
       '.argo-assistant-msg-bot{align-self:flex-start}' +
       '.argo-assistant-msg-user{align-self:flex-end;flex-direction:row-reverse}' +
-      '.argo-assistant-msg-icon{flex:0 0 auto;width:24px;height:24px;margin-top:3px}' +
-      '.argo-assistant-msg-icon .argo-mascot-icon{width:24px;height:24px}' +
-      '.argo-assistant-bubble{font-size:13px;line-height:1.45;padding:9px 12px;border-radius:14px;white-space:pre-line;word-break:break-word}' +
+      '.argo-assistant-msg-icon{flex:0 0 auto;width:28px;height:28px;margin-top:3px}' +
+      '.argo-assistant-msg-icon .argo-mascot-icon{width:28px;height:28px}' +
+      '.argo-assistant-bubble{font-size:14.5px;line-height:1.5;padding:10px 14px;border-radius:14px;white-space:pre-line;word-break:break-word}' +
       '.argo-assistant-bubble.argo-md{white-space:normal}' +
       '.argo-md p{margin:0 0 6px}.argo-md p:last-child,.argo-md ul:last-child,.argo-md ol:last-child{margin-bottom:0}' +
       '.argo-md ul,.argo-md ol{margin:0 0 6px;padding-left:18px}.argo-md li{margin:2px 0}' +
@@ -381,7 +381,7 @@
       '.argo-assistant-dot{position:absolute;top:2px;right:2px;width:12px;height:12px;border-radius:50%;background:#DC2626;border:2px solid var(--bg-card,#151F35)}' +
       '.argo-assistant-fab{position:fixed}.argo-assistant-fab.argo-assistant-busy{box-shadow:0 0 0 3px rgba(0,145,194,.35),var(--shadow-lg,0 24px 48px -12px rgba(0,0,0,.4));animation:argoAssistantPulse 1.4s ease-in-out infinite}' +
       '@keyframes argoAssistantPulse{0%,100%{box-shadow:0 0 0 2px rgba(0,145,194,.2)}50%{box-shadow:0 0 0 7px rgba(0,145,194,.3)}}' +
-      '.argo-assistant-panel.argo-assistant-wide{width:min(560px,calc(100vw - 32px));max-height:min(86vh,760px)}' +
+      '.argo-assistant-panel.argo-assistant-wide{width:min(820px,calc(100vw - 32px));height:min(90vh,900px)}' +
       '.argo-assistant-field{position:relative;flex:1;min-width:0;display:flex}.argo-assistant-count{position:absolute;right:10px;bottom:-1px;font-size:10px;color:var(--text-muted,#A7B7CC);background:var(--bg-card,#151F35);padding:0 3px}' +
       '.argo-assistant-send.is-stop{background:#DC2626}' +
       '.argo-assistant-chip-ask{border-style:dotted}' +
@@ -393,15 +393,15 @@
       '.argo-assistant-typing i:nth-child(2){animation-delay:.15s}.argo-assistant-typing i:nth-child(3){animation-delay:.3s}' +
 
       '.argo-assistant-quick{display:flex;flex-wrap:wrap;gap:6px;padding:6px 12px 10px;flex:0 0 auto}' +
-      '.argo-assistant-chip{border:1px solid rgba(127,127,127,.3);background:transparent;color:inherit;font-size:12px;font-weight:600;'+
-        'padding:6px 11px;border-radius:20px;cursor:pointer;transition:background .15s ease,border-color .15s ease}' +
+      '.argo-assistant-chip{border:1px solid rgba(127,127,127,.3);background:transparent;color:inherit;font-size:13px;font-weight:600;'+
+        'padding:7px 13px;border-radius:20px;cursor:pointer;transition:background .15s ease,border-color .15s ease}' +
       '.argo-assistant-chip:hover{background:rgba(0,145,194,.14);border-color:var(--brand-primary,var(--argo-mascot-info,#0091C2))}' +
 
       '.argo-assistant-form{display:flex;gap:8px;padding:10px 12px;border-top:1px solid rgba(127,127,127,.16);flex:0 0 auto}' +
       '.argo-assistant-input{flex:1;min-width:0;border:1px solid rgba(127,127,127,.3);background:transparent;color:inherit;'+
-        'border-radius:18px;padding:8px 14px;font-size:13px;line-height:1.35;outline:none;font-family:inherit;resize:none;max-height:96px;width:100%;box-sizing:border-box}' +
+        'border-radius:20px;padding:10px 16px;font-size:14.5px;line-height:1.35;outline:none;font-family:inherit;resize:none;max-height:96px;width:100%;box-sizing:border-box}' +
       '.argo-assistant-input:focus{border-color:var(--brand-primary,var(--argo-mascot-info,#0091C2))}' +
-      '.argo-assistant-send{flex:0 0 auto;width:36px;height:36px;border-radius:50%;border:none;'+
+      '.argo-assistant-send{flex:0 0 auto;width:42px;height:42px;border-radius:50%;border:none;'+
         'background:var(--brand-primary,var(--argo-mascot-info,#0091C2));color:#fff;display:flex;align-items:center;'+
         'justify-content:center;cursor:pointer}' +
       '.argo-assistant-send:hover{filter:brightness(1.1)}' +
@@ -413,7 +413,7 @@
       '.argo-assistant-hint[hidden],.argo-assistant-panel[hidden]{display:none!important}' +
       '@keyframes argoAssistantIn{0%{opacity:0;transform:translateY(6px)}100%{opacity:1;transform:translateY(0)}}' +
       '@keyframes argoAssistantTyping{0%,60%,100%{opacity:.3}30%{opacity:1}}' +
-      '@media (max-width:480px){.argo-assistant-panel{left:12px;right:12px;width:auto}}' +
+      '@media (max-width:560px){.argo-assistant-panel,.argo-assistant-panel.argo-assistant-wide{left:8px;right:8px;width:auto;height:min(86dvh,calc(100dvh - 100px))}}' +
       '@media print{.argo-assistant-fab,.argo-assistant-hint,.argo-assistant-panel{display:none!important}}' +
       'body.tab-focus .argo-assistant-hint{display:none}' +
       'body.tab-focus .argo-assistant-fab{width:48px;height:48px}' +
@@ -649,7 +649,7 @@
       '<div id="argoAssistantPanel" class="argo-assistant-panel" role="dialog" aria-modal="false" ' +
         'aria-labelledby="argoAssistantTitle" hidden>' +
         '<div class="argo-assistant-head">' +
-          boatSVG('info', 32) +
+          '<button type="button" class="argo-assistant-mascot-btn" id="argoAssistantMascot" aria-label="Ampliar ou reduzir o painel" title="Clique no Argo para ampliar">' + boatSVG('info', 48) + '</button>' +
           '<div class="argo-assistant-head-text"><strong id="argoAssistantTitle">Argo</strong>' +
             '<span id="argoAssistantStatus"><i class="argo-assistant-led" aria-hidden="true"></i><em>seu guia a bordo do Argo SUAS</em></span></div>' +
           '<button type="button" class="argo-assistant-tool" id="argoAssistantNew" aria-label="Nova conversa" title="Nova conversa">' +
@@ -711,8 +711,8 @@
     }
     try {
       if (!localStorage.getItem(HINT_KEY)) armHint();
-      if (localStorage.getItem(WIDE_KEY) === '1') setWide(true);
-    } catch (e) { /* localStorage indisponível - sem dica, sem problema */ }
+      if (localStorage.getItem(WIDE_KEY) !== '0') setWide(true);
+    } catch (e) { setWide(true); /* localStorage indisponível - abre ampliado */ }
     hintClose.addEventListener('click', function (e) { e.stopPropagation(); dismissHint(); });
 
     function setWide(on) {
@@ -1041,6 +1041,8 @@
     fab.addEventListener('click', function () { isOpen ? close() : open(); });
     closeBtn.addEventListener('click', function (e) { e.stopPropagation(); close(); try { fab.focus(); } catch (err) { /* ignora */ } });
     newBtn.addEventListener('click', function (e) { e.stopPropagation(); reset(); });
+    var mascotBtn = root.querySelector('#argoAssistantMascot');
+    mascotBtn.addEventListener('click', function (e) { e.stopPropagation(); wideBtn.click(); });
     wideBtn.addEventListener('click', function (e) {
       e.stopPropagation();
       var on = !panel.classList.contains('argo-assistant-wide'); setWide(on);
