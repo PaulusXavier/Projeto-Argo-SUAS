@@ -16329,8 +16329,53 @@ function argoLoginMascotReact(kind) {
   line.querySelector('strong').textContent = word + '!';
   if (kind === 'reset' && typeof argoLoginErrors !== 'undefined') argoLoginErrors = 0;
 }
+// Perguntas rápidas do mascote da tela de login. Só texto fixo e público:
+// antes do acesso o Argo não consulta diretório nem IA.
+const ARGO_LOGIN_FAQ = [
+  { q: 'O que é o Argo?', mood: 'success', a: 'O Argo SUAS leva você à Rede de Políticas Públicas de Roraima: equipamentos, ficha de encaminhamento, notícias e a Central de PDF.' },
+  { q: 'Funciona sem internet?', mood: 'info', a: 'O essencial fica guardado no aparelho e abre mesmo sem internet. As respostas da IA e as notícias precisam de conexão.' },
+  { q: 'Esqueci a senha', mood: 'notfound', a: 'A senha é definida pela coordenação. Peça a ela para confirmar o acesso e confira o Caps Lock ao digitar.' },
+  { q: 'Quem fez o Argo?', mood: 'success', a: 'O Argo é do autor do Vita. O atalho para o site dele está no painel de acesso, logo acima.' }
+];
 function initLoginMascot() {
   argoLoginMascotReact('reset');
+  const box = document.getElementById('loginMascot');
+  const fig = document.getElementById('loginMascotFigure');
+  const more = document.getElementById('loginMascotMore');
+  const chips = document.getElementById('loginMascotChips');
+  const answer = document.getElementById('loginMascotAnswer');
+  if (!box || !fig || !more || !chips || !answer || typeof ArgoMascot === 'undefined') return;
+  const size = () => (window.matchMedia && window.matchMedia('(max-width: 760px)').matches ? 90 : 120);
+  const setMood = (m) => { fig.innerHTML = ArgoMascot.icon(m, size()); };
+
+  ARGO_LOGIN_FAQ.forEach((item) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'login-mascot-chip'; b.textContent = item.q; b.setAttribute('aria-pressed', 'false');
+    b.addEventListener('click', () => {
+      chips.querySelectorAll('.login-mascot-chip').forEach((c) => c.setAttribute('aria-pressed', c === b ? 'true' : 'false'));
+      answer.textContent = item.a;
+      setMood(item.mood);
+    });
+    chips.appendChild(b);
+  });
+
+  function setOpen(on) {
+    box.classList.toggle('is-open', on);
+    more.hidden = !on;
+    fig.setAttribute('aria-expanded', on ? 'true' : 'false');
+    fig.setAttribute('aria-label', on ? 'Fechar conversa com o Argo' : 'Conversar com o Argo');
+    if (on) {
+      answer.textContent = 'Toque numa pergunta:';
+      chips.querySelectorAll('.login-mascot-chip').forEach((c) => c.setAttribute('aria-pressed', 'false'));
+      setMood('info');
+      fig.classList.remove('is-poked'); void fig.offsetWidth; fig.classList.add('is-poked');
+    } else {
+      argoLoginMascotReact('reset');
+    }
+  }
+  fig.addEventListener('click', (e) => { e.stopPropagation(); setOpen(!box.classList.contains('is-open')); });
+  document.addEventListener('click', (e) => { if (box.classList.contains('is-open') && !box.contains(e.target)) setOpen(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && box.classList.contains('is-open')) { setOpen(false); fig.focus(); } });
 }
 
 function agendaToast(msg, kind) {
