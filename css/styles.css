@@ -5436,11 +5436,21 @@
     gap: 0.85rem;
     pointer-events: none;
   }
+  /* Aberto: o Argo cresce e o balão aparece acima dele, em qualquer tela. */
+  .login-mascot.is-open { z-index: 20; flex-direction: column; align-items: flex-start; gap: 0.6rem; }
+  .login-mascot.is-open .login-mascot-bubble { display: block; order: -1; width: min(340px, calc(100vw - 32px)); background: #1b2638; box-shadow: 0 18px 40px -8px rgba(0, 0, 0, 0.6); }
+  .login-mascot.is-open .login-mascot-bubble::before { bottom: -7px; left: 2.6rem; transform: rotate(-45deg); }
+  .login-mascot.is-open .login-mascot-figure { width: 124px; height: 124px; padding: 6px; }
 
   .login-mascot-figure {
     flex: 0 0 auto;
     width: 72px;
     height: 72px;
+    border: 0;
+    cursor: pointer;
+    pointer-events: auto;
+    touch-action: manipulation;
+    transition: width 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2), height 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2), transform 0.18s ease;
     border-radius: 50%;
     /* Halo claro atrás do mascote: o casco é azul-marinho e sumia no fundo escuro. */
     background:
@@ -5450,6 +5460,23 @@
   }
 
   .login-mascot-figure svg { width: 100%; height: 100%; display: block; }
+  .login-mascot-figure:hover { transform: scale(1.08) rotate(-3deg); }
+  .login-mascot-figure:focus-visible { outline: 3px solid #FFD400; outline-offset: 3px; }
+  .login-mascot-figure.is-poked { animation: loginMascotPoke 0.45s ease; }
+  @keyframes loginMascotPoke { 0%,100% { transform: scale(1); } 35% { transform: scale(1.14) rotate(5deg); } 70% { transform: scale(0.96) rotate(-3deg); } }
+
+  .login-mascot-bubble { pointer-events: auto; }
+  .login-mascot-more { margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px dashed rgba(255, 255, 255, 0.22); }
+  .login-mascot-more[hidden] { display: none; }
+  .login-mascot-answer { margin: 0 0 0.5rem; font-size: 0.82rem; line-height: 1.5; color: #fff; font-weight: 600; }
+  .login-mascot-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .login-mascot-chip {
+    border: 1px solid rgba(255, 255, 255, 0.28); background: rgba(255, 255, 255, 0.06); color: #E2E8F0;
+    font: inherit; font-size: 0.76rem; font-weight: 600; padding: 0.35rem 0.7rem; border-radius: 999px;
+    cursor: pointer; touch-action: manipulation; transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .login-mascot-chip:hover, .login-mascot-chip[aria-pressed="true"] { background: rgba(255, 212, 0, 0.16); border-color: #FFD400; color: #fff; }
+  .login-mascot-chip:focus-visible { outline: 2px solid #FFD400; outline-offset: 2px; }
 
   .login-mascot-bubble {
     position: relative;
@@ -5521,7 +5548,7 @@
   .login-mascot-tip strong { color: #F2CB7E; }
 
   @media (prefers-reduced-motion: reduce) {
-    .login-mascot-bubble { animation: none; }
+    .login-mascot-bubble, .login-mascot-figure, .login-mascot-figure.is-poked { animation: none; transition: none; }
   }
 
   /* Telas largas (>= 1700px): sobra espaço à esquerda do cartão de login,
@@ -5536,6 +5563,7 @@
 
   @media (max-width: 760px) {
     .login-mascot-figure { width: 56px; height: 56px; padding: 3px; }
+    .login-mascot.is-open .login-mascot-figure { width: 96px; height: 96px; padding: 4px; }
     #loginScreen { padding-bottom: calc(1rem + 62px + env(safe-area-inset-bottom)); }
   }
 
