@@ -1,5 +1,167 @@
 [
   {
+    "id": "bolsa-familia-2026#1",
+    "doc": "bolsa-familia-2026",
+    "titulo": "Bolsa Família (informações 2026)",
+    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
+    "ano": 2026,
+    "referencia": "Valores do benefício em 2026",
+    "texto": "Benefício de Renda de Cidadania (BRC): R$ 142 por pessoa da família, base do cálculo. Benefício Complementar (BCO): piso mínimo garantido de R$ 600 por família, pago quando a soma dos BRCs não alcança esse valor. Benefício Primeira Infância (BPI): R$ 150 por criança de 0 a 7 anos incompletos. Benefício Variável Familiar (BVF): R$ 50 por gestante, nutriz (criança de 0 a 6 meses) ou criança/adolescente de 7 a 18 anos incompletos. Os valores somam-se conforme a composição familiar registrada no CadÚnico."
+  },
+  {
+    "id": "bolsa-familia-2026#2",
+    "doc": "bolsa-familia-2026",
+    "titulo": "Bolsa Família (informações 2026)",
+    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
+    "ano": 2026,
+    "referencia": "Exemplo de cálculo do benefício",
+    "texto": "Família com 3 pessoas soma R$ 426 de BRC (3 × R$ 142). Como não alcança R$ 600, recebe mais R$ 174 de Benefício Complementar, chegando ao piso de R$ 600. Sobre esse valor entram o BPI (R$ 150 por criança de 0 a 7 anos incompletos) e o BVF (R$ 50 por gestante, nutriz ou criança/adolescente de 7 a 18 anos incompletos), conforme a composição."
+  },
+  {
+    "id": "bolsa-familia-2026#3",
+    "doc": "bolsa-familia-2026",
+    "titulo": "Bolsa Família (informações 2026)",
+    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
+    "ano": 2026,
+    "referencia": "Regras importantes do pagamento",
+    "texto": "Pagamentos nos últimos 10 dias úteis de cada mês, exceto dezembro, que encerra antes, no dia 23. As parcelas ficam disponíveis para saque por até 180 dias. O benefício depende do cumprimento das condicionalidades de saúde (vacinação, pré-natal) e da frequência escolar. Atualize o Cadastro Único a cada 24 meses ou sempre que a família mudar (renda, endereço, filhos, escola). Movimente pelo cartão do programa, no app Caixa Tem ou em correspondentes Caixa Aqui."
+  },
+  {
+    "id": "bolsa-familia-2026#4",
+    "doc": "bolsa-familia-2026",
+    "titulo": "Bolsa Família (informações 2026)",
+    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
+    "ano": 2026,
+    "referencia": "Como participar do Bolsa Família",
+    "texto": "Três passos. 1) Cadastro Único: inscrição com dados atualizados no CRAS, apresentando CPF ou título de eleitor. 2) Critério de renda: renda mensal de, no máximo, R$ 218 por pessoa da família. 3) Seleção automatizada: o programa identifica mensalmente as novas famílias de forma automática."
+  },
+  {
+    "id": "bolsa-familia-2026#5",
+    "doc": "bolsa-familia-2026",
+    "titulo": "Bolsa Família (informações 2026)",
+    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
+    "ano": 2026,
+    "referencia": "Condicionalidades de educação",
+    "texto": "Frequência escolar mínima de 60% para crianças de 4 a 5 anos e de 75% para estudantes de 6 a 18 anos incompletos."
+  },
+  {
+    "id": "bolsa-familia-2026#6",
+    "doc": "bolsa-familia-2026",
+    "titulo": "Bolsa Família (informações 2026)",
+    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
+    "ano": 2026,
+    "referencia": "Condicionalidades de saúde",
+    "texto": "Pré-natal: acompanhamento pelo SUS das gestantes. Vacinação: menores de 7 anos. Peso e nutrição: acompanhamento dos menores de 7 anos."
+  },
+  {
+    "id": "bolsa-familia-2026#7",
+    "doc": "bolsa-familia-2026",
+    "titulo": "Bolsa Família (informações 2026)",
+    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
+    "ano": 2026,
+    "referencia": "Cronograma de repercussão 2026",
+    "texto": "Mês de repercussão, referência de educação, referência de saúde e data limite do recurso. Março: educação outubro/novembro de 2025, saúde 2º semestre de 2025, recurso até 23/04/2026. Maio: educação fevereiro/março de 2026, recurso até 25/06/2026. Julho: educação abril/maio de 2026, recurso até 27/08/2026. Setembro: educação junho/julho de 2026, saúde 1º semestre de 2026, recurso até 29/10/2026. Novembro: educação agosto/setembro de 2026, recurso até 31/01/2027."
+  },
+  {
+    "id": "bolsa-familia-2026#8",
+    "doc": "bolsa-familia-2026",
+    "titulo": "Bolsa Família (informações 2026)",
+    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
+    "ano": 2026,
+    "referencia": "Recurso on-line (Sicon)",
+    "texto": "Direito da família de contestar, no Sicon, um efeito recebido por descumprimento de condicionalidades (art. 10 da Portaria MDS nº 251/2012), por exemplo quando houve erro no registro ou quando o descumprimento decorreu de situação de vulnerabilidade que dificultou o acesso à escola ou à saúde. É cadastrado com o NIS ou nome do responsável, uma justificativa da família (até 400 caracteres) e a documentação anexada."
+  },
+  {
+    "id": "bolsa-familia-2026#9",
+    "doc": "bolsa-familia-2026",
+    "titulo": "Bolsa Família (informações 2026)",
+    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
+    "ano": 2026,
+    "referencia": "Documentação aceita no recurso on-line",
+    "texto": "Declaração ou comprovante da escola, da Unidade de Saúde, da própria família ou do CRAS, laudo da Assistência Social ou relatório técnico, ou outros documentos. Os documentos originais devem ficar arquivados no município para fins de auditoria. Depois de avaliado (deferido ou indeferido), o resultado passa a constar no histórico de condicionalidades da família no Sicon."
+  },
+  {
+    "id": "bolsa-familia-2026#10",
+    "doc": "bolsa-familia-2026",
+    "titulo": "Bolsa Família (informações 2026)",
+    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
+    "ano": 2026,
+    "referencia": "Como sacar o benefício",
+    "texto": "O valor é depositado mensalmente em conta na Caixa (poupança, poupança digital, poupança social digital, simplificada ou conta contábil). Se a família não tiver conta, a Caixa abre automaticamente uma Conta Poupança Social Digital gratuita, sem restrições de uso. Canais: agências e postos da Caixa, casas lotéricas, terminais de autoatendimento, correspondentes CAIXA Aqui e unidades itinerantes."
+  },
+  {
+    "id": "bolsa-familia-2026#11",
+    "doc": "bolsa-familia-2026",
+    "titulo": "Bolsa Família (informações 2026)",
+    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
+    "ano": 2026,
+    "referencia": "Cartão Bolsa Família e app Caixa Tem",
+    "texto": "O Cartão Bolsa Família é emitido em nome do responsável familiar identificado no CadÚnico e permite sacar, comprar no débito e pagar contas. Pelo app CAIXA Tem também dá para movimentar o saldo, pagar contas e fazer Pix."
+  },
+  {
+    "id": "bolsa-familia-2026#12",
+    "doc": "bolsa-familia-2026",
+    "titulo": "Bolsa Família (informações 2026)",
+    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
+    "ano": 2026,
+    "referencia": "Devolução voluntária de valores",
+    "texto": "Se a família recebeu valor indevido do Bolsa Família, a devolução pode ser feita voluntariamente pela Guia de Recolhimento da União (GRU), no PagTesouro do Tesouro Nacional, ou pessoalmente em qualquer agência da Caixa. Órgão arrecadador: 55000 (MDS). Unidade Gestora: 550007 (Secretaria Nacional de Renda de Cidadania). Serviço: 025144 (devolução do exercício atual) ou 025132 (exercícios anteriores). Informe CPF e nome do responsável familiar e o valor a devolver. Pague a GRU por Pix, cartão de crédito ou boleto e guarde o comprovante."
+  },
+  {
+    "id": "bolsa-familia-2026#13",
+    "doc": "bolsa-familia-2026",
+    "titulo": "Bolsa Família (informações 2026)",
+    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
+    "ano": 2026,
+    "referencia": "Canais de atendimento do Bolsa Família",
+    "texto": "Disque Social (MDS): 121. Caixa: 111. CRAS Cristiana Vicente Nunes: Rua Santo Agostinho, nº 193, Centenário, Boa Vista/RR, telefone (95) 98402-6617."
+  },
+  {
+    "id": "cadunico-mds#1",
+    "doc": "cadunico-mds",
+    "titulo": "Cadastro Único (orientações do MDS)",
+    "norma": "Material informativo do MDS sobre o Cadastro Único para Programas Sociais (gov.br/mds)",
+    "ano": 2026,
+    "referencia": "O que é o Cadastro Único",
+    "texto": "O Cadastro Único (CadÚnico) identifica e caracteriza as famílias de baixa renda de todo o país, registrando endereço, composição familiar, escolaridade, trabalho, renda e deficiência. É a porta de entrada para mais de 40 programas sociais federais, estaduais e municipais, entre eles Bolsa Família, BPC, Pé-de-Meia, Tarifa Social de Energia Elétrica, Gás do Povo e Minha Casa Minha Vida."
+  },
+  {
+    "id": "cadunico-mds#2",
+    "doc": "cadunico-mds",
+    "titulo": "Cadastro Único (orientações do MDS)",
+    "norma": "Material informativo do MDS sobre o Cadastro Único para Programas Sociais (gov.br/mds)",
+    "ano": 2026,
+    "referencia": "Quem pode se cadastrar no CadÚnico",
+    "texto": "Famílias com renda mensal de até meio salário mínimo por pessoa. Famílias com renda maior também podem se cadastrar quando o CadÚnico for exigido para acessar algum programa ou serviço. Pessoas que moram sozinhas podem se cadastrar como família unipessoal (para benefícios federais como Bolsa Família e BPC, o cadastro ou a atualização costuma exigir entrevista no domicílio). Há procedimentos diferenciados para povos indígenas, quilombolas, ribeirinhos, pescadores artesanais e pessoas em situação de rua."
+  },
+  {
+    "id": "cadunico-mds#3",
+    "doc": "cadunico-mds",
+    "titulo": "Cadastro Único (orientações do MDS)",
+    "norma": "Material informativo do MDS sobre o Cadastro Único para Programas Sociais (gov.br/mds)",
+    "ano": 2026,
+    "referencia": "Como se cadastrar no CadÚnico",
+    "texto": "Cadastro gratuito e presencial, no CRAS ou posto de cadastramento do município. O responsável familiar deve levar CPF de todas as pessoas da família (obrigatório), documento de identificação e, se houver, comprovante de residência (de preferência conta de luz). Cada pessoa só pode estar cadastrada em uma família. O CPF é a chave de identificação: sem ele, o cadastro fica \"aguardando CPF\" e pode ser excluído se não for regularizado no prazo."
+  },
+  {
+    "id": "cadunico-mds#4",
+    "doc": "cadunico-mds",
+    "titulo": "Cadastro Único (orientações do MDS)",
+    "norma": "Material informativo do MDS sobre o Cadastro Único para Programas Sociais (gov.br/mds)",
+    "ano": 2026,
+    "referencia": "Atualização cadastral do CadÚnico",
+    "texto": "Obrigatória a cada 24 meses, mesmo sem mudanças, e sempre que houver alteração de endereço, renda ou trabalho, composição familiar, escola das crianças ou saúde. A família pode ser convocada para atualizar a partir de 18 meses da última atualização. Cadastro desatualizado pode levar a bloqueio, suspensão ou cancelamento de benefícios."
+  },
+  {
+    "id": "cadunico-mds#5",
+    "doc": "cadunico-mds",
+    "titulo": "Cadastro Único (orientações do MDS)",
+    "norma": "Material informativo do MDS sobre o Cadastro Único para Programas Sociais (gov.br/mds)",
+    "ano": 2026,
+    "referencia": "Onde consultar os dados do CadÚnico",
+    "texto": "Pelo site cadunico.dataprev.gov.br ou pelo aplicativo Cadastro Único, ou pelo CRAS ou posto de atendimento do município. Avisos de atualização também podem chegar pelo app do Bolsa Família ou do Caixa Tem."
+  },
+  {
     "id": "cf-1988-extratos#1",
     "doc": "cf-1988-extratos",
     "titulo": "Constituição Federal (trechos da seguridade e assistência social)",
