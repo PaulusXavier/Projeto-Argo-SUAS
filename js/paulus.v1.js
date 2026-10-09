@@ -104,7 +104,12 @@ const SIGLAS = {
   cmas: ['conselho', 'municipal', 'assistencia', 'social'],
   cit: ['comissao', 'intergestores', 'tripartite'],
   cib: ['comissao', 'intergestores', 'bipartite'],
-  igd: ['indice', 'gestao', 'descentralizada']
+  igd: ['indice', 'gestao', 'descentralizada'],
+  brc: ['beneficio', 'renda', 'cidadania'],
+  bpi: ['beneficio', 'primeira', 'infancia'],
+  bvf: ['beneficio', 'variavel', 'familiar'],
+  bco: ['beneficio', 'complementar'],
+  sicon: ['sistema', 'condicionalidades']
 };
 
 function normalizar(s) {
