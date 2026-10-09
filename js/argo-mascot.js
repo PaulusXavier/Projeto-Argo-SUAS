@@ -62,7 +62,7 @@
   // o nome dele em sw.js (lista de arquivos) e preencha CUSTOM_IMAGE_SRC —
   // o desenho abaixo passa a ser substituído pela sua imagem.
   // ---------------------------------------------------------------------
-  var PILOT = { skin: '#C98E5F', skinDk: '#A8703F', hair: '#2B1B12', shirt: '#0F4A41', shirtLt: '#1C6A5C', capTop: '#FBF3DC' };
+  var PILOT = { skin: '#D9A474', skinDk: '#B98152', hair: '#1D1511', shirt: '#8D9096', shirtLt: '#B7BABF', capTop: '#FBF3DC', frame: '#2A2A33', lens: '#8FE9FF' };
   var CUSTOM_IMAGE_SRC = ''; // ex.: 'argo-mascote.png'
 
   function boatSVG(mood, size) {
@@ -84,11 +84,16 @@
     var INK = '#5A3118', WOOD = '#C98A4B', WOOD_DK = '#8A5128', WOOD_LT = '#E0A767',
         GOLD = '#F2B84B', GOLD_DK = '#B9801F', PARCH = '#F8EACB', PARCH_DK = '#EBD3A0',
         BLUSH = '#FF8FA3', SEA = '#6EC1E4', EYE = '#3B2314', MOUTH = '#8E3B3B';
+    // Navio Argo (casco azul-petróleo com friso dourado, escudos redondos, proa de
+    // cavalo-marinho e vela clara) + toques "tech": LEDs ciano e chip na vela.
+    var NAVY = '#0F2E3A', HULL = '#2B7380', HULL_DK = '#164755', HULL_LT = '#4BA7AE', CYAN = '#5EE6FF',
+        SHIELD = '#3FA38C', MAST = '#A9742F';
 
     // IDs únicos por chamada: dois mascotes na mesma página não podem
     // compartilhar o mesmo id de gradiente.
     mascotUid += 1;
     var hullGradId = 'argoMascot' + mascotUid + 'Hull';
+    var sailGradId = 'argoMascot' + mascotUid + 'Sail';
 
     function stroke(d, w, col) {
       return '<path d="' + d + '" fill="none" stroke="' + (col || EYE) + '" stroke-width="' + (w || 2.2) + '" stroke-linecap="round" stroke-linejoin="round"/>';
@@ -108,8 +113,18 @@
              hand(x2, y2);
     }
 
+    // Óculos aviador de armação fina (lentes levemente azuladas). Fica por cima
+    // dos olhos em todos os humores; as hastes vão até as orelhas.
+    var glasses =
+      '<path d="M31 35.6 H41 Q41.4 43.8 36 44 Q31.2 43.8 31 35.6 Z" fill="' + PILOT.lens + '" fill-opacity=".3" stroke="' + PILOT.frame + '" stroke-width="1.3" stroke-linejoin="round"/>' +
+      '<path d="M43 35.6 H53 Q52.8 43.8 48 44 Q42.6 43.8 43 35.6 Z" fill="' + PILOT.lens + '" fill-opacity=".3" stroke="' + PILOT.frame + '" stroke-width="1.3" stroke-linejoin="round"/>' +
+      '<path d="M41 36.6 Q42 35.4 43 36.6 M31 36.2 L27.8 36.8 M53 36.2 L56.2 36.8" fill="none" stroke="' + PILOT.frame + '" stroke-width="1.2" stroke-linecap="round"/>' +
+      '<path d="M33 37.6 L35.6 37 M45 37.6 L47.6 37" stroke="#fff" stroke-width=".9" stroke-linecap="round" opacity=".55"/>' +
+      '<path d="M33.2 41.6 H38 M45.2 41.6 H50" stroke="' + CYAN + '" stroke-width=".8" stroke-linecap="round" opacity=".9"/>' +
+      '<circle cx="28.4" cy="36.2" r="1.1" fill="' + CYAN + '" stroke="' + PILOT.frame + '" stroke-width=".5"/>';
+
     // ---- Rosto e pose por humor ----
-    var cheeks = ''; // sem bochechas rosadas: visual mais sobrio, menos "fofinho"
+    var cheeks = '<ellipse cx="31.4" cy="46" rx="2.8" ry="1.8" fill="' + BLUSH + '" opacity=".6"/><ellipse cx="52.6" cy="46" rx="2.8" ry="1.8" fill="' + BLUSH + '" opacity=".6"/>';
     var face, arms, extra = '';
 
     if (mood === 'success') {
@@ -135,30 +150,37 @@
       arms = arm(23, 63, 21, 61) + arm(61, 62, 53.5, 50.5);
     } else { // info
       face = '<g class="argo-mascot-look"><g class="argo-mascot-blink">' + eye(36.5, 39, 2.7) + eye(47.5, 39, 2.7) + '</g></g>' +
-        stroke('M37.4 44.4 Q42 49.2 46.6 44.4', 2.2);
+        '<path d="M36.2 46.4 Q42 53.4 47.8 46.4 Q42 47.8 36.2 46.4 Z" fill="#fff" stroke="' + EYE + '" stroke-width="1.7" stroke-linejoin="round"/>';
       arms = arm(23, 63, 21, 61) + '<g class="argo-mascot-wave">' + arm(60, 62, 70.5, 43) + '</g>';
     }
 
-    // ---- Comandante: orelhas, cabeça, cabelo, rosto, boné com Ψ ----
+    // ---- Comandante: orelhas, cabeça, cabelo, óculos, rosto, polo cinza com crachá ----
     var pilot =
-      // camisa (a parte de baixo fica escondida atrás do casco)
+      // camisa polo (a parte de baixo fica escondida atrás do casco)
       '<path d="M18 74 Q18 53 42 52 Q66 53 66 74 Z" fill="' + PILOT.shirt + '" stroke="' + INK + '" stroke-width="2.4" stroke-linejoin="round"/>' +
-      '<path d="M34 52.6 Q42 60 50 52.6" fill="none" stroke="' + PILOT.shirtLt + '" stroke-width="3" stroke-linecap="round"/>' +
       // pescoço, orelhas e cabeça
-      '<rect x="37.5" y="47" width="9" height="8" rx="3" fill="' + PILOT.skinDk + '"/>' +
-      '<ellipse cx="27" cy="39.5" rx="2.6" ry="3.6" fill="' + PILOT.skin + '" stroke="' + INK + '" stroke-width="1.6"/>' +
-      '<ellipse cx="57" cy="39.5" rx="2.6" ry="3.6" fill="' + PILOT.skin + '" stroke="' + INK + '" stroke-width="1.6"/>' +
-      '<circle cx="42" cy="37" r="15" fill="' + PILOT.skin + '" stroke="' + INK + '" stroke-width="2.4"/>' +
-      // costeletas sob o boné
-      '<path d="M27.6 30 Q26.2 38 29.4 41 Q29.8 35 31.6 29.6 Z" fill="' + PILOT.hair + '"/>' +
-      '<path d="M56.4 30 Q57.8 38 54.6 41 Q54.2 35 52.4 29.6 Z" fill="' + PILOT.hair + '"/>' +
-      cheeks + face +
-      // boné de comandante: copa clara, faixa, viseira e emblema Ψ dourado
-      '<path d="M26 30 Q25.5 11 42 10 Q58.5 11 58 30 Q42 25.5 26 30 Z" fill="' + PILOT.capTop + '" stroke="' + INK + '" stroke-width="2.4" stroke-linejoin="round"/>' +
-      '<path d="M26.2 27.6 Q42 23.4 57.8 27.6 L58 30.6 Q42 26.6 26 30.6 Z" fill="' + PILOT.shirt + '" stroke="' + INK + '" stroke-width="1.8" stroke-linejoin="round"/>' +
-      '<path d="M26.5 31 Q42 36 57.5 31 Q58.5 28.6 56 28.4 Q42 24.6 28 28.4 Q25.5 28.6 26.5 31 Z" fill="' + WOOD_DK + '" stroke="' + INK + '" stroke-width="1.8" stroke-linejoin="round"/>' +
-      '<circle cx="42" cy="18.4" r="5.4" fill="' + GOLD + '" stroke="' + INK + '" stroke-width="1.6"/>' +
-      '<path d="M39.2 14.6 Q39.2 20.6 42 20.6 Q44.8 20.6 44.8 14.6 M42 13.8 V22.6" fill="none" stroke="' + INK + '" stroke-width="1.35" stroke-linecap="round"/>' +
+      '<rect x="37" y="47" width="10" height="8" rx="3" fill="' + PILOT.skinDk + '"/>' +
+      // gola da polo, botões e cordão do crachá
+      '<path d="M32.6 53 Q36 49.6 40.4 52.4 L42 60.6 L34.2 57 Z" fill="' + PILOT.shirtLt + '" stroke="' + INK + '" stroke-width="1.5" stroke-linejoin="round"/>' +
+      '<path d="M51.4 53 Q48 49.6 43.6 52.4 L42 60.6 L49.8 57 Z" fill="' + PILOT.shirtLt + '" stroke="' + INK + '" stroke-width="1.5" stroke-linejoin="round"/>' +
+      '<path d="M42 60.6 V72" stroke="' + INK + '" stroke-width="1.2" stroke-linecap="round" opacity=".7"/>' +
+      '<circle cx="42" cy="64.6" r="1" fill="' + INK + '"/><circle cx="42" cy="68.6" r="1" fill="' + INK + '"/>' +
+      '<path d="M35 51.6 L38.8 72 M49 51.6 L45.2 72" stroke="#1E1E24" stroke-width="2.2" stroke-linecap="round" fill="none"/>' +
+      // pin Ψ dourado (psicologia) no peito
+      '<circle cx="30.6" cy="60.4" r="3" fill="' + GOLD + '" stroke="' + INK + '" stroke-width="1.1"/>' +
+      '<path d="M29.1 58.6 Q29.1 61.6 30.6 61.6 Q32.1 61.6 32.1 58.6 M30.6 58.2 V62.6" fill="none" stroke="' + INK + '" stroke-width=".9" stroke-linecap="round"/>' +
+      '<g transform="translate(42 54) scale(1.13) translate(-42 -54)">' +
+      '<ellipse cx="27.2" cy="39.5" rx="2.4" ry="3.6" fill="' + PILOT.skin + '" stroke="' + INK + '" stroke-width="1.6"/>' +
+      '<ellipse cx="56.8" cy="39.5" rx="2.4" ry="3.6" fill="' + PILOT.skin + '" stroke="' + INK + '" stroke-width="1.6"/>' +
+      // rosto um pouco alongado, com queixo firme e barba rala por baixo
+      '<path d="M27.4 34 Q27.4 21.6 42 21.6 Q56.6 21.6 56.6 34 Q56.6 44 53 48.6 Q48 53.8 42 53.8 Q36 53.8 31 48.6 Q27.4 44 27.4 34 Z" fill="' + PILOT.skin + '" stroke="' + INK + '" stroke-width="2.4" stroke-linejoin="round"/>' +
+      '<path d="M31.4 47.6 Q36 52.4 42 52.6 Q48 52.4 52.6 47.6 Q50 52.6 42 53 Q34 52.6 31.4 47.6 Z" fill="' + PILOT.skinDk + '" opacity=".38"/>' +
+      cheeks + face + glasses +
+      // cabelo preto curto, com topete volumoso caído para o lado e costeletas
+      '<path d="M26.6 36 Q23.8 15.5 41 14.6 Q59.6 14 57.4 36 Q56.6 29 53.6 26.4 Q49.6 28.4 45.4 23.6 Q42.4 28.8 36.6 27.8 Q31 27.4 29.6 36 Q28.2 37 26.6 36 Z" fill="' + PILOT.hair + '" stroke="' + INK + '" stroke-width="1.6" stroke-linejoin="round"/>' +
+      '<path d="M37.4 26.6 Q36.6 31.6 40.4 32.4 Q39 29.4 41.4 26.8 Z" fill="' + PILOT.hair + '"/>' +
+      '<path d="M32.5 20.4 Q41 16.6 51.5 21" fill="none" stroke="#5A4638" stroke-width="1.3" stroke-linecap="round" opacity=".7"/>' +
+      '</g>' +
       arms;
 
     var bob = mood === 'error' ? '' : ' argo-mascot-bob';
@@ -170,56 +192,88 @@
       '" viewBox="0 0 130 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">' +
         '<defs>' +
           '<linearGradient id="' + hullGradId + '" x1="0" y1="0" x2="0" y2="1">' +
-            '<stop offset="0%" stop-color="' + WOOD_LT + '"/>' +
-            '<stop offset="100%" stop-color="' + WOOD + '"/>' +
+            '<stop offset="0%" stop-color="' + HULL_LT + '"/>' +
+            '<stop offset="45%" stop-color="' + HULL + '"/>' +
+            '<stop offset="100%" stop-color="' + HULL_DK + '"/>' +
+          '</linearGradient>' +
+          '<linearGradient id="' + sailGradId + '" x1="0" y1="0" x2="1" y2="1">' +
+            '<stop offset="0%" stop-color="#FFF6DC"/>' +
+            '<stop offset="60%" stop-color="#F4EBD0"/>' +
+            '<stop offset="100%" stop-color="#BFE3E4"/>' +
           '</linearGradient>' +
         '</defs>' +
         // ondinha de fundo
         '<path d="M5 105 ' + wave + '" fill="none" stroke="' + SEA + '" stroke-width="3" stroke-linecap="round" opacity=".55"/>' +
         '<g class="argo-mascot-rock">' +
+        // cordame e vela grande do Argo (antes do mastro, que fica na frente)
+        '<path d="M104 8 L121 46" stroke="' + NAVY + '" stroke-width=".9" stroke-linecap="round" opacity=".55"/>' +
+        '<path d="M75 22 L116 15.6 C119 30 118 42 113 52 C105 64 92 66 82 60 C70 52 68 34 75 22 Z" fill="url(#' + sailGradId + ')" stroke="' + NAVY + '" stroke-width="2.4" stroke-linejoin="round"/>' +
+        '<path d="M96 19 Q92 44 96 65 M85 22 Q80 42 86 60" fill="none" stroke="' + NAVY + '" stroke-width="1" opacity=".16" stroke-linecap="round"/>' +
+        '<path d="M72 21.4 L118 14.6" stroke="' + NAVY + '" stroke-width="4.6" stroke-linecap="round"/>' +
+        '<path d="M72 21.4 L118 14.6" stroke="' + MAST + '" stroke-width="2.4" stroke-linecap="round"/>' +
+        // constelação Argo Navis (estrelas ligadas por linhas de luz) na vela
+        '<path d="M80 34 L87 28 L95 35 L90 42 M95 35 L100 29" fill="none" stroke="' + HULL + '" stroke-width="1" stroke-linecap="round" opacity=".6"/>' +
+        '<circle cx="80" cy="34" r="1.7" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width=".6"/><circle cx="87" cy="28" r="2.1" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width=".6"/>' +
+        '<circle cx="95" cy="35" r="2.3" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width=".6"/><circle cx="90" cy="42" r="1.6" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width=".6"/>' +
+        '<circle cx="100" cy="29" r="1.5" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width=".6"/>' +
+        // chip na cor do humor (o "remendo" virou um microchip com pinos)
+        '<path d="M86 47 v-2.4 M89 47 v-2.4 M92 47 v-2.4 M86 58 v2.4 M89 58 v2.4 M92 58 v2.4 M83.4 50 h-2.4 M83.4 53 h-2.4 M83.4 56 h-2.4 M94.6 50 h2.4 M94.6 53 h2.4 M94.6 56 h2.4" stroke="' + NAVY + '" stroke-width="1.1" stroke-linecap="round"/>' +
+        '<rect x="83.4" y="46.6" width="11.2" height="11.2" rx="2.6" fill="' + accent + '" stroke="' + NAVY + '" stroke-width="1.4"/>' +
+        '<rect x="85.6" y="48.8" width="6.8" height="6.8" rx="1.6" fill="none" stroke="#fff" stroke-width=".9" stroke-dasharray="1.4 1.4" opacity=".85"/>' +
+        '<circle cx="89" cy="52.2" r="1.3" fill="#fff"/>' +
         // mastro à direita, com bolinha dourada no topo
-        '<line x1="104" y1="68" x2="104" y2="6" stroke="' + INK + '" stroke-width="5.4" stroke-linecap="round"/>' +
-        '<line x1="104" y1="68" x2="104" y2="6" stroke="' + WOOD_DK + '" stroke-width="2.6" stroke-linecap="round"/>' +
-        // vela grande (atrás do comandante) e vela pequena, de pergaminho remendado
-        '<path d="M100 14 C82 16 70 30 72 54 Q87 59 100 55 Z" fill="' + PARCH + '" stroke="' + INK + '" stroke-width="2.4" stroke-linejoin="round"/>' +
-        '<path d="M96 28 Q84 30 77 38" fill="none" stroke="' + WOOD_DK + '" stroke-width="1.2" stroke-dasharray="2 3" stroke-linecap="round" opacity=".6"/>' +
-        '<path d="M108 18 Q119 32 121 52 L108 52 Z" fill="' + PARCH_DK + '" stroke="' + INK + '" stroke-width="2.2" stroke-linejoin="round"/>' +
-        // constelacao (tema Argo Navis) na vela pequena
-        '<path d="M112.4 27.5 L116.2 35.5 L113 44.6 M116.2 35.5 L119 46" fill="none" stroke="' + INK + '" stroke-width=".9" stroke-linecap="round" opacity=".55"/>' +
-        '<circle cx="112.4" cy="27.5" r="1.7" fill="' + GOLD_DK + '"/><circle cx="116.2" cy="35.5" r="2.2" fill="' + GOLD_DK + '"/>' +
-        '<circle cx="113" cy="44.6" r="1.5" fill="' + GOLD_DK + '"/><circle cx="119" cy="46" r="1.4" fill="' + GOLD_DK + '"/>' +
-        // remendo costurado na cor do humor
-        '<rect x="82" y="34" width="12" height="12" rx="3" fill="' + accent + '" transform="rotate(-8 88 40)"/>' +
-        '<rect x="83.6" y="35.6" width="8.8" height="8.8" rx="2" fill="none" stroke="#fff" stroke-width="1" stroke-dasharray="1.6 1.6" opacity=".85" transform="rotate(-8 88 40)"/>' +
+        '<line x1="104" y1="70" x2="104" y2="6" stroke="' + NAVY + '" stroke-width="5.4" stroke-linecap="round"/>' +
+        '<line x1="104" y1="70" x2="104" y2="6" stroke="' + MAST + '" stroke-width="2.6" stroke-linecap="round"/>' +
         // o comandante
         pilot +
-        // casco (proa/popa enroladinhas, madeira, friso dourado), deslocado para baixo
+        // casco do Argo: proa de cavalo-marinho, popa em voluta, escudos redondos e friso dourado com LED
         '<g transform="translate(0 ' + HULL_DY + ')">' +
-          '<path d="M14 60 Q2 58 4 44" fill="none" stroke="' + INK + '" stroke-width="7" stroke-linecap="round"/>' +
-          '<path d="M14 60 Q2 58 4 44" fill="none" stroke="' + WOOD + '" stroke-width="3.6" stroke-linecap="round"/>' +
-          '<path d="M116 60 Q128 58 126 44" fill="none" stroke="' + INK + '" stroke-width="7" stroke-linecap="round"/>' +
-          '<path d="M116 60 Q128 58 126 44" fill="none" stroke="' + WOOD + '" stroke-width="3.6" stroke-linecap="round"/>' +
-          '<circle cx="4" cy="42" r="3.6" fill="' + GOLD + '" stroke="' + INK + '" stroke-width="1.6"/>' +
-          '<circle cx="126" cy="42" r="3.6" fill="' + GOLD + '" stroke="' + INK + '" stroke-width="1.6"/>' +
-          '<path d="M11 60 H119 C118 82 106 99 86 101 H44 C24 99 12 82 11 60 Z" fill="url(#' + hullGradId + ')" stroke="' + INK + '" stroke-width="2.8" stroke-linejoin="round"/>' +
-          '<path d="M15 71 H115 M20 82 H110 M30 92 H100" stroke="' + WOOD_DK + '" stroke-width="1.3" stroke-linecap="round" opacity=".55"/>' +
-          '<rect x="8" y="54" width="114" height="10" rx="5" fill="' + GOLD + '" stroke="' + INK + '" stroke-width="2.4"/>' +
-          '<path d="M16 57.4 H114" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".45"/>' +
-          '<circle cx="22" cy="60" r="1.3" fill="' + GOLD_DK + '"/><circle cx="43" cy="60" r="1.3" fill="' + GOLD_DK + '"/>' +
-          '<circle cx="87" cy="60" r="1.3" fill="' + GOLD_DK + '"/><circle cx="108" cy="60" r="1.3" fill="' + GOLD_DK + '"/>' +
+          // proa: pescoço curvo + cabeça fofa com crina dourada
+          '<path d="M19 62 Q4 56 7 36 Q8 27 14 24" fill="none" stroke="' + NAVY + '" stroke-width="9.4" stroke-linecap="round"/>' +
+          '<path d="M19 62 Q4 56 7 36 Q8 27 14 24" fill="none" stroke="' + HULL + '" stroke-width="6" stroke-linecap="round"/>' +
+          '<path d="M16 60.4 Q3 54 5.6 36" fill="none" stroke="' + GOLD + '" stroke-width="1.3" stroke-linecap="round"/>' +
+          '<path d="M14 15 Q19 7 23 12.4 Q19 11.6 19.6 16 Q16 13.4 14 18 Z" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width="1" stroke-linejoin="round"/>' +
+          '<path d="M13.6 14.8 L14.6 10 L18.4 14 Z" fill="' + HULL + '" stroke="' + NAVY + '" stroke-width="1.3" stroke-linejoin="round"/>' +
+          '<ellipse cx="7.4" cy="23.4" rx="4.4" ry="3.3" fill="' + HULL_LT + '" stroke="' + NAVY + '" stroke-width="1.8"/>' +
+          '<circle cx="12.4" cy="20" r="6.4" fill="' + HULL + '" stroke="' + NAVY + '" stroke-width="2"/>' +
+          '<ellipse cx="8.2" cy="23.6" rx="3.6" ry="2.6" fill="' + HULL_LT + '"/>' +
+          '<circle cx="5.8" cy="22.8" r=".8" fill="' + NAVY + '"/>' +
+          '<circle cx="13.4" cy="18.4" r="2" fill="' + NAVY + '"/><circle cx="14" cy="17.7" r=".75" fill="#fff"/>' +
+          '<ellipse cx="14.6" cy="22.4" rx="2" ry="1.2" fill="' + BLUSH + '" opacity=".75"/>' +
+          // popa em voluta dourada
+          '<path d="M115 52 Q127 50 126 38 Q125 31 119.4 33.4 Q117.6 36.6 120.8 38" fill="none" stroke="' + NAVY + '" stroke-width="6.4" stroke-linecap="round"/>' +
+          '<path d="M115 52 Q127 50 126 38 Q125 31 119.4 33.4 Q117.6 36.6 120.8 38" fill="none" stroke="' + GOLD + '" stroke-width="3.2" stroke-linecap="round"/>' +
+          // casco
+          '<path d="M9 49 Q36 63 65 63 Q94 63 121 47 Q121 82 98 97 Q86 103 65 103 Q44 103 32 97 Q9 82 9 49 Z" fill="url(#' + hullGradId + ')" stroke="' + NAVY + '" stroke-width="2.8" stroke-linejoin="round"/>' +
+          '<path d="M13 92 Q40 98 65 98 Q90 98 117 90" fill="none" stroke="' + HULL_LT + '" stroke-width="1.2" stroke-linecap="round" opacity=".45"/>' +
+          // trilhas de circuito (luz ciano) no casco
+          '<path d="M22 91 H34 L37 88 H46 M84 88 H93 L96 91 H108" fill="none" stroke="' + CYAN + '" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round" opacity=".75"/>' +
+          '<circle cx="46" cy="88" r="1.2" fill="' + CYAN + '"/><circle cx="84" cy="88" r="1.2" fill="' + CYAN + '"/>' +
+          // escudos redondos ao longo do casco, com ferro dourado no centro
+          [30, 47.5, 65, 82.5, 100].map(function (x) {
+            return '<circle cx="' + x + '" cy="80" r="7.4" fill="' + SHIELD + '" stroke="' + NAVY + '" stroke-width="1.8"/>' +
+                   '<circle cx="' + x + '" cy="80" r="5.4" fill="none" stroke="' + GOLD + '" stroke-width="1.1"/>' +
+                   '<circle cx="' + x + '" cy="80" r="2.1" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width=".7"/>' +
+                   '<path d="M' + (x - 4.6) + ' ' + 77 + ' Q' + (x - 3.2) + ' ' + 74.6 + ' ' + (x - 0.6) + ' ' + 74.6 + '" fill="none" stroke="#fff" stroke-width="1" stroke-linecap="round" opacity=".5"/>';
+          }).join('') +
+          // friso dourado no topo do casco, com fita de LED ciano
+          '<path d="M9 49 Q36 63 65 63 Q94 63 121 47" fill="none" stroke="' + NAVY + '" stroke-width="6.6" stroke-linecap="round"/>' +
+          '<path d="M9 49 Q36 63 65 63 Q94 63 121 47" fill="none" stroke="' + GOLD + '" stroke-width="3.8" stroke-linecap="round"/>' +
+          '<path d="M14 52 Q38 65.4 65 65.4 Q92 65.4 116 50.6" fill="none" stroke="' + CYAN + '" stroke-width="1.3" stroke-linecap="round" opacity=".95"/>' +
+          '<path d="M20 50.4 Q40 60 62 60.4" fill="none" stroke="#fff" stroke-width="1.2" stroke-linecap="round" opacity=".5"/>' +
         '</g>' +
         '</g>' +
         // ondinhas da frente com espuma (vao de um lado a outro, bem de leve)
         '<g class="argo-mascot-swell">' +
-        '<path d="M5 106 ' + wave + ' C125 113 100 116 65 116 C30 116 5 113 5 106 Z" fill="' + SEA + '" stroke="' + INK + '" stroke-width="2" stroke-linejoin="round" opacity=".92"/>' +
+        '<path d="M5 106 ' + wave + ' C125 113 100 116 65 116 C30 116 5 113 5 106 Z" fill="' + SEA + '" stroke="' + NAVY + '" stroke-width="2" stroke-linejoin="round" opacity=".92"/>' +
         '<path d="M10 108.4 q5 -3 10 0 M52 108.4 q5 -3 10 0 M96 108.4 q5 -3 10 0" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>' +
         '</g>' +
         // bandeirinha de ponta, balançando
         '<g class="argo-mascot-flag">' +
-          '<path d="M106 3 H126 L121.5 8.5 L126 14 H106 Z" fill="' + accent + '" stroke="' + INK + '" stroke-width="1.8" stroke-linejoin="round"/>' +
+          '<path d="M106 3 H126 L121.5 8.5 L126 14 H106 Z" fill="' + accent + '" stroke="' + NAVY + '" stroke-width="1.8" stroke-linejoin="round"/>' +
           '<text x="114.5" y="11.6" font-size="8.5" font-weight="800" fill="#fff" text-anchor="middle" font-family="Trebuchet MS,Verdana,sans-serif">' + flagSymbol + '</text>' +
         '</g>' +
-        '<circle cx="104" cy="6" r="3.2" fill="' + GOLD + '" stroke="' + INK + '" stroke-width="1.6"/>' +
+        '<circle cx="104" cy="6" r="3.2" fill="' + GOLD + '" stroke="' + NAVY + '" stroke-width="1.6"/>' +
         extra +
       '</svg>'
     );
