@@ -10942,6 +10942,10 @@ function tradutorClear() {
   const speakTo = document.getElementById('tradutorSpeakTo');
   if (tradutorListening && tradutorRecognition) tradutorRecognition.stop();
   tradutorConvAuto = false;
+  tradutorReqId++; // descarta tradução ainda em andamento
+  const goBtn = document.getElementById('tradutorGoBtn');
+  if (goBtn) goBtn.disabled = false;
+  tradutorHideBackCheck();
   tradutorStopSpeaking();
   tradutorDetectIgnore = '';
   if (inputEl) { inputEl.value = ''; inputEl.focus(); }
@@ -10960,12 +10964,61 @@ function tradutorDecode(txt) {
   return ta.value;
 }
 
+// Siglas e nomes de programas que NÃO devem ser traduzidos ("Cadastro Único"
+// virava "Single Registry"; "CRAS" e "Bolsa Família" idem). Antes de enviar,
+// cada termo é trocado por uma ficha neutra (XQ1X, XQ2X...) e recolocado na
+// resposta. Se o serviço estragar alguma ficha, a parte é traduzida de novo
+// sem proteção — nunca se entrega uma tradução com ficha perdida.
+const TRADUTOR_KEEP_TERMS = [
+  'Benefício de Prestação Continuada', 'Cadastro Único', 'CadÚnico', 'Bolsa Família', 'Centro POP',
+  'CRAS', 'CREAS', 'CAPS', 'UBS', 'UPA', 'SUAS', 'SUS', 'BPC', 'NIS', 'CPF', 'INSS', 'PAIF', 'SCFV'
+];
+const TRADUTOR_KEEP_RE = new RegExp(
+  '(?<![\\p{L}\\p{N}])(' + TRADUTOR_KEEP_TERMS.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')(?![\\p{L}\\p{N}])', 'giu');
+// Siglas (tudo maiúsculo) só valem em maiúsculas: "nis"/"sus" existem como palavras comuns.
+const TRADUTOR_KEEP_ACRONYM = /^[A-ZÀ-Ý]{2,5}$/;
+
+function tradutorProtectTerms(text) {
+  const terms = [];
+  const protectedText = text.replace(TRADUTOR_KEEP_RE, (m) => {
+    // sigla escrita em minúsculas/misturadas (ex.: "sus", "Nis") não é protegida
+    const known = TRADUTOR_KEEP_TERMS.find(t => t.toLowerCase() === m.toLowerCase());
+    if (known && TRADUTOR_KEEP_ACRONYM.test(known) && m !== known) return m;
+    let i = terms.indexOf(m);
+    if (i < 0) { terms.push(m); i = terms.length - 1; }
+    return 'XQ' + (i + 1) + 'X';
+  });
+  return { text: protectedText, terms };
+}
+
+// Devolve o texto com os termos de volta, ou null se alguma ficha se perdeu.
+function tradutorRestoreTerms(translated, terms) {
+  let out = translated;
+  for (let i = 0; i < terms.length; i++) {
+    const re = new RegExp('X\\s?Q\\s?' + (i + 1) + '\\s?X', 'gi');
+    if (!re.test(out)) return null;
+    out = out.replace(new RegExp('X\\s?Q\\s?' + (i + 1) + '\\s?X', 'gi'), () => terms[i]);
+  }
+  return /X\s?Q\s?\d+\s?X/i.test(out) ? null : out;
+}
+
+// Abreviações que terminam em ponto sem encerrar a frase ("Sr. Silva").
+const TRADUTOR_ABBREV_RE = /(?:^|[\s(])(?:sr|sra|srs|sras|srta|dr|dra|prof|profa|av|n|nº|art|tel|cel|ex|exs|etc|ltda|obs|ref|cap|cep|apt|apto|bl|jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez|mr|mrs|ms|st|vs|no|dpto|dept)\.\s*$/i;
+
 // Divide por frase em partes de até `max` caracteres (e por palavra, no caso
-// raro de uma única frase maior que o limite).
+// raro de uma única frase maior que o limite). Não corta em "3.5", "Sr. Silva"
+// nem em "Dra. Ana".
 function tradutorSplitText(text, max) {
-  const clean = String(text).replace(/\s+/g, ' ').trim();
+  const clean = String(text).replace(/[ \t]+/g, ' ').trim();
   if (clean.length <= max) return [clean];
-  const sentences = clean.match(/[^.!?…]+[.!?…]*\s*/g) || [clean];
+  const raw = clean.match(/[^.!?…]+[.!?…]*\s*/g) || [clean];
+  const sentences = [];
+  raw.forEach(s => {
+    const prev = sentences[sentences.length - 1];
+    const glued = prev !== undefined && /[.!?…]$/.test(prev) && !/\s$/.test(prev); // "3.5", "www.site"
+    if (prev !== undefined && (glued || TRADUTOR_ABBREV_RE.test(prev.trim()))) sentences[sentences.length - 1] = prev + s;
+    else sentences.push(s);
+  });
   const chunks = [];
   let cur = '';
   const flush = () => { if (cur.trim()) chunks.push(cur.trim()); cur = ''; };
@@ -10987,35 +11040,81 @@ function tradutorSplitText(text, max) {
   return chunks;
 }
 
-async function tradutorFetchChunk(chunk, from, to) {
-  const key = `${from}|${to}|${chunk}`;
-  const hit = tradutorCache.get(key);
-  if (hit) return hit;
-  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=${from}|${to}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('network');
-  const data = await res.json();
+const TRADUTOR_TIMEOUT_MS = 12000; // sem isso, rede ruim deixava "Traduzindo..." para sempre
+let tradutorReqId = 0;             // só o pedido mais recente pode escrever na tela
+
+// GET com limite de tempo e uma nova tentativa para falhas passageiras
+// (rede móvel oscilando). Cota esgotada (429) não é repetida.
+async function tradutorRequest(url) {
+  let lastErr;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), TRADUTOR_TIMEOUT_MS);
+    try {
+      const res = await fetch(url, { signal: ctrl.signal });
+      if (res.status === 429) throw new Error('quota');
+      if (!res.ok) throw new Error('network');
+      return await res.json();
+    } catch (e) {
+      lastErr = (e && e.name === 'AbortError') ? new Error('timeout') : e;
+      if (lastErr.message === 'quota') throw lastErr;
+      if (attempt === 0) await new Promise(r => setTimeout(r, 700));
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw lastErr;
+}
+
+async function tradutorCallApi(text, from, to) {
+  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}`;
+  const data = await tradutorRequest(url);
   const translated = data && data.responseData && data.responseData.translatedText;
   const status = data && data.responseStatus ? Number(data.responseStatus) : 200;
   // O MyMemory às vezes devolve status 200 com o aviso de cota esgotada
   // dentro do próprio texto: sem este tratamento, o aviso em inglês seria
   // mostrado como se fosse a tradução.
-  if (translated && /MYMEMORY WARNING/i.test(translated)) throw new Error('quota');
+  if ((translated && /MYMEMORY WARNING/i.test(translated)) || status === 429 ||
+      /ALL AVAILABLE FREE TRANSLATIONS/i.test(String(data && data.responseDetails || ''))) throw new Error('quota');
   if (!translated || status >= 400) throw new Error('bad response');
-  const clean = tradutorDecode(translated);
-  if (tradutorCache.size >= TRADUTOR_CACHE_MAX) tradutorCache.delete(tradutorCache.keys().next().value);
-  tradutorCache.set(key, clean);
-  return clean;
+  return tradutorDecode(translated);
 }
 
-async function tradutorFetchText(text, from, to, onProgress) {
-  const chunks = tradutorSplitText(text, TRADUTOR_CHUNK_CHARS);
-  const parts = [];
-  for (let i = 0; i < chunks.length; i++) {
-    if (onProgress && chunks.length > 1) onProgress(i + 1, chunks.length);
-    parts.push(await tradutorFetchChunk(chunks[i], from, to));
+async function tradutorFetchChunk(chunk, from, to) {
+  const key = `${from}|${to}|${chunk}`;
+  const hit = tradutorCache.get(key);
+  if (hit) {
+    tradutorCache.delete(key); tradutorCache.set(key, hit); // mantém os mais recentes (LRU)
+    return hit;
   }
-  return parts.join(' ');
+  let result = null;
+  const prot = tradutorProtectTerms(chunk);
+  if (prot.terms.length) {
+    result = tradutorRestoreTerms(await tradutorCallApi(prot.text, from, to), prot.terms);
+  }
+  if (result === null) result = await tradutorCallApi(chunk, from, to); // sem termos, ou ficha perdida
+  if (tradutorCache.size >= TRADUTOR_CACHE_MAX) tradutorCache.delete(tradutorCache.keys().next().value);
+  tradutorCache.set(key, result);
+  return result;
+}
+
+// Traduz linha por linha: quebras de linha e parágrafos do texto original
+// (listas, endereços, bilhetes) são mantidos na tradução.
+async function tradutorFetchText(text, from, to, onProgress) {
+  const lines = String(text).split(/\r?\n/);
+  const plan = lines.map(l => (l.trim() ? tradutorSplitText(l, TRADUTOR_CHUNK_CHARS) : []));
+  const total = plan.reduce((n, c) => n + c.length, 0);
+  let done = 0;
+  const out = [];
+  for (const chunks of plan) {
+    const parts = [];
+    for (const c of chunks) {
+      if (onProgress && total > 1) onProgress(++done, total);
+      parts.push(await tradutorFetchChunk(c, from, to));
+    }
+    out.push(parts.join(' '));
+  }
+  return out.join('\n');
 }
 
 async function tradutorTranslate() {
@@ -11035,6 +11134,9 @@ async function tradutorTranslate() {
     return;
   }
   tradutorHideBackCheck();
+  tradutorReqId++; // qualquer pedido anterior ainda em andamento fica obsoleto
+  const goBtn = document.getElementById('tradutorGoBtn');
+  if (goBtn) goBtn.disabled = false;
   if (from === to) {
     output.value = text;
     tradutorSetStatus('Os idiomas são iguais — nada para traduzir.', '');
@@ -11061,24 +11163,30 @@ async function tradutorTranslate() {
     return;
   }
 
+  const reqId = ++tradutorReqId; // um pedido novo (ou "Limpar") invalida o que ainda está em andamento
+  const stale = () => reqId !== tradutorReqId;
   btn.disabled = true;
   tradutorSetStatus('Traduzindo...', '');
   try {
     const translated = await tradutorFetchText(text, from, to,
-      (i, n) => tradutorSetStatus(`Traduzindo parte ${i} de ${n}...`, ''));
+      (i, n) => { if (!stale()) tradutorSetStatus(`Traduzindo parte ${i} de ${n}...`, ''); });
+    if (stale()) return;
     output.value = translated;
     tradutorSetStatus('Tradução concluída.', 'success');
     tradutorLogTurn(from, to, text, translated);
     tradutorMaybeAutoSpeak();
   } catch (e) {
+    if (stale()) return;
     tradutorConvAuto = false;
     if (e && e.message === 'quota') {
       tradutorSetStatus('O serviço de tradução gratuito atingiu o limite diário de uso. Use as frases padrão (funcionam sem o serviço) ou tente mais tarde.', 'error');
+    } else if (e && e.message === 'timeout') {
+      tradutorSetStatus('O serviço de tradução demorou demais para responder. Tente novamente em instantes.', 'error');
     } else {
       tradutorSetStatus('Não foi possível traduzir agora. Verifique a internet e tente novamente.', 'error');
     }
   } finally {
-    btn.disabled = false;
+    if (!stale()) { btn.disabled = false; tradutorSyncOutputButtons(); }
   }
 }
 
@@ -11102,17 +11210,22 @@ async function tradutorBackCheck() {
     return;
   }
   if (btn) btn.disabled = true;
+  const reqId = tradutorReqId;
   tradutorSetStatus('Conferindo...', '');
   try {
     const back = await tradutorFetchText(text, to, from);
+    if (reqId !== tradutorReqId) return; // a tradução mudou enquanto conferia
     box.hidden = false;
     box.innerHTML = `<div><strong>Retradução para ${escapeHtml(TRADUTOR_LANGS[from].label)} (conferência):</strong> ${escapeHtml(back)}</div>
       <small>Serve só para checar o sentido: é outra tradução automática e pode trocar palavras. Na dúvida, simplifique a frase.</small>`;
     tradutorSetStatus('Conferência pronta.', 'success');
   } catch (e) {
+    if (reqId !== tradutorReqId) return;
     tradutorSetStatus(e && e.message === 'quota'
       ? 'O serviço de tradução gratuito atingiu o limite diário de uso.'
-      : 'Não foi possível conferir agora. Tente novamente.', 'error');
+      : e && e.message === 'timeout'
+        ? 'O serviço demorou demais para responder. Tente novamente.'
+        : 'Não foi possível conferir agora. Tente novamente.', 'error');
   } finally {
     tradutorSyncOutputButtons();
   }
@@ -11264,6 +11377,21 @@ function tradutorPickVoice(langCode) {
   return voices.find(x => norm(x).startsWith(langCode)) || null;
 }
 
+// Siglas que se lêem letra por letra mesmo (CPF, RG...). Todo o resto escrito
+// em MAIÚSCULAS (ex.: nomes como "JOSÉ GARCÍA", "MARÍA") é convertido para
+// "José García" antes de falar: os motores de voz soletram palavra em caixa
+// alta, letra por letra, em vez de pronunciá-la como nome.
+const TRADUTOR_SPELLED = new Set(['CPF', 'RG', 'CNH', 'CEP', 'INSS', 'BPC', 'UBS', 'PBF', 'CNPJ', 'DNI', 'NIE', 'ONG', 'USA', 'EUA']);
+function tradutorPrepareSpeech(text) {
+  return String(text)
+    .replace(/(?<![\p{L}\p{N}])\p{Lu}[\p{Lu}'’-]*\p{Lu}(?![\p{L}\p{N}])/gu, (w) => {
+      const bare = w.replace(/[^\p{L}]/gu, '');
+      if (TRADUTOR_SPELLED.has(bare)) return w;
+      return w.toLowerCase().replace(/(^|[-'’])(\p{L})/gu, (_, a, b) => a + b.toUpperCase());
+    })
+    .replace(/\s*\n+\s*/g, '. ').replace(/\.{2,}/g, '.'); // quebra de linha vira pausa, não palavra emendada
+}
+
 async function tradutorSpeakText(text, langCode, btnId) {
   if (!('speechSynthesis' in window)) {
     tradutorSetStatus('Este navegador não tem suporte a voz.', 'error');
@@ -11275,10 +11403,14 @@ async function tradutorSpeakText(text, langCode, btnId) {
   if (myToken !== tradutorSpeakToken) return; // a pessoa tocou em Parar enquanto as vozes carregavam
   const slow = document.getElementById('tradutorSlowSpeech');
   window.speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance(text);
+  const utter = new SpeechSynthesisUtterance(tradutorPrepareSpeech(text));
   const voice = tradutorPickVoice(langCode);
   if (voice) { utter.voice = voice; utter.lang = voice.lang; }
-  else utter.lang = TRADUTOR_LANGS[langCode].voice;
+  else {
+    utter.lang = TRADUTOR_LANGS[langCode].voice;
+    // Sem voz do idioma instalada o aparelho usa outra e costuma soletrar nomes.
+    tradutorSetStatus(`Este aparelho não tem voz em ${TRADUTOR_LANGS[langCode].label.toLowerCase()} instalada: nomes podem sair soletrados. Instale a voz nas configurações de texto-para-fala do aparelho.`, 'warn');
+  }
   utter.rate = (slow && slow.checked) ? 0.7 : 1;
   utter.onstart = () => { if (myToken === tradutorSpeakToken) tradutorSpeakUi(btnId || null); };
   utter.onend = () => { if (myToken === tradutorSpeakToken) tradutorSpeakUi(null); };
@@ -11457,6 +11589,9 @@ function tradutorConvoStart(who) {
   fromSel.value = who === 'pt' ? 'pt' : foreign;
   toSel.value = who === 'pt' ? foreign : 'pt';
   tradutorSyncSpeakLabels();
+  tradutorReqId++;
+  const goBtn = document.getElementById('tradutorGoBtn');
+  if (goBtn) goBtn.disabled = false;
   inputEl.value = '';
   outputEl.value = '';
   tradutorDetectIgnore = '';
@@ -11948,16 +12083,12 @@ const NEWS_FETCHERS = [
 // podia travar a aba de notícias por muito tempo, já que fetch() sozinho não
 // tem timeout embutido: ele só falha se a rede devolver um erro explícito.
 const NEWS_FETCH_TIMEOUT_MS = 8000;
-
-async function newsFetchWithTimeout(url) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), NEWS_FETCH_TIMEOUT_MS);
-  try {
-    return await fetch(url, { cache: 'no-store', signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
-}
+// Se o repassador da vez não respondeu em tanto tempo, o próximo já começa em
+// paralelo (sem esperar o timeout inteiro). O primeiro que trouxer a lista vale.
+const NEWS_HEDGE_MS = 3000;
+// Cada ministério mantém ao menos tantas publicações na lista, mesmo que outro
+// publique muito mais (senão o MDS empurraria MEC e Saúde para fora do limite).
+const NEWS_MIN_PER_SOURCE = 25;
 
 // Lembra, por endereço de feed, qual repassador funcionou da última vez.
 // Sem isso, toda atualização repetia a tentativa direta (falha quase
@@ -12036,6 +12167,21 @@ function newsCleanText(raw) {
   return txt.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+// Endereço "canônico": sempre https, sem #âncora e sem parâmetros de rastreio
+// (utm_*). Evita a mesma matéria aparecer duas vezes por variar só no link —
+// e perder o "lida"/"salva" quando o link muda de forma.
+function newsCanonLink(url) {
+  const raw = String(url || '').trim();
+  if (!raw) return '';
+  try {
+    const u = new URL(raw);
+    if (u.protocol === 'http:') u.protocol = 'https:';
+    u.hash = '';
+    Array.from(u.searchParams.keys()).filter(k => /^utm_|^fbclid$|^gclid$/i.test(k)).forEach(k => u.searchParams.delete(k));
+    return u.toString();
+  } catch (e) { return raw; }
+}
+
 function newsParseFeed(xmlText, sourceId) {
   const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
   if (doc.getElementsByTagName('parsererror').length) throw new Error('XML inválido');
@@ -12044,7 +12190,7 @@ function newsParseFeed(xmlText, sourceId) {
   return nodes
     .map(item => ({
       title: newsField(item, 'title'),
-      link: newsField(item, 'link') || item.getAttribute('rdf:about') || '',
+      link: newsCanonLink(newsField(item, 'link') || item.getAttribute('rdf:about') || ''),
       desc: newsCleanText(newsField(item, 'description')),
       date: newsField(item, 'date') || newsField(item, 'pubDate'),
       type: newsField(item, 'type'),
@@ -12057,27 +12203,56 @@ function newsParseFeed(xmlText, sourceId) {
     .slice(0, NEWS_MAX_PER_FEED);
 }
 
-// Busca UM feed, tentando o acesso direto e depois os repassadores (o que
-// funcionou da última vez para este feed entra primeiro na fila).
-async function newsFetchOne(feedUrl, sourceId) {
-  let lastError = null;
-  for (const fetcher of newsOrderedFetchers(feedUrl)) {
-    try {
-      const resp = await newsFetchWithTimeout(fetcher.build(feedUrl));
-      if (!resp.ok) throw new Error('HTTP ' + resp.status + ' (' + fetcher.label + ')');
-      const items = newsParseFeed(await resp.text(), sourceId);
-      if (items.length) {
-        newsRememberFetcher(feedUrl, fetcher.label);
-        return items;
-      }
-      throw new Error('feed vazio (' + fetcher.label + ')');
-    } catch (e) {
-      lastError = e && e.name === 'AbortError'
-        ? new Error('tempo esgotado (' + fetcher.label + ')')
-        : e;
-    }
-  }
-  throw lastError || new Error('falha ao buscar o feed');
+// Busca UM feed. Começa pelo que funcionou da última vez; se ele falhar (ou
+// demorar mais que NEWS_HEDGE_MS), o próximo entra em paralelo. O primeiro que
+// devolver itens vence e os demais são cancelados. Antes era um de cada vez,
+// e com repassadores fora do ar a espera passava de 30 segundos por feed.
+function newsFetchOne(feedUrl, sourceId) {
+  const fetchers = newsOrderedFetchers(feedUrl);
+  return new Promise((resolve, reject) => {
+    let started = 0, failed = 0, done = false, lastError = null;
+    const controllers = [];
+    const timers = [];
+
+    const finish = (fn, value) => {
+      if (done) return;
+      done = true;
+      timers.forEach(clearTimeout);
+      controllers.forEach(c => { try { c.abort(); } catch (e) { /* já encerrada */ } });
+      fn(value);
+    };
+
+    const launch = () => {
+      if (done || started >= fetchers.length) return;
+      const fetcher = fetchers[started++];
+      const ctrl = new AbortController();
+      controllers.push(ctrl);
+      let timedOut = false;
+      const killer = setTimeout(() => { timedOut = true; ctrl.abort(); }, NEWS_FETCH_TIMEOUT_MS);
+      timers.push(killer);
+      if (started < fetchers.length) timers.push(setTimeout(launch, NEWS_HEDGE_MS));
+
+      (async () => {
+        try {
+          const resp = await fetch(fetcher.build(feedUrl), { cache: 'no-store', signal: ctrl.signal });
+          if (!resp.ok) throw new Error('HTTP ' + resp.status + ' (' + fetcher.label + ')');
+          const items = newsParseFeed(await resp.text(), sourceId);
+          if (!items.length) throw new Error('feed vazio (' + fetcher.label + ')');
+          newsRememberFetcher(feedUrl, fetcher.label);
+          finish(resolve, items);
+        } catch (e) {
+          if (done) return;
+          lastError = timedOut ? new Error('tempo esgotado (' + fetcher.label + ')') : e;
+          failed++;
+          clearTimeout(killer);
+          if (failed >= fetchers.length) finish(reject, lastError || new Error('falha ao buscar o feed'));
+          else launch(); // falhou: não espera o intervalo, já tenta o próximo
+        }
+      })();
+    };
+
+    launch();
+  });
 }
 
 // Busca os feeds de um único ministério (principal + reforço), juntando e
@@ -12100,7 +12275,7 @@ async function newsFetchSource(source) {
 // mais novo para o mais antigo. Só dá erro se NENHUM ministério responder;
 // se só alguns falharem, a lista sai só com os que responderam e o aviso
 // deixa claro quais faltaram.
-async function newsFetchFeed() {
+async function newsFetchFeed(previousItems) {
   const results = await Promise.allSettled(NEWS_SOURCES.map(newsFetchSource));
   const merged = new Map();
   const failedSources = [];
@@ -12118,11 +12293,26 @@ async function newsFetchFeed() {
     throw (firstError && firstError.reason) || new Error('falha ao buscar os feeds');
   }
 
-  const items = Array.from(merged.values())
-    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
-    .slice(0, NEWS_MAX_ITEMS);
+  // Ministério que não respondeu agora continua aparecendo com o que já se
+  // tinha dele (antes as publicações dele sumiam da lista até a próxima
+  // atualização bem-sucedida).
+  let kept = 0;
+  (previousItems || []).forEach(it => {
+    const src = NEWS_SOURCES.find(s => s.id === it.source);
+    if (src && failedSources.includes(src.label) && !merged.has(it.link)) { merged.set(it.link, it); kept++; }
+  });
 
-  return { items, failedSources };
+  const byDate = (a, b) => new Date(b.date || 0) - new Date(a.date || 0);
+  const sorted = Array.from(merged.values()).sort(byDate);
+  const picked = new Set(sorted.slice(0, NEWS_MAX_ITEMS));
+  // Garante um mínimo por ministério além do corte geral.
+  NEWS_SOURCES.forEach(src => {
+    const mine = sorted.filter(it => it.source === src.id);
+    mine.slice(0, NEWS_MIN_PER_SOURCE).forEach(it => picked.add(it));
+  });
+  const items = sorted.filter(it => picked.has(it));
+
+  return { items, failedSources, kept };
 }
 
 function newsFormatDate(iso) {
@@ -12828,7 +13018,7 @@ async function refreshNews() {
   if (!newsState.items.length) renderNewsList(); // sem lista salva ainda: mostra o skeleton
 
   try {
-    const { items, failedSources } = await newsFetchFeed();
+    const { items, failedSources, kept } = await newsFetchFeed(newsState.items);
     const before = new Set(newsState.items.map(i => i.link));
     const added = newsState.items.length ? items.filter(i => !before.has(i.link)).length : 0;
     newsState.items = items;
@@ -12838,7 +13028,7 @@ async function refreshNews() {
     let base = `${items.length} publicações · atualizado em ${escapeHtml(newsFormatUpdated(newsState.ts))}`;
     if (added) base += ` · ${added} nova${added > 1 ? 's' : ''}`;
     newsSetStatus(failedSources.length
-      ? `${base} — não foi possível buscar: ${escapeHtml(failedSources.join(', '))}. <button type="button" class="noticias-retry" onclick="refreshNews()">Tentar de novo</button>`
+      ? `${base} — não foi possível atualizar: ${escapeHtml(failedSources.join(', '))}${kept ? ' (mantidas as publicações anteriores)' : ''}. <button type="button" class="noticias-retry" onclick="refreshNews()">Tentar de novo</button>`
       : base);
   } catch (e) {
     if (newsState.items.length) {
