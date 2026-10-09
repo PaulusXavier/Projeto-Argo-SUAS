@@ -170,12 +170,17 @@
 
   <!-- Argo no canto inferior esquerdo da tela: apresenta o app e recomenda o
    site do autor (Vita), cujo atalho fica no painel de acesso (.login-vita). -->
-  <div class="login-mascot" id="loginMascot" aria-hidden="true">
-    <div class="login-mascot-figure" id="loginMascotFigure"></div>
-    <div class="login-mascot-bubble">
+  <div class="login-mascot" id="loginMascot">
+    <button type="button" class="login-mascot-figure" id="loginMascotFigure" aria-expanded="false"
+            aria-controls="loginMascotBubble" aria-label="Conversar com o Argo" title="Clique no Argo"></button>
+    <div class="login-mascot-bubble" id="loginMascotBubble">
       <p class="login-mascot-line" id="loginMascotLine"><strong id="loginMascotHello">Olá!</strong> Eu sou o Argo, seu guia a bordo.</p>
       <p class="login-mascot-text">Levo você até a Rede de Políticas Públicas de Roraima: equipamentos, ficha de encaminhamento, notícias e a Central de PDF — até sem internet.</p>
       <p class="login-mascot-tip"><span aria-hidden="true">Ψ</span> Quer conhecer quem está no leme? Visite o site do autor, o <strong>Vita</strong>. O atalho está no painel de acesso.</p>
+      <div class="login-mascot-more" id="loginMascotMore" hidden>
+        <p class="login-mascot-answer" id="loginMascotAnswer" role="status" aria-live="polite">Toque numa pergunta:</p>
+        <div class="login-mascot-chips" id="loginMascotChips"></div>
+      </div>
     </div>
   </div>
 </div>
