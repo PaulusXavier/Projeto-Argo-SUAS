@@ -6469,6 +6469,7 @@ function toolsExtrasHtml() {
         <button type="button" class="btn-tech btn-secondary" id="shNis">Conferir NIS</button>
         <button type="button" class="btn-tech btn-secondary" id="shCpf">Conferir CPF</button>
         <button type="button" class="btn-tech btn-secondary" id="shDate">Conferir datas</button>
+        <button type="button" class="btn-tech btn-primary" id="shToAcomp" title="Abre esta planilha no cartão Acompanhamento de famílias, para editar, marcar retornos e baixar de novo">Levar para o acompanhamento</button>
       </div>
       <div class="tools-row">
         <label class="tools-lbl">Contar linhas em que a coluna<select id="shMode" class="tools-input">
@@ -6968,6 +6969,7 @@ function renderToolsCard() {
   const presets = [5, 10, 15, 30, 45, 60].map(m => '<button type="button" class="tools-chip" data-min="' + m + '">' + m + ' min</button>').join('');
   return '<div id="toolsRoot" class="tools-wrap">'
     + toolsNavHtml()
+    + toolsAcompHtml()
     // ---------- Relógio / cronômetro / temporizador
     + '<section class="tech-card tools-card" aria-label="Relógio, cronômetro e temporizador"><h2>Relógio</h2>'
     + '<div class="tools-tabs" role="tablist" aria-label="Relógio, cronômetro e temporizador">' + tabs + '</div>'
@@ -6979,7 +6981,9 @@ function renderToolsCard() {
     +     '<div class="tools-clock-text"><div id="toolsClock" class="tools-time" role="timer" aria-live="off">--:--:--</div><div id="toolsDate" class="tools-date"></div>'
     +       '<div class="tools-hint">Horário de Boa Vista (RR)</div>'
     +       '<div class="tools-hint tools-br"><label for="toolsZoneSel" class="sr-only">Comparar com outro fuso</label><select id="toolsZoneSel" class="tools-select">' + zoneOpts + '</select><strong id="toolsBr">--:--</strong></div></div>'
-    +   '</div></div>'
+    +   '</div>'
+    +   '<div id="toolsPend" class="ac-pend" hidden><span class="ac-pend-txt"></span> <button type="button" class="tools-link-btn">Ver na planilha</button></div>'
+    +   '</div>'
     + '<div class="tools-pane" role="tabpanel" id="toolPane-sw" aria-labelledby="toolTab-sw" hidden>'
     +   '<div id="toolSwDisp" class="tools-time tools-time-sm" role="timer" aria-live="off">00:00,00</div>'
     +   '<div class="tools-row"><button type="button" class="btn-tech btn-primary" id="toolSwGo">Iniciar</button>'
@@ -7028,7 +7032,7 @@ function renderToolsCard() {
     +   '<ul id="toolNoteList" class="notes-list" aria-label="Suas notas"></ul></div>'
     +   '<div class="notes-main"><textarea id="toolPad" class="tools-pad" aria-label="Texto da nota" placeholder="Escreva aqui. O texto é salvo automaticamente, cifrado, neste aparelho. Dica: Ctrl+S salva na hora."></textarea>'
     +   '<div class="tools-bar"><span id="toolPadInfo" class="tools-hint" role="status"></span>'
-    +   '<select id="toolPadTpl" class="tools-select" aria-label="Criar nota a partir de um modelo"><option value="">Modelo…</option><option value="atend">Atendimento</option><option value="visita">Visita domiciliar</option><option value="tel">Contato por telefone</option><option value="reuniao">Reunião de equipe</option><option value="dia">Tarefas do dia</option></select>'
+    +   '<select id="toolPadTpl" class="tools-select" aria-label="Criar nota a partir de um modelo"><option value="">Modelo…</option><option value="atend">Atendimento</option><option value="visita">Visita domiciliar</option><option value="tel">Contato por telefone</option><option value="fam">Acompanhamento familiar</option><option value="reuniao">Reunião de equipe</option><option value="dia">Tarefas do dia</option></select>'
     +   '<button type="button" class="btn-tech btn-secondary" id="toolPadStamp" title="Inserir data e hora no cursor">Data/hora</button>'
     +   '<button type="button" class="btn-tech btn-secondary" id="toolPadTask" title="Transformar a linha (ou as linhas selecionadas) em tarefas. Enter continua a lista; Ctrl+Enter marca ou desmarca.">☐ Lista</button>'
     +   '<button type="button" class="btn-tech btn-secondary" id="toolPadPin" aria-pressed="false">Fixar</button>'
@@ -7054,7 +7058,7 @@ const TOOLS_PINS_KEY = 'argo_tools_pins_v1';
 const TOOLS_FOLD_KEY = 'argo_tools_fold_v1';
 const TOOLS_CATS = [
   ['all', 'Todas'], ['fav', '★ Favoritas'], ['tempo', 'Tempo'], ['calculo', 'Cálculos'],
-  ['atend', 'Atendimento'], ['dados', 'Dados'], ['notas', 'Notas']
+  ['familias', 'Famílias'], ['atend', 'Atendimento'], ['dados', 'Dados'], ['notas', 'Notas']
 ];
 // A chave é o aria-label de cada cartão (é por ele que a barra encontra o cartão).
 const TOOLS_CATALOG = {
@@ -7071,7 +7075,8 @@ const TOOLS_CATALOG = {
   'Valor por extenso': { id: 'extenso', cat: 'calculo', kw: 'reais dinheiro recibo oficio declaracao escrever numero texto moeda centavos beneficio eventual' },
   'Link de WhatsApp': { id: 'whatsapp', cat: 'atend', kw: 'wa.me zap whatsapp telefone celular contato mensagem link ddd conversa' },
   'Formatar texto': { id: 'texto', cat: 'dados', kw: 'maiuscula minuscula nome proprio acento acentos espacos limpar caracteres palavras contar padronizar' },
-  'Analisador de planilha': { id: 'planilha', cat: 'dados', kw: 'csv excel xlsx xls duplicados repetidos base familias nis coluna contar' },
+  'Acompanhamento de famílias': { id: 'acomp', cat: 'familias', kw: 'planilha acompanhamento familias retorno vencido visita atendimento pendencias prazo situacao paif paefi cras bairro tecnico nis per capita xlsx csv importar base lista' },
+  'Analisador de planilha': { id: 'planilha', cat: 'familias', kw: 'csv excel xlsx xls duplicados repetidos base familias nis coluna contar' },
   'Bloco de notas': { id: 'notas', cat: 'notas', kw: 'anotacao nota texto pdf txt lista tarefas checklist fixar' }
 };
 const toolsNorm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -7219,6 +7224,7 @@ function initToolsPanel() {
   initToolsDocs();
   initToolsMore();
   initSheetAnalyzer();
+  initAcomp();
   initToolsNav();
 
   // ---- Abas do cartão do relógio
@@ -7709,6 +7715,7 @@ function initToolsPanel() {
     visita: () => 'Visita domiciliar — ' + stampNow() + '\nFamília (iniciais ou código): \nObjetivo da visita: \nSituação observada: \nOrientações dadas: \nCombinados: \nPróxima ação: \n',
     tel: () => 'Contato por telefone — ' + stampNow() + '\nQuem ligou / quem atendeu (iniciais): \nAssunto: \nOrientação dada: \nPendências: \n☐ ',
     reuniao: () => 'Reunião de equipe — ' + stampNow() + '\nParticipantes: \nPauta: \n- \nDecisões: \nTarefas:\n☐ ',
+    fam: () => 'Acompanhamento familiar — \nSituação: \nÚltimo atendimento: \nRetorno previsto: \n\n' + stampNow() + ' — ',
     dia: () => 'Tarefas — ' + stampNow().slice(0, 10) + '\n☐ '
   };
   $('toolPadTpl').addEventListener('change', e => {
@@ -7724,6 +7731,25 @@ function initToolsPanel() {
     const pos = at > -1 ? at + 2 : pad.value.length;
     try { pad.setSelectionRange(pos, pos); } catch (err) { /* ignora */ }
   });
+
+  // ---- Ligação com o Acompanhamento de famílias: abre a nota da família (primeira linha = título) ou cria
+  // uma nova; numa nota que já existe, acrescenta uma entrada datada no fim, para formar o histórico.
+  TOOLS_STATE.famNote = (head, text) => {
+    if (saveT) saveNow();
+    search.value = '';
+    const found = data.notes.find(x => x.x.split('\n', 1)[0].trim() === head);
+    if (found) {
+      openNote(found.id);
+      if (!/—\s*$/.test(found.x)) found.x = found.x.replace(/\s+$/, '') + '\n\n' + stampNow() + ' — '; // não empilha entradas vazias
+    } else {
+      let n = current();
+      if (n.x.trim()) { n = { id: newId(), x: '', u: Date.now() }; data.notes.push(n); data.active = n.id; }
+      n.x = text + '\n' + stampNow() + ' — ';
+    }
+    const n = current(); n.u = Date.now(); pad.value = n.x;
+    saveNow(); paintPin(); pad.focus();
+    try { pad.setSelectionRange(pad.value.length, pad.value.length); pad.scrollTop = pad.scrollHeight; } catch (err) { /* ignora */ }
+  };
 
   // ---- Excluir com "Desfazer" por 15 s (no lugar do confirm())
   let trash = null, trashT = null;
@@ -21808,6 +21834,16 @@ function initSheetAnalyzer() {
   on('shCpf', () => validate(colIdx(), sheetCheckCpf, 'CPF'));
   on('shDate', () => validate(colIdx(), v => sheetCheckDate(v), 'datas'));
   on('shAuto', conferirTudo);
+  $('shToAcomp').addEventListener('click', () => {
+    if (!S.rows.length) return;
+    if (ACOMP.rows.length && !confirm('Substituir a planilha do Acompanhamento de famílias (' + ACOMP.rows.length + ' famílias) por esta?\n\nDepois dá para desfazer por 15 segundos.')) return;
+    const n = acompImportMatrix([S.head].concat(S.rows));
+    if (!n) { say('Não há linhas para levar.'); return; }
+    acompSave();
+    if (ACOMP.render) ACOMP.render();
+    acompGoCard('acomp');
+    say(n + ' famílias levadas para o Acompanhamento de famílias.');
+  });
   on('shFilt', filtrar);
   $('shMode').addEventListener('change', () => { const m = $('shMode').value; $('shVal').disabled = m === 'empty' || m === 'full'; });
   $('shClear').addEventListener('click', limpar);
@@ -21817,6 +21853,831 @@ function initSheetAnalyzer() {
     catch (e) { say('Não consegui copiar. Selecione o texto do resultado e copie manualmente.'); }
   });
 }
+
+/* ============================================================
+   ACOMPANHAMENTO DE FAMÍLIAS (aba Ferramentas)
+   Planilha editável para o dia a dia do acompanhamento: importa a base
+   (.csv/.xlsx/.xls) ou começa de um modelo, marca o último atendimento e o
+   retorno previsto, mostra o que está vencido, o que vence em 7 dias, quem
+   está sem atendimento há muito tempo, NIS/CPF/datas com problema, NIS
+   repetido e a renda per capita de cada família. Exporta em .xlsx/.csv.
+   Ligações com as outras ferramentas: o Relógio mostra as pendências do dia,
+   a Renda per capita recebe a família escolhida e o Bloco de notas abre (ou
+   cria) a nota de acompanhamento da família.
+   PRIVACIDADE: por padrão os dados ficam só na memória (somem ao fechar o
+   app). "Lembrar neste aparelho" grava com a mesma cifra do Bloco de notas
+   (chave toolpad_*): entra no backup e some em "Apagar dados salvos".
+   ============================================================ */
+const ACOMP_KEY = 'toolpad_acomp_v1';
+const ACOMP_PREF_KEY = 'argo_acomp_pref_v1'; // só preferências (sem dados de pessoas)
+const ACOMP_PAGE = 20;
+const ACOMP_ROLES = [
+  ['txt', 'Texto livre'], ['nome', 'Responsável / nome'], ['nis', 'NIS'], ['cpf', 'CPF'], ['tel', 'Telefone'],
+  ['bairro', 'Bairro / território'], ['tecnico', 'Técnico de referência'], ['sit', 'Situação do acompanhamento'],
+  ['ultimo', 'Último atendimento (data)'], ['proximo', 'Retorno previsto (data)'], ['data', 'Outra data'],
+  ['pessoas', 'Nº de pessoas na família'], ['renda', 'Renda total da família (R$)'], ['num', 'Número']
+];
+const ACOMP_DATE_ROLES = ['ultimo', 'proximo', 'data'];
+const ACOMP_SIT = ['Em acompanhamento', 'Acolhida inicial', 'Aguardando retorno', 'Descumprimento de condicionalidade', 'Encaminhada à rede', 'Desligada / concluída'];
+const ACOMP_TEMPLATE = [
+  ['Responsável familiar', 'nome'], ['NIS', 'nis'], ['Bairro', 'bairro'], ['Telefone', 'tel'], ['Pessoas na família', 'pessoas'],
+  ['Renda total (R$)', 'renda'], ['Situação', 'sit'], ['Último atendimento', 'ultimo'], ['Retorno previsto', 'proximo'],
+  ['Técnico', 'tecnico'], ['Observações', 'txt']
+];
+
+const ACOMP = {
+  cols: [], rows: [], keep: false, mask: true, gap: 30, intervalo: 30,
+  view: { q: '', f: 'all', sit: '', bairro: '', tec: '', sort: null, dir: 1, page: 0 },
+  loaded: false, undo: null, undoT: null, saveT: null, dup: new Map(), render: null
+};
+
+// ---------- datas (sempre no fuso de Boa Vista)
+const acompPad = n => String(n).padStart(2, '0');
+function acompToday() {
+  try {
+    const s = new Intl.DateTimeFormat('en-CA', { timeZone: TOOLS_TZ_BV, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  } catch (e) { /* cai no relógio do aparelho */ }
+  const d = new Date(); return d.getFullYear() + '-' + acompPad(d.getMonth() + 1) + '-' + acompPad(d.getDate());
+}
+const acompUtc = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : NaN; };
+const acompDiff = (a, b) => Math.round((acompUtc(a) - acompUtc(b)) / 86400000);
+function acompAddDays(iso, n) {
+  const t = new Date(acompUtc(iso) + n * 86400000);
+  return t.getUTCFullYear() + '-' + acompPad(t.getUTCMonth() + 1) + '-' + acompPad(t.getUTCDate());
+}
+const acompBr = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); return m ? m[3] + '/' + m[2] + '/' + m[1] : String(iso || ''); };
+// Aceita aaaa-mm-dd, dd/mm/aaaa (também com - ou .) e dd/mm/aa. Devolve ISO ou '' se não for data real.
+function acompParseDate(v) {
+  const s = String(v == null ? '' : v).trim();
+  let y, m, d, mt;
+  if ((mt = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s].*)?$/.exec(s))) { y = +mt[1]; m = +mt[2]; d = +mt[3]; }
+  else if ((mt = /^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})(?:\s.*)?$/.exec(s))) { d = +mt[1]; m = +mt[2]; y = +mt[3]; }
+  else if ((mt = /^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2})$/.exec(s))) { d = +mt[1]; m = +mt[2]; y = +mt[3]; y += y <= 50 ? 2000 : 1900; }
+  else return '';
+  const t = new Date(Date.UTC(y, m - 1, d));
+  if (t.getUTCFullYear() !== y || t.getUTCMonth() !== m - 1 || t.getUTCDate() !== d || y < 1900) return '';
+  return y + '-' + acompPad(m) + '-' + acompPad(d);
+}
+
+// ---------- papéis das colunas
+function acompGuessRole(h) {
+  const k = sheetNorm(h);
+  if (/\bnis\b|\bpis\b/.test(k)) return 'nis';
+  if (/\bcpf\b/.test(k)) return 'cpf';
+  if (/prox|retorno|prazo|previst|agendad|reagend/.test(k) && !/ultim/.test(k)) return 'proximo';
+  if (/ultim|\bult\b|(data|dt).*(atend|visita|contato|acompanh)/.test(k)) return 'ultimo';
+  if (/nasc|^data|\bdt\b|entrada|cadastr|inclus/.test(k)) return 'data';
+  if (/tel|fone|celular|whats/.test(k)) return 'tel';
+  if (/situa|status|etapa|acompanhamento/.test(k)) return 'sit';
+  if (/bairro|territ|comunid|localidade|setor|regiao/.test(k)) return 'bairro';
+  if (/tecnic|referencia|profissional|psicolog|assistente social/.test(k)) return 'tecnico';
+  if (/pessoas|membros|integrantes|composic|\bqtd\b|quantidade/.test(k)) return 'pessoas';
+  if (/renda|rendimento|salario|valor/.test(k)) return 'renda';
+  if (/nome|responsavel|titular|beneficiari|usuario|familia|\brf\b/.test(k)) return 'nome';
+  return 'txt';
+}
+function acompNormalize(role, v) {
+  const s = String(v == null ? '' : v).trim();
+  if (ACOMP_DATE_ROLES.indexOf(role) > -1) return acompParseDate(s) || s;
+  if (role === 'pessoas' || role === 'num') return s.replace(/\.0+$/, '');
+  return s;
+}
+const acompRid = () => 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const acompBlank = () => ACOMP.cols.map(() => '');
+function acompIdx() { const o = {}; ACOMP.cols.forEach((c, i) => { if (o[c.r] === undefined) o[c.r] = i; }); return o; }
+const acompClosed = v => /deslig|conclu|encerr|transfer|obito|arquiv/.test(sheetNorm(v));
+const acompRow = id => ACOMP.rows.find(r => r.id === id);
+
+function acompIniciais(nome) {
+  const w = String(nome || '').trim().split(/\s+/).filter(x => x && !/^(da|de|do|das|dos|e)$/i.test(x));
+  return w.map(x => x[0].toUpperCase()).join('.') + (w.length ? '.' : '');
+}
+// Código curto para notas e mensagens: iniciais + final do NIS (não expõe o nome completo).
+function acompCode(row, ix) {
+  const nome = ix.nome !== undefined ? row.v[ix.nome] : '';
+  const nis = ix.nis !== undefined ? sheetDigits(row.v[ix.nis]) : '';
+  const parts = [acompIniciais(nome)];
+  if (nis.length >= 3) parts.push('NIS ' + nis.slice(-3));
+  return parts.filter(Boolean).join(' · ') || 'sem código';
+}
+
+// ---------- análise de uma linha
+function acompDupMap() {
+  const ix = acompIdx(), m = new Map();
+  if (ix.nis === undefined) return m;
+  ACOMP.rows.forEach(r => { const k = sheetDupKey(r.v[ix.nis]); if (k) m.set(k, (m.get(k) || 0) + 1); });
+  return m;
+}
+function acompInfo(row, ix, today) {
+  const g = r => (ix[r] === undefined || row.v[ix[r]] == null ? '' : String(row.v[ix[r]]));
+  const closed = ix.sit !== undefined && acompClosed(g('sit'));
+  const prox = acompParseDate(g('proximo')), ult = acompParseDate(g('ultimo'));
+  let st = 'none', dias = null;
+  if (prox) { dias = acompDiff(prox, today); st = dias < 0 ? 'venc' : dias === 0 ? 'hoje' : dias <= 7 ? 'sem' : 'ok'; }
+  const gapDias = ult ? acompDiff(today, ult) : null;
+  const semAt = ix.ultimo !== undefined && (!ult || gapDias > ACOMP.gap);
+  const pes = parseInt(String(g('pessoas')).replace(/\D/g, ''), 10) || 0, renda = pcParse(g('renda'));
+  const pc = pes > 0 && renda > 0 ? renda / pes : null;
+  const cell = {}, flags = [];
+  ACOMP.cols.forEach((c, i) => {
+    const v = String(row.v[i] == null ? '' : row.v[i]).trim();
+    if (!v) return;
+    let msg = '';
+    if (c.r === 'nis') {
+      msg = sheetCheckNis(v);
+      if (!msg && ACOMP.dup.get(sheetDupKey(v)) > 1) msg = 'NIS repetido na planilha';
+    } else if (c.r === 'cpf') msg = sheetCheckCpf(v);
+    else if (ACOMP_DATE_ROLES.indexOf(c.r) > -1) {
+      const p = acompParseDate(v);
+      if (!p) msg = 'data não reconhecida (use dd/mm/aaaa)';
+      else if (c.r === 'ultimo' && p > today) msg = 'data no futuro';
+    }
+    if (msg) { cell[i] = msg; flags.push(c.l + ': ' + msg); }
+  });
+  if (prox && ult && prox < ult) { cell[ix.proximo] = cell[ix.proximo] || 'retorno antes do último atendimento'; flags.push('retorno antes do último atendimento'); }
+  return { closed, prox, ult, st, dias, gapDias, semAt, pc, cell, flags };
+}
+function acompPrazoTxt(i) {
+  if (i.closed) return ['Encerrada', 'enc'];
+  if (i.st === 'venc') return ['Vencido há ' + (-i.dias) + (i.dias === -1 ? ' dia' : ' dias'), 'venc'];
+  if (i.st === 'hoje') return ['Hoje', 'hoje'];
+  if (i.st === 'sem') return ['Em ' + i.dias + (i.dias === 1 ? ' dia' : ' dias'), 'sem'];
+  if (i.st === 'ok') return ['Em ' + i.dias + ' dias', 'ok'];
+  return ['Sem retorno marcado', 'none'];
+}
+function acompPcLimits() {
+  const sm = (document.getElementById('pcSm') && pcParse(document.getElementById('pcSm').value)) || PC_REF.sm;
+  const bf = (document.getElementById('pcBf') && pcParse(document.getElementById('pcBf').value)) || PC_REF.bf;
+  return { sm, bf };
+}
+function acompPcCls(pc) {
+  if (pc == null) return '';
+  const L = acompPcLimits();
+  return pc <= L.bf ? 'ac-pc-bf' : pc <= L.sm / 2 ? 'ac-pc-meio' : '';
+}
+
+// ---------- visão geral (contagens e pendências)
+function acompSummary() {
+  const ix = acompIdx(), today = acompToday();
+  ACOMP.dup = acompDupMap();
+  const S = { total: ACOMP.rows.length, venc: 0, hoje: 0, sem7: 0, semRet: 0, semAt: 0, dup: 0, prob: 0, bf: 0, meio: 0, pcN: 0, pcSoma: 0, ativas: 0, sit: new Map(), infos: new Map() };
+  ACOMP.rows.forEach(r => {
+    const i = acompInfo(r, ix, today);
+    S.infos.set(r.id, i);
+    if (!i.closed) {
+      S.ativas++;
+      if (i.st === 'venc') S.venc++;
+      else if (i.st === 'hoje') S.hoje++;
+      else if (i.st === 'sem') S.sem7++;
+      if (ix.proximo !== undefined && i.st === 'none') S.semRet++;
+      if (i.semAt) S.semAt++;
+    }
+    if (i.flags.length) S.prob++;
+    if (ix.nis !== undefined && ACOMP.dup.get(sheetDupKey(r.v[ix.nis])) > 1) S.dup++;
+    if (i.pc != null) { S.pcN++; S.pcSoma += i.pc; const c = acompPcCls(i.pc); if (c === 'ac-pc-bf') S.bf++; if (c) S.meio++; }
+    if (ix.sit !== undefined) { const k = String(r.v[ix.sit] || '').trim() || '(sem situação)'; S.sit.set(k, (S.sit.get(k) || 0) + 1); }
+  });
+  return S;
+}
+function acompPendSummary() {
+  if (!ACOMP.rows.length) return null;
+  const ix = acompIdx();
+  if (ix.proximo === undefined) return null;
+  const S = acompSummary();
+  return { venc: S.venc, hoje: S.hoje, sem7: S.sem7, total: S.total };
+}
+function acompPaintPend() {
+  const el = document.getElementById('toolsPend'); if (!el) return;
+  const p = acompPendSummary();
+  if (!p) { el.hidden = true; return; }
+  const t = [];
+  if (p.venc) t.push('<b class="ac-t-venc">' + p.venc + (p.venc === 1 ? ' retorno vencido' : ' retornos vencidos') + '</b>');
+  if (p.hoje) t.push('<b class="ac-t-hoje">' + p.hoje + (p.hoje === 1 ? ' retorno hoje' : ' retornos hoje') + '</b>');
+  if (p.sem7) t.push(p.sem7 + ' nos próximos 7 dias');
+  el.hidden = false;
+  el.querySelector('.ac-pend-txt').innerHTML = '<span aria-hidden="true">📋</span> Planilha de famílias: '
+    + (t.length ? t.join(' · ') : 'nenhum retorno vencido ou marcado para os próximos 7 dias') + '.';
+  el.querySelector('button').hidden = !(p.venc || p.hoje || p.sem7);
+}
+
+// ---------- persistência
+function acompPrefSave() {
+  try { localStorage.setItem(ACOMP_PREF_KEY, JSON.stringify({ keep: ACOMP.keep, mask: ACOMP.mask, gap: ACOMP.gap, intervalo: ACOMP.intervalo })); } catch (e) { /* ignora */ }
+}
+function acompLoad() {
+  if (ACOMP.loaded) return;
+  ACOMP.loaded = true;
+  try {
+    const p = JSON.parse(localStorage.getItem(ACOMP_PREF_KEY) || '{}');
+    ACOMP.keep = !!p.keep; ACOMP.mask = p.mask !== false;
+    if (p.gap > 0) ACOMP.gap = p.gap;
+    if (p.intervalo > 0) ACOMP.intervalo = p.intervalo;
+  } catch (e) { /* ignora */ }
+  if (ACOMP.keep) {
+    const d = safeStorage.getJSON(ACOMP_KEY, null);
+    if (d && Array.isArray(d.cols) && Array.isArray(d.rows)) { ACOMP.cols = d.cols; ACOMP.rows = d.rows; }
+  }
+}
+function acompSay(msg) { const el = document.getElementById('acInfo'); if (el) el.textContent = msg || ''; }
+function acompSaveNow() {
+  clearTimeout(ACOMP.saveT);
+  if (!ACOMP.keep) return true;
+  if (!ACOMP.rows.length) return safeStorage.remove(ACOMP_KEY);
+  return safeStorage.set(ACOMP_KEY, JSON.stringify({ cols: ACOMP.cols, rows: ACOMP.rows }));
+}
+function acompSave() {
+  if (!ACOMP.keep) return;
+  clearTimeout(ACOMP.saveT);
+  ACOMP.saveT = setTimeout(() => { if (!acompSaveNow()) acompSay('Não consegui salvar neste aparelho (armazenamento cheio ou bloqueado). Baixe o .xlsx para não perder o trabalho.'); }, 500);
+}
+
+// ---------- importação
+function acompImportMatrix(aoa) {
+  const idx = aoa.findIndex(r => r.some(v => String(v == null ? '' : v).trim() !== ''));
+  if (idx < 0) return 0;
+  // colunas calculadas que o próprio app põe no .xlsx/.csv que baixa: não voltam como dados
+  const skip = new Set();
+  aoa[idx].forEach((h, i) => { if (/^(renda per capita \(r\$\)|prazo do retorno)$/.test(sheetNorm(h))) skip.add(i); });
+  if (skip.size) aoa = aoa.map(r => r.filter((v, i) => !skip.has(i)));
+  const used = new Set();
+  const head = aoa[idx].slice(0, 60).map((h, i) => {
+    let nome = String(h == null ? '' : h).trim() || 'Coluna ' + (i + 1), n = 2; const base = nome;
+    while (used.has(nome)) nome = base + ' (' + n++ + ')';
+    used.add(nome); return nome;
+  });
+  const seen = new Set();
+  const cols = head.map(h => {
+    let r = acompGuessRole(h);
+    if (seen.has(r) && r !== 'txt' && r !== 'data' && r !== 'num') r = 'txt'; // um papel de cada, para os alertas
+    seen.add(r); return { l: h, r };
+  });
+  const rows = [];
+  for (let i = idx + 1; i < aoa.length; i++) {
+    if (!aoa[i].some(v => String(v == null ? '' : v).trim() !== '')) continue;
+    rows.push({ id: acompRid(), v: cols.map((c, k) => acompNormalize(c.r, aoa[i][k])) });
+  }
+  const before = { cols: ACOMP.cols, rows: ACOMP.rows };
+  ACOMP.cols = cols; ACOMP.rows = rows;
+  ACOMP.view = { q: '', f: 'all', sit: '', bairro: '', tec: '', sort: null, dir: 1, page: 0 };
+  acompUndoSet(rows.length + ' famílias importadas.', () => { ACOMP.cols = before.cols; ACOMP.rows = before.rows; }, 'Desfazer importação');
+  return rows.length;
+}
+function acompStartTemplate() {
+  ACOMP.cols = ACOMP_TEMPLATE.map(t => ({ l: t[0], r: t[1] }));
+  ACOMP.rows = [{ id: acompRid(), v: acompBlank() }];
+  ACOMP.view = { q: '', f: 'all', sit: '', bairro: '', tec: '', sort: null, dir: 1, page: 0 };
+}
+
+// ---------- desfazer (uma ação por vez, 15 s)
+function acompUndoSet(msg, fn, label) {
+  clearTimeout(ACOMP.undoT);
+  ACOMP.undo = fn;
+  const b = document.getElementById('acUndo');
+  if (b) { b.hidden = false; b.textContent = label || 'Desfazer'; }
+  acompSay(msg);
+  ACOMP.undoT = setTimeout(() => { ACOMP.undo = null; const x = document.getElementById('acUndo'); if (x) x.hidden = true; }, 15000);
+}
+
+// ---------- exportação
+function acompExportMatrix() {
+  const ix = acompIdx(), today = acompToday();
+  ACOMP.dup = acompDupMap();
+  const head = ACOMP.cols.map(c => c.l);
+  const extra = [];
+  if (ix.pessoas !== undefined && ix.renda !== undefined) extra.push('Renda per capita (R$)');
+  if (ix.proximo !== undefined) extra.push('Prazo do retorno');
+  const rows = ACOMP.rows.map(r => {
+    const i = acompInfo(r, ix, today);
+    const base = ACOMP.cols.map((c, k) => {
+      const v = r.v[k] == null ? '' : String(r.v[k]);
+      return ACOMP_DATE_ROLES.indexOf(c.r) > -1 && acompParseDate(v) ? acompBr(acompParseDate(v)) : v;
+    });
+    if (ix.pessoas !== undefined && ix.renda !== undefined) base.push(i.pc == null ? '' : i.pc.toFixed(2).replace('.', ','));
+    if (ix.proximo !== undefined) base.push(acompPrazoTxt(i)[0]);
+    return base;
+  });
+  return { head: head.concat(extra), rows };
+}
+function acompDownloadCsv() {
+  if (!ACOMP.rows.length) return;
+  const m = acompExportMatrix();
+  const cc = v => { const t = String(v == null ? '' : v); return /[;"\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+  const out = [m.head.map(cc).join(';')].concat(m.rows.map(r => r.map(cc).join(';')));
+  const blob = new Blob(['﻿' + out.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  pdftoolsDownloadBlob(blob, 'acompanhamento-familias-' + acompToday() + '.csv');
+  acompSay('Planilha baixada em .csv. O arquivo sai sem cifra: guarde com cuidado.');
+}
+async function acompDownloadXlsx() {
+  if (!ACOMP.rows.length) return;
+  acompSay('Gerando .xlsx…');
+  try {
+    if (!window.XLSX) await pdftoolsLoadScript(SHEET_XLSX_URL);
+    const X = window.XLSX, ix = acompIdx(), today = acompToday();
+    ACOMP.dup = acompDupMap();
+    const head = ACOMP.cols.map(c => c.l);
+    const hasPc = ix.pessoas !== undefined && ix.renda !== undefined, hasPz = ix.proximo !== undefined;
+    if (hasPc) head.push('Renda per capita (R$)');
+    if (hasPz) head.push('Prazo do retorno');
+    const aoa = [head];
+    ACOMP.rows.forEach(r => {
+      const i = acompInfo(r, ix, today);
+      const line = ACOMP.cols.map((c, k) => {
+        const v = r.v[k] == null ? '' : String(r.v[k]).trim();
+        if (!v) return '';
+        if (ACOMP_DATE_ROLES.indexOf(c.r) > -1) { const p = acompParseDate(v); if (p) return new Date(acompUtc(p) + 12 * 3600000); return v; }
+        if (c.r === 'pessoas' || c.r === 'num') { const n = toolsNum(v); return n == null ? v : n; }
+        if (c.r === 'renda') { const n = pcParse(v); return n || v; }
+        return v; // NIS, CPF e telefone ficam como texto (não perdem zeros à esquerda)
+      });
+      if (hasPc) line.push(i.pc == null ? '' : Math.round(i.pc * 100) / 100);
+      if (hasPz) line.push(acompPrazoTxt(i)[0]);
+      aoa.push(line);
+    });
+    const ws = X.utils.aoa_to_sheet(aoa, { cellDates: true });
+    const range = X.utils.decode_range(ws['!ref']);
+    for (let R = 1; R <= range.e.r; R++) for (let C = 0; C < ACOMP.cols.length; C++) {
+      const cell = ws[X.utils.encode_cell({ r: R, c: C })]; if (!cell) continue;
+      const role = ACOMP.cols[C].r;
+      if (cell.t === 'd') cell.z = 'dd/mm/yyyy';
+      else if (role === 'renda' && cell.t === 'n') cell.z = '#,##0.00';
+    }
+    if (hasPc) for (let R = 1; R <= range.e.r; R++) { const cell = ws[X.utils.encode_cell({ r: R, c: ACOMP.cols.length })]; if (cell && cell.t === 'n') cell.z = '#,##0.00'; }
+    ws['!cols'] = head.map((h, c) => ({ wch: Math.min(40, Math.max(10, h.length + 2, ...aoa.slice(1, 60).map(r => String(r[c] instanceof Date ? '00/00/0000' : r[c] == null ? '' : r[c]).length + 1))) }));
+    ws['!autofilter'] = { ref: ws['!ref'] };
+    const wb = X.utils.book_new();
+    X.utils.book_append_sheet(wb, ws, 'Acompanhamento');
+    const buf = X.write(wb, { type: 'array', bookType: 'xlsx', cellDates: true });
+    pdftoolsDownloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), 'acompanhamento-familias-' + acompToday() + '.xlsx');
+    acompSay('Planilha baixada em .xlsx. O arquivo sai sem cifra: guarde com cuidado.');
+  } catch (e) {
+    acompSay('Não consegui gerar o .xlsx (na primeira vez é preciso internet). O .csv funciona sem internet e abre no Excel.');
+  }
+}
+function acompPendText() {
+  const ix = acompIdx(), today = acompToday(), S = acompSummary();
+  const sec = { venc: [], hoje: [], sem: [] };
+  ACOMP.rows.forEach(r => {
+    const i = S.infos.get(r.id);
+    if (i.closed || !sec[i.st]) return;
+    const nome = ix.nome !== undefined ? String(r.v[ix.nome] || '').trim() : '';
+    const nis = ix.nis !== undefined ? sheetMask(r.v[ix.nis] || '') : '';
+    const bairro = ix.bairro !== undefined ? String(r.v[ix.bairro] || '').trim() : '';
+    sec[i.st].push({ d: i.prox, t: '• ' + [nome || acompCode(r, ix), nis, bairro, 'retorno ' + acompBr(i.prox) + (i.st === 'venc' ? ' (vencido há ' + (-i.dias) + ' d)' : '')].filter(Boolean).join(' — ') });
+  });
+  const out = ['Retornos de famílias — ' + acompBr(today)];
+  [['venc', 'Vencidos'], ['hoje', 'Para hoje'], ['sem', 'Próximos 7 dias']].forEach(([k, t]) => {
+    if (!sec[k].length) return;
+    out.push('', t + ' (' + sec[k].length + '):');
+    sec[k].sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0).forEach(x => out.push(x.t));
+  });
+  return out.length > 1 ? out.join('\n') : '';
+}
+
+// ---------- ligações com as outras ferramentas
+function acompGoCard(id) {
+  const root = document.getElementById('toolsRoot'); if (!root) return null;
+  const all = root.querySelector('.tools-fchip[data-tf="all"]');
+  if (TOOLS_STATE.view.cat !== 'all' || TOOLS_STATE.view.q) {
+    const f = document.getElementById('toolsFind'); if (f) f.value = '';
+    TOOLS_STATE.view.q = '';
+    if (all) all.click();
+  }
+  const card = root.querySelector('section[data-tid="' + id + '"]'); if (!card) return null;
+  if (card.classList.contains('is-collapsed')) { const b = card.querySelector('[data-act="fold"]'); if (b) b.click(); }
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  return card;
+}
+function acompToRenda(row) {
+  const ix = acompIdx(), $ = id => document.getElementById(id);
+  if (!$('pcN') || !$('pcRows')) return;
+  const pes = ix.pessoas !== undefined ? parseInt(String(row.v[ix.pessoas]).replace(/\D/g, ''), 10) || 0 : 0;
+  const renda = ix.renda !== undefined ? pcParse(row.v[ix.renda]) : 0;
+  $('pcN').value = pes ? String(pes) : '';
+  const inc = Array.from($('pcRows').querySelectorAll('.pc-inc'));
+  inc.forEach((el, k) => { el.value = k === 0 && renda ? String(renda).replace('.', ',') : ''; });
+  $('pcN').dispatchEvent(new Event('input', { bubbles: true }));
+  acompGoCard('renda');
+  argoAviso('Renda per capita preenchida com ' + acompCode(row, ix) + '. Se a renda estiver dividida entre várias pessoas, ajuste as linhas.', 'info');
+}
+function acompToNote(row) {
+  const ix = acompIdx();
+  if (typeof TOOLS_STATE.famNote !== 'function') return;
+  const code = acompCode(row, ix);
+  const g = r => (ix[r] === undefined ? '' : String(row.v[ix[r]] || '').trim());
+  const head = 'Acompanhamento familiar — ' + code;
+  const text = head + '\nSituação: ' + g('sit')
+    + '\nÚltimo atendimento: ' + (acompParseDate(g('ultimo')) ? acompBr(acompParseDate(g('ultimo'))) : g('ultimo'))
+    + '\nRetorno previsto: ' + (acompParseDate(g('proximo')) ? acompBr(acompParseDate(g('proximo'))) : g('proximo')) + '\n';
+  TOOLS_STATE.famNote(head, text);
+  acompGoCard('notas');
+}
+
+// ---------- HTML do cartão
+function toolsAcompHtml() {
+  return `
+  <section class="tech-card tools-card ac-card" aria-label="Acompanhamento de famílias">
+    <h2>Acompanhamento de famílias</h2>
+    <div class="tools-row ac-top">
+      <button type="button" class="btn-tech btn-primary" id="acTemplate">Começar com modelo</button>
+      <label class="btn-tech btn-secondary ac-file">Importar planilha (.csv, .xlsx)<input id="acFile" type="file" accept=".csv,.txt,.xlsx,.xls,text/csv" hidden></label>
+      <label class="tools-lbl ac-sheetsel" id="acSheetRow" hidden>Aba<select id="acSheet" class="tools-input"></select></label>
+      <button type="button" class="btn-tech btn-primary" id="acUndo" hidden>Desfazer</button>
+    </div>
+    <div id="acInfo" class="tools-hint" role="status" aria-live="polite"></div>
+    <div id="acEmpty" class="tools-hint ac-empty">Marque o último atendimento e o retorno previsto de cada família e veja na hora o que está vencido, quem está sem atendimento e a renda per capita. Importe a sua planilha de acompanhamento ou comece pelo modelo.</div>
+    <div id="acMain" hidden>
+      <div id="acStats" class="ac-chips" role="group" aria-label="Filtrar famílias"></div>
+      <div class="ac-filters">
+        <label class="tools-lbl ac-grow">Buscar<input id="acSearch" class="tools-input" type="search" autocomplete="off" placeholder="Nome, NIS, bairro, observação…"></label>
+        <label class="tools-lbl" id="acSitW" hidden>Situação<select id="acSit" class="tools-input"></select></label>
+        <label class="tools-lbl" id="acBairroW" hidden>Bairro<select id="acBairro" class="tools-input"></select></label>
+        <label class="tools-lbl" id="acTecW" hidden>Técnico<select id="acTec" class="tools-input"></select></label>
+      </div>
+      <div id="acSummary" class="ac-summary"></div>
+      <div class="ac-wrap"><table class="ac-table" id="acTable"></table></div>
+      <div class="ac-pager" id="acPager"></div>
+      <div class="tools-row">
+        <button type="button" class="btn-tech btn-secondary" id="acAdd">+ Nova família</button>
+        <button type="button" class="btn-tech btn-secondary" id="acPend" title="Copia a lista de retornos vencidos, de hoje e dos próximos 7 dias">Copiar pendências</button>
+        <button type="button" class="btn-tech btn-secondary" id="acXlsx">Baixar .xlsx</button>
+        <button type="button" class="btn-tech btn-secondary" id="acCsv">Baixar .csv</button>
+        <button type="button" class="btn-tech btn-secondary" id="acClear">Limpar planilha</button>
+      </div>
+      <div class="ac-opts">
+        <label class="ac-check"><input type="checkbox" id="acKeep"> Lembrar neste aparelho (cifrado)</label>
+        <label class="ac-check"><input type="checkbox" id="acMask"> Ocultar NIS e CPF na tela</label>
+        <label class="ac-num">Próximo retorno em <input id="acInterv" class="tools-input" type="number" min="1" max="365" inputmode="numeric"> dias</label>
+        <label class="ac-num">“Sem atendimento” após <input id="acGap" class="tools-input" type="number" min="1" max="730" inputmode="numeric"> dias</label>
+      </div>
+      <details class="ac-cols"><summary>Colunas e funções</summary>
+        <p class="tools-hint">A função diz ao app o que cada coluna significa: é ela que liga os alertas de retorno, o NIS repetido e a renda per capita. Dê a função certa às colunas de último atendimento e retorno previsto.</p>
+        <div id="acCols"></div>
+        <div class="tools-row"><button type="button" class="btn-tech btn-secondary" id="acColAdd">+ Nova coluna</button></div>
+      </details>
+    </div>
+    <datalist id="acSitList"></datalist>
+    <p class="tools-hint">Por padrão nada fica salvo: os dados ficam só na memória até fechar o app. Com “Lembrar neste aparelho”, ficam guardados cifrados com a senha do app, entram no backup e somem em “Apagar dados salvos”. Baixar .xlsx ou .csv gera arquivo sem cifra. A conferência de NIS/CPF vê formato e dígito verificador, não se o número existe no CadÚnico. “Prazo” e renda per capita são contas de apoio: a decisão é sempre da análise oficial.</p>
+  </section>`;
+}
+
+// ---------- montagem e eventos
+function initAcomp() {
+  const root = document.getElementById('acMain');
+  if (!root) return;
+  acompLoad();
+  const $ = id => document.getElementById(id);
+  let wb = null;
+  const TXT = sheetNorm;
+
+  const colsHtml = () => ACOMP.cols.map((c, i) =>
+    '<div class="ac-colrow"><input class="tools-input" data-cl="' + i + '" value="' + sheetEsc(c.l) + '" aria-label="Nome da coluna ' + (i + 1) + '">'
+    + '<select class="tools-input" data-cr="' + i + '" aria-label="Função da coluna ' + sheetEsc(c.l) + '">'
+    + ACOMP_ROLES.map(r => '<option value="' + r[0] + '"' + (r[0] === c.r ? ' selected' : '') + '>' + r[1] + '</option>').join('') + '</select>'
+    + '<button type="button" class="tools-ico-btn" data-cdel="' + i + '" aria-label="Remover a coluna ' + sheetEsc(c.l) + '" title="Remover coluna">✕</button></div>').join('');
+
+  const maskVal = (role, v) => (ACOMP.mask && (role === 'nis' || role === 'cpf') && v ? sheetMask(v) : v);
+
+  const cellHtml = (row, c, i, info) => {
+    const v = row.v[i] == null ? '' : String(row.v[i]);
+    const bad = info.cell[i], role = c.r;
+    const a = ' data-ac="1" data-r="' + row.id + '" data-c="' + i + '" aria-label="' + sheetEsc(c.l) + '"' + (bad ? ' class="ac-in is-bad" title="' + sheetEsc(bad) + '"' : ' class="ac-in"');
+    if (ACOMP_DATE_ROLES.indexOf(role) > -1) {
+      const p = acompParseDate(v);
+      return p || !v ? '<input type="date"' + a + ' value="' + p + '">' : '<input type="text"' + a + ' value="' + sheetEsc(v) + '" placeholder="dd/mm/aaaa">';
+    }
+    if (role === 'sit') return '<input type="text" list="acSitList"' + a + ' value="' + sheetEsc(v) + '">';
+    if (role === 'pessoas' || role === 'num') return '<input type="text" inputmode="numeric"' + a + ' value="' + sheetEsc(v) + '">';
+    if (role === 'renda') return '<input type="text" inputmode="decimal"' + a + ' value="' + sheetEsc(v) + '" placeholder="0,00">';
+    if (role === 'tel') return '<input type="tel"' + a + ' value="' + sheetEsc(v) + '">';
+    if (role === 'nis' || role === 'cpf') return '<input type="text" inputmode="numeric"' + a + ' value="' + sheetEsc(maskVal(role, v)) + '" data-secret="' + (ACOMP.mask && v ? '1' : '') + '" autocomplete="off">';
+    return '<input type="text"' + a + ' value="' + sheetEsc(v) + '">';
+  };
+
+  const computedHtml = (info, ix) => {
+    let h = '';
+    if (ix.proximo !== undefined) { const p = acompPrazoTxt(info); h += '<td class="ac-prazo ac-p-' + p[1] + '">' + p[0] + '</td>'; }
+    if (ix.pessoas !== undefined && ix.renda !== undefined) h += '<td class="ac-pc ' + acompPcCls(info.pc) + '">' + (info.pc == null ? '—' : pcMoney(info.pc)) + '</td>';
+    return h;
+  };
+
+  const filtered = S => {
+    const ix = acompIdx(), v = ACOMP.view, q = TXT(v.q).split(/\s+/).filter(Boolean);
+    const out = ACOMP.rows.filter(r => {
+      const i = S.infos.get(r.id);
+      if (v.f === 'venc' && !(i.st === 'venc' && !i.closed)) return false;
+      if (v.f === 'prox' && !((i.st === 'hoje' || i.st === 'sem') && !i.closed)) return false;
+      if (v.f === 'semret' && !(i.st === 'none' && !i.closed && ix.proximo !== undefined)) return false;
+      if (v.f === 'semat' && !(i.semAt && !i.closed)) return false;
+      if (v.f === 'dup' && !(ix.nis !== undefined && ACOMP.dup.get(sheetDupKey(r.v[ix.nis])) > 1)) return false;
+      if (v.f === 'prob' && !i.flags.length) return false;
+      if (v.sit && String(r.v[ix.sit] || '').trim() !== v.sit) return false;
+      if (v.bairro && String(r.v[ix.bairro] || '').trim() !== v.bairro) return false;
+      if (v.tec && String(r.v[ix.tecnico] || '').trim() !== v.tec) return false;
+      if (q.length) { const hay = TXT(r.v.join(' ')); if (!q.every(t => hay.indexOf(t) > -1)) return false; }
+      return true;
+    });
+    if (v.sort !== null) {
+      const k = v.sort, d = v.dir;
+      const key = r => {
+        const i = S.infos.get(r.id);
+        if (k === '#pc') return i.pc == null ? null : i.pc;
+        if (k === '#prazo') return i.prox || null;
+        const role = ACOMP.cols[k].r, val = String(r.v[k] == null ? '' : r.v[k]).trim();
+        if (!val) return null;
+        if (ACOMP_DATE_ROLES.indexOf(role) > -1) return acompParseDate(val) || null;
+        if (role === 'pessoas' || role === 'num') return toolsNum(val);
+        if (role === 'renda') return pcParse(val);
+        return TXT(val);
+      };
+      out.sort((a, b) => {
+        const x = key(a), y = key(b);
+        if (x === null && y === null) return 0;
+        if (x === null) return 1; if (y === null) return -1; // vazios sempre no fim
+        return (x < y ? -1 : x > y ? 1 : 0) * d;
+      });
+    }
+    return out;
+  };
+
+  const paintStats = S => {
+    const ix = acompIdx(), f = ACOMP.view.f;
+    const chip = (k, label, n, cls) => '<button type="button" class="tools-chip ac-chip ' + (cls || '') + (f === k ? ' is-active' : '') + '" data-f="' + k + '" aria-pressed="' + (f === k ? 'true' : 'false') + '">' + label + ' <b>' + n + '</b></button>';
+    let h = chip('all', 'Todas', S.total);
+    if (ix.proximo !== undefined) h += chip('venc', 'Vencidos', S.venc, S.venc ? 'ac-c-venc' : '') + chip('prox', 'Hoje e 7 dias', S.hoje + S.sem7, S.hoje ? 'ac-c-hoje' : '') + chip('semret', 'Sem retorno marcado', S.semRet);
+    if (ix.ultimo !== undefined) h += chip('semat', 'Sem atendimento +' + ACOMP.gap + ' d', S.semAt);
+    if (ix.nis !== undefined) h += chip('dup', 'NIS repetido', S.dup, S.dup ? 'ac-c-venc' : '');
+    h += chip('prob', 'Com problema', S.prob, S.prob ? 'ac-c-hoje' : '');
+    $('acStats').innerHTML = h;
+    let sum = '';
+    if (S.pcN) {
+      const L = acompPcLimits();
+      sum = 'Renda per capita média: <b>' + pcMoney(S.pcSoma / S.pcN) + '</b> (' + S.pcN + ' famílias com renda e nº de pessoas) · até ' + pcMoney(L.bf) + ': <b>' + S.bf + '</b> · até ½ salário mínimo (' + pcMoney(L.sm / 2) + '): <b>' + S.meio + '</b>';
+    }
+    if (S.sit.size > 1) sum += (sum ? '<br>' : '') + [...S.sit.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(e => sheetEsc(e[0]) + ': <b>' + e[1] + '</b>').join(' · ');
+    $('acSummary').innerHTML = sum;
+    $('acSummary').hidden = !sum;
+  };
+
+  const fillSel = (id, wid, role, cur) => {
+    const ix = acompIdx(), w = $(wid), sel = $(id);
+    if (ix[role] === undefined) { w.hidden = true; return; }
+    const set = new Set();
+    ACOMP.rows.forEach(r => { const t = String(r.v[ix[role]] || '').trim(); if (t) set.add(t); });
+    const arr = [...set].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    sel.innerHTML = '<option value="">Todos</option>' + arr.map(t => '<option value="' + sheetEsc(t) + '"' + (t === cur ? ' selected' : '') + '>' + sheetEsc(t) + '</option>').join('');
+    w.hidden = arr.length < 2;
+  };
+
+  const renderTable = S => {
+    const ix = acompIdx(), v = ACOMP.view, list = filtered(S);
+    const pages = Math.max(1, Math.ceil(list.length / ACOMP_PAGE));
+    if (v.page >= pages) v.page = pages - 1;
+    if (v.page < 0) v.page = 0;
+    const slice = list.slice(v.page * ACOMP_PAGE, (v.page + 1) * ACOMP_PAGE);
+    const th = (label, key, cls) => '<th scope="col" class="' + (cls || '') + '"><button type="button" class="ac-sort" data-sort="' + key + '" aria-label="Ordenar por ' + sheetEsc(label) + '">' + sheetEsc(label)
+      + (String(v.sort) === String(key) ? '<span aria-hidden="true">' + (v.dir === 1 ? ' ▲' : ' ▼') + '</span>' : '') + '</button></th>';
+    // Prazo e renda per capita ficam logo depois do nome, para aparecerem sem rolar a tabela para o lado.
+    const compHead = (ix.proximo !== undefined ? th('Prazo', '#prazo', 'ac-c-prazo') : '')
+      + (ix.pessoas !== undefined && ix.renda !== undefined ? th('Per capita', '#pc', 'ac-c-pc') : '');
+    let head = '<tr><th scope="col" class="ac-n">#</th>' + (ix.nome === undefined ? compHead : '');
+    ACOMP.cols.forEach((c, k) => { head += th(c.l, k, 'ac-c-' + c.r) + (k === ix.nome ? compHead : ''); });
+    head += '<th scope="col" class="ac-c-act">Ações</th></tr>';
+    const body = slice.map(r => {
+      const i = S.infos.get(r.id), n = ACOMP.rows.indexOf(r) + 1;
+      return '<tr data-row="' + r.id + '" class="' + (i.closed ? 'is-closed ' : '') + (i.st === 'venc' && !i.closed ? 'is-venc' : '') + '"><td class="ac-n">' + n + '</td>'
+        + (ix.nome === undefined ? computedHtml(i, ix) : '')
+        + ACOMP.cols.map((c, k) => '<td class="ac-c-' + c.r + '">' + cellHtml(r, c, k, i) + '</td>' + (k === ix.nome ? computedHtml(i, ix) : '')).join('')
+        + '<td class="ac-act"><button type="button" class="ac-btn" data-act="today" title="Registrar atendimento hoje e marcar o próximo retorno">✓ Hoje</button>'
+        + '<button type="button" class="ac-btn" data-act="note" title="Abrir ou criar a nota desta família" aria-label="Nota desta família">📝</button>'
+        + '<button type="button" class="ac-btn" data-act="calc" title="Calcular a renda per capita no cartão Renda per capita" aria-label="Calcular renda per capita">🧮</button>'
+        + '<button type="button" class="ac-btn ac-del" data-act="del" title="Remover esta família (dá para desfazer)" aria-label="Remover esta família">✕</button></td></tr>';
+    }).join('');
+    $('acTable').innerHTML = '<thead>' + head + '</thead><tbody>' + (body || '<tr><td class="ac-none" colspan="' + (ACOMP.cols.length + 4) + '">Nenhuma família neste filtro.</td></tr>') + '</tbody>';
+    $('acPager').innerHTML = list.length
+      ? '<button type="button" class="tools-link-btn" data-pg="-1"' + (v.page ? '' : ' disabled') + '>‹ Anterior</button><span>' + (list.length === S.total ? S.total + ' famílias' : list.length + ' de ' + S.total) + ' · página ' + (v.page + 1) + ' de ' + pages + '</span><button type="button" class="tools-link-btn" data-pg="1"' + (v.page < pages - 1 ? '' : ' disabled') + '>Próxima ›</button>'
+      : '';
+  };
+
+  const renderAll = () => {
+    acompLoad();
+    const has = ACOMP.rows.length > 0 || ACOMP.cols.length > 0;
+    $('acMain').hidden = !has; $('acEmpty').hidden = has;
+    $('acTemplate').hidden = has;
+    $('acKeep').checked = ACOMP.keep; $('acMask').checked = ACOMP.mask;
+    $('acInterv').value = ACOMP.intervalo; $('acGap').value = ACOMP.gap;
+    if (has) {
+      const S = acompSummary();
+      const ix = acompIdx(), sits = new Set(ACOMP_SIT);
+      if (ix.sit !== undefined) ACOMP.rows.forEach(r => { const t = String(r.v[ix.sit] || '').trim(); if (t) sits.add(t); });
+      $('acSitList').innerHTML = [...sits].map(t => '<option value="' + sheetEsc(t) + '">').join('');
+      fillSel('acSit', 'acSitW', 'sit', ACOMP.view.sit); fillSel('acBairro', 'acBairroW', 'bairro', ACOMP.view.bairro); fillSel('acTec', 'acTecW', 'tecnico', ACOMP.view.tec);
+      $('acSearch').value = ACOMP.view.q;
+      paintStats(S); renderTable(S);
+      $('acCols').innerHTML = colsHtml();
+    }
+    acompPaintPend();
+  };
+
+  // atualiza só a linha editada (não tira o foco de quem está digitando)
+  const afterEdit = (row, tr) => {
+    const S = acompSummary(), ix = acompIdx(), info = S.infos.get(row.id);
+    if (tr) {
+      tr.classList.toggle('is-closed', info.closed);
+      tr.classList.toggle('is-venc', info.st === 'venc' && !info.closed);
+      tr.querySelectorAll('input[data-ac]').forEach(inp => {
+        const bad = info.cell[inp.dataset.c];
+        inp.classList.toggle('is-bad', !!bad);
+        if (bad) inp.title = bad; else inp.removeAttribute('title');
+      });
+      const pz = tr.querySelector('.ac-prazo');
+      if (pz) { const p = acompPrazoTxt(info); pz.textContent = p[0]; pz.className = 'ac-prazo ac-p-' + p[1]; }
+      const pc = tr.querySelector('.ac-pc');
+      if (pc) { pc.textContent = info.pc == null ? '—' : pcMoney(info.pc); pc.className = 'ac-pc ' + acompPcCls(info.pc); }
+    }
+    paintStats(S);
+    acompPaintPend(); acompSave();
+  };
+
+  // ---- arquivo
+  const readAoa = ws => {
+    const X = window.XLSX;
+    // raw:true devolve números e datas de verdade (raw:false traria "1,500.00" no formato americano e quebraria a renda)
+    const aoa = X.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '', blankrows: true });
+    return aoa.map(r => r.map(v => (v instanceof Date ? acompPad(v.getDate()) + '/' + acompPad(v.getMonth() + 1) + '/' + v.getFullYear() : String(v == null ? '' : v))));
+  };
+  const doImport = aoa => {
+    const hadRows = ACOMP.rows.length;
+    if (hadRows && !confirm('Substituir a planilha atual (' + hadRows + ' famílias) pela planilha importada?\n\nDepois de importar, dá para desfazer por 15 segundos.')) return;
+    const n = acompImportMatrix(aoa);
+    if (!n) { acompSay('Não encontrei linhas de dados nessa planilha. A primeira linha precisa ser o cabeçalho.'); return; }
+    renderAll(); acompSave();
+    acompSay(n + ' famílias importadas. Confira em “Colunas e funções” se cada coluna ficou com a função certa.' + (n > 3000 ? ' Planilha grande: se não salvar neste aparelho, baixe o .xlsx.' : ''));
+  };
+  $('acFile').addEventListener('change', async () => {
+    const f = $('acFile').files && $('acFile').files[0]; if (!f) return;
+    if (f.size > SHEET_MAX_BYTES) { acompSay('O arquivo passa de 25 MB. Divida a planilha em partes menores.'); $('acFile').value = ''; return; }
+    acompSay('Lendo a planilha…');
+    try {
+      const buf = await f.arrayBuffer(), ext = (f.name.split('.').pop() || '').toLowerCase();
+      if (ext === 'xlsx' || ext === 'xls') {
+        if (!window.XLSX) await pdftoolsLoadScript(SHEET_XLSX_URL);
+        wb = window.XLSX.read(buf, { type: 'array', cellDates: true, dateNF: 'dd/mm/yyyy' });
+        $('acSheet').innerHTML = wb.SheetNames.map((n, i) => '<option value="' + i + '">' + sheetEsc(n) + '</option>').join('');
+        $('acSheetRow').hidden = wb.SheetNames.length < 2;
+        doImport(readAoa(wb.Sheets[wb.SheetNames[0]]));
+      } else {
+        wb = null; $('acSheetRow').hidden = true;
+        let text; try { text = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { text = new TextDecoder('windows-1252').decode(buf); }
+        doImport(sheetParseCsv(text));
+      }
+    } catch (e) {
+      acompSay(/Falha ao carregar/.test(String(e && e.message)) ? 'Para abrir .xlsx ou .xls pela primeira vez é preciso internet. Sem internet, salve a planilha como CSV e importe de novo.'
+        : 'Não consegui ler esse arquivo. Confira se é .csv, .xlsx ou .xls e se não está protegido por senha.');
+    }
+    $('acFile').value = '';
+  });
+  $('acSheet').addEventListener('change', () => { if (wb) doImport(readAoa(wb.Sheets[wb.SheetNames[parseInt($('acSheet').value, 10) || 0]])); });
+  $('acTemplate').addEventListener('click', () => { acompStartTemplate(); renderAll(); acompSave(); const f = root.querySelector('input[data-ac]'); if (f) f.focus(); });
+
+  // ---- desfazer
+  $('acUndo').addEventListener('click', () => {
+    if (!ACOMP.undo) return;
+    const fn = ACOMP.undo; ACOMP.undo = null; clearTimeout(ACOMP.undoT);
+    $('acUndo').hidden = true; fn(); renderAll(); acompSave(); acompSay('Desfeito.');
+  });
+
+  // ---- edição de célula
+  root.addEventListener('focusin', e => {
+    const inp = e.target.closest && e.target.closest('input[data-secret="1"]'); if (!inp) return;
+    const row = acompRow(inp.dataset.r); if (row) inp.value = row.v[+inp.dataset.c] || '';
+  });
+  root.addEventListener('focusout', e => {
+    const inp = e.target.closest && e.target.closest('input[data-ac]'); if (!inp) return;
+    const c = ACOMP.cols[+inp.dataset.c]; if (!c || (c.r !== 'nis' && c.r !== 'cpf')) return;
+    const row = acompRow(inp.dataset.r); if (!row) return;
+    inp.dataset.secret = ACOMP.mask && row.v[+inp.dataset.c] ? '1' : '';
+    inp.value = maskVal(c.r, row.v[+inp.dataset.c] || '');
+  });
+  root.addEventListener('change', e => {
+    const inp = e.target.closest && e.target.closest('input[data-ac]'); if (!inp) return;
+    const row = acompRow(inp.dataset.r), i = +inp.dataset.c, c = ACOMP.cols[i]; if (!row || !c) return;
+    let val = inp.value.trim();
+    if (ACOMP_DATE_ROLES.indexOf(c.r) > -1) {
+      if (inp.type === 'text') { const p = acompParseDate(val); if (p) { val = p; inp.type = 'date'; inp.value = p; inp.placeholder = ''; } }
+    } else if (c.r === 'pessoas') { val = val.replace(/\D/g, '').slice(0, 3); inp.value = val; }
+    row.v[i] = val;
+    afterEdit(row, inp.closest('tr'));
+  });
+
+  // ---- cliques: filtros, ordenação, páginas, ações da linha
+  root.addEventListener('click', e => {
+    const ch = e.target.closest('[data-f]');
+    if (ch) { ACOMP.view.f = ch.dataset.f; ACOMP.view.page = 0; renderAll(); return; }
+    const so = e.target.closest('[data-sort]');
+    if (so) {
+      const k = so.dataset.sort[0] === '#' ? so.dataset.sort : +so.dataset.sort;
+      if (String(ACOMP.view.sort) === String(k)) { if (ACOMP.view.dir === 1) ACOMP.view.dir = -1; else { ACOMP.view.sort = null; ACOMP.view.dir = 1; } }
+      else { ACOMP.view.sort = k; ACOMP.view.dir = 1; }
+      ACOMP.view.page = 0; renderAll(); return;
+    }
+    const pg = e.target.closest('[data-pg]');
+    if (pg) { ACOMP.view.page += +pg.dataset.pg; renderAll(); $('acTable').scrollIntoView({ block: 'nearest' }); return; }
+    const b = e.target.closest('[data-act]'); if (!b) return;
+    const tr = b.closest('tr'), row = tr && acompRow(tr.dataset.row); if (!row) return;
+    const ix = acompIdx();
+    if (b.dataset.act === 'today') {
+      if (ix.ultimo === undefined && ix.proximo === undefined) { acompSay('Defina as funções “Último atendimento” e “Retorno previsto” em “Colunas e funções”.'); return; }
+      const prev = row.v.slice(), t = acompToday();
+      if (ix.ultimo !== undefined) row.v[ix.ultimo] = t;
+      if (ix.proximo !== undefined) row.v[ix.proximo] = acompAddDays(t, ACOMP.intervalo);
+      acompUndoSet('Atendimento registrado em ' + acompBr(t) + (ix.proximo !== undefined ? '; retorno marcado para ' + acompBr(acompAddDays(t, ACOMP.intervalo)) : '') + '.', () => { row.v = prev; }, 'Desfazer');
+      renderAll(); acompSave();
+    } else if (b.dataset.act === 'del') {
+      const at = ACOMP.rows.indexOf(row), code = acompCode(row, ix);
+      ACOMP.rows.splice(at, 1);
+      acompUndoSet('Família removida (' + code + ').', () => { ACOMP.rows.splice(Math.min(at, ACOMP.rows.length), 0, row); }, 'Desfazer remoção');
+      renderAll(); acompSave();
+    } else if (b.dataset.act === 'calc') acompToRenda(row);
+    else if (b.dataset.act === 'note') acompToNote(row);
+  });
+
+  let qT = null;
+  $('acSearch').addEventListener('input', e => { clearTimeout(qT); const val = e.target.value; qT = setTimeout(() => { ACOMP.view.q = val; ACOMP.view.page = 0; const S = acompSummary(); renderTable(S); }, 150); });
+  [['acSit', 'sit'], ['acBairro', 'bairro'], ['acTec', 'tec']].forEach(([id, k]) => $(id).addEventListener('change', e => { ACOMP.view[k] = e.target.value; ACOMP.view.page = 0; renderTable(acompSummary()); }));
+
+  // ---- botões da barra
+  $('acAdd').addEventListener('click', () => {
+    ACOMP.view = Object.assign(ACOMP.view, { q: '', f: 'all', sit: '', bairro: '', tec: '', sort: null, dir: 1 });
+    ACOMP.rows.push({ id: acompRid(), v: acompBlank() });
+    ACOMP.view.page = Math.floor((ACOMP.rows.length - 1) / ACOMP_PAGE);
+    renderAll(); acompSave();
+    const inputs = root.querySelectorAll('tbody tr:last-child input[data-ac]'); if (inputs[0]) inputs[0].focus();
+  });
+  $('acPend').addEventListener('click', () => {
+    const t = acompPendText();
+    if (!t) { acompSay(acompPendSummary() ? 'Nenhum retorno vencido, de hoje ou dos próximos 7 dias.' : 'Defina a coluna “Retorno previsto” em “Colunas e funções” para listar pendências.'); return; }
+    toolsCopyText(t, 'Pendências copiadas.');
+  });
+  $('acXlsx').addEventListener('click', acompDownloadXlsx);
+  $('acCsv').addEventListener('click', acompDownloadCsv);
+  $('acClear').addEventListener('click', () => {
+    if (!ACOMP.rows.length && !ACOMP.cols.length) return;
+    const before = { cols: ACOMP.cols, rows: ACOMP.rows };
+    ACOMP.cols = []; ACOMP.rows = []; ACOMP.view = { q: '', f: 'all', sit: '', bairro: '', tec: '', sort: null, dir: 1, page: 0 };
+    acompSaveNow();
+    acompUndoSet('Planilha limpa' + (ACOMP.keep ? ' (e apagada deste aparelho)' : '') + '.', () => { ACOMP.cols = before.cols; ACOMP.rows = before.rows; }, 'Desfazer limpeza');
+    renderAll();
+  });
+  $('acKeep').addEventListener('change', e => {
+    ACOMP.keep = e.target.checked; acompPrefSave();
+    if (ACOMP.keep) { acompSay(acompSaveNow() ? 'Planilha guardada neste aparelho, cifrada. Ela volta sozinha na próxima vez.' : 'Não consegui guardar neste aparelho (armazenamento cheio ou bloqueado).'); }
+    else { safeStorage.remove(ACOMP_KEY); acompSay('Cópia guardada neste aparelho apagada. A planilha continua na tela até você fechar o app.'); }
+  });
+  $('acMask').addEventListener('change', e => { ACOMP.mask = e.target.checked; acompPrefSave(); renderAll(); });
+  $('acInterv').addEventListener('change', e => { const n = parseInt(e.target.value, 10); ACOMP.intervalo = n > 0 ? Math.min(365, n) : 30; e.target.value = ACOMP.intervalo; acompPrefSave(); });
+  $('acGap').addEventListener('change', e => { const n = parseInt(e.target.value, 10); ACOMP.gap = n > 0 ? Math.min(730, n) : 30; e.target.value = ACOMP.gap; acompPrefSave(); renderAll(); });
+
+  // ---- colunas e funções
+  const cols = $('acCols');
+  cols.addEventListener('change', e => {
+    const l = e.target.closest('[data-cl]'), r = e.target.closest('[data-cr]');
+    if (l) { ACOMP.cols[+l.dataset.cl].l = l.value.trim() || 'Coluna ' + (+l.dataset.cl + 1); }
+    else if (r) {
+      const i = +r.dataset.cr, role = r.value;
+      if (role !== 'txt' && role !== 'data' && role !== 'num') ACOMP.cols.forEach((c, k) => { if (k !== i && c.r === role) c.r = 'txt'; }); // um papel de cada
+      ACOMP.cols[i].r = role;
+      ACOMP.rows.forEach(row => { row.v[i] = acompNormalize(role, row.v[i]); });
+    } else return;
+    renderAll(); acompSave();
+  });
+  cols.addEventListener('click', e => {
+    const d = e.target.closest('[data-cdel]'); if (!d) return;
+    const i = +d.dataset.cdel, c = ACOMP.cols[i];
+    const used = ACOMP.rows.some(r => String(r.v[i] || '').trim());
+    if (used && !confirm('Remover a coluna “' + c.l + '” e os dados dela?\n\nDepois dá para desfazer por 15 segundos.')) return;
+    const snap = { cols: ACOMP.cols.map(x => Object.assign({}, x)), vals: ACOMP.rows.map(r => r.v.slice()) };
+    ACOMP.cols.splice(i, 1); ACOMP.rows.forEach(r => r.v.splice(i, 1));
+    acompUndoSet('Coluna “' + c.l + '” removida.', () => { ACOMP.cols = snap.cols; ACOMP.rows.forEach((r, k) => { r.v = snap.vals[k] || snap.cols.map(() => ''); }); }, 'Desfazer remoção');
+    renderAll(); acompSave();
+  });
+  $('acColAdd').addEventListener('click', () => {
+    ACOMP.cols.push({ l: 'Nova coluna', r: 'txt' }); ACOMP.rows.forEach(r => r.v.push(''));
+    renderAll(); acompSave();
+    const inp = cols.querySelector('[data-cl="' + (ACOMP.cols.length - 1) + '"]'); if (inp) { inp.focus(); inp.select(); }
+  });
+
+  // botão "Ver na planilha" do Relógio
+  const pend = $('toolsPend');
+  if (pend) pend.querySelector('button').addEventListener('click', () => {
+    ACOMP.view.f = 'prox'; ACOMP.view.page = 0;
+    const p = acompPendSummary(); if (p && p.venc) ACOMP.view.f = 'venc';
+    renderAll(); acompGoCard('acomp');
+  });
+  ACOMP.render = renderAll;
+  renderAll();
+}
+
 
 /* ============================================================
    IA NO MASCOTE ARGO (cérebro em js/argo-cerebro.js)
