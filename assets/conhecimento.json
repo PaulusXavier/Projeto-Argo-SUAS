@@ -1,167 +1,5 @@
 [
   {
-    "id": "bolsa-familia-2026#1",
-    "doc": "bolsa-familia-2026",
-    "titulo": "Bolsa Família (informações 2026)",
-    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
-    "ano": 2026,
-    "referencia": "Valores do benefício em 2026",
-    "texto": "Benefício de Renda de Cidadania (BRC): R$ 142 por pessoa da família, base do cálculo. Benefício Complementar (BCO): piso mínimo garantido de R$ 600 por família, pago quando a soma dos BRCs não alcança esse valor. Benefício Primeira Infância (BPI): R$ 150 por criança de 0 a 7 anos incompletos. Benefício Variável Familiar (BVF): R$ 50 por gestante, nutriz (criança de 0 a 6 meses) ou criança/adolescente de 7 a 18 anos incompletos. Os valores somam-se conforme a composição familiar registrada no CadÚnico."
-  },
-  {
-    "id": "bolsa-familia-2026#2",
-    "doc": "bolsa-familia-2026",
-    "titulo": "Bolsa Família (informações 2026)",
-    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
-    "ano": 2026,
-    "referencia": "Exemplo de cálculo do benefício",
-    "texto": "Família com 3 pessoas soma R$ 426 de BRC (3 × R$ 142). Como não alcança R$ 600, recebe mais R$ 174 de Benefício Complementar, chegando ao piso de R$ 600. Sobre esse valor entram o BPI (R$ 150 por criança de 0 a 7 anos incompletos) e o BVF (R$ 50 por gestante, nutriz ou criança/adolescente de 7 a 18 anos incompletos), conforme a composição."
-  },
-  {
-    "id": "bolsa-familia-2026#3",
-    "doc": "bolsa-familia-2026",
-    "titulo": "Bolsa Família (informações 2026)",
-    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
-    "ano": 2026,
-    "referencia": "Regras importantes do pagamento",
-    "texto": "Pagamentos nos últimos 10 dias úteis de cada mês, exceto dezembro, que encerra antes, no dia 23. As parcelas ficam disponíveis para saque por até 180 dias. O benefício depende do cumprimento das condicionalidades de saúde (vacinação, pré-natal) e da frequência escolar. Atualize o Cadastro Único a cada 24 meses ou sempre que a família mudar (renda, endereço, filhos, escola). Movimente pelo cartão do programa, no app Caixa Tem ou em correspondentes Caixa Aqui."
-  },
-  {
-    "id": "bolsa-familia-2026#4",
-    "doc": "bolsa-familia-2026",
-    "titulo": "Bolsa Família (informações 2026)",
-    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
-    "ano": 2026,
-    "referencia": "Como participar do Bolsa Família",
-    "texto": "Três passos. 1) Cadastro Único: inscrição com dados atualizados no CRAS, apresentando CPF ou título de eleitor. 2) Critério de renda: renda mensal de, no máximo, R$ 218 por pessoa da família. 3) Seleção automatizada: o programa identifica mensalmente as novas famílias de forma automática."
-  },
-  {
-    "id": "bolsa-familia-2026#5",
-    "doc": "bolsa-familia-2026",
-    "titulo": "Bolsa Família (informações 2026)",
-    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
-    "ano": 2026,
-    "referencia": "Condicionalidades de educação",
-    "texto": "Frequência escolar mínima de 60% para crianças de 4 a 5 anos e de 75% para estudantes de 6 a 18 anos incompletos."
-  },
-  {
-    "id": "bolsa-familia-2026#6",
-    "doc": "bolsa-familia-2026",
-    "titulo": "Bolsa Família (informações 2026)",
-    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
-    "ano": 2026,
-    "referencia": "Condicionalidades de saúde",
-    "texto": "Pré-natal: acompanhamento pelo SUS das gestantes. Vacinação: menores de 7 anos. Peso e nutrição: acompanhamento dos menores de 7 anos."
-  },
-  {
-    "id": "bolsa-familia-2026#7",
-    "doc": "bolsa-familia-2026",
-    "titulo": "Bolsa Família (informações 2026)",
-    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
-    "ano": 2026,
-    "referencia": "Cronograma de repercussão 2026",
-    "texto": "Mês de repercussão, referência de educação, referência de saúde e data limite do recurso. Março: educação outubro/novembro de 2025, saúde 2º semestre de 2025, recurso até 23/04/2026. Maio: educação fevereiro/março de 2026, recurso até 25/06/2026. Julho: educação abril/maio de 2026, recurso até 27/08/2026. Setembro: educação junho/julho de 2026, saúde 1º semestre de 2026, recurso até 29/10/2026. Novembro: educação agosto/setembro de 2026, recurso até 31/01/2027."
-  },
-  {
-    "id": "bolsa-familia-2026#8",
-    "doc": "bolsa-familia-2026",
-    "titulo": "Bolsa Família (informações 2026)",
-    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
-    "ano": 2026,
-    "referencia": "Recurso on-line (Sicon)",
-    "texto": "Direito da família de contestar, no Sicon, um efeito recebido por descumprimento de condicionalidades (art. 10 da Portaria MDS nº 251/2012), por exemplo quando houve erro no registro ou quando o descumprimento decorreu de situação de vulnerabilidade que dificultou o acesso à escola ou à saúde. É cadastrado com o NIS ou nome do responsável, uma justificativa da família (até 400 caracteres) e a documentação anexada."
-  },
-  {
-    "id": "bolsa-familia-2026#9",
-    "doc": "bolsa-familia-2026",
-    "titulo": "Bolsa Família (informações 2026)",
-    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
-    "ano": 2026,
-    "referencia": "Documentação aceita no recurso on-line",
-    "texto": "Declaração ou comprovante da escola, da Unidade de Saúde, da própria família ou do CRAS, laudo da Assistência Social ou relatório técnico, ou outros documentos. Os documentos originais devem ficar arquivados no município para fins de auditoria. Depois de avaliado (deferido ou indeferido), o resultado passa a constar no histórico de condicionalidades da família no Sicon."
-  },
-  {
-    "id": "bolsa-familia-2026#10",
-    "doc": "bolsa-familia-2026",
-    "titulo": "Bolsa Família (informações 2026)",
-    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
-    "ano": 2026,
-    "referencia": "Como sacar o benefício",
-    "texto": "O valor é depositado mensalmente em conta na Caixa (poupança, poupança digital, poupança social digital, simplificada ou conta contábil). Se a família não tiver conta, a Caixa abre automaticamente uma Conta Poupança Social Digital gratuita, sem restrições de uso. Canais: agências e postos da Caixa, casas lotéricas, terminais de autoatendimento, correspondentes CAIXA Aqui e unidades itinerantes."
-  },
-  {
-    "id": "bolsa-familia-2026#11",
-    "doc": "bolsa-familia-2026",
-    "titulo": "Bolsa Família (informações 2026)",
-    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
-    "ano": 2026,
-    "referencia": "Cartão Bolsa Família e app Caixa Tem",
-    "texto": "O Cartão Bolsa Família é emitido em nome do responsável familiar identificado no CadÚnico e permite sacar, comprar no débito e pagar contas. Pelo app CAIXA Tem também dá para movimentar o saldo, pagar contas e fazer Pix."
-  },
-  {
-    "id": "bolsa-familia-2026#12",
-    "doc": "bolsa-familia-2026",
-    "titulo": "Bolsa Família (informações 2026)",
-    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
-    "ano": 2026,
-    "referencia": "Devolução voluntária de valores",
-    "texto": "Se a família recebeu valor indevido do Bolsa Família, a devolução pode ser feita voluntariamente pela Guia de Recolhimento da União (GRU), no PagTesouro do Tesouro Nacional, ou pessoalmente em qualquer agência da Caixa. Órgão arrecadador: 55000 (MDS). Unidade Gestora: 550007 (Secretaria Nacional de Renda de Cidadania). Serviço: 025144 (devolução do exercício atual) ou 025132 (exercícios anteriores). Informe CPF e nome do responsável familiar e o valor a devolver. Pague a GRU por Pix, cartão de crédito ou boleto e guarde o comprovante."
-  },
-  {
-    "id": "bolsa-familia-2026#13",
-    "doc": "bolsa-familia-2026",
-    "titulo": "Bolsa Família (informações 2026)",
-    "norma": "Material informativo do MDS e da Caixa sobre o Programa Bolsa Família, valores em vigor em 2026",
-    "ano": 2026,
-    "referencia": "Canais de atendimento do Bolsa Família",
-    "texto": "Disque Social (MDS): 121. Caixa: 111. CRAS Cristiana Vicente Nunes: Rua Santo Agostinho, nº 193, Centenário, Boa Vista/RR, telefone (95) 98402-6617."
-  },
-  {
-    "id": "cadunico-mds#1",
-    "doc": "cadunico-mds",
-    "titulo": "Cadastro Único (orientações do MDS)",
-    "norma": "Material informativo do MDS sobre o Cadastro Único para Programas Sociais (gov.br/mds)",
-    "ano": 2026,
-    "referencia": "O que é o Cadastro Único",
-    "texto": "O Cadastro Único (CadÚnico) identifica e caracteriza as famílias de baixa renda de todo o país, registrando endereço, composição familiar, escolaridade, trabalho, renda e deficiência. É a porta de entrada para mais de 40 programas sociais federais, estaduais e municipais, entre eles Bolsa Família, BPC, Pé-de-Meia, Tarifa Social de Energia Elétrica, Gás do Povo e Minha Casa Minha Vida."
-  },
-  {
-    "id": "cadunico-mds#2",
-    "doc": "cadunico-mds",
-    "titulo": "Cadastro Único (orientações do MDS)",
-    "norma": "Material informativo do MDS sobre o Cadastro Único para Programas Sociais (gov.br/mds)",
-    "ano": 2026,
-    "referencia": "Quem pode se cadastrar no CadÚnico",
-    "texto": "Famílias com renda mensal de até meio salário mínimo por pessoa. Famílias com renda maior também podem se cadastrar quando o CadÚnico for exigido para acessar algum programa ou serviço. Pessoas que moram sozinhas podem se cadastrar como família unipessoal (para benefícios federais como Bolsa Família e BPC, o cadastro ou a atualização costuma exigir entrevista no domicílio). Há procedimentos diferenciados para povos indígenas, quilombolas, ribeirinhos, pescadores artesanais e pessoas em situação de rua."
-  },
-  {
-    "id": "cadunico-mds#3",
-    "doc": "cadunico-mds",
-    "titulo": "Cadastro Único (orientações do MDS)",
-    "norma": "Material informativo do MDS sobre o Cadastro Único para Programas Sociais (gov.br/mds)",
-    "ano": 2026,
-    "referencia": "Como se cadastrar no CadÚnico",
-    "texto": "Cadastro gratuito e presencial, no CRAS ou posto de cadastramento do município. O responsável familiar deve levar CPF de todas as pessoas da família (obrigatório), documento de identificação e, se houver, comprovante de residência (de preferência conta de luz). Cada pessoa só pode estar cadastrada em uma família. O CPF é a chave de identificação: sem ele, o cadastro fica \"aguardando CPF\" e pode ser excluído se não for regularizado no prazo."
-  },
-  {
-    "id": "cadunico-mds#4",
-    "doc": "cadunico-mds",
-    "titulo": "Cadastro Único (orientações do MDS)",
-    "norma": "Material informativo do MDS sobre o Cadastro Único para Programas Sociais (gov.br/mds)",
-    "ano": 2026,
-    "referencia": "Atualização cadastral do CadÚnico",
-    "texto": "Obrigatória a cada 24 meses, mesmo sem mudanças, e sempre que houver alteração de endereço, renda ou trabalho, composição familiar, escola das crianças ou saúde. A família pode ser convocada para atualizar a partir de 18 meses da última atualização. Cadastro desatualizado pode levar a bloqueio, suspensão ou cancelamento de benefícios."
-  },
-  {
-    "id": "cadunico-mds#5",
-    "doc": "cadunico-mds",
-    "titulo": "Cadastro Único (orientações do MDS)",
-    "norma": "Material informativo do MDS sobre o Cadastro Único para Programas Sociais (gov.br/mds)",
-    "ano": 2026,
-    "referencia": "Onde consultar os dados do CadÚnico",
-    "texto": "Pelo site cadunico.dataprev.gov.br ou pelo aplicativo Cadastro Único, ou pelo CRAS ou posto de atendimento do município. Avisos de atualização também podem chegar pelo app do Bolsa Família ou do Caixa Tem."
-  },
-  {
     "id": "cf-1988-extratos#1",
     "doc": "cf-1988-extratos",
     "titulo": "Constituição Federal (trechos da seguridade e assistência social)",
@@ -430,6 +268,168 @@
     "ano": 1988,
     "referencia": "ADCT, art. 56",
     "texto": "Até que a lei disponha sobre o art. 195, I, a arrecadação decorrente de, no mínimo, cinco dos seis décimos percentuais correspondentes à alíquota da contribuição de que trata o Decreto-Lei nº 1.940, de 25 de maio de 1982, alterada pelo Decreto-Lei nº 2.049, de 1º de agosto de 1983, pelo Decreto nº 91.236, de 8 de maio de 1985, e pela Lei nº 7.611, de 8 de julho de 1987, passa a integrar a receita da seguridade social, ressalvados, exclusivamente no exercício de 1988, os compromissos assumidos com programas e projetos em andamento."
+  },
+  {
+    "id": "decreto-12064-2024#1",
+    "doc": "decreto-12064-2024",
+    "titulo": "Regulamento do Programa Bolsa Família",
+    "norma": "Decreto nº 12.064, de 17 de junho de 2024 (texto compilado, Planalto, com alterações dos Decretos nº 12.417/2025 e nº 13.120/2026)",
+    "ano": 2024,
+    "referencia": "art. 18, § 1º, § 3º e § 4º (ingresso e família unipessoal)",
+    "texto": "Famílias com dados cadastrais inconsistentes não podem ingressar no Programa enquanto não saneadas as inconsistências. Famílias compostas de uma só pessoa sem inscrição ou atualização cadastral realizada por entrevista em domicílio não podem ingressar no Programa enquanto não forem realizadas essas ações (incluído pelo Decreto nº 12.417/2025). A manutenção dessas famílias será regulamentada em ato do Ministro, que disporá sobre as excepcionalidades da exigência."
+  },
+  {
+    "id": "decreto-12064-2024#2",
+    "doc": "decreto-12064-2024",
+    "titulo": "Regulamento do Programa Bolsa Família",
+    "norma": "Decreto nº 12.064, de 17 de junho de 2024 (texto compilado, Planalto, com alterações dos Decretos nº 12.417/2025 e nº 13.120/2026)",
+    "ano": 2024,
+    "referencia": "art. 19 (linha de pobreza)",
+    "texto": "O Programa Bolsa Família atenderá às famílias em situação de pobreza, caracterizada pela renda familiar per capita mensal de até R$ 218,00 (duzentos e dezoito reais), denominada linha de pobreza."
+  },
+  {
+    "id": "decreto-12064-2024#3",
+    "doc": "decreto-12064-2024",
+    "titulo": "Regulamento do Programa Bolsa Família",
+    "norma": "Decreto nº 12.064, de 17 de junho de 2024 (texto compilado, Planalto, com alterações dos Decretos nº 12.417/2025 e nº 13.120/2026)",
+    "ano": 2024,
+    "referencia": "art. 21, I a IV (valores vigentes desde outubro de 2026)",
+    "texto": "Benefícios, calculados nesta ordem: I – Benefício de Renda de Cidadania, R$ 164,00 por integrante; II – Benefício Complementar, quando a soma do inciso I for inferior a R$ 691,00, pela diferença; III – Benefício Primeira Infância, R$ 173,00 por criança de zero a sete anos incompletos; IV – Benefício Variável Familiar, R$ 58,00 por integrante que seja gestante, nutriz, criança de 7 a 12 anos incompletos ou adolescente de 12 a 18 anos incompletos. Valores anteriores (até setembro/2026): R$ 142, R$ 600, R$ 150 e R$ 50 (redação dada pelo Decreto nº 13.120/2026)."
+  },
+  {
+    "id": "decreto-12064-2024#4",
+    "doc": "decreto-12064-2024",
+    "titulo": "Regulamento do Programa Bolsa Família",
+    "norma": "Decreto nº 12.064, de 17 de junho de 2024 (texto compilado, Planalto, com alterações dos Decretos nº 12.417/2025 e nº 13.120/2026)",
+    "ano": 2024,
+    "referencia": "art. 21, § 1º",
+    "texto": "Os benefícios poderão ser pagos cumulativamente às famílias beneficiárias e o seu valor total será arredondado ao número inteiro imediatamente superior."
+  },
+  {
+    "id": "decreto-12064-2024#5",
+    "doc": "decreto-12064-2024",
+    "titulo": "Regulamento do Programa Bolsa Família",
+    "norma": "Decreto nº 12.064, de 17 de junho de 2024 (texto compilado, Planalto, com alterações dos Decretos nº 12.417/2025 e nº 13.120/2026)",
+    "ano": 2024,
+    "referencia": "art. 21, § 3º a § 6º (gestantes e nutrizes)",
+    "texto": "O Benefício Variável Familiar para gestantes é concedido com base na relação de gestantes do SUS enviada pelo Ministério da Saúde e é encerrado após o pagamento da nona parcela. Para nutrizes, a família deve ter criança que ainda não completou sete meses de idade, conforme o CadÚnico, e o benefício é encerrado após o pagamento da sexta parcela."
+  },
+  {
+    "id": "decreto-12064-2024#6",
+    "doc": "decreto-12064-2024",
+    "titulo": "Regulamento do Programa Bolsa Família",
+    "norma": "Decreto nº 12.064, de 17 de junho de 2024 (texto compilado, Planalto, com alterações dos Decretos nº 12.417/2025 e nº 13.120/2026)",
+    "ano": 2024,
+    "referencia": "art. 25 e art. 27, § 1º (titular e conta)",
+    "texto": "O titular do benefício será preferencialmente uma mulher, previamente indicada como responsável pela unidade familiar no CadÚnico. O crédito é feito em conta contábil quando o responsável não tiver conta bancária (poupança social digital, poupança digital ou conta de depósitos), quando optar por ela ou quando houver impedimento da conta."
+  },
+  {
+    "id": "decreto-12064-2024#7",
+    "doc": "decreto-12064-2024",
+    "titulo": "Regulamento do Programa Bolsa Família",
+    "norma": "Decreto nº 12.064, de 17 de junho de 2024 (texto compilado, Planalto, com alterações dos Decretos nº 12.417/2025 e nº 13.120/2026)",
+    "ano": 2024,
+    "referencia": "art. 28 e art. 29 (benefício não sacado)",
+    "texto": "São restituídos à União, nos prazos fixados pelo Ministério, os benefícios mantidos na conta contábil que não forem sacados e os creditados em contas bancárias não movimentados em prazo específico. Os prazos podem ser ampliados para grupos populacionais tradicionais, municípios em emergência ou calamidade e locais de acesso precário à rede bancária."
+  },
+  {
+    "id": "decreto-12064-2024#8",
+    "doc": "decreto-12064-2024",
+    "titulo": "Regulamento do Programa Bolsa Família",
+    "norma": "Decreto nº 12.064, de 17 de junho de 2024 (texto compilado, Planalto, com alterações dos Decretos nº 12.417/2025 e nº 13.120/2026)",
+    "ano": 2024,
+    "referencia": "art. 32, § 2º (atualização cadastral)",
+    "texto": "As informações cadastrais deverão ser atualizadas ou revalidadas pela família a cada período de dois anos, contados da data de inclusão ou da última atualização ou revalidação, na forma prevista pelo Ministério do Desenvolvimento e Assistência Social."
+  },
+  {
+    "id": "decreto-12064-2024#9",
+    "doc": "decreto-12064-2024",
+    "titulo": "Regulamento do Programa Bolsa Família",
+    "norma": "Decreto nº 12.064, de 17 de junho de 2024 (texto compilado, Planalto, com alterações dos Decretos nº 12.417/2025 e nº 13.120/2026)",
+    "ano": 2024,
+    "referencia": "art. 33 (regra de proteção)",
+    "texto": "A renda per capita pode variar sem desligamento imediato da família. Famílias cuja renda ultrapasse a linha de pobreza, até o limite fixado em ato do Ministro, permanecem no Programa pelo período fixado em ato do Ministro (originalmente até 24 meses) recebendo 50% dos benefícios a que eram elegíveis. Famílias em situação de pobreza canceladas pelo fim desse período podem retornar com prioridade em até 36 meses (redação dada pelo Decreto nº 12.417/2025)."
+  },
+  {
+    "id": "decreto-12064-2024#10",
+    "doc": "decreto-12064-2024",
+    "titulo": "Regulamento do Programa Bolsa Família",
+    "norma": "Decreto nº 12.064, de 17 de junho de 2024 (texto compilado, Planalto, com alterações dos Decretos nº 12.417/2025 e nº 13.120/2026)",
+    "ano": 2024,
+    "referencia": "art. 39 (critérios das condicionalidades)",
+    "texto": "São critérios para o cumprimento das condicionalidades: I – frequência escolar mensal mínima de 60% para beneficiários de 4 a 6 anos incompletos; II – frequência escolar mensal mínima de 75% para beneficiários de 6 a 18 anos incompletos que não tenham concluído a educação básica; III – cumprimento do calendário nacional de vacinação; IV – acompanhamento do estado nutricional de beneficiários de até 7 anos incompletos; V – realização de pré-natal para as gestantes."
+  },
+  {
+    "id": "decreto-12064-2024#11",
+    "doc": "decreto-12064-2024",
+    "titulo": "Regulamento do Programa Bolsa Família",
+    "norma": "Decreto nº 12.064, de 17 de junho de 2024 (texto compilado, Planalto, com alterações dos Decretos nº 12.417/2025 e nº 13.120/2026)",
+    "ano": 2024,
+    "referencia": "art. 40 (responsáveis pelo acompanhamento)",
+    "texto": "O Ministério da Educação acompanha as condicionalidades de frequência escolar e o Ministério da Saúde as de vacinação, estado nutricional e pré-natal, cada um disponibilizando sistemas para o registro. Ao Ministério do Desenvolvimento e Assistência Social compete a articulação intersetorial e regulamentar a gestão das condicionalidades, inclusive as hipóteses de interrupção temporária dos efeitos."
+  },
+  {
+    "id": "decreto-12064-2024#12",
+    "doc": "decreto-12064-2024",
+    "titulo": "Regulamento do Programa Bolsa Família",
+    "norma": "Decreto nº 12.064, de 17 de junho de 2024 (texto compilado, Planalto, com alterações dos Decretos nº 12.417/2025 e nº 13.120/2026)",
+    "ano": 2024,
+    "referencia": "art. 41 (efeitos do descumprimento e recurso)",
+    "texto": "Os efeitos do não cumprimento das condicionalidades são graduais e aplicados conforme o histórico da família. Não são aplicados, desde que registrado nos sistemas de saúde e educação, em caso de força maior ou caso fortuito, falta de oferta do serviço, questões de saúde, étnicas ou culturais ou outros motivos sociais reconhecidos pelo Ministério. Os efeitos podem ser revistos mediante recurso administrativo."
+  },
+  {
+    "id": "decreto-12064-2024#13",
+    "doc": "decreto-12064-2024",
+    "titulo": "Regulamento do Programa Bolsa Família",
+    "norma": "Decreto nº 12.064, de 17 de junho de 2024 (texto compilado, Planalto, com alterações dos Decretos nº 12.417/2025 e nº 13.120/2026)",
+    "ano": 2024,
+    "referencia": "art. 42 (acompanhamento pela assistência social)",
+    "texto": "As famílias em situação de não cumprimento das condicionalidades têm prioridade na inclusão nos serviços da assistência social. As famílias em atendimento ou acompanhamento pela rede socioassistencial podem ter a aplicação dos efeitos interrompida temporariamente, conforme ato do Ministério."
+  },
+  {
+    "id": "decreto-12064-2024#14",
+    "doc": "decreto-12064-2024",
+    "titulo": "Regulamento do Programa Bolsa Família",
+    "norma": "Decreto nº 12.064, de 17 de junho de 2024 (texto compilado, Planalto, com alterações dos Decretos nº 12.417/2025 e nº 13.120/2026)",
+    "ano": 2024,
+    "referencia": "art. 49, § 1º (ressarcimento)",
+    "texto": "A cobrança de ressarcimento por informação falsa prestada com dolo no CadÚnico alcança o responsável familiar que, cumulativamente, apresentar renda familiar per capita superior a dois salários mínimos e débito original superior a R$ 1.800,00. Não são alcançadas as parcelas sacadas há mais de sessenta meses. Sem comprovação de dolo, o benefício é cancelado e o processo arquivado (art. 49, § 4º)."
+  },
+  {
+    "id": "decreto-12064-2024#15",
+    "doc": "decreto-12064-2024",
+    "titulo": "Regulamento do Programa Bolsa Família",
+    "norma": "Decreto nº 12.064, de 17 de junho de 2024 (texto compilado, Planalto, com alterações dos Decretos nº 12.417/2025 e nº 13.120/2026)",
+    "ano": 2024,
+    "referencia": "art. 53 (prazos de defesa e recurso)",
+    "texto": "Ao responsável familiar são assegurados o contraditório e a ampla defesa: trinta dias, contados da ciência da notificação, para apresentar defesa administrativa ou ressarcir o valor; e trinta dias, contados da ciência da decisão que julgar improcedente a defesa, para recurso ao Ministro ou para ressarcimento."
+  },
+  {
+    "id": "decreto-13120-2026#1",
+    "doc": "decreto-13120-2026",
+    "titulo": "Correção dos valores do Bolsa Família (2026)",
+    "norma": "Decreto nº 13.120, de 17 de setembro de 2026",
+    "ano": 2026,
+    "referencia": "art. 1º",
+    "texto": "Este Decreto corrige o valor dos benefícios financeiros do Programa Bolsa Família pela variação acumulada do Índice Nacional de Preços ao Consumidor (INPC) entre março de 2023 e agosto de 2026."
+  },
+  {
+    "id": "decreto-13120-2026#2",
+    "doc": "decreto-13120-2026",
+    "titulo": "Correção dos valores do Bolsa Família (2026)",
+    "norma": "Decreto nº 13.120, de 17 de setembro de 2026",
+    "ano": 2026,
+    "referencia": "art. 2º (novos valores do art. 21 do Decreto nº 12.064/2024)",
+    "texto": "Novos valores: Benefício de Renda de Cidadania, R$ 164,00 por integrante; Benefício Complementar, para famílias cuja soma dos benefícios do inciso I seja inferior a R$ 691,00, calculado pela diferença; Benefício Primeira Infância, R$ 173,00 por criança de zero a sete anos incompletos; Benefício Variável Familiar, R$ 58,00 por integrante (gestantes, nutrizes, crianças de 7 a 12 anos incompletos e adolescentes de 12 a 18 anos incompletos)."
+  },
+  {
+    "id": "decreto-13120-2026#3",
+    "doc": "decreto-13120-2026",
+    "titulo": "Correção dos valores do Bolsa Família (2026)",
+    "norma": "Decreto nº 13.120, de 17 de setembro de 2026",
+    "ano": 2026,
+    "referencia": "art. 3º (vigência e efeitos financeiros)",
+    "texto": "O Decreto entra em vigor na data de sua publicação (17/09/2026) e produz efeitos financeiros a partir do primeiro dia do mês subsequente, isto é, 1º de outubro de 2026. A linha de pobreza de R$ 218,00 per capita (art. 19 do Decreto nº 12.064/2024) não foi alterada por este Decreto."
   },
   {
     "id": "decreto-6214-2007#1",
@@ -2185,6 +2185,276 @@
     "ano": 2012,
     "referencia": "art. 15",
     "texto": "Ficam revogados os Decretos nº 1.605, de 25 de agosto de 1995, e nº 2.529, de 25 de março de 1998. Brasília, 15 de agosto de 2012; 191º da Independência e 124º da República. Guido Mantega Miriam Belchior Tereza Campello"
+  },
+  {
+    "id": "guia-bolsa-familia-cadunico-2026#1",
+    "doc": "guia-bolsa-familia-cadunico-2026",
+    "titulo": "Guia rápido Bolsa Família e CadÚnico (orientação, não é norma)",
+    "norma": "Material orientativo compilado de MDS/Caixa e das normas citadas (Lei 14.601/2023, Decretos 12.064/2024 e 13.120/2026, Decreto 11.016/2022, Portaria MDS 1.058/2025, IN SENARC/MDS 50/2025); atualizado em 09/10/2026",
+    "ano": 2026,
+    "referencia": "Valores dos benefícios (a partir de outubro de 2026)",
+    "texto": "R$ 164 por pessoa da família (Benefício de Renda de Cidadania, BRC), base do cálculo. R$ 691 é o piso mínimo por família (Benefício Complementar, BCO), pago quando a soma dos BRCs não alcança esse valor. Mais R$ 173 por criança de 0 a 7 anos incompletos (Benefício Primeira Infância, BPI). Mais R$ 58 por gestante, nutriz, criança de 7 a 12 anos incompletos ou adolescente de 12 a 18 anos incompletos (Benefício Variável Familiar, BVF). Fonte: Decreto nº 13.120/2026."
+  },
+  {
+    "id": "guia-bolsa-familia-cadunico-2026#2",
+    "doc": "guia-bolsa-familia-cadunico-2026",
+    "titulo": "Guia rápido Bolsa Família e CadÚnico (orientação, não é norma)",
+    "norma": "Material orientativo compilado de MDS/Caixa e das normas citadas (Lei 14.601/2023, Decretos 12.064/2024 e 13.120/2026, Decreto 11.016/2022, Portaria MDS 1.058/2025, IN SENARC/MDS 50/2025); atualizado em 09/10/2026",
+    "ano": 2026,
+    "referencia": "Exemplo de cálculo com os valores de outubro de 2026",
+    "texto": "Família de 3 pessoas, sem outros adicionais: 3 × R$ 164 = R$ 492 de BRC. Como não alcança R$ 691, recebe mais R$ 199 de Benefício Complementar, totalizando R$ 691. Os adicionais (BPI e BVF) somam-se conforme a composição familiar registrada no CadÚnico. Até setembro de 2026 valiam R$ 142, R$ 600, R$ 150 e R$ 50 (exemplo antigo: 3 × R$ 142 = R$ 426, mais R$ 174 de complemento)."
+  },
+  {
+    "id": "guia-bolsa-familia-cadunico-2026#3",
+    "doc": "guia-bolsa-familia-cadunico-2026",
+    "titulo": "Guia rápido Bolsa Família e CadÚnico (orientação, não é norma)",
+    "norma": "Material orientativo compilado de MDS/Caixa e das normas citadas (Lei 14.601/2023, Decretos 12.064/2024 e 13.120/2026, Decreto 11.016/2022, Portaria MDS 1.058/2025, IN SENARC/MDS 50/2025); atualizado em 09/10/2026",
+    "ano": 2026,
+    "referencia": "Quem pode receber e como entrar",
+    "texto": "Renda mensal de, no máximo, R$ 218 por pessoa da família e inscrição no Cadastro Único (Lei 14.601/2023, art. 5º). A linha de R$ 218 não mudou com o reajuste de outubro de 2026. A seleção é automatizada e feita todo mês a partir do CadÚnico. A inscrição é feita no CRAS com CPF ou título de eleitor. Estar no CadÚnico não garante entrada no programa."
+  },
+  {
+    "id": "guia-bolsa-familia-cadunico-2026#4",
+    "doc": "guia-bolsa-familia-cadunico-2026",
+    "titulo": "Guia rápido Bolsa Família e CadÚnico (orientação, não é norma)",
+    "norma": "Material orientativo compilado de MDS/Caixa e das normas citadas (Lei 14.601/2023, Decretos 12.064/2024 e 13.120/2026, Decreto 11.016/2022, Portaria MDS 1.058/2025, IN SENARC/MDS 50/2025); atualizado em 09/10/2026",
+    "ano": 2026,
+    "referencia": "Regra de proteção (renda acima de R$ 218)",
+    "texto": "Se a renda per capita da família subir acima de R$ 218, mas não passar do limite fixado pelo Ministério (máximo de meio salário mínimo), a família pode continuar no programa por até 24 meses recebendo 50% do benefício. Acima do limite, é desligada. Fonte: Lei 14.601/2023, art. 6º; Decreto 12.064/2024, art. 33."
+  },
+  {
+    "id": "guia-bolsa-familia-cadunico-2026#5",
+    "doc": "guia-bolsa-familia-cadunico-2026",
+    "titulo": "Guia rápido Bolsa Família e CadÚnico (orientação, não é norma)",
+    "norma": "Material orientativo compilado de MDS/Caixa e das normas citadas (Lei 14.601/2023, Decretos 12.064/2024 e 13.120/2026, Decreto 11.016/2022, Portaria MDS 1.058/2025, IN SENARC/MDS 50/2025); atualizado em 09/10/2026",
+    "ano": 2026,
+    "referencia": "Pagamento: datas e prazo para saque",
+    "texto": "Pagamentos nos últimos 10 dias úteis de cada mês, escalonados pelo final do NIS, exceto dezembro. Calendário de 2026: outubro de 19 a 30; novembro de 16 a 30; dezembro de 10 a 23 (encerra antes do Natal). Em municípios em emergência ou calamidade reconhecida, o pagamento é unificado no primeiro dia do calendário. As parcelas ficam disponíveis para saque por até 180 dias, segundo material do MDS."
+  },
+  {
+    "id": "guia-bolsa-familia-cadunico-2026#6",
+    "doc": "guia-bolsa-familia-cadunico-2026",
+    "titulo": "Guia rápido Bolsa Família e CadÚnico (orientação, não é norma)",
+    "norma": "Material orientativo compilado de MDS/Caixa e das normas citadas (Lei 14.601/2023, Decretos 12.064/2024 e 13.120/2026, Decreto 11.016/2022, Portaria MDS 1.058/2025, IN SENARC/MDS 50/2025); atualizado em 09/10/2026",
+    "ano": 2026,
+    "referencia": "Como sacar e movimentar o benefício",
+    "texto": "O valor é depositado em conta na Caixa (poupança social digital, poupança digital, conta de depósitos ou conta contábil). Se a família não tiver conta, a Caixa abre automaticamente uma conta Poupança Social Digital gratuita. Canais: agências e postos da Caixa, casas lotéricas, terminais de autoatendimento, correspondentes Caixa Aqui e unidades itinerantes. O cartão é emitido em nome do responsável familiar do CadÚnico e permite sacar, comprar no débito e pagar contas. Pelo app Caixa Tem também é possível movimentar o saldo, pagar contas e fazer Pix."
+  },
+  {
+    "id": "guia-bolsa-familia-cadunico-2026#7",
+    "doc": "guia-bolsa-familia-cadunico-2026",
+    "titulo": "Guia rápido Bolsa Família e CadÚnico (orientação, não é norma)",
+    "norma": "Material orientativo compilado de MDS/Caixa e das normas citadas (Lei 14.601/2023, Decretos 12.064/2024 e 13.120/2026, Decreto 11.016/2022, Portaria MDS 1.058/2025, IN SENARC/MDS 50/2025); atualizado em 09/10/2026",
+    "ano": 2026,
+    "referencia": "Atualização do CadÚnico",
+    "texto": "A atualização é obrigatória a cada 24 meses, mesmo sem mudanças, e sempre que mudar endereço, renda ou trabalho, composição familiar, escola das crianças ou saúde (Decreto 12.064/2024, art. 32, § 2º). A família pode ser convocada antes, a partir de 18 meses da última atualização. Cadastro desatualizado pode levar a bloqueio, suspensão ou cancelamento. Famílias de uma só pessoa precisam de inscrição ou atualização por entrevista no domicílio para ingressar no Bolsa Família (Decreto 12.064/2024, art. 18, § 3º)."
+  },
+  {
+    "id": "guia-bolsa-familia-cadunico-2026#8",
+    "doc": "guia-bolsa-familia-cadunico-2026",
+    "titulo": "Guia rápido Bolsa Família e CadÚnico (orientação, não é norma)",
+    "norma": "Material orientativo compilado de MDS/Caixa e das normas citadas (Lei 14.601/2023, Decretos 12.064/2024 e 13.120/2026, Decreto 11.016/2022, Portaria MDS 1.058/2025, IN SENARC/MDS 50/2025); atualizado em 09/10/2026",
+    "ano": 2026,
+    "referencia": "Quem pode se cadastrar no CadÚnico e o que levar",
+    "texto": "Famílias com renda mensal de até meio salário mínimo por pessoa (Decreto 11.016/2022, art. 5º). Famílias com renda maior também podem se cadastrar quando o CadÚnico for exigido para algum programa ou serviço. O cadastro é gratuito e presencial, no CRAS ou posto do município. O responsável familiar leva o CPF de todas as pessoas da família (obrigatório), documento de identificação e, se houver, comprovante de residência. Cada pessoa só pode estar em uma família. Sem CPF, o cadastro fica aguardando CPF e pode ser excluído. Há procedimentos diferenciados para povos indígenas, quilombolas, ribeirinhos, pescadores artesanais e pessoas em situação de rua."
+  },
+  {
+    "id": "guia-bolsa-familia-cadunico-2026#9",
+    "doc": "guia-bolsa-familia-cadunico-2026",
+    "titulo": "Guia rápido Bolsa Família e CadÚnico (orientação, não é norma)",
+    "norma": "Material orientativo compilado de MDS/Caixa e das normas citadas (Lei 14.601/2023, Decretos 12.064/2024 e 13.120/2026, Decreto 11.016/2022, Portaria MDS 1.058/2025, IN SENARC/MDS 50/2025); atualizado em 09/10/2026",
+    "ano": 2026,
+    "referencia": "Condicionalidades",
+    "texto": "Educação: frequência mínima de 60% para 4 a 6 anos incompletos e de 75% para 6 a 18 anos incompletos que não concluíram a educação básica. Saúde: pré-natal para gestantes; vacinação conforme o calendário nacional; acompanhamento do estado nutricional (peso e altura) de crianças com menos de 7 anos. Fonte: Lei 14.601/2023, art. 10; Decreto 12.064/2024, art. 39."
+  },
+  {
+    "id": "guia-bolsa-familia-cadunico-2026#10",
+    "doc": "guia-bolsa-familia-cadunico-2026",
+    "titulo": "Guia rápido Bolsa Família e CadÚnico (orientação, não é norma)",
+    "norma": "Material orientativo compilado de MDS/Caixa e das normas citadas (Lei 14.601/2023, Decretos 12.064/2024 e 13.120/2026, Decreto 11.016/2022, Portaria MDS 1.058/2025, IN SENARC/MDS 50/2025); atualizado em 09/10/2026",
+    "ano": 2026,
+    "referencia": "Efeitos do descumprimento das condicionalidades",
+    "texto": "Os efeitos são graduais e consideram o histórico da família: alerta (a família continua recebendo), bloqueio por um mês, suspensão por dois meses e, em último caso, cancelamento. Famílias em descumprimento têm prioridade nos serviços da assistência social, e o acompanhamento no Sicon pode interromper temporariamente os efeitos. Fonte: Portaria MDS 1.058/2025 e Decreto 12.064/2024, arts. 41 e 42."
+  },
+  {
+    "id": "guia-bolsa-familia-cadunico-2026#11",
+    "doc": "guia-bolsa-familia-cadunico-2026",
+    "titulo": "Guia rápido Bolsa Família e CadÚnico (orientação, não é norma)",
+    "norma": "Material orientativo compilado de MDS/Caixa e das normas citadas (Lei 14.601/2023, Decretos 12.064/2024 e 13.120/2026, Decreto 11.016/2022, Portaria MDS 1.058/2025, IN SENARC/MDS 50/2025); atualizado em 09/10/2026",
+    "ano": 2026,
+    "referencia": "Cronograma de repercussão 2026 e prazo de recurso",
+    "texto": "Março: educação de out/nov de 2025 e saúde da 2ª vigência de 2025; recurso até 23/04/2026. Maio: educação de fev/mar de 2026; recurso até 25/06/2026. Julho: educação de abr/mai; recurso até 27/08/2026. Setembro: educação de jun/jul e saúde da 1ª vigência de 2026; recurso até 29/10/2026. Novembro: educação de ago/set; recurso até 31/01/2027. Fonte: Instrução Normativa SENARC/MDS nº 50, de 26/12/2025."
+  },
+  {
+    "id": "guia-bolsa-familia-cadunico-2026#12",
+    "doc": "guia-bolsa-familia-cadunico-2026",
+    "titulo": "Guia rápido Bolsa Família e CadÚnico (orientação, não é norma)",
+    "norma": "Material orientativo compilado de MDS/Caixa e das normas citadas (Lei 14.601/2023, Decretos 12.064/2024 e 13.120/2026, Decreto 11.016/2022, Portaria MDS 1.058/2025, IN SENARC/MDS 50/2025); atualizado em 09/10/2026",
+    "ano": 2026,
+    "referencia": "Recurso on-line no Sicon",
+    "texto": "É o direito da família de contestar o efeito recebido por descumprimento de condicionalidades, por exemplo por erro de registro ou por situação de vulnerabilidade que dificultou o acesso à escola ou à saúde. O recurso é feito com a coordenação municipal do PBF, que registra no Sicon: NIS ou nome do responsável, justificativa da família (até 400 caracteres) e documentação. Documentos aceitos: declaração da escola, da unidade de saúde, da própria família, do CRAS, laudo ou relatório técnico da assistência social, entre outros. Os originais ficam arquivados no município. A norma vigente é a Portaria MDS 1.058/2025 (art. 10 da Portaria 251/2012, citado em materiais antigos, foi substituído)."
+  },
+  {
+    "id": "guia-bolsa-familia-cadunico-2026#13",
+    "doc": "guia-bolsa-familia-cadunico-2026",
+    "titulo": "Guia rápido Bolsa Família e CadÚnico (orientação, não é norma)",
+    "norma": "Material orientativo compilado de MDS/Caixa e das normas citadas (Lei 14.601/2023, Decretos 12.064/2024 e 13.120/2026, Decreto 11.016/2022, Portaria MDS 1.058/2025, IN SENARC/MDS 50/2025); atualizado em 09/10/2026",
+    "ano": 2026,
+    "referencia": "Devolução voluntária de valores",
+    "texto": "Valores recebidos indevidamente podem ser devolvidos pela Guia de Recolhimento da União (GRU) no PagTesouro, ou pessoalmente em agência da Caixa. Órgão arrecadador 55000 (MDS), Unidade Gestora 550007 (Secretaria Nacional de Renda de Cidadania); códigos de serviço 025144 (exercício atual) e 025132 (exercícios anteriores) conforme o material recebido, a confirmar. Informe CPF e nome do responsável familiar e o valor, pague por Pix, cartão ou boleto e guarde o comprovante."
+  },
+  {
+    "id": "guia-bolsa-familia-cadunico-2026#14",
+    "doc": "guia-bolsa-familia-cadunico-2026",
+    "titulo": "Guia rápido Bolsa Família e CadÚnico (orientação, não é norma)",
+    "norma": "Material orientativo compilado de MDS/Caixa e das normas citadas (Lei 14.601/2023, Decretos 12.064/2024 e 13.120/2026, Decreto 11.016/2022, Portaria MDS 1.058/2025, IN SENARC/MDS 50/2025); atualizado em 09/10/2026",
+    "ano": 2026,
+    "referencia": "Atendimento e contatos",
+    "texto": "Disque Social (MDS): 121. Caixa: 111. CRAS Cristiana Vicente Nunes, Rua Santo Agostinho, nº 193, Centenário, Boa Vista/RR, telefone (95) 98402-6617 (dado fornecido pelo mantenedor, a confirmar)."
+  },
+  {
+    "id": "lei-14601-2023#1",
+    "doc": "lei-14601-2023",
+    "titulo": "Lei do Programa Bolsa Família",
+    "norma": "Lei nº 14.601, de 19 de junho de 2023 (texto compilado, Planalto, com alterações da Lei nº 15.077/2024)",
+    "ano": 2023,
+    "referencia": "art. 3º",
+    "texto": "São objetivos do Programa Bolsa Família: I – combater a fome, por meio da transferência direta de renda às famílias beneficiárias; II – contribuir para a interrupção do ciclo de reprodução da pobreza entre as gerações; e III – promover o desenvolvimento e a proteção social das famílias, especialmente das crianças, dos adolescentes e dos jovens em situação de pobreza."
+  },
+  {
+    "id": "lei-14601-2023#2",
+    "doc": "lei-14601-2023",
+    "titulo": "Lei do Programa Bolsa Família",
+    "norma": "Lei nº 14.601, de 19 de junho de 2023 (texto compilado, Planalto, com alterações da Lei nº 15.077/2024)",
+    "ano": 2023,
+    "referencia": "art. 3º, parágrafo único, II e V",
+    "texto": "Os objetivos do Programa Bolsa Família serão obtidos por meio de: II – vinculação ao Sistema Único de Assistência Social (Suas), permitida a utilização de sua rede de serviços socioassistenciais; V – utilização do Cadastro Único para Programas Sociais do Governo Federal (CadÚnico) e sua promoção como plataforma de integração do Programa a ações executadas pelos governos federal, estaduais, municipais e distrital."
+  },
+  {
+    "id": "lei-14601-2023#3",
+    "doc": "lei-14601-2023",
+    "titulo": "Lei do Programa Bolsa Família",
+    "norma": "Lei nº 14.601, de 19 de junho de 2023 (texto compilado, Planalto, com alterações da Lei nº 15.077/2024)",
+    "ano": 2023,
+    "referencia": "art. 4º, I a IV",
+    "texto": "Para fins desta Lei, considera-se: I – família: núcleo composto de uma ou mais pessoas que formem um grupo doméstico, com residência no mesmo domicílio, e que contribuam para o rendimento ou que dele dependam para atendimento de suas despesas; II – renda familiar mensal: soma dos rendimentos auferidos por todos os integrantes da família, excluídos os rendimentos indicados no § 1º e em regulamento; III – renda familiar per capita mensal: razão entre a renda familiar mensal e o total de integrantes da família; IV – domicílio: local que serve de moradia à família."
+  },
+  {
+    "id": "lei-14601-2023#4",
+    "doc": "lei-14601-2023",
+    "titulo": "Lei do Programa Bolsa Família",
+    "norma": "Lei nº 14.601, de 19 de junho de 2023 (texto compilado, Planalto, com alterações da Lei nº 15.077/2024)",
+    "ano": 2023,
+    "referencia": "art. 4º, § 1º e § 2º",
+    "texto": "Não serão computados na renda familiar mensal: I – benefícios financeiros de caráter eventual, temporário ou sazonal instituídos pelo poder público; II – recursos financeiros de natureza indenizatória, para recomposição de danos materiais ou morais; III – recursos recebidos de ações de transferência de renda de natureza assistencial instituídas pelo poder público. O benefício de prestação continuada (BPC), recebido por qualquer integrante da família, compõe o cálculo da renda familiar per capita mensal."
+  },
+  {
+    "id": "lei-14601-2023#5",
+    "doc": "lei-14601-2023",
+    "titulo": "Lei do Programa Bolsa Família",
+    "norma": "Lei nº 14.601, de 19 de junho de 2023 (texto compilado, Planalto, com alterações da Lei nº 15.077/2024)",
+    "ano": 2023,
+    "referencia": "art. 5º",
+    "texto": "São elegíveis ao Programa Bolsa Família as famílias: I – inscritas no CadÚnico; e II – cuja renda familiar per capita mensal seja igual ou inferior a R$ 218,00 (duzentos e dezoito reais)."
+  },
+  {
+    "id": "lei-14601-2023#6",
+    "doc": "lei-14601-2023",
+    "titulo": "Lei do Programa Bolsa Família",
+    "norma": "Lei nº 14.601, de 19 de junho de 2023 (texto compilado, Planalto, com alterações da Lei nº 15.077/2024)",
+    "ano": 2023,
+    "referencia": "art. 6º, caput e § 2º (regra de proteção)",
+    "texto": "As famílias beneficiárias cuja renda per capita mensal seja superior a R$ 218,00 serão mantidas no Programa pelo período de até 24 meses, observados os parâmetros do artigo e do regulamento. Durante esse período, a família receberá 50% do valor dos benefícios financeiros a que for elegível."
+  },
+  {
+    "id": "lei-14601-2023#7",
+    "doc": "lei-14601-2023",
+    "titulo": "Lei do Programa Bolsa Família",
+    "norma": "Lei nº 14.601, de 19 de junho de 2023 (texto compilado, Planalto, com alterações da Lei nº 15.077/2024)",
+    "ano": 2023,
+    "referencia": "art. 6º, § 1º, § 3º e § 5º",
+    "texto": "Se a renda familiar per capita mensal superar meio salário mínimo (excluído o valor dos benefícios do Bolsa Família), a família será desligada do Programa. Têm prioridade para reingressar: as famílias que voluntariamente se desligarem e as desligadas pelo término dos 24 meses. Ato do Poder Executivo federal poderá alterar o valor-limite de desligamento (máximo: meio salário mínimo) e o prazo da regra de proteção (máximo: 24 meses). (§ 5º incluído pela Lei nº 15.077/2024.)"
+  },
+  {
+    "id": "lei-14601-2023#8",
+    "doc": "lei-14601-2023",
+    "titulo": "Lei do Programa Bolsa Família",
+    "norma": "Lei nº 14.601, de 19 de junho de 2023 (texto compilado, Planalto, com alterações da Lei nº 15.077/2024)",
+    "ano": 2023,
+    "referencia": "art. 7º, § 1º, I e II",
+    "texto": "Benefícios financeiros do Bolsa Família: I – Benefício de Renda de Cidadania, por integrante da família, destinado a todas as famílias beneficiárias; II – Benefício Complementar, destinado às famílias cuja soma dos valores do inciso I seja inferior ao valor de referência (R$ 600,00 na redação original da lei, hoje R$ 691,00 pelo Decreto nº 13.120/2026), calculado pela diferença entre este valor e a soma."
+  },
+  {
+    "id": "lei-14601-2023#9",
+    "doc": "lei-14601-2023",
+    "titulo": "Lei do Programa Bolsa Família",
+    "norma": "Lei nº 14.601, de 19 de junho de 2023 (texto compilado, Planalto, com alterações da Lei nº 15.077/2024)",
+    "ano": 2023,
+    "referencia": "art. 7º, § 1º, III e IV",
+    "texto": "III – Benefício Primeira Infância, por criança, para famílias com crianças de 0 (zero) a 7 (sete) anos incompletos; IV – Benefício Variável Familiar, para famílias com: a) gestantes; b) nutrizes; c) crianças de 7 a 12 anos incompletos; ou d) adolescentes de 12 a 18 anos incompletos. O Benefício Variável Familiar é calculado por integrante que se enquadrar nessas hipóteses (art. 7º, § 5º)."
+  },
+  {
+    "id": "lei-14601-2023#10",
+    "doc": "lei-14601-2023",
+    "titulo": "Lei do Programa Bolsa Família",
+    "norma": "Lei nº 14.601, de 19 de junho de 2023 (texto compilado, Planalto, com alterações da Lei nº 15.077/2024)",
+    "ano": 2023,
+    "referencia": "art. 7º, § 3º e § 4º",
+    "texto": "Ato do Poder Executivo federal poderá alterar os valores dos benefícios (incisos I, III e IV), o valor de referência do Benefício Complementar e o valor de referência da linha de pobreza. Os valores poderão ser corrigidos a cada intervalo de, no máximo, 24 meses, vedada a sua redução."
+  },
+  {
+    "id": "lei-14601-2023#11",
+    "doc": "lei-14601-2023",
+    "titulo": "Lei do Programa Bolsa Família",
+    "norma": "Lei nº 14.601, de 19 de junho de 2023 (texto compilado, Planalto, com alterações da Lei nº 15.077/2024)",
+    "ano": 2023,
+    "referencia": "art. 8º, § 1º",
+    "texto": "Os benefícios são pagos mensalmente pelo agente pagador: I – ao responsável familiar, de acordo com os dados da inscrição da família no CadÚnico; e II – preferencialmente, à mulher."
+  },
+  {
+    "id": "lei-14601-2023#12",
+    "doc": "lei-14601-2023",
+    "titulo": "Lei do Programa Bolsa Família",
+    "norma": "Lei nº 14.601, de 19 de junho de 2023 (texto compilado, Planalto, com alterações da Lei nº 15.077/2024)",
+    "ano": 2023,
+    "referencia": "art. 10, caput (condicionalidades)",
+    "texto": "A manutenção da família no Programa depende do cumprimento, pelos integrantes, de condicionalidades relativas: I – à realização de pré-natal; II – ao cumprimento do calendário nacional de vacinação; III – ao acompanhamento do estado nutricional, para beneficiários de até 7 anos incompletos; IV – à frequência escolar mínima de 60% para beneficiários de 4 a 6 anos incompletos e de 75% para beneficiários de 6 a 18 anos incompletos que não tenham concluído a educação básica."
+  },
+  {
+    "id": "lei-14601-2023#13",
+    "doc": "lei-14601-2023",
+    "titulo": "Lei do Programa Bolsa Família",
+    "norma": "Lei nº 14.601, de 19 de junho de 2023 (texto compilado, Planalto, com alterações da Lei nº 15.077/2024)",
+    "ano": 2023,
+    "referencia": "art. 10, § 1º, IV e VI",
+    "texto": "Ato do Poder Executivo federal disporá sobre os efeitos do descumprimento das condicionalidades, vedada a adoção de procedimentos de caráter punitivo e de exposição vexatória, e sobre procedimentos para verificar a situação da família e seu atendimento, com prazo razoável para que possa cumprir as exigências antes de ser desligada."
+  },
+  {
+    "id": "lei-14601-2023#14",
+    "doc": "lei-14601-2023",
+    "titulo": "Lei do Programa Bolsa Família",
+    "norma": "Lei nº 14.601, de 19 de junho de 2023 (texto compilado, Planalto, com alterações da Lei nº 15.077/2024)",
+    "ano": 2023,
+    "referencia": "art. 10, § 2º",
+    "texto": "A rede de serviços do Suas poderá atender ou acompanhar as famílias beneficiárias em situação de descumprimento das condicionalidades, com vistas à superação gradativa de suas vulnerabilidades."
+  },
+  {
+    "id": "lei-14601-2023#15",
+    "doc": "lei-14601-2023",
+    "titulo": "Lei do Programa Bolsa Família",
+    "norma": "Lei nº 14.601, de 19 de junho de 2023 (texto compilado, Planalto, com alterações da Lei nº 15.077/2024)",
+    "ano": 2023,
+    "referencia": "art. 15, § 1º",
+    "texto": "É vedado ao agente operador e pagador (Caixa Econômica Federal) efetuar descontos ou compensações que impliquem a redução do valor dos benefícios do Bolsa Família, a pretexto de recompor saldos negativos ou de saldar dívidas preexistentes do beneficiário."
+  },
+  {
+    "id": "lei-14601-2023#16",
+    "doc": "lei-14601-2023",
+    "titulo": "Lei do Programa Bolsa Família",
+    "norma": "Lei nº 14.601, de 19 de junho de 2023 (texto compilado, Planalto, com alterações da Lei nº 15.077/2024)",
+    "ano": 2023,
+    "referencia": "art. 18, caput",
+    "texto": "Sem prejuízo das sanções penais e cíveis, e observados o contraditório e a ampla defesa, o responsável familiar que dolosamente prestar informação falsa no CadÚnico, que resulte no ingresso ou na permanência como beneficiário do Programa, deverá ressarcir ao erário os valores recebidos. Para ressarcimento, o valor original é atualizado pelo IPCA (art. 18, § 3º)."
   },
   {
     "id": "loas-1993#1",
