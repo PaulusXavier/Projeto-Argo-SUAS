@@ -328,6 +328,7 @@ function finishUnlockAfterRender() {
       if (typeof syncCategoryToggleLabel === 'function') syncCategoryToggleLabel();
       if (typeof renderQuickNav === 'function') renderQuickNav();
       if (typeof applyHashRoute === 'function') applyHashRoute();
+      if (typeof toolsAlarmsBoot === 'function') toolsAlarmsBoot();
       setTimeout(() => {
         const alreadyMutedToday = (typeof argoGreetingMutedToday === 'function') && argoGreetingMutedToday();
         if (!alreadyMutedToday && typeof argoShowGreeting === 'function') argoShowGreeting();
@@ -344,6 +345,7 @@ function lockApp(reason) {
   sessionEncKey = null;
   sessionLegacyKey = null;
   _attachCache.clear();
+  if (typeof toolsAlarmsLock === 'function') toolsAlarmsLock();
   const appRoot = document.getElementById('appRoot');
   const loginScreen = document.getElementById('loginScreen');
   if (appRoot) appRoot.dataset.locked = 'true';
@@ -3587,30 +3589,116 @@ function toolsCopy(txt, okMsg) {
 
 // ---- Alarmes: próxima ocorrência de HH:MM no horário de Boa Vista, comparada com o relógio
 // do aparelho (por isso aguenta a aba ficar em segundo plano e só toca um pouco depois).
-function toolsAlarmNext(hm) {
+// Podem repetir (todo dia / segunda a sexta) e ficam salvos, cifrados, neste aparelho
+// (chave toolpad_*, que já entra no backup e some em "Apagar dados salvos").
+const TOOLS_ALARMS_KEY = 'toolpad_alarms_v1';
+const TOOLS_REP_NAMES = { once: '', daily: ' · todo dia', weekdays: ' · segunda a sexta' };
+function toolsAlarmNext(hm, rep) {
   const parts = hm.split(':').map(Number), now = Date.now(), p = toolsPartsIn(new Date(now), TOOLS_TZ_BV);
   let delta = (parts[0] * 3600 + parts[1] * 60) - (p.h * 3600 + p.m * 60 + p.s);
   if (delta <= 0) delta += 86400;
-  return now - (now % 1000) + delta * 1000;
+  let at = now - (now % 1000) + delta * 1000;
+  if (rep === 'weekdays') {
+    for (let i = 0; i < 7; i++) {
+      const z = toolsZoneInfo(new Date(at), TOOLS_TZ_BV);
+      const wd = z ? (z.day + 4) % 7 : new Date(at).getDay(); // 1/1/1970 foi quinta; 0 = domingo
+      if (wd !== 0 && wd !== 6) break;
+      at += 86400000;
+    }
+  }
+  return at;
+}
+function toolsAlarmsSave() {
+  const keep = TOOLS_STATE.alarms.filter(a => a.rep !== 'once' || !a.done)
+    .map(a => ({ id: a.id, hm: a.hm, label: a.label, rep: a.rep, at: a.at }));
+  if (!keep.length) safeStorage.remove(TOOLS_ALARMS_KEY);
+  else safeStorage.set(TOOLS_ALARMS_KEY, JSON.stringify(keep));
+}
+function toolsAlarmsEnsureTimer() {
+  const S = TOOLS_STATE;
+  if (S.alarms.some(a => !a.done)) { if (!S.alarmTimer) S.alarmTimer = setInterval(toolsAlarmTick, 1000); }
+  else if (S.alarmTimer) { clearInterval(S.alarmTimer); S.alarmTimer = null; }
+}
+// Carrega os alarmes salvos assim que o app destranca (e de novo ao abrir a aba), para eles
+// tocarem mesmo sem abrir a aba Ferramentas. Alarme único que passou com o app fechado vira aviso.
+function toolsAlarmsBoot() {
+  const S = TOOLS_STATE;
+  if (S.alarmsLoaded || !sessionEncKey) return;
+  S.alarmsLoaded = true;
+  const saved = safeStorage.getJSON(TOOLS_ALARMS_KEY, []);
+  const now = Date.now(), missed = [];
+  (Array.isArray(saved) ? saved : []).slice(0, 8).forEach((x, i) => {
+    if (!x || !/^\d{2}:\d{2}$/.test(String(x.hm))) return;
+    const rep = x.rep === 'daily' || x.rep === 'weekdays' ? x.rep : 'once';
+    const a = { id: String(x.id || 'a' + now.toString(36) + i), hm: x.hm, label: String(x.label || '').slice(0, 60), rep, at: Number(x.at) || toolsAlarmNext(x.hm, rep), done: false };
+    if (rep === 'once') { if (a.at <= now) { a.done = true; a.missed = true; missed.push(a); } }
+    else a.at = toolsAlarmNext(a.hm, rep);
+    S.alarms.push(a);
+  });
+  S.alarms.sort((x, y) => x.at - y.at);
+  // O navegador só libera som depois de um toque: o primeiro toque na página prepara o áudio.
+  document.addEventListener('pointerdown', toolsPrimeAudio, { once: true });
+  toolsAlarmsEnsureTimer();
+  if (missed.length) toolsToast('⏰ Passou com o app fechado: alarme das ' + missed.map(a => a.hm).join(', ') + '.', 12000);
+  toolsAlarmRender();
+}
+// Ao trancar o app, os alarmes saem da memória (o rótulo pode ter dado de atendimento).
+function toolsAlarmsLock() {
+  const S = TOOLS_STATE;
+  clearInterval(S.alarmTimer); S.alarmTimer = null;
+  S.alarms = []; S.alarmsLoaded = false;
+  toolsAlarmRender();
 }
 function toolsAlarmTick() {
   const al = TOOLS_STATE.alarms, now = Date.now();
+  let changed = false;
   al.forEach(a => {
     if (a.done || now < a.at) return;
-    a.done = true; toolsBeep();
+    toolsBeep();
     toolsToast('⏰ Alarme das ' + a.hm + (a.label ? ': ' + a.label : '.'), 12000);
+    // Na notificação do sistema o rótulo NÃO vai: ela aparece na tela bloqueada.
+    toolsNotify('Alarme das ' + a.hm, 'Toque para abrir o Argo SUAS.');
+    if (a.rep === 'once') a.done = true; else a.at = toolsAlarmNext(a.hm, a.rep);
+    changed = true;
   });
-  if (!al.some(a => !a.done)) { clearInterval(TOOLS_STATE.alarmTimer); TOOLS_STATE.alarmTimer = null; }
+  if (changed) toolsAlarmsSave();
+  toolsAlarmsEnsureTimer();
   toolsAlarmRender();
 }
 function toolsAlarmRender() {
   const ul = document.getElementById('toolAlList');
   if (!ul) return;
   const al = TOOLS_STATE.alarms;
-  ul.innerHTML = al.length ? al.map(a => '<li class="tools-al' + (a.done ? ' is-done' : '') + '"><strong>' + a.hm + '</strong><span>'
-    + (a.label ? escapeHtml(a.label) : 'Alarme') + (a.done ? ' · tocou' : '') + '</span>'
-    + '<button type="button" class="tools-ico-btn" data-al="' + a.id + '" aria-label="Remover alarme das ' + a.hm + '" title="Remover">✕</button></li>').join('')
-    : '<li class="tools-hint">Nenhum alarme ativo.</li>';
+  ul.innerHTML = al.length ? al.map(a => {
+    const extra = a.missed ? ' · passou com o app fechado' : a.done ? ' · tocou' : (TOOLS_REP_NAMES[a.rep] || '') + (a.snoozed ? ' · adiado' : '');
+    return '<li class="tools-al' + (a.done ? ' is-done' : '') + '"><strong>' + a.hm + '</strong><span>'
+      + (a.label ? escapeHtml(a.label) : 'Alarme') + extra + '</span>'
+      + (a.done && !a.missed ? '<button type="button" class="tools-chip" data-snooze="' + a.id + '" aria-label="Adiar o alarme das ' + a.hm + ' em 5 minutos">Soneca 5 min</button>' : '')
+      + '<button type="button" class="tools-ico-btn" data-al="' + a.id + '" aria-label="Remover alarme das ' + a.hm + '" title="Remover">✕</button></li>';
+  }).join('') : '<li class="tools-hint">Nenhum alarme ativo.</li>';
+}
+
+// Aviso do sistema quando a página está escondida (alarme e temporizador). Só com a permissão
+// já dada; o texto é sempre genérico, porque a notificação aparece na tela bloqueada.
+async function toolsNotify(title, body) {
+  try {
+    if (!('Notification' in window) || Notification.permission !== 'granted' || !document.hidden) return;
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      reg.showNotification(title, { body, icon: './assets/img/icon-192.png', badge: './assets/img/icon-192.png', tag: 'argo-tools' });
+      return;
+    }
+    new Notification(title, { body, icon: './assets/img/icon-192.png' });
+  } catch (e) { /* o aviso na tela e o som continuam valendo */ }
+}
+// Pede a permissão uma única vez, no toque que cria o alarme ou inicia o temporizador.
+function toolsAskNotify() {
+  try {
+    if ('Notification' in window && Notification.permission === 'default' && !TOOLS_STATE.askedNotify) {
+      TOOLS_STATE.askedNotify = true;
+      Notification.requestPermission();
+    }
+  } catch (e) { /* ignora */ }
 }
 
 // Mostra a contagem no título da aba do navegador enquanto o temporizador roda.
@@ -3740,6 +3828,7 @@ function toolsTmTick() {
     clearInterval(tm.timer); tm.timer = null;
     toolsBeep();
     toolsToast('⏰ Temporizador: o tempo acabou.');
+    toolsNotify('Temporizador', 'O tempo acabou.');
   }
   toolsTmPaint();
 }
@@ -3747,6 +3836,7 @@ function toolsTmStart() {
   const tm = TOOLS_STATE.tm;
   if (tm.running || tm.left <= 0) return;
   toolsPrimeAudio();
+  toolsAskNotify();
   tm.done = false; tm.running = true; tm.end = Date.now() + tm.left;
   clearInterval(tm.timer); tm.timer = setInterval(toolsTmTick, 250);
   toolsTmPaint();
@@ -6152,6 +6242,109 @@ function pcParse(v) {
   return isFinite(n) && n >= 0 ? n : 0;
 }
 
+// Número em formato brasileiro ou simples (1.234,56 · 1234.5 · R$ 89,90 · -15 · 12%). null se não for número.
+function toolsNum(v) {
+  let s = String(v == null ? '' : v).replace(/R\$/gi, '').replace(/[\s%]/g, '').replace(/−/g, '-');
+  const neg = s[0] === '-';
+  s = s.replace(/[^\d.,]/g, '');
+  if (!/\d/.test(s)) return null;
+  const lc = s.lastIndexOf(','), ld = s.lastIndexOf('.');
+  if (lc > -1 && ld > -1) s = lc > ld ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+  else if (lc > -1) s = s.replace(/,/g, (m, i) => i === lc ? '.' : '');
+  else if (ld > -1 && /^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+  const n = parseFloat(s);
+  return isFinite(n) ? (neg ? -n : n) : null;
+}
+
+function toolsCalcMoreHtml() {
+  return `
+  <section class="tech-card tools-card" aria-label="Porcentagens">
+    <h2>Porcentagens</h2>
+    <label class="tools-lbl">O que calcular<select id="pctMode" class="tools-input">
+      <option value="of">Quanto é X% de um valor</option>
+      <option value="what">X é quantos % de um total</option>
+      <option value="up">Acrescentar X% a um valor</option>
+      <option value="down">Descontar X% de um valor</option>
+      <option value="chg">Variação de um valor para outro</option></select></label>
+    <div class="pc-ref">
+      <label class="tools-lbl"><span id="pctLa">Percentual (%)</span><input id="pctA" class="tools-input" inputmode="decimal" autocomplete="off" placeholder="ex.: 15"></label>
+      <label class="tools-lbl"><span id="pctLb">Valor</span><input id="pctB" class="tools-input" inputmode="decimal" autocomplete="off" placeholder="ex.: 1.621,00"></label>
+    </div>
+    <div id="pctOut" class="pc-out" role="status" aria-live="polite"></div>
+    <div class="tools-row"><button type="button" class="btn-tech btn-secondary" id="pctCopy">Copiar resultado</button></div>
+    <p class="tools-hint">Aceita 1.621,50, 1621,5 ou 1621.50. Nada é salvo.</p>
+  </section>
+  <section class="tech-card tools-card" aria-label="Soma e média de uma lista">
+    <h2>Soma e média de uma lista</h2>
+    <label class="tools-lbl">Valores (um por linha ou separados por ;)<textarea id="lsIn" class="tools-input qr-text" rows="5" autocomplete="off" spellcheck="false" placeholder="Cole aqui uma coluna da planilha, ex.:&#10;1.621,00&#10;350,50&#10;R$ 89,90"></textarea></label>
+    <label class="tools-check"><input type="checkbox" id="lsBrl"> Mostrar em reais (R$)</label>
+    <div id="lsOut" class="pc-out" role="status" aria-live="polite"></div>
+    <div class="tools-row"><button type="button" class="btn-tech btn-secondary" id="lsCopy">Copiar resultado</button>
+    <button type="button" class="btn-tech btn-secondary" id="lsClear">Limpar</button></div>
+    <p class="tools-hint">Calcula soma, média, mediana, menor e maior. Texto e números misturados: só os números entram na conta. O que você cola fica só na tela.</p>
+  </section>`;
+}
+
+function initToolsCalcMore() {
+  const $ = id => document.getElementById(id);
+  if (!$('pctMode')) return;
+  const f2 = n => n.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+
+  // ---- Porcentagens
+  const LAB = { of: ['Percentual (%)', 'Valor'], what: ['Parte', 'Total'], up: ['Percentual (%)', 'Valor'], down: ['Percentual (%)', 'Valor'], chg: ['Valor inicial', 'Valor final'] };
+  let pctLast = '';
+  const pctRun = () => {
+    const mode = $('pctMode').value, a = toolsNum($('pctA').value), b = toolsNum($('pctB').value), out = $('pctOut');
+    $('pctLa').textContent = LAB[mode][0]; $('pctLb').textContent = LAB[mode][1];
+    pctLast = '';
+    if (a === null || b === null) { out.innerHTML = '<p class="tools-hint">Preencha os dois campos para ver o resultado.</p>'; return; }
+    let big, line;
+    if (mode === 'of') { const r = b * a / 100; big = f2(r); line = f2(a) + '% de ' + f2(b) + ' = ' + f2(r); }
+    else if (mode === 'what') {
+      if (b === 0) { out.innerHTML = '<p class="tools-hint">Não é possível dividir por zero.</p>'; return; }
+      const r = a / b * 100; big = f2(r) + '%'; line = f2(a) + ' é ' + f2(r) + '% de ' + f2(b);
+    } else if (mode === 'up' || mode === 'down') {
+      const d = b * a / 100, r = mode === 'up' ? b + d : b - d;
+      big = f2(r); line = f2(b) + (mode === 'up' ? ' + ' : ' − ') + f2(a) + '% (' + f2(d) + ') = ' + f2(r);
+    } else {
+      if (a === 0) { out.innerHTML = '<p class="tools-hint">O valor inicial não pode ser zero.</p>'; return; }
+      const r = (b - a) / a * 100;
+      big = (r > 0 ? '+' : '') + f2(r) + '%';
+      line = 'De ' + f2(a) + ' para ' + f2(b) + ': ' + (r > 0 ? 'aumento' : r < 0 ? 'redução' : 'sem variação') + (r ? ' de ' + f2(Math.abs(r)) + '%' : '');
+    }
+    out.innerHTML = '<div class="pc-big"><span>Resultado</span><strong>' + escapeHtml(big) + '</strong></div><p class="tools-hint">' + escapeHtml(line) + '</p>';
+    pctLast = line;
+  };
+  const pctCard = $('pctMode').closest('section');
+  pctCard.addEventListener('input', pctRun); pctCard.addEventListener('change', pctRun);
+  $('pctCopy').addEventListener('click', () => { if (!pctLast) { toolsToast('Preencha os dois campos antes de copiar.', 3000); return; } toolsCopy(pctLast, 'Resultado copiado.'); });
+  pctRun();
+
+  // ---- Soma e média de uma lista
+  let lsLast = '';
+  const lsRun = () => {
+    const out = $('lsOut');
+    const toks = $('lsIn').value.replace(/R\$/gi, '').replace(/−/g, '-').match(/-?\d[\d.,]*/g) || [];
+    const nums = toks.map(toolsNum).filter(n => n !== null);
+    lsLast = '';
+    if (!nums.length) { out.innerHTML = '<p class="tools-hint">Cole ou digite os valores para ver a soma e a média.</p>'; return; }
+    const brl = $('lsBrl').checked;
+    const F = n => brl ? n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : n.toLocaleString('pt-BR', { maximumFractionDigits: 4 });
+    const sum = parseFloat(nums.reduce((x, y) => x + y, 0).toPrecision(12)), n = nums.length;
+    const sorted = nums.slice().sort((x, y) => x - y);
+    const med = n % 2 ? sorted[(n - 1) / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2;
+    const rows = [['Quantidade', String(n)], ['Média', F(sum / n)], ['Mediana', F(med)], ['Menor', F(sorted[0])], ['Maior', F(sorted[n - 1])]];
+    out.innerHTML = '<div class="pc-big"><span>Soma</span><strong>' + escapeHtml(F(sum)) + '</strong></div>'
+      + '<ul class="pc-facts">' + rows.map(r => '<li>' + r[0] + ': <strong>' + escapeHtml(r[1]) + '</strong></li>').join('') + '</ul>';
+    lsLast = 'Soma: ' + F(sum) + '\n' + rows.map(r => r[0] + ': ' + r[1]).join('\n');
+  };
+  $('lsIn').addEventListener('input', lsRun);
+  $('lsBrl').addEventListener('change', lsRun);
+  $('lsClear').addEventListener('click', () => { $('lsIn').value = ''; lsRun(); $('lsIn').focus(); });
+  $('lsCopy').addEventListener('click', () => { if (!lsLast) { toolsToast('Não há resultado para copiar.', 3000); return; } toolsCopy(lsLast, 'Resultado copiado.'); });
+  lsRun();
+}
+
 function toolsExtrasHtml() {
   return `
   <section class="tech-card tools-card" aria-label="Renda per capita">
@@ -6266,9 +6459,11 @@ function toolsExtrasHtml() {
     <div id="shControls" hidden>
       <div class="pc-ref">
         <label class="tools-lbl">Coluna<select id="shCol" class="tools-input"></select></label>
+        <label class="tools-lbl">Duplicados: combinar com (opcional)<select id="shCol2" class="tools-input"></select></label>
       </div>
       <div class="tools-row">
         <button type="button" class="btn-tech btn-primary" id="shAuto">Conferir tudo</button>
+        <button type="button" class="btn-tech btn-secondary" id="shPeek">Ver amostra</button>
         <button type="button" class="btn-tech btn-secondary" id="shFreq">Contar valores</button>
         <button type="button" class="btn-tech btn-secondary" id="shDup">Achar duplicados</button>
         <button type="button" class="btn-tech btn-secondary" id="shNis">Conferir NIS</button>
@@ -6285,6 +6480,7 @@ function toolsExtrasHtml() {
     <div id="shOut" class="sh-out" role="status" aria-live="polite"></div>
     <div class="tools-row">
       <button type="button" class="btn-tech btn-secondary" id="shCopy" disabled>Copiar resultado</button>
+      <button type="button" class="btn-tech btn-secondary" id="shCsv" disabled title="Baixa as tabelas do resultado, completas, em .csv (abre no Excel)">Baixar tabelas (.csv)</button>
       <button type="button" class="btn-tech btn-secondary" id="shClear" disabled>Limpar planilha</button>
     </div>
     <p class="tools-hint">A primeira linha precisa ser o cabeçalho. A planilha é lida neste aparelho: nada é enviado e nada fica salvo. Os dados ficam só na memória até você tocar em Limpar ou trocar de aba. NIS e CPF aparecem só com os 3 últimos dígitos. A conferência vê formato e dígito verificador, não se o número existe no CadÚnico. Em .xlsx/.xls, o primeiro uso baixa uma biblioteca e precisa de internet; em CSV funciona offline.</p>
@@ -6806,9 +7002,10 @@ function renderToolsCard() {
     + '<div class="tools-pane" role="tabpanel" id="toolPane-al" aria-labelledby="toolTab-al" hidden>'
     +   '<div class="tools-row"><label class="tools-lbl">Horário (Boa Vista) <input id="toolAlTime" class="tools-input" type="time"></label>'
     +   '<label class="tools-lbl tools-grow">Aviso (opcional) <input id="toolAlLabel" class="tools-input" type="text" maxlength="60" placeholder="ex.: visita domiciliar às 15h"></label>'
+    +   '<label class="tools-lbl">Repetir <select id="toolAlRep" class="tools-input"><option value="once">Só uma vez</option><option value="daily">Todo dia</option><option value="weekdays">Segunda a sexta</option></select></label>'
     +   '<button type="button" class="btn-tech btn-primary" id="toolAlAdd">Ativar alarme</button></div>'
     +   '<ul id="toolAlList" class="tools-al-list" aria-label="Alarmes"></ul>'
-    +   '<p class="tools-hint">O alarme toca na próxima vez que der o horário, desde que o app continue aberto. Fica só na memória: ao recarregar a página os alarmes somem, e o aviso digitado não é salvo.</p>'
+    +   '<p class="tools-hint">O alarme toca na próxima vez que der o horário, desde que o app esteja aberto e destrancado. Os alarmes ficam salvos, cifrados, neste aparelho (com o aviso digitado) e somem em “Apagar dados salvos”. Com a permissão de notificações, o app também avisa quando a aba está escondida; a notificação não mostra o texto do aviso.</p>'
     + '</div></section>'
     // ---------- Calculadora
     + '<section id="calcBox" class="tech-card tools-card" aria-label="Calculadora" tabindex="0"><h2>Calculadora</h2>'
@@ -6820,6 +7017,7 @@ function renderToolsCard() {
     + '<div id="calcHint" class="tools-hint" role="status">Clique aqui e use o teclado: números, + − * /, Enter, Backspace, Esc (limpa tudo) e Del (limpa o número). Ctrl+V cola um valor.</div>'
     + '<details class="calc-log-box"><summary>Histórico <span id="calcLogCount" class="calc-log-count"></span></summary>'
     + '<ul id="calcLog" class="calc-log"></ul><button type="button" class="btn-tech btn-secondary calc-log-clear" id="calcLogClear">Limpar histórico</button></details></section>'
+    + toolsCalcMoreHtml()
     // ---------- Atendimento: renda per capita, idade e QR Code
     + toolsExtrasHtml()
     // ---------- Bloco de notas
@@ -6830,6 +7028,7 @@ function renderToolsCard() {
     +   '<ul id="toolNoteList" class="notes-list" aria-label="Suas notas"></ul></div>'
     +   '<div class="notes-main"><textarea id="toolPad" class="tools-pad" aria-label="Texto da nota" placeholder="Escreva aqui. O texto é salvo automaticamente, cifrado, neste aparelho. Dica: Ctrl+S salva na hora."></textarea>'
     +   '<div class="tools-bar"><span id="toolPadInfo" class="tools-hint" role="status"></span>'
+    +   '<select id="toolPadTpl" class="tools-select" aria-label="Criar nota a partir de um modelo"><option value="">Modelo…</option><option value="atend">Atendimento</option><option value="visita">Visita domiciliar</option><option value="tel">Contato por telefone</option><option value="reuniao">Reunião de equipe</option><option value="dia">Tarefas do dia</option></select>'
     +   '<button type="button" class="btn-tech btn-secondary" id="toolPadStamp" title="Inserir data e hora no cursor">Data/hora</button>'
     +   '<button type="button" class="btn-tech btn-secondary" id="toolPadTask" title="Transformar a linha (ou as linhas selecionadas) em tarefas. Enter continua a lista; Ctrl+Enter marca ou desmarca.">☐ Lista</button>'
     +   '<button type="button" class="btn-tech btn-secondary" id="toolPadPin" aria-pressed="false">Fixar</button>'
@@ -6839,9 +7038,10 @@ function renderToolsCard() {
     +   '<button type="button" class="btn-tech btn-secondary" id="toolPadPdfAll" title="Salvar todas as notas em um PDF (uma por página)">Todas em PDF</button>'
     +   '<button type="button" class="btn-tech btn-secondary" id="toolPadSave">Esta nota em .txt</button>'
     +   '<button type="button" class="btn-tech btn-secondary" id="toolPadSaveAll" title="Baixar todas as notas em um único .txt">Todas em .txt</button></div></details>'
-    +   '<button type="button" class="btn-tech btn-secondary" id="toolPadClear">Excluir nota</button></div></div>'
+    +   '<button type="button" class="btn-tech btn-secondary" id="toolPadClear">Excluir nota</button>'
+    +   '<button type="button" class="btn-tech btn-primary" id="toolPadUndo" hidden>Desfazer exclusão</button></div></div>'
     + '</div>'
-    + '<p class="tools-hint">Fica cifrado com a senha do app e some em “Apagar dados salvos neste dispositivo”. Ao baixar o .txt ou o PDF, o arquivo sai sem cifra.</p></section></div>';
+    + '<p class="tools-hint">Fica cifrado com a senha do app e some em “Apagar dados salvos neste dispositivo”. Ao baixar o .txt ou o PDF, o arquivo sai sem cifra. Nos modelos, use iniciais ou código, não o nome completo.</p></section></div>';
 }
 
 /* ---------------------------------------------------------------------------
@@ -6866,6 +7066,8 @@ const TOOLS_CATALOG = {
   'Contador de atendimentos': { id: 'contador', cat: 'atend', kw: 'rma mensal contagem resumo mes atendimentos' },
   'Calculadora de prazos': { id: 'prazos', cat: 'atend', kw: 'dias uteis corridos feriados vencimento data' },
   'Conferir NIS e CPF': { id: 'documentos', cat: 'atend', kw: 'nis cpf pis digito verificador validar conferir documento numero digitacao cadunico' },
+  'Porcentagens': { id: 'porcentagem', cat: 'calculo', kw: 'percentual por cento acrescimo desconto aumento reducao variacao reajuste quanto e quantos' },
+  'Soma e média de uma lista': { id: 'lista', cat: 'calculo', kw: 'somar total media mediana minimo maximo valores coluna planilha colar estatistica' },
   'Valor por extenso': { id: 'extenso', cat: 'calculo', kw: 'reais dinheiro recibo oficio declaracao escrever numero texto moeda centavos beneficio eventual' },
   'Link de WhatsApp': { id: 'whatsapp', cat: 'atend', kw: 'wa.me zap whatsapp telefone celular contato mensagem link ddd conversa' },
   'Formatar texto': { id: 'texto', cat: 'dados', kw: 'maiuscula minuscula nome proprio acento acentos espacos limpar caracteres palavras contar padronizar' },
@@ -7012,6 +7214,7 @@ function initToolsNav() {
 function initToolsPanel() {
   const $ = id => document.getElementById(id);
   initToolsExtras();
+  initToolsCalcMore();
   initToolsAtendimento();
   initToolsDocs();
   initToolsMore();
@@ -7125,23 +7328,33 @@ function initToolsPanel() {
   });
 
   // ---- Alarme (horário de Boa Vista; toca enquanto o app estiver aberto)
+  toolsAlarmsBoot();
   $('toolAlAdd').addEventListener('click', () => {
     const hm = $('toolAlTime').value, al = TOOLS_STATE.alarms;
     if (!/^\d{2}:\d{2}$/.test(hm)) { toolsToast('Informe o horário do alarme.', 3500); $('toolAlTime').focus(); return; }
     if (al.filter(a => !a.done).length >= 8) { toolsToast('Limite de 8 alarmes ativos.', 3500); return; }
-    toolsPrimeAudio();
-    al.push({ id: 'a' + Date.now().toString(36) + al.length, hm, label: $('toolAlLabel').value.trim().slice(0, 60), at: toolsAlarmNext(hm), done: false });
+    toolsPrimeAudio(); toolsAskNotify();
+    const rv = $('toolAlRep').value, rep = rv === 'daily' || rv === 'weekdays' ? rv : 'once';
+    al.push({ id: 'a' + Date.now().toString(36) + al.length, hm, label: $('toolAlLabel').value.trim().slice(0, 60), rep, at: toolsAlarmNext(hm, rep), done: false });
     al.sort((x, y) => x.at - y.at);
     $('toolAlLabel').value = '';
-    if (!TOOLS_STATE.alarmTimer) TOOLS_STATE.alarmTimer = setInterval(toolsAlarmTick, 1000);
-    toolsAlarmRender();
+    toolsAlarmsSave(); toolsAlarmsEnsureTimer(); toolsAlarmRender();
   });
   $('toolAlLabel').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('toolAlAdd').click(); } });
   $('toolAlList').addEventListener('click', e => {
+    const sn = e.target.closest('[data-snooze]');
+    if (sn) {
+      const a = TOOLS_STATE.alarms.find(x => x.id === sn.dataset.snooze); if (!a) return;
+      toolsPrimeAudio();
+      a.at = Date.now() + 5 * 60000; a.done = false; a.snoozed = true; a.rep = 'once';
+      const p = toolsPartsIn(new Date(a.at), TOOLS_TZ_BV); a.hm = toolsPad2(p.h) + ':' + toolsPad2(p.m);
+      TOOLS_STATE.alarms.sort((x, y) => x.at - y.at);
+      toolsAlarmsSave(); toolsAlarmsEnsureTimer(); toolsAlarmRender();
+      return;
+    }
     const b = e.target.closest('[data-al]'); if (!b) return;
     TOOLS_STATE.alarms = TOOLS_STATE.alarms.filter(a => a.id !== b.dataset.al);
-    if (!TOOLS_STATE.alarms.some(a => !a.done)) { clearInterval(TOOLS_STATE.alarmTimer); TOOLS_STATE.alarmTimer = null; }
-    toolsAlarmRender();
+    toolsAlarmsSave(); toolsAlarmsEnsureTimer(); toolsAlarmRender();
   });
   setPane(TOOLS_STATE.pane);
   toolsTmPaint();
@@ -7331,19 +7544,22 @@ function initToolsPanel() {
     if (!keep.some(n => n.x.trim())) return safeStorage.remove(TOOLPAD_V2_KEY) || true;
     return safeStorage.set(TOOLPAD_V2_KEY, JSON.stringify({ active: data.active, notes: keep }));
   };
+  // Tarefas da nota: linhas que começam com ☐ (aberta) ou ☑ (feita).
+  const tasksOf = x => { const m = String(x).match(/^[ \t]*[☐☑] /gm) || []; return { t: m.length, d: m.filter(l => l.indexOf('☑') > -1).length }; };
   const counts = () => {
-    const w = (pad.value.trim().match(/\S+/g) || []).length;
-    return w + (w === 1 ? ' palavra' : ' palavras') + ' · ' + pad.value.length + ' caracteres';
+    const w = (pad.value.trim().match(/\S+/g) || []).length, k = tasksOf(pad.value);
+    return w + (w === 1 ? ' palavra' : ' palavras') + ' · ' + pad.value.length + ' caracteres'
+      + (k.t ? ' · ' + k.d + ' de ' + k.t + (k.t === 1 ? ' tarefa feita' : ' tarefas feitas') : '');
   };
   const renderList = () => {
     const q = norm(search.value.trim());
     const items = data.notes.slice().sort(byRecent).filter(n => !q || norm(n.x).includes(q));
     list.innerHTML = items.length ? items.map(n => {
-      const act = n.id === data.active, sn = snipOf(n.x, q);
+      const act = n.id === data.active, sn = snipOf(n.x, q), tk = tasksOf(n.x);
       return '<li><button type="button" class="notes-item' + (act ? ' is-active' : '') + '" data-id="' + n.id + '" aria-current="' + (act ? 'true' : 'false') + '">'
         + '<span class="notes-item-title">' + (n.p ? '<span class="notes-pin" role="img" aria-label="Fixada">📌</span> ' : '') + escapeHtml(titleOf(n.x)) + '</span>'
         + (sn ? '<span class="notes-item-snip">' + escapeHtml(sn) + '</span>' : '')
-        + '<span class="notes-item-meta">' + escapeHtml(whenOf(n.u)) + '</span></button></li>';
+        + '<span class="notes-item-meta">' + escapeHtml(whenOf(n.u)) + (tk.t ? ' · ☑ ' + tk.d + '/' + tk.t : '') + '</span></button></li>';
     }).join('') : '<li class="tools-hint notes-empty">Nenhuma nota encontrada.</li>';
   };
   const paintPin = () => {
@@ -7487,13 +7703,51 @@ function initToolsPanel() {
       'bloco-de-notas-' + new Date().toISOString().slice(0, 10) + '.txt');
     info.textContent = items.length + (items.length === 1 ? ' nota baixada.' : ' notas baixadas.');
   });
+  // ---- Modelos: criam uma nota nova (ou preenchem a nota vazia) com a estrutura pronta
+  const TPL = {
+    atend: () => 'Atendimento — ' + stampNow() + '\nUsuário/família (iniciais ou código): \nDemanda: \nO que foi feito: \nEncaminhamentos: \nPróximos passos: \nRetorno previsto em: \n',
+    visita: () => 'Visita domiciliar — ' + stampNow() + '\nFamília (iniciais ou código): \nObjetivo da visita: \nSituação observada: \nOrientações dadas: \nCombinados: \nPróxima ação: \n',
+    tel: () => 'Contato por telefone — ' + stampNow() + '\nQuem ligou / quem atendeu (iniciais): \nAssunto: \nOrientação dada: \nPendências: \n☐ ',
+    reuniao: () => 'Reunião de equipe — ' + stampNow() + '\nParticipantes: \nPauta: \n- \nDecisões: \nTarefas:\n☐ ',
+    dia: () => 'Tarefas — ' + stampNow().slice(0, 10) + '\n☐ '
+  };
+  $('toolPadTpl').addEventListener('change', e => {
+    const k = e.target.value; e.target.value = '';
+    if (!k || !TPL[k]) return;
+    if (saveT) saveNow();
+    search.value = '';
+    let n = current();
+    if (n.x.trim()) { n = { id: newId(), x: '', u: Date.now() }; data.notes.push(n); data.active = n.id; }
+    n.x = TPL[k](); n.u = Date.now(); pad.value = n.x;
+    saveNow(); paintPin(); pad.focus();
+    const at = pad.value.indexOf(': \n');
+    const pos = at > -1 ? at + 2 : pad.value.length;
+    try { pad.setSelectionRange(pos, pos); } catch (err) { /* ignora */ }
+  });
+
+  // ---- Excluir com "Desfazer" por 15 s (no lugar do confirm())
+  let trash = null, trashT = null;
+  const hideUndo = () => { clearTimeout(trashT); trash = null; $('toolPadUndo').hidden = true; };
   $('toolPadClear').addEventListener('click', () => {
-    if (pad.value && !confirm('Excluir esta nota? Isso não pode ser desfeito.')) return;
     clearTimeout(saveT); saveT = null;
+    const gone = current(), had = gone.x.trim() !== '';
     data.notes = data.notes.filter(n => n.id !== data.active);
     if (!data.notes.length) data.notes.push({ id: newId(), x: '', u: Date.now() });
     data.active = data.notes.slice().sort(byRecent)[0].id;
     pad.value = current().x; saveNow(); paintPin(); pad.focus();
+    if (had) {
+      hideUndo(); trash = gone; $('toolPadUndo').hidden = false;
+      trashT = setTimeout(hideUndo, 15000);
+      info.textContent = 'Nota excluída. Toque em “Desfazer exclusão” para recuperá-la.';
+    }
+  });
+  $('toolPadUndo').addEventListener('click', () => {
+    if (!trash) return;
+    const back = trash; hideUndo();
+    if (saveT) saveNow();
+    data.notes.push(back); data.active = back.id; pad.value = back.x;
+    saveNow(); paintPin(); pad.focus();
+    info.textContent = 'Nota recuperada. ' + counts();
   });
 }
 
@@ -15815,9 +16069,12 @@ function agendaEntriesFromDocData(data) {
 // várias viram "3 anotações — mais recente: ...". A lista completa, com
 // hora de cada uma, só aparece dentro do próprio dia (agendaRenderEntriesList).
 function agendaEntriesPreview(entries) {
-  if (!entries || !entries.length) return '';
-  if (entries.length === 1) return entries[0].text;
-  return entries.length + ' anotações — mais recente: ' + entries[entries.length - 1].text;
+  // Anotações marcadas como feitas saem dos resumos (grade, semana, notificação);
+  // continuam na lista do dia e na busca.
+  const open = (entries || []).filter(e => e && !e.done);
+  if (!open.length) return '';
+  if (open.length === 1) return open[0].text;
+  return open.length + ' anotações — mais recente: ' + open[open.length - 1].text;
 }
 
 function agendaEntryTimeLabel(createdAt) {
@@ -16341,12 +16598,12 @@ function argoPick(list) { return list[Math.floor(Math.random() * list.length)]; 
 const ARGO_TAB_TIPS = {
   all: 'Na busca, escreva bairro, serviço ou nome da unidade. Cada card tem "Gerar Guia" (ficha de encaminhamento), mapa e a estrela de favoritos.',
   favoritos: 'Aqui ficam as unidades marcadas com estrela. Para tirar uma, toque na estrela de novo no card.',
-  agenda: 'Use "Hoje" para voltar ao dia atual. Em PageUp/PageDown você troca de mês. Para ver as anotações em outros aparelhos, configure o código de sincronização. Pergunte ao Argo: "o que tem hoje?", "próximo feriado", "dias úteis em novembro" ou "anotar amanhã: ligar para o CRAS".',
+  agenda: 'Toque num dia para anotar; cada anotação pode ser editada ou marcada como feita. O botão 🖨️ imprime o mês aberto. Use "Hoje" para voltar ao dia atual. Em PageUp/PageDown você troca de mês. Para ver as anotações em outros aparelhos, configure o código de sincronização. Pergunte ao Argo: "o que tem hoje?", "próximo feriado", "dias úteis em novembro" ou "anotar amanhã: ligar para o CRAS".',
   mapa: 'Toque num pino para ver a unidade, ou busque pelo nome. "Qual CRAS/CREAS atende o bairro?" mostra a unidade de referência. "Minha localização" lista as mais próximas.',
   tradutor: 'Escreva ou fale em português e escolha o idioma. Dá para salvar frases próprias para usar de novo.',
   pdftools: 'Una até 20 arquivos, divida ou extraia páginas, reduza o tamanho de um PDF, numere as páginas e converta entre PDF, Word e JPG. Nada sai do seu navegador.',
   appsext: 'Cada atalho abre um app do autor em nova aba, com login e sincronização independentes.',
-  ferramentas: 'Relógio de Boa Vista com cronômetro, temporizador e alarme, calculadora com memória, renda per capita, idade, QR Code, contador de atendimentos, prazos em dias úteis, conferência de NIS e CPF, valor por extenso, link de WhatsApp, formatador de texto, analisador de planilha (duplicados, NIS/CPF e datas) e bloco de notas cifrado neste aparelho.',
+  ferramentas: 'Relógio de Boa Vista com cronômetro, temporizador e alarmes que repetem e ficam salvos, calculadora com memória, porcentagens, soma e média de listas, renda per capita, idade, QR Code, contador de atendimentos, prazos em dias úteis, conferência de NIS e CPF, valor por extenso, link de WhatsApp, formatador de texto, analisador de planilha (duplicados, NIS/CPF e datas) e bloco de notas cifrado neste aparelho.',
   noticias: 'Toque num tema rápido (Bolsa Família, CadÚnico…), filtre por Normativos ou por período e use a estrela para salvar o que quer ler depois.',
   cras: 'Procure por bairro para saber qual equipe de referência atende. A planilha de atendimentos abre em tela cheia.',
   cas: 'Aqui ficam os registros de atendimento do CAS. Use a busca para localizar um registro.',
@@ -16571,7 +16828,7 @@ function initLoginMascot() {
 function agendaToast(msg, kind) {
   agendaEnsureModals();
   let type = kind === 'error' ? 'error' : 'info';
-  if (type === 'info' && /^(Anotação (guardada|apagada)|Código copiado)/.test(msg)) type = 'success';
+  if (type === 'info' && /^(Anotação (guardada|apagada|adicionada|atualizada)|Código copiado)/.test(msg)) type = 'success';
   argoAviso(msg, type);
 }
 
@@ -16856,6 +17113,23 @@ function renderAgendaCard() {
         /* Próximos marcos na coluna lateral. */
         .agenda-up-box { margin-top: 16px; padding-top: 6px; border-top: 1px dashed var(--rule-line); }
         .agenda-up-box[hidden] { display: none; }
+
+        /* Painel "Hoje": data, tipo do dia, dias úteis que faltam e atalho para anotar. */
+        .agenda-today-status { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin: 0 14px 8px; padding: 9px 12px; border-radius: 10px; background: var(--paper-alt); border: 1px solid var(--rule-line); border-left: 4px solid var(--gold); }
+        .agenda-today-status[hidden] { display: none; }
+        .agenda-ts-date { font-weight: 800; font-size: 15px; color: var(--ink); }
+        .agenda-ts-date::first-letter { text-transform: uppercase; }
+        .agenda-ts-kind { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--ink); }
+        .agenda-ts-kind i { width: 9px; height: 9px; border-radius: 50%; background: var(--green-ink); }
+        .agenda-ts-kind[data-kind="feriado"] i { background: var(--red-ink); }
+        .agenda-ts-kind[data-kind="facultativo"] i { background: var(--amber-ink); }
+        .agenda-ts-kind[data-kind="fim"] i { background: var(--ink-muted); }
+        .agenda-ts-kind[data-kind="pagamento"] i { background: var(--green-ink); }
+        .agenda-ts-kind[data-kind="extra"] i { background: var(--blue-ink); }
+        .agenda-ts-meta { font-size: 12.5px; color: var(--ink-muted); }
+        .agenda-ts-add { margin-left: auto; min-height: 32px; padding: 3px 13px; border-radius: 999px; border: 1px solid var(--gold); background: transparent; color: var(--cover); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+        .agenda-ts-add:hover { background: rgba(184, 137, 79, 0.18); }
+        @media (max-width: 600px) { .agenda-today-status { margin: 0 10px 8px; } .agenda-ts-add { margin-left: 0; } }
       </style>
       <div class="card-top">
         <div style="display:flex; align-items:center; gap:0.55rem;">
@@ -16890,7 +17164,7 @@ function renderAgendaCard() {
                 🔔<span id="agendaNotifyDot" class="agenda-sync-dot agenda-sync-off"></span>
               </button>
               <button type="button" class="agenda-sync-btn" title="Baixar as datas de ${AGENDA_YEAR} para o calendário do celular (.ics)" aria-label="Baixar as datas para o calendário do celular (.ics)" onclick="agendaExportIcs()">📥</button>
-              <button type="button" class="agenda-sync-btn" title="Imprimir este mês" aria-label="Imprimir este mês" onclick="window.print()">🖨️</button>
+              <button type="button" class="agenda-sync-btn" title="Imprimir este mês" aria-label="Imprimir este mês" onclick="agendaPrintMonth()">🖨️</button>
               <button type="button" id="agendaSyncBtn" class="agenda-sync-btn" title="Sincronização entre aparelhos" aria-label="Sincronização entre aparelhos" onclick="agendaOpenSyncModal()">
                 🔄<span id="agendaSyncDot" class="agenda-sync-dot agenda-sync-off"></span>
               </button>
@@ -16906,6 +17180,8 @@ function renderAgendaCard() {
             </div>
             <div id="agendaTodayText" class="agenda-today-text"></div>
           </div>
+
+          <div id="agendaTodayStatus" class="agenda-today-status" role="status" aria-live="polite" hidden></div>
 
           <div id="agendaNextStrip" class="agenda-next-strip" role="status"></div>
 
@@ -17070,10 +17346,96 @@ function agendaRenderCalendar() {
   }
 
   agendaRenderMonthList();
+  agendaRenderTodayStatus();
   agendaRenderNextStrip();
   agendaRenderYearStrip();
   agendaRenderUpcoming();
   agendaUpdateLegend();
+}
+
+// Painel "Hoje": sempre visível (funciona sem sincronizar). Mostra o tipo do
+// dia (útil, feriado, facultativo, fim de semana), quantos dias úteis faltam
+// no mês e quantas anotações pendentes há para hoje.
+function agendaRenderTodayStatus() {
+  const el = document.getElementById('agendaTodayStatus');
+  if (!el) return;
+  const now = new Date();
+  if (now.getFullYear() !== AGENDA_YEAR) { el.hidden = true; return; }
+  const m = now.getMonth(), d = now.getDate(), key = agendaKeyFor(m, d);
+  const info = AGENDA_DATA_INFO[key];
+  const kind = info ? argoAgendaKind(info) : '';
+  const wd = now.getDay();
+  let kindLabel, kindData;
+  if (kind === 'feriado') { kindLabel = agendaDayTitle(key); kindData = 'feriado'; }
+  else if (kind === 'facultativo') { kindLabel = agendaDayTitle(key); kindData = 'facultativo'; }
+  else if (wd === 0 || wd === 6) { kindLabel = 'Fim de semana'; kindData = 'fim'; }
+  else if (kind === 'pagamento') { kindLabel = 'Dia útil · dia de pagamento'; kindData = 'pagamento'; }
+  else if (kind === 'extra') { kindLabel = 'Dia útil · ' + agendaDayTitle(key); kindData = 'extra'; }
+  else { kindLabel = 'Dia útil'; kindData = 'util'; }
+
+  let remaining = 0;
+  for (let x = d + 1; x <= agendaDaysInMonth(m); x++) if (argoAgIsBusiness(m, x)) remaining++;
+  const pending = (agendaNotesCache[key] || []).filter(e => e && !e.done).length;
+
+  const meta = [];
+  if (Object.keys(AGENDA_DATA_INFO).length) meta.push(remaining === 0 ? 'último dia útil do mês' : (remaining === 1 ? 'falta 1 dia útil no mês' : 'faltam ' + remaining + ' dias úteis no mês'));
+  meta.push(pending ? pending + (pending === 1 ? ' anotação pendente' : ' anotações pendentes') : 'sem anotações pendentes');
+
+  el.innerHTML = '<span class="agenda-ts-date">' + escapeHtml(agendaLongDate(now)) + '</span>' +
+    '<span class="agenda-ts-kind" data-kind="' + kindData + '"><i></i>' + escapeHtml(kindLabel) + '</span>' +
+    '<span class="agenda-ts-meta">' + escapeHtml(meta.join(' · ')) + '</span>' +
+    '<button type="button" class="agenda-ts-add" onclick="agendaOpenNoteModal(\'' + key + '\')">＋ Anotar hoje</button>';
+  el.hidden = false;
+}
+
+// Imprime o mês aberto. A folha é montada em #print-area (o CSS de impressão
+// esconde todo o resto do app, por isso window.print() direto saía em branco).
+// Só entram as datas oficiais; anotações pessoais não saem no papel.
+function agendaPrintMonth() {
+  const m = agendaCurrentMonth, count = agendaDaysInMonth(m);
+  const first = new Date(AGENDA_YEAR, m, 1).getDay();
+  const total = Math.ceil((first + count) / 7) * 7;
+  const colors = { feriado: '#b3413a', facultativo: '#a9762a', pagamento: '#3f7d55', extra: '#2f5d8a' };
+  const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+  let rows = '<tr>' + dayNames.map((n, i) => '<th style="border:1px solid #888;padding:4px;font-size:12px;background:#eee;' + (i === 0 ? 'color:#b3413a;' : '') + '">' + n + '</th>').join('') + '</tr>';
+  for (let i = 0; i < total; i += 7) {
+    let tr = '';
+    for (let c = 0; c < 7; c++) {
+      const d = i + c - first + 1;
+      if (d < 1 || d > count) { tr += '<td style="border:1px solid #bbb;background:#fafafa;"></td>'; continue; }
+      const key = agendaKeyFor(m, d), info = AGENDA_DATA_INFO[key], kind = info ? argoAgendaKind(info) : '';
+      const weekend = c === 0 || c === 6;
+      tr += '<td style="border:1px solid #888;vertical-align:top;padding:4px 5px;height:2.6cm;' + (weekend ? 'background:#f3f3f3;' : '') + '">' +
+        '<div style="font-size:15px;font-weight:700;' + (c === 0 || kind === 'feriado' ? 'color:#b3413a;' : '') + '">' + d + '</div>' +
+        (info ? '<div style="margin-top:3px;font-size:10.5px;font-weight:700;line-height:1.2;color:' + colors[kind] + ';">' + escapeHtml(agendaDayTitle(key)) + '</div>' : '') +
+        '</td>';
+    }
+    rows += '<tr>' + tr + '</tr>';
+  }
+  const prefix = AGENDA_YEAR + '-' + String(m + 1).padStart(2, '0') + '-';
+  const marked = Object.keys(AGENDA_DATA_INFO).filter(k => k.indexOf(prefix) === 0).sort();
+  const list = marked.length
+    ? marked.map(k => '<li><strong>' + agendaDateFromKey(k).getDate() + '</strong> — ' + escapeHtml(agendaDayTitle(k)) + ' <span style="color:#666;">(' + escapeHtml(argoAgKindWord(argoAgendaKind(AGENDA_DATA_INFO[k])).toLowerCase()) + ')</span></li>').join('')
+    : '<li>Nenhuma data oficial marcada neste mês.</li>';
+  const biz = Object.keys(AGENDA_DATA_INFO).length ? ' · ' + agendaBusinessDays(m) + ' dias úteis' : '';
+  const printArea = document.getElementById('print-area');
+  if (!printArea) { window.print(); return; }
+  printArea.innerHTML =
+    '<div class="print-page" style="font-family:\'Times New Roman\',Times,serif;color:#111;padding:0.3cm;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">' +
+        '<h1 style="margin:0;font-size:26px;font-style:italic;">' + AGENDA_MONTH_NAMES[m] + ' de ' + AGENDA_YEAR + '</h1>' +
+        '<span style="font-size:12px;color:#555;">Agenda Argo' + biz + '</span></div>' +
+      '<table style="width:100%;border-collapse:collapse;table-layout:fixed;">' + rows + '</table>' +
+      '<ul style="margin:10px 0 0;padding-left:18px;font-size:12px;columns:2;line-height:1.5;">' + list + '</ul>' +
+      '<div style="margin-top:8px;font-size:10px;color:#777;">Feriados, pontos facultativos e pagamentos oficiais · Argo SUAS · Impresso em ' + new Date().toLocaleDateString('pt-BR') + '</div>' +
+    '</div>';
+  setTempPageOrientation('A4 landscape', '0.8cm');
+  window.addEventListener('afterprint', function done() {
+    setTempPageOrientation(null);
+    printArea.innerHTML = '';
+    window.removeEventListener('afterprint', done);
+  });
+  window.print();
 }
 
 // Faixa dos 12 meses, com um pontinho por tipo de data (e anotação) de cada mês.
@@ -17454,7 +17816,8 @@ function agendaEnsureModals() {
           <button type="button" class="agenda-modal-x" onclick="agendaCloseNoteModal()" aria-label="Fechar">&times;</button>
         </div>
         <div id="agendaEntriesList" class="agenda-entries-list"></div>
-        <label for="agendaNoteInput" class="agenda-sr-only">Nova anotação do dia</label>
+        <div id="agendaEditBanner" class="agenda-edit-banner" hidden><span>Editando uma anotação</span><button type="button" onclick="agendaCancelEdit()">Cancelar edição</button></div>
+        <label for="agendaNoteInput" class="agenda-sr-only">Anotação do dia</label>
         <textarea id="agendaNoteInput" rows="3" maxlength="500" placeholder="Escrever nova anotação…" class="agenda-textarea" oninput="agendaUpdateNoteCounter()"></textarea>
         <div class="agenda-note-meta">
           <span id="agendaNoteHint" class="agenda-note-hint"></span>
@@ -17522,6 +17885,16 @@ function agendaEnsureModals() {
       .agenda-entry-del { background:none; border:none; cursor:pointer; color:#6f6551; font-size:12px; font-weight:700; padding:2px 7px; border-radius:6px; line-height:1.4; flex-shrink:0; }
       .agenda-entry-del:hover { background:#efe4cb; color:#8f2d27; }
       .agenda-entry-del.armed { background:#b3413a; color:#fff; }
+      .agenda-entry-check { display:inline-flex; align-items:center; gap:7px; cursor:pointer; }
+      .agenda-entry-check input { width:17px; height:17px; accent-color:#1f3d33; cursor:pointer; margin:0; }
+      .agenda-entry-actions { display:inline-flex; gap:2px; flex-shrink:0; }
+      .agenda-entry-edit { background:none; border:none; cursor:pointer; color:#6f6551; font-size:12px; font-weight:700; padding:2px 7px; border-radius:6px; line-height:1.4; }
+      .agenda-entry-edit:hover { background:#efe4cb; color:#1f3d33; }
+      .agenda-entry-item.is-done .agenda-entry-text { text-decoration:line-through; opacity:0.55; }
+      .agenda-entry-item.is-editing { border-color:#1f3d33; box-shadow:0 0 0 2px rgba(31,61,51,0.18); }
+      .agenda-edit-banner { font-size:13px; font-weight:700; color:#1f3d33; margin:0 0 6px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+      .agenda-edit-banner[hidden] { display:none; }
+      .agenda-edit-banner button { background:none; border:none; color:#8f2d27; font:inherit; font-size:13px; font-weight:700; text-decoration:underline; cursor:pointer; padding:2px 6px; }
       .agenda-entry-text { font-family:'Caveat', cursive; font-size:19px; line-height:1.2; color:#2f5d8a; white-space:pre-wrap; overflow-wrap:anywhere; }
       .agenda-btn-secondary { flex:1; background:#efe4cb; color:#2c2620; border:1px solid #d3c495; padding:11px; border-radius:8px; font-weight:700; cursor:pointer; }
       .agenda-btn-link { display:block; margin:12px auto 0; background:none; border:none; color:#1f3d33; font-family:inherit; font-size:14px; font-weight:700; text-decoration:underline; cursor:pointer; padding:4px 8px; }
@@ -17547,8 +17920,14 @@ function agendaEnsureModals() {
   const entriesList = document.getElementById('agendaEntriesList');
   if (entriesList) {
     entriesList.addEventListener('click', (ev) => {
+      const edit = ev.target.closest ? ev.target.closest('.agenda-entry-edit') : null;
+      if (edit) { agendaStartEdit(Number(edit.dataset.idx)); return; }
       const btn = ev.target.closest ? ev.target.closest('.agenda-entry-del') : null;
       if (btn) agendaDeleteEntry(Number(btn.dataset.idx));
+    });
+    entriesList.addEventListener('change', (ev) => {
+      const box = ev.target && ev.target.classList && ev.target.classList.contains('agenda-entry-done') ? ev.target : null;
+      if (box) agendaToggleDone(Number(box.dataset.idx), box);
     });
   }
 
@@ -17615,14 +17994,85 @@ function agendaRenderEntriesList(key) {
   const entries = agendaNotesCache[key] || [];
   list.innerHTML = entries.map((e, idx) => {
     const time = agendaEntryTimeLabel(e.createdAt);
-    return '<div class="agenda-entry-item">' +
+    const label = (time || '') + (e.editedAt ? (time ? ' · ' : '') + 'editada' : '');
+    return '<div class="agenda-entry-item' + (e.done ? ' is-done' : '') + (idx === agendaEditingIdx ? ' is-editing' : '') + '">' +
       '<div class="agenda-entry-meta">' +
-        (time ? '<span class="agenda-entry-time">' + time + '</span>' : '<span></span>') +
-        '<button type="button" class="agenda-entry-del" data-idx="' + idx + '" aria-label="Apagar esta anotação">Apagar</button>' +
+        '<label class="agenda-entry-check"><input type="checkbox" class="agenda-entry-done" data-idx="' + idx + '"' + (e.done ? ' checked' : '') + ' aria-label="Marcar como feita">' +
+          '<span class="agenda-entry-time">' + escapeHtml(label || (e.done ? 'feita' : 'pendente')) + '</span></label>' +
+        '<span class="agenda-entry-actions">' +
+          '<button type="button" class="agenda-entry-edit" data-idx="' + idx + '" aria-label="Editar esta anotação">Editar</button>' +
+          '<button type="button" class="agenda-entry-del" data-idx="' + idx + '" aria-label="Apagar esta anotação">Apagar</button>' +
+        '</span>' +
       '</div>' +
       '<div class="agenda-entry-text">' + escapeHtml(e.text) + '</div>' +
     '</div>';
   }).join('');
+}
+
+// ---- Editar e concluir anotações ----
+let agendaEditingIdx = -1;   // índice da anotação em edição (-1 = escrevendo uma nova)
+
+function agendaSyncSaveLabel() {
+  const save = document.getElementById('agendaSaveBtn');
+  const banner = document.getElementById('agendaEditBanner');
+  if (banner) banner.hidden = agendaEditingIdx < 0;
+  if (!save) return;
+  if (agendaEditingIdx >= 0) save.textContent = 'Salvar alteração';
+  else save.textContent = agendaSyncCode ? 'Adicionar' : 'Guardar e sincronizar';
+}
+
+function agendaStartEdit(idx) {
+  const key = agendaSelectedKey;
+  const e = (agendaNotesCache[key] || [])[idx];
+  if (!e) return;
+  agendaResetEntryDelete();
+  agendaEditingIdx = idx;
+  const input = document.getElementById('agendaNoteInput');
+  input.value = e.text;
+  agendaUpdateNoteCounter();
+  agendaRenderEntriesList(key);
+  agendaSyncSaveLabel();
+  input.focus();
+  try { input.setSelectionRange(input.value.length, input.value.length); } catch (err) { /* ignora */ }
+}
+
+function agendaCancelEdit() {
+  if (agendaEditingIdx < 0) return;
+  agendaEditingIdx = -1;
+  const input = document.getElementById('agendaNoteInput');
+  if (input) { input.value = ''; agendaUpdateNoteCounter(); input.focus(); }
+  if (agendaSelectedKey) agendaRenderEntriesList(agendaSelectedKey);
+  agendaSyncSaveLabel();
+}
+
+// Marca/desmarca uma anotação como feita. Grava como qualquer outra mudança
+// (cifrada, na nuvem); se falhar, devolve a caixa ao estado anterior.
+async function agendaToggleDone(idx, box) {
+  const key = agendaSelectedKey;
+  const base = agendaNotesCache[key] || [];
+  if (!base[idx]) return;
+  if (agendaBusy) { if (box) box.checked = !!base[idx].done; return; }
+  if (!agendaSyncCode || !agendaDb) {
+    if (box) box.checked = !!base[idx].done;
+    agendaToast('Ainda conectando à nuvem. Tente de novo em alguns segundos.');
+    return;
+  }
+  agendaBusy = true;
+  const nowDone = !base[idx].done;
+  const newEntries = base.map((e, i) => i === idx ? Object.assign({}, e, { done: nowDone }) : e);
+  try {
+    const outcome = await agendaCommitEntries(key, newEntries);
+    agendaNotesCache[key] = newEntries;
+    agendaRenderEntriesList(key);
+    agendaRenderCalendar();
+    if (outcome !== 'ok') agendaToast('Sem resposta do servidor. A mudança será enviada quando a conexão voltar; mantenha o app aberto.', 'error');
+  } catch (e) {
+    console.error(e);
+    if (box) box.checked = !!base[idx].done;
+    agendaToast('Não foi possível atualizar na nuvem. Verifique a internet e tente de novo.', 'error');
+  } finally {
+    agendaBusy = false;
+  }
 }
 
 function agendaOpenNoteModal(key) {
@@ -17630,6 +18080,7 @@ function agendaOpenNoteModal(key) {
   agendaSelectedKey = key;
   agendaLastFocus = document.activeElement;
   agendaPendingSave = false;
+  agendaEditingIdx = -1;
   agendaResetEntryDelete();
 
   const date = agendaDateFromKey(key);
@@ -17660,11 +18111,10 @@ function agendaOpenNoteModal(key) {
   save.disabled = false;
   if (!agendaSyncCode) {
     hint.textContent = 'Para guardar, defina um código de sincronização.';
-    save.textContent = 'Guardar e sincronizar';
   } else {
-    hint.textContent = (window.matchMedia && window.matchMedia('(hover: hover)').matches) ? 'Ctrl+Enter adiciona.' : '';
-    save.textContent = 'Adicionar';
+    hint.textContent = (window.matchMedia && window.matchMedia('(hover: hover)').matches) ? 'Ctrl+Enter salva.' : '';
   }
+  agendaSyncSaveLabel();
 
   document.getElementById('agendaNoteModal').style.display = 'flex';
   input.focus();
@@ -17674,6 +18124,7 @@ function agendaCloseNoteModal() {
   const m = document.getElementById('agendaNoteModal');
   if (m) m.style.display = 'none';
   agendaPendingSave = false;
+  agendaEditingIdx = -1;
   agendaResetEntryDelete();
   const sm = document.getElementById('agendaSyncModal');
   if (sm && sm.style.display === 'flex') return;   // o foco fica com o modal de cima
@@ -17748,17 +18199,22 @@ async function agendaSaveNote() {
   save.disabled = true;
   save.textContent = 'Guardando…';
   const key = agendaSelectedKey;
-  const newEntries = (agendaNotesCache[key] || []).concat([{ text: txt, createdAt: Date.now() }]);
+  const base = agendaNotesCache[key] || [];
+  const editing = agendaEditingIdx >= 0 && !!base[agendaEditingIdx];
+  const newEntries = editing
+    ? base.map((e, i) => i === agendaEditingIdx ? Object.assign({}, e, { text: txt, editedAt: Date.now() }) : e)
+    : base.concat([{ text: txt, createdAt: Date.now() }]);
   try {
     const outcome = await agendaCommitEntries(key, newEntries);
     // Atualiza a tela na hora (não espera a confirmação em tempo real do
     // Firestore, que pode demorar alguns instantes mesmo dando certo).
     agendaNotesCache[key] = newEntries;
+    agendaEditingIdx = -1;
     input.value = '';
     agendaUpdateNoteCounter();
     agendaRenderEntriesList(key);
     agendaRenderCalendar();
-    if (outcome === 'ok') agendaToast('Anotação adicionada.');
+    if (outcome === 'ok') agendaToast(editing ? 'Anotação atualizada.' : 'Anotação adicionada.');
     else agendaToast('Sem resposta do servidor. A anotação já aparece aqui e será enviada quando a conexão voltar; mantenha o app aberto.', 'error');
   } catch (e) {
     console.error(e);
@@ -17766,7 +18222,7 @@ async function agendaSaveNote() {
   } finally {
     agendaBusy = false;
     save.disabled = false;
-    save.textContent = 'Adicionar';
+    agendaSyncSaveLabel();
     input.focus();
   }
 }
@@ -17795,6 +18251,7 @@ async function agendaDeleteEntry(idx) {
   try {
     const outcome = await agendaCommitEntries(key, newEntries);
     agendaNotesCache[key] = newEntries;
+    if (agendaEditingIdx >= 0) { agendaEditingIdx = -1; const inp = document.getElementById('agendaNoteInput'); if (inp) { inp.value = ''; agendaUpdateNoteCounter(); } agendaSyncSaveLabel(); }
     agendaRenderEntriesList(key);
     agendaRenderCalendar();
     if (outcome === 'ok') agendaToast('Anotação apagada.');
@@ -21093,12 +21550,13 @@ function initSheetAnalyzer() {
   const $ = id => document.getElementById(id);
   const fileEl = $('shFile');
   if (!fileEl) return;
-  const S = { head: [], rows: [], nums: [], wb: null, text: '' };
+  const S = { head: [], rows: [], nums: [], wb: null, text: '', blocks: [] };
   const cell = (r, c) => (r[c] == null ? '' : String(r[c]));
   const colIdx = () => parseInt($('shCol').value, 10) || 0;
   const LIM_TABELA = 25, LIM_PROBLEMAS = 30;
 
   const render = blocks => {
+    S.blocks = blocks;
     let html = '', text = '';
     blocks.forEach(b => {
       html += '<div class="sh-block"><strong>' + sheetEsc(b.title) + '</strong>';
@@ -21118,6 +21576,7 @@ function initSheetAnalyzer() {
     $('shOut').innerHTML = html;
     S.text = text.trim();
     $('shCopy').disabled = !S.text;
+    $('shCsv').disabled = !blocks.some(b => b.table && (b.table.full || b.table.rows).length);
   };
   const say = msg => { $('shSummary').textContent = msg; };
 
@@ -21151,29 +21610,36 @@ function initSheetAnalyzer() {
       title: 'Contagem por valor — ' + S.head[c],
       lines: [cheias + ' linhas preenchidas, ' + vazias + ' vazias, ' + arr.length + ' valores diferentes.'
         + (arr.length > LIM_TABELA ? ' Mostrando os ' + LIM_TABELA + ' mais frequentes.' : '')],
-      table: { head: ['Valor', 'Linhas', '% das preenchidas'], rows: arr.slice(0, LIM_TABELA).map(e => [sheetMask(e.label), e.n, sheetPct(e.n, cheias)]) }
+      table: { head: ['Valor', 'Linhas', '% das preenchidas'], rows: arr.slice(0, LIM_TABELA).map(e => [sheetMask(e.label), e.n, sheetPct(e.n, cheias)]),
+        full: arr.map(e => [sheetMask(e.label), e.n, sheetPct(e.n, cheias)]) }
     };
   };
 
-  const dup = c => {
+  const dup = (c, c2) => {
+    const two = Number.isInteger(c2) && c2 >= 0 && c2 !== c;
     const m = new Map();
     let cheias = 0;
     S.rows.forEach((r, i) => {
-      const v = cell(r, c), k = sheetDupKey(v);
-      if (!k) return;
+      const v = cell(r, c), v2 = two ? cell(r, c2) : '';
+      const k1 = sheetDupKey(v), k2 = two ? sheetDupKey(v2) : '';
+      if (!k1 || (two && !k2)) return;
       cheias++;
+      const k = two ? k1 + '\u0001' + k2 : k1;
       const e = m.get(k);
-      if (e) e.l.push(S.nums[i]); else m.set(k, { label: v.trim(), l: [S.nums[i]] });
+      if (e) e.l.push(S.nums[i]);
+      else m.set(k, { label: two ? sheetMask(v.trim()) + ' + ' + sheetMask(v2.trim()) : sheetMask(v.trim()), l: [S.nums[i]] });
     });
     const grupos = [...m.values()].filter(e => e.l.length > 1).sort((a, b) => b.l.length - a.l.length);
     const linhas = grupos.reduce((s, e) => s + e.l.length, 0);
+    const nome = S.head[c] + (two ? ' + ' + S.head[c2] : '');
     return {
-      title: 'Duplicados — ' + S.head[c],
+      title: 'Duplicados — ' + nome,
       lines: grupos.length
-        ? [linhas + ' linhas com valor repetido, em ' + grupos.length + ' grupo(s), entre ' + cheias + ' preenchidas. “Linha” é o número da linha na planilha.'
-          + (grupos.length > LIM_PROBLEMAS ? ' Mostrando os ' + LIM_PROBLEMAS + ' maiores grupos.' : '')]
-        : ['Nenhum valor repetido entre as ' + cheias + ' linhas preenchidas.'],
-      table: { head: ['Valor', 'Vezes', 'Linhas'], rows: grupos.slice(0, LIM_PROBLEMAS).map(e => [sheetMask(e.label), e.l.length, e.l.slice(0, 8).join(', ') + (e.l.length > 8 ? '…' : '')]) }
+        ? [linhas + ' linhas com valor repetido, em ' + grupos.length + ' grupo(s), entre ' + cheias + ' preenchidas' + (two ? ' (as duas colunas juntas)' : '') + '. “Linha” é o número da linha na planilha.'
+          + (grupos.length > LIM_PROBLEMAS ? ' Mostrando os ' + LIM_PROBLEMAS + ' maiores grupos; o .csv traz todos.' : '')]
+        : ['Nenhum valor repetido entre as ' + cheias + ' linhas preenchidas' + (two ? ' (as duas colunas juntas)' : '') + '.'],
+      table: { head: ['Valor', 'Vezes', 'Linhas'], rows: grupos.slice(0, LIM_PROBLEMAS).map(e => [e.label, e.l.length, e.l.slice(0, 8).join(', ') + (e.l.length > 8 ? '…' : '')]),
+        full: grupos.map(e => [e.label, e.l.length, e.l.join(', ')]) }
     };
   };
 
@@ -21189,8 +21655,8 @@ function initSheetAnalyzer() {
     });
     const lines = ['Conferidos (' + nome + '): ' + cheias + '. Com problema: ' + ruins.length + '. Linhas vazias: ' + vazias + '.'];
     [...motivos.entries()].sort((a, b) => b[1] - a[1]).forEach(([mot, n]) => lines.push('• ' + n + ' com ' + mot));
-    if (ruins.length > LIM_PROBLEMAS) lines.push('Mostrando as ' + LIM_PROBLEMAS + ' primeiras linhas com problema.');
-    return { title: 'Conferência de ' + nome + ' — ' + S.head[c], lines, table: { head: ['Linha', 'Valor', 'Problema'], rows: ruins.slice(0, LIM_PROBLEMAS) } };
+    if (ruins.length > LIM_PROBLEMAS) lines.push('Mostrando as ' + LIM_PROBLEMAS + ' primeiras linhas com problema; o .csv traz todas.');
+    return { title: 'Conferência de ' + nome + ' — ' + S.head[c], lines, table: { head: ['Linha', 'Valor', 'Problema'], rows: ruins.slice(0, LIM_PROBLEMAS), full: ruins } };
   };
 
   const filtrar = () => {
@@ -21198,12 +21664,46 @@ function initSheetAnalyzer() {
     if ((mode === 'has' || mode === 'eq') && !val.trim()) { return { title: 'Contar linhas', lines: ['Digite o valor que você procura.'] }; }
     const q = sheetNorm(val);
     let n = 0;
-    S.rows.forEach(r => {
+    const achadas = [];
+    S.rows.forEach((r, i) => {
       const v = sheetNorm(cell(r, c));
-      if (mode === 'has' ? v.includes(q) : mode === 'eq' ? v === q : mode === 'empty' ? v === '' : v !== '') n++;
+      if (mode === 'has' ? v.includes(q) : mode === 'eq' ? v === q : mode === 'empty' ? v === '' : v !== '') { n++; if (achadas.length < 40) achadas.push(S.nums[i]); }
     });
     const desc = { has: 'contém “' + val.trim() + '”', eq: 'é igual a “' + val.trim() + '”', empty: 'está vazio', full: 'está preenchido' }[mode];
-    return { title: 'Contar linhas — ' + S.head[c], lines: [n + ' de ' + S.rows.length + ' linhas (' + sheetPct(n, S.rows.length) + ') em que ' + S.head[c] + ' ' + desc + '.'] };
+    const lines = [n + ' de ' + S.rows.length + ' linhas (' + sheetPct(n, S.rows.length) + ') em que ' + S.head[c] + ' ' + desc + '.'];
+    if (achadas.length) lines.push('Linhas na planilha: ' + achadas.join(', ') + (n > achadas.length ? '… (primeiras ' + achadas.length + ')' : '') + '.');
+    return { title: 'Contar linhas — ' + S.head[c], lines };
+  };
+
+  // Primeiras linhas, para conferir se o cabeçalho foi lido na linha certa.
+  const amostra = () => {
+    const n = Math.min(5, S.rows.length), cols = Math.min(12, S.head.length);
+    return {
+      title: 'Primeiras linhas',
+      lines: ['Confira se o cabeçalho foi lido certo. Mostrando ' + n + ' de ' + S.rows.length + ' linhas' + (S.head.length > cols ? ' e as ' + cols + ' primeiras colunas' : '') + '. Documentos longos aparecem mascarados.'],
+      table: { head: ['Linha'].concat(S.head.slice(0, cols)), rows: S.rows.slice(0, n).map((r, i) => [S.nums[i]].concat(S.head.slice(0, cols).map((h, c) => sheetMask(cell(r, c))))) }
+    };
+  };
+
+  // Baixa as tabelas do resultado (completas, não só as linhas mostradas) em CSV com ; e BOM (Excel pt-BR).
+  const csvCell = v => { const t = String(v == null ? '' : v); return /[;"\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+  const baixarCsv = () => {
+    const out = [];
+    (S.blocks || []).forEach(b => {
+      out.push(csvCell(b.title));
+      (b.lines || []).forEach(l => out.push(csvCell(l)));
+      if (b.table) {
+        const rows = b.table.full || b.table.rows;
+        if (rows.length) { out.push(b.table.head.map(csvCell).join(';')); rows.forEach(r => out.push(r.map(csvCell).join(';'))); }
+      }
+      out.push('');
+    });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['\uFEFF' + out.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'analise-planilha-' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    say('Tabelas baixadas em .csv. O arquivo sai sem cifra: guarde com cuidado.');
   };
 
   const conferirTudo = () => {
@@ -21242,6 +21742,7 @@ function initSheetAnalyzer() {
       S.rows.push(aoa[i]); S.nums.push(i + 1);
     }
     $('shCol').innerHTML = S.head.map((h, i) => '<option value="' + i + '">' + sheetEsc(h) + '</option>').join('');
+    $('shCol2').innerHTML = '<option value="">— só a coluna escolhida —</option>' + S.head.map((h, i) => '<option value="' + i + '">' + sheetEsc(h) + '</option>').join('');
     $('shControls').hidden = false;
     $('shClear').disabled = false;
     say(S.rows.length + ' linhas e ' + S.head.length + ' colunas lidas. Os dados ficam só neste aparelho.');
@@ -21259,10 +21760,11 @@ function initSheetAnalyzer() {
   const limpar = () => {
     S.head = []; S.rows = []; S.nums = []; S.wb = null; S.text = '';
     fileEl.value = '';
-    $('shCol').innerHTML = ''; $('shSheet').innerHTML = '';
+    $('shCol').innerHTML = ''; $('shCol2').innerHTML = ''; $('shSheet').innerHTML = '';
     $('shSheetRow').hidden = true; $('shControls').hidden = true;
     $('shOut').innerHTML = ''; $('shVal').value = '';
-    $('shCopy').disabled = true; $('shClear').disabled = true;
+    $('shCopy').disabled = true; $('shCsv').disabled = true; $('shClear').disabled = true;
+    S.blocks = [];
     say('');
   };
 
@@ -21299,7 +21801,9 @@ function initSheetAnalyzer() {
   const on = (id, fn) => $(id).addEventListener('click', () => { if (S.rows.length) render([].concat(fn())); });
   $('shSheet').addEventListener('change', () => loadSheet(parseInt($('shSheet').value, 10) || 0));
   on('shFreq', () => freq(colIdx()));
-  on('shDup', () => dup(colIdx()));
+  on('shDup', () => { const v = $('shCol2').value; return dup(colIdx(), v === '' ? -1 : parseInt(v, 10)); });
+  on('shPeek', amostra);
+  $('shCsv').addEventListener('click', baixarCsv);
   on('shNis', () => validate(colIdx(), sheetCheckNis, 'NIS'));
   on('shCpf', () => validate(colIdx(), sheetCheckCpf, 'CPF'));
   on('shDate', () => validate(colIdx(), v => sheetCheckDate(v), 'datas'));
