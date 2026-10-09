@@ -7020,3 +7020,11 @@ button, a, summary, select, label, .filter-chip, .quick-nav-btn { touch-action: 
   .pdfedit-field:focus { outline: 2px solid #1d4ed8; outline-offset: 0; background: #fff; }
   .pdfedit-field.is-static { pointer-events: none; border-color: transparent; background: #fff; }
   .pdfedit-stage[data-tool="form"] .pdfedit-layer { pointer-events: none; }
+
+
+/* Ferramentas: melhorias de relógio, cálculos, planilha e notas */
+.tools-check { display: inline-flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; font-size: 0.88rem; color: var(--text-main); cursor: pointer; }
+.tools-check input { width: 18px; height: 18px; accent-color: var(--brand-primary); }
+.tools-bar .btn-tech[hidden] { display: none; }
+.tools-al .tools-chip { flex: 0 0 auto; min-height: 30px; padding: 0.15rem 0.7rem; font-size: 0.76rem; }
+.tools-al.is-done strong { opacity: 0.6; }
