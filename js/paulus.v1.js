@@ -166,7 +166,20 @@ const ALIAS = { gere: 'gerir', gerem: 'gerir', gerencia: 'gerir', gerenciar: 'ge
 // Raiz simples: tira o plural (-s, -es, -ões), as terminações de verbo e de substantivo (-ar, -er, -ir, -ção, -mento),
 // a vogal final e corta em 6 letras. Assim "atuar", "atua" e "atuação" se encontram, "acolher" acha "acolhimento"
 // e "município" e "municipal" também.
+const CACHE_RAIZ = new Map();
 function raiz(t) {
+  // O vocabulário é pequeno (~12 mil palavras) e os trechos repetem as mesmas palavras centenas de milhares de vezes:
+  // guardar o resultado corta o tempo de montar o índice (importante no Worker, que tem limite de partida).
+  let r = CACHE_RAIZ.get(t);
+  if (r === undefined) {
+    if (CACHE_RAIZ.size > 60000) CACHE_RAIZ.clear();
+    r = calcularRaiz(t);
+    CACHE_RAIZ.set(t, r);
+  }
+  return r;
+}
+
+function calcularRaiz(t) {
   if (ALIAS[t]) t = ALIAS[t];
   if (t.length > 4) {
     if (t.endsWith('oes')) t = t.slice(0, -3) + 'ao';          // decisoes -> decisao
@@ -190,12 +203,30 @@ function tokenizar(s, { expandir = false } = {}) {
   return saida;
 }
 
-function criarIndice(trechos) {
+function trechosValidos(trechos) {
+  return (Array.isArray(trechos) ? trechos : []).filter(function (c) { return c && c.texto; });
+}
+
+// Assinatura simples da base (quantidade de trechos e de caracteres): serve para saber se um índice
+// pré-calculado ainda corresponde à base que está sendo usada.
+function assinatura(validos) {
+  let chars = 0;
+  for (const c of validos) chars += c.texto.length;
+  return validos.length + ':' + chars;
+}
+
+// "pre" (opcional) é um índice já calculado por serializarIndice(). Montar o índice de uma base grande leva
+// centenas de milissegundos; o Worker tem limite de partida, então ele recebe o índice pronto no pacote.
+// Se "pre" não corresponder à base (assinatura diferente), o índice é calculado do zero.
+function criarIndice(trechos, pre) {
+  const validos = trechosValidos(trechos);
+  if (pre && pre.sig === assinatura(validos) && Array.isArray(pre.v) && Array.isArray(pre.d) && pre.d.length === validos.length) {
+    return restaurarIndice(validos, pre);
+  }
   const docs = [];
   const df = Object.create(null);
   let soma = 0;
-  for (const c of Array.isArray(trechos) ? trechos : []) {
-    if (!c || !c.texto) continue;
+  for (const c of validos) {
     // a referência ("art. 17, XV") e o título pesam o dobro
     const toks = tokenizar((c.referencia || '') + ' ' + (c.referencia || '') + ' ' + (c.titulo || '') + ' ' + c.texto);
     const tf = Object.create(null);
@@ -203,6 +234,36 @@ function criarIndice(trechos) {
     for (const t in tf) df[t] = (df[t] || 0) + 1;
     docs.push({ c, tf, len: toks.length });
     soma += toks.length;
+  }
+  return { docs, df, N: docs.length, avg: docs.length ? soma / docs.length : 0 };
+}
+
+// Índice em forma compacta (só números e um vocabulário), para guardar em arquivo: { sig, v:[termos], d:[[len, idTermo, vezes, ...], ...] }
+function serializarIndice(indice) {
+  const v = Object.keys(indice.df);
+  const id = new Map(v.map(function (t, i) { return [t, i]; }));
+  const d = indice.docs.map(function (x) {
+    const linha = [x.len];
+    for (const t in x.tf) linha.push(id.get(t), x.tf[t]);
+    return linha;
+  });
+  return { sig: assinatura(indice.docs.map(function (x) { return x.c; })), v, d };
+}
+
+function restaurarIndice(validos, pre) {
+  const docs = [];
+  const df = Object.create(null);
+  let soma = 0;
+  for (let i = 0; i < validos.length; i++) {
+    const linha = pre.d[i];
+    const tf = Object.create(null);
+    for (let j = 1; j < linha.length; j += 2) {
+      const t = pre.v[linha[j]];
+      tf[t] = linha[j + 1];
+      df[t] = (df[t] || 0) + 1;
+    }
+    docs.push({ c: validos[i], tf, len: linha[0] });
+    soma += linha[0];
   }
   return { docs, df, N: docs.length, avg: docs.length ? soma / docs.length : 0 };
 }
