@@ -96,6 +96,15 @@ for (const s of scriptsIndex) {
   if (!needed.includes(`'${path.posix.basename(s)}'`)) aviso(`gerar-protecao.html: "${path.posix.basename(s)}" não está em NEEDED (a versão protegida vai recusar gerar)`);
 }
 
+// 8) Base de normas do Paulus: o service worker a baixa em TODA instalação/atualização do app, então ela tem que ser a
+// versão leve (conhecimento-geral.json do repositório paulus, ~0,4 MB). A base completa (~8 MB) trava o aparelho.
+if (existe('assets/conhecimento.json')) {
+  const mb = statSync(path.join(ROOT, 'assets/conhecimento.json')).size / 1048576;
+  if (mb > 2) erro(`assets/conhecimento.json tem ${mb.toFixed(1)} MB: use o pacote leve (dist/conhecimento-geral.json do paulus), não o conhecimento.json inteiro.`);
+}
+// Nada de conhecimento*.json solto fora de assets/ (iria para o site sem ninguém usar).
+for (const f of walk('assets')) if (/conhecimento.*\.json$/.test(f) && f !== 'assets/conhecimento.json') erro(`${f}: cópia solta da base de normas; apague (a única é assets/conhecimento.json).`);
+
 // Resultado.
 for (const a of avisos) console.log('⚠️  ' + a);
 for (const e of erros) console.log('❌ ' + e);
