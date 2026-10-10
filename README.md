@@ -54,7 +54,7 @@ Um diretório técnico instalável (PWA) dos equipamentos socioassistenciais e d
 │   ├── paulus.v1.js            Cliente do Paulus (cópia gerada no repositório "paulus": ida à IA, filtro de dados pessoais e base de normas)
 │   └── auth-config.js          Configuração da senha (ver "Senha forte")
 ├── assets/
-│   ├── conhecimento.json       Base de normas do Paulus (offline; cópia gerada no repositório "paulus")
+│   ├── conhecimento.json       Base de normas do Paulus (offline; pacote leve `conhecimento-geral.json` gerado no repositório "paulus", ~0,4 MB)
 │   └── img/                    Ícones do PWA, ícones dos aplicativos, imagens de fundo
 ├── ferramentas/                Páginas avulsas (PBF, RMA, equipe técnica, mapa) — publicadas
 ├── docs/
