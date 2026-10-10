@@ -22785,12 +22785,18 @@ function argoAssistantAskHybrid(rawText, meta) {
   let local = null;
   if (!meta.forceAI && !meta.regen) {
     plan = B.plan(rawText, { tabCat: tab.cat });
-    if (plan.kind === 'crisis' || plan.kind === 'directory' || plan.kind === 'concept') {
-      return keep(argoAssistantToUi(plan.result, rawText, plan.kind === 'concept'), plan.result.units);
+    // Socorro e consulta ao diretório (telefone, endereço, horário, bairro) continuam respondidos na hora, com os dados reais.
+    if (plan.kind === 'crisis' || plan.kind === 'directory') {
+      return keep(argoAssistantToUi(plan.result, rawText, false), plan.result.units);
+    }
+    // Dúvida de conteúdo (pergunta de verdade): com a IA ligada, ela responde com a norma e a conversa; o verbete pronto
+    // só entra se a IA falhar ou estiver desligada. Frase curta de navegação ("abrir mapa") não é pergunta e segue como antes.
+    if (plan.kind === 'concept' && !(B.aiOn() && questionLike)) {
+      return keep(argoAssistantToUi(plan.result, rawText, true), plan.result.units);
     }
     local = argoAssistantAsk(rawText);
-    // uma palavra solta ("serviço", "unidade") não deve sequestrar uma pergunta longa que a IA entende melhor
-    const longQ = rawText.trim().split(/\s+/).length >= 6 && B.aiOn();
+    // uma palavra solta ("serviço", "unidade") não deve sequestrar uma pergunta que a IA entende melhor
+    const longQ = questionLike && B.aiOn();
     if (local && !local.fallback && (local.score || 0) >= 2 && ((local.score || 0) >= 4 || !longQ)) return keep(local);
   } else {
     local = argoAssistantAsk(rawText);
@@ -22798,11 +22804,14 @@ function argoAssistantAskHybrid(rawText, meta) {
 
   // lista aproximada do diretório só serve para pedidos curtos ("preciso de um psicólogo"); em pergunta longa vira ruído
   const weak = (plan.kind === 'directory-weak' && rawText.trim().split(/\s+/).length < 6) ? argoAssistantToUi(plan.result, rawText, false) : null;
+  // verbete pronto (conceito) que ficou de reserva caso a IA falhe
+  const conceito = plan.kind === 'concept' ? argoAssistantToUi(plan.result, rawText, false) : null;
   const iaOk = B.aiOn();
   if (iaOk && (meta.forceAI || meta.regen || !weak || questionLike)) {
-    const ai = argoAskAI(rawText, tab, weak || local);
+    const ai = argoAskAI(rawText, tab, weak || conceito || local);
     if (ai) return ai;
   }
+  if (conceito) return keep(conceito, plan.result.units);
   if (weak) return keep(weak, plan.result.units);
   if (local) return keep(local);
   return local;
