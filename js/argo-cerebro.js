@@ -765,6 +765,10 @@
     var pan = '';
     if (ampla) {
       pan = panorama();
+      var nq = norm(text);
+      if (/\bbairros?\b/.test(nq) && /\b(quantos|quantas|quantidade|numero|total)\b/.test(nq)) {
+        pan += ' ATENÇÃO: este contexto NÃO traz contagem por bairro. Não calcule, não estime e não some fichas: diga que a contagem por bairro é feita pelo app e peça para perguntar no formato "quantas escolas no Caimbé?" (ou "quantas UBS no Centro?").';
+      }
       if (ctx.fichas.length) {
         pan += ' Para esta pergunta foram anexadas ' + ctx.fichas.length + ' fichas' +
           (ctx.total > ctx.fichas.length ? ' de cerca de ' + ctx.total + ' que combinam (lista parcial)' : ' (todas as que combinam)') + '.';
@@ -1632,6 +1636,292 @@
   }
 
   // ---------------------------------------------------------------------
+  // Contagem por bairro: "quantas escolas tem no Caimbé?", "quantas UBS em Boa Vista?"
+  // O NÚMERO É CALCULADO AQUI, em código, sobre as fichas do diretório (data.js). A IA nunca conta:
+  // ela só recebia 7-10 fichas soltas e totais por grupo, por isso errava "quantas ... no bairro".
+  // A resposta sempre diz que é a contagem do diretório (não um censo oficial).
+  // ---------------------------------------------------------------------
+  var ESPECIAL_RE = /^(CAP-DVRR|CADAHS|CAS|CAEBV)$|^Centro Mun\. Integrado/i;
+  var AVISO_ESCOLA = 'Conta só as escolas estaduais e municipais cadastradas no diretório do Argo: escolas particulares e unidades ainda não cadastradas não entram. Para o número oficial, consulte o Censo Escolar (INEP), a SEED ou a SMEC.';
+  var AVISO_DIR = 'Conta só o que está cadastrado no diretório do Argo; confirme com a rede antes de usar o número em relatório.';
+  var CONT_TIPOS = [
+    { key: 'ESCOLA', sing: 'escola', plur: 'escolas', fem: true, list: true, aviso: AVISO_ESCOLA, tambem: ['CRECHE', 'CENTRO'],
+      det: /\b(escolas?|colegios?|ensino fundamental|ensino medio)\b/,
+      match: function (d) { return /^(Rede Estadual|Rede Municipal - Escolas)$/.test(d.group || '') && !ESPECIAL_RE.test(d.name || ''); },
+      sub: function (d) { return /Estadual/.test(d.group) ? 'estadual' : 'municipal'; } },
+    { key: 'CRECHE', sing: 'creche', plur: 'creches', fem: true, list: true, aviso: AVISO_ESCOLA.replace('as escolas estaduais e municipais', 'as creches e unidades Proinfância municipais'),
+      det: /\b(creches?|proinfancia|nucleos? de creche|casa mae)\b/,
+      match: function (d) { return d.group === 'Rede Municipal - Creches e Proinfância'; } },
+    { key: 'CENTRO', sing: 'centro de atendimento educacional especializado', plur: 'centros de atendimento educacional especializado', fem: false, list: true, aviso: AVISO_DIR,
+      det: /\b(educacao especial|atendimento educacional especializado)\b/,
+      match: function (d) { return /^(Rede Estadual|Rede Municipal - Escolas)$/.test(d.group || '') && ESPECIAL_RE.test(d.name || ''); } },
+    { key: 'SUPERIOR', sing: 'instituição de ensino superior', plur: 'instituições de ensino superior', fem: true, list: true, aviso: AVISO_DIR,
+      det: /\b(faculdades?|universidades?|ensino superior)\b/,
+      match: function (d) { return d.group === 'Ensino Superior'; } },
+    { key: 'UBS', sing: 'UBS', plur: 'UBS', fem: true, list: false, aviso: AVISO_DIR + ' A UBS de referência de uma família segue a área da equipe de saúde da família e pode não ser a do bairro onde ela mora.',
+      det: /\bubs\b|\bpostos? de saude\b|\bpostinhos?\b|\bunidades? basicas? de saude\b/,
+      match: function (d) { return /^UBS\b/i.test(d.name || ''); } },
+    { key: 'CAPS', sing: 'CAPS', plur: 'CAPS', fem: false, list: false, aviso: AVISO_DIR,
+      det: /\bcaps\b/, match: function (d) { return /^CAPS \(Boa Vista\)/i.test(d.group || ''); } },
+    { key: 'CRAS', sing: 'CRAS', plur: 'CRAS', fem: false, list: false, aviso: AVISO_DIR,
+      det: /\bcras\b/, match: function (d) { return d.group === 'CRAS (Boa Vista)'; } },
+    { key: 'CREAS', sing: 'CREAS', plur: 'CREAS', fem: false, list: false, aviso: AVISO_DIR,
+      det: /\bcreas\b/, match: function (d) { return d.group === 'CREAS (Boa Vista)'; } },
+    { key: 'HOSPITAL', sing: 'hospital', plur: 'hospitais', fem: false, list: true, aviso: AVISO_DIR,
+      det: /\bhospita(?:l|is)\b/, match: function (d) { return d.group === 'Hospitais'; } },
+    { key: 'RESTAURANTE', sing: 'Restaurante Cidadão', plur: 'Restaurantes Cidadão', fem: false, list: false, aviso: AVISO_DIR,
+      det: /\brestaurantes? cidada[oa]s?\b|\brestaurantes?\b/, match: function (d) { return /Restaurante Cidad/i.test(d.group || ''); } },
+    { key: 'BOMBEIROS', sing: 'unidade do Corpo de Bombeiros', plur: 'unidades do Corpo de Bombeiros', fem: true, list: true, aviso: AVISO_DIR,
+      det: /\bbombeiros?\b/, match: function (d) { return /^Corpo de Bombeiros/i.test(d.group || ''); } }
+  ];
+  function contTipo(key) { return CONT_TIPOS.filter(function (t) { return t.key === key; })[0]; }
+
+  // Bairro do endereço: o trecho "- Bairro, Boa Vista" (ou "Bairro, Boa Vista"); ignora rua, número, campus, bloco etc.
+  var NAO_BAIRRO = /^(rua|r|av|avenida|travessa|tv|praca|rodovia|br \d+|rr \d+|vicinal|lote|quadra|campus|andar|bloco|sala|casa|km|s n|n \d+|cep|endereco|atendimento|diversas|rede|sem|atuacao|cras|creas|ubs|antigo|esquina)\b|^\d+$/;
+  function bairroBruto(addr) {
+    var linhas = cleanText(addr).split(' · '), lin = '', i;
+    for (i = 0; i < linhas.length; i++) if (/Boa Vista/i.test(linhas[i])) { lin = linhas[i]; break; }
+    if (!lin) return '';
+    var segs = lin.split(',').map(function (s) { return s.trim(); }), ib = -1;
+    for (i = 0; i < segs.length; i++) if (/^Boa Vista/i.test(segs[i])) { ib = i; break; }
+    if (ib < 1) return '';
+    function ok(b) { var nb = norm(b); return b.length >= 3 && b.length <= 45 && !NAO_BAIRRO.test(nb); }
+    for (var j = ib - 1; j >= 0; j--) {
+      var seg = segs[j], partes = seg.split(/\s[-–]\s/);
+      if (partes.length > 1) { var b = partes[partes.length - 1].trim(); if (ok(b)) return b; continue; }
+      if (j === ib - 1 && ok(seg)) return seg;
+    }
+    return '';
+  }
+  // Nomes diferentes do mesmo bairro viram uma chave só (grafias do cadastro; "Conjunto Cidadão" e "Dr. Airton Rocha" constam
+  // nas próprias fichas como parte de Laura Moreira e Nova Cidade).
+  var BAIRRO_ALIAS = {
+    'treze de setembro': '13 de setembro', 'trinta e um de marco': '31 de marco', 'santa teresa': 'santa tereza',
+    'aquilino mota duarte': 'distrito industrial', 'nossa senhora aparecida': 'aparecida', 'cidadao': 'laura moreira',
+    'airton rocha': 'nova cidade', 'p a nova amazonia': 'nova amazonia'
+  };
+  function bairroCanon(raw) {
+    var s = cleanText(raw).replace(/^bairro\s+(?:(?:dos|das|do|da|de)\s+)?/i, '').replace(/\s*\([^)]*\)/g, '').trim();
+    var k = norm(s);
+    if (/^(zona rural|area rural|comunidade)\b/.test(k)) return { key: 'zona rural', label: 'Zona rural e comunidades', alias: false };
+    var base = k, ant;
+    do { ant = base; base = base.replace(/^(dr|doutor|doutora|conj|conjunto|sen|senador|gov|governador|prof|profa|professor|professora)\s+/, ''); } while (base !== ant);
+    var key = BAIRRO_ALIAS[base] || BAIRRO_ALIAS[k] || base, via = !!(BAIRRO_ALIAS[base] || BAIRRO_ALIAS[k]);
+    return { key: key, label: s, alias: via };
+  }
+  var contIdx = null;
+  function buildContIdx() {
+    var porKey = {}, keys = {}, unidades = [];
+    data.forEach(function (d) {
+      if ((d.cat || []).indexOf('interior') > -1 || !/Boa Vista/i.test(cleanText(d.address))) return;
+      var bruto = bairroBruto(d.address), c = bruto ? bairroCanon(bruto) : null;
+      unidades.push({ d: d, key: c ? c.key : '', nome: norm(d.name) });
+      if (!c) return;
+      var e = porKey[c.key] = porKey[c.key] || { key: c.key, vars: {}, n: 0, fb: c.label };
+      e.n++;
+      if (!c.alias) e.vars[c.label] = (e.vars[c.label] || 0) + 1;
+      // formas que as pessoas digitam: a chave, a grafia original e a forma sem "Dr./Conj./Sen."
+      [c.key, norm(c.label), norm(bruto)].forEach(function (v) {
+        if (!v || v.length < 3) return;
+        var arr = keys[v] = keys[v] || [];
+        if (!arr.some(function (i) { return i.canon === c.key; })) arr.push({ canon: c.key, label: c.label, unit: { id: d.id } });
+      });
+    });
+    // rótulo de exibição: a grafia com acento e mais frequente
+    Object.keys(porKey).forEach(function (k) {
+      var e = porKey[k], vs = Object.keys(e.vars);
+      if (k === 'zona rural') { e.label = 'Zona rural e comunidades'; return; }
+      vs.sort(function (a, b) {
+        var ac = (a.match(/[^\x00-\x7f]/g) || []).length, bc = (b.match(/[^\x00-\x7f]/g) || []).length;
+        return (bc - ac) || (e.vars[b] - e.vars[a]) || (a.length - b.length);
+      });
+      e.label = vs[0] || e.fb || k;
+    });
+    // "Treze de Setembro" e "13 de Setembro" apontam para a mesma chave; "Zona rural" aceita "rural", "comunidades"
+    ['rural', 'zona rural', 'area rural', 'comunidades', 'comunidade', 'comunidades indigenas'].forEach(function (v) {
+      if (porKey['zona rural']) keys[v] = [{ canon: 'zona rural', label: 'Zona rural e comunidades', unit: { id: 'zona-rural' } }];
+    });
+    Object.keys(BAIRRO_ALIAS).forEach(function (a) { if (a !== 'cidadao' && porKey[BAIRRO_ALIAS[a]] && !keys[a]) keys[a] = [{ canon: BAIRRO_ALIAS[a], label: porKey[BAIRRO_ALIAS[a]].label, unit: { id: 'alias-' + a } }]; });
+    var sorted = Object.keys(keys).sort(function (a, b) { return b.length - a.length; });
+    return { porKey: porKey, keys: keys, sorted: sorted, unidades: unidades };
+  }
+  function contIndex() { return contIdx || (contIdx = buildContIdx()); }
+
+  var CONT_IGNORA = /\b(quantos|quantas|quantidade|numero|total|cidadao|escolas?|colegios?|creches?|faculdades?|universidades?|hospital|hospitais|bombeiros?|restaurantes?|estaduais|municipais|estadual|municipal|indigenas?|existem|temos|possui|possuem|ficam)\b/g;
+  function contBairros(n, ix) {
+    var padded = ' ' + n + ' ', used = [], hits = [];
+    ix.sorted.forEach(function (k) {
+      var at = padded.indexOf(' ' + k + ' ');
+      if (at < 0) return;
+      var from = at, to = at + k.length + 2;
+      if (used.some(function (u) { return from < u[1] && to > u[0]; })) return;
+      used.push([from, to]);
+      var c = ix.keys[k][0].canon;
+      if (!hits.some(function (h) { return h === c; })) hits.push(c);
+    });
+    if (hits.length) return { hits: hits, corrigido: false };
+    var fz = fuzzyBairro(n.replace(CONT_IGNORA, ' ').replace(/\s+/g, ' ').trim(), { keys: ix.keys, sorted: ix.sorted });
+    return fz ? { hits: [ix.keys[fz.key][0].canon], corrigido: true } : { hits: [], corrigido: false };
+  }
+  function contItens(ix, t, filtro) {
+    var vistos = {}, out = [];
+    ix.unidades.forEach(function (u) {
+      if (!t.match(u.d) || (filtro && !filtro(u.d))) return;
+      if (vistos[u.nome]) return;   // a mesma unidade cadastrada em duas redes conta uma vez
+      vistos[u.nome] = 1;
+      out.push(u);
+    });
+    return out;
+  }
+  function contResumoSub(itens, t) {
+    if (!t.sub) return '';
+    var c = {}; itens.forEach(function (u) { var s = t.sub(u.d); c[s] = (c[s] || 0) + 1; });
+    var p = [];
+    if (c.estadual) p.push(c.estadual + (c.estadual === 1 ? ' estadual' : ' estaduais'));
+    if (c.municipal) p.push(c.municipal + (c.municipal === 1 ? ' municipal' : ' municipais'));
+    return p.length > 1 ? ' (' + p.join(' e ') + ')' : '';
+  }
+  function contLinha(u, t) { return '- **' + (u.d.fullName && u.d.fullName.length < 70 ? u.d.fullName : u.d.name) + '**' + (t.sub ? ' (' + t.sub(u.d) + ')' : ''); }
+
+  function contagem(text) {
+    var n = norm(text);
+    if (!n || n.length > 220 || !data.length) return null;
+    var tipos = CONT_TIPOS.filter(function (t) { return t.det.test(n); });
+    if (!tipos.length) return null;
+    if (/\b(vagas?|alunos?|alunas?|matriculas?|professores?|professoras?|turmas?|criancas?|salas?|funcionarios?|pessoas|familias?|atendimentos?|casos?|notas?)\b/.test(n)) return null;
+    // a palavra de contagem tem que vir logo antes do tipo ("quantas escolas", "total de creches", "tem quantas UBS")
+    var mC = n.match(/\b(quantos|quantas|quantidade|numero|total)\b/), tipoPos = Math.min.apply(null, tipos.map(function (t) { return n.search(t.det); }));
+    var ehContagem = !!mC && mC.index < tipoPos && n.slice(mC.index + mC[0].length, tipoPos).trim().split(/\s+/).filter(Boolean).length <= 4;
+    var mL = n.match(/\b(quais|liste|listar|lista|mostre|mostrar|relacao)\b/);
+    var ehLista = !ehContagem && !!mL && mL.index < tipoPos && n.slice(mL.index + mL[0].length, tipoPos).trim().split(/\s+/).filter(Boolean).length <= 3 && tipos.every(function (t) { return t.list; });
+    var rankSem = /\b(sem|nenhum|nenhuma|nao (?:tem|possui|ha|existe))\b/.test(n);
+    var ehRank = !ehLista && /\bbairros?\b/.test(n) && (rankSem || /\b(mais|maior|menos|menor)\b/.test(n)) && tipos.length === 1 && (!ehContagem || rankSem);
+    if (ehRank) ehContagem = false;
+    if (!ehContagem && !ehLista && !ehRank) return null;
+
+    // "quantos CRAS atendem o bairro X?" / "qual UBS atende quem mora em X?" é cobertura (territory()), não localização
+    var COM_TERRITORIO = { CRAS: 1, CREAS: 1, CAPS: 1, UBS: 1, RESTAURANTE: 1 };
+    if (tipos.some(function (t) { return COM_TERRITORIO[t.key]; }) && (RE_COBERTURA.test(n) || /\b(moro|mora|moram|morando|morar|moramos|residente|resido|reside|regiao)\b/.test(n))) return null;
+
+    var ix = contIndex(), br = contBairros(n, ix), hits = br.hits;
+    var soEstadual = /\bestaduais?\b|\bestadual\b|\bseed\b/.test(n), soMunicipal = /\bmunicipais?\b|\bmunicipal\b|\bsmec\b/.test(n), soIndigena = /\bindigenas?\b/.test(n);
+    var porBairro = /\b(por bairro|cada bairro|bairro a bairro|distribuicao|bairros)\b/.test(n) && !hits.length;
+    var pediuBairro = /\bbairro\b/.test(n);
+
+    function filtroDe(t) {
+      if (t.key !== 'ESCOLA') return null;
+      return function (d) {
+        if (soEstadual && !/Estadual/.test(d.group)) return false;
+        if (soMunicipal && !/Municipal/.test(d.group)) return false;
+        if (soIndigena && !/^E\.E\.I\./.test(d.name)) return false;
+        return true;
+      };
+    }
+    var lines = [], todas = [], seen = {};
+    function guarda(itens) { itens.forEach(function (u) { if (!seen[u.d.id]) { seen[u.d.id] = 1; todas.push(slim(u.d)); } }); }
+    function rotuloT(t, plural) {
+      var adj = soIndigena ? (plural ? 'estaduais indígenas' : 'estadual indígena') : soEstadual ? (plural ? 'estaduais' : 'estadual') : soMunicipal ? (plural ? 'municipais' : 'municipal') : '';
+      return (plural ? t.plur : t.sing) + (t.key === 'ESCOLA' && adj ? ' ' + adj : '');
+    }
+
+    // ---- bairro(s) citado(s) ----
+    if (hits.length) {
+      hits.slice(0, 3).forEach(function (hk) {
+        var lbl = ix.porKey[hk] ? ix.porKey[hk].label : hk;
+        var onde = hk === 'zona rural' ? 'Na **' + lbl + '**' : 'No bairro **' + lbl + '**';
+        if (br.corrigido) lines.push('Entendi o bairro como **' + lbl + '**.');
+        tipos.forEach(function (t) {
+          var itens = contItens(ix, t, filtroDe(t)).filter(function (u) { return u.key === hk; });
+          var c = itens.length;
+          var nome = t.key === 'ESCOLA' && (soEstadual || soMunicipal || soIndigena) ? rotuloT(t, c !== 1) : (c === 1 ? t.sing : t.plur);
+          if (!c) {
+            lines.push(onde + ' não consta nenhum' + (t.fem ? 'a' : '') + ' ' + (t.key === 'ESCOLA' && (soEstadual || soMunicipal || soIndigena) ? rotuloT(t, false) : t.sing) + ' no diretório do Argo.');
+          } else {
+            lines.push(onde + ' ' + (c === 1 ? 'consta **1 ' : 'constam **' + c + ' ') + nome + '** no diretório do Argo' + contResumoSub(itens, t) + (t.list || c <= 6 ? ':' : '.'));
+            if (t.list || c <= 6) itens.slice(0, 15).forEach(function (u) { lines.push(contLinha(u, t)); });
+            if (c > 15) lines.push('…e mais ' + (c - 15) + '.');
+            guarda(itens);
+          }
+          // creches e centros especializados ficam fora da conta de "escolas", mas aparecem em separado
+          if (t.tambem) {
+            var extras = [];
+            t.tambem.forEach(function (k) {
+              if (tipos.some(function (o) { return o.key === k; })) return;
+              var tt = contTipo(k), it2 = contItens(ix, tt).filter(function (u) { return u.key === hk; });
+              if (it2.length) { extras.push(it2.length + ' ' + (it2.length === 1 ? tt.sing : tt.plur) + ' (' + it2.map(function (u) { return u.d.name; }).join('; ') + ')'); guarda(it2); }
+            });
+            if (extras.length) lines.push('Fora dessa conta, no mesmo bairro: ' + extras.join('; ') + '.');
+          }
+        });
+      });
+      if (hits.length > 3) lines.push('Mostrei os 3 primeiros bairros citados; pergunte pelos demais separadamente.');
+      lines.push(tipos[0].aviso);
+      var h1 = hits.length === 1 ? (ix.porKey[hits[0]] || {}).label : '';
+      var fu = [];
+      if (h1) {
+        if (tipos[0].key === 'ESCOLA') fu.push('Quantas creches no ' + h1 + '?');
+        fu.push('Qual o CRAS do bairro ' + h1 + '?');
+        fu.push('Quantas ' + rotuloT(tipos[0], true) + ' por bairro?');
+      }
+      return { reply: lines.join('\n'), mood: todas.length ? 'success' : 'notfound', badge: 'Contagem', followups: fu.slice(0, 3), units: todas.slice(0, 5), unitsAll: todas };
+    }
+
+    // "qual bairro tem mais escolas?" / "bairros sem UBS": ranking calculado nas fichas
+    if (ehRank) {
+      var tr = tipos[0], itR = contItens(ix, tr, filtroDe(tr)), contR = {};
+      itR.forEach(function (u) { if (u.key) contR[u.key] = (contR[u.key] || 0) + 1; });
+      var todosB = Object.keys(ix.porKey).filter(function (k) { return k !== 'zona rural'; });
+      var lab = function (k) { return ix.porKey[k].label; };
+      if (/\b(menos|menor|sem|nenhum|nenhuma|nao (?:tem|possui|ha|existe))\b/.test(n)) {
+        var semT = todosB.filter(function (k) { return !contR[k]; }).sort(function (a, b) { return lab(a) < lab(b) ? -1 : 1; });
+        lines.push(semT.length
+          ? 'Dos ' + todosB.length + ' bairros que aparecem nos endereços do diretório, **' + semT.length + '** não têm nenhum' + (tr.fem ? 'a' : '') + ' ' + tr.sing + ' cadastrad' + (tr.fem ? 'a' : 'o') + ': ' + semT.map(lab).join(', ') + '.'
+          : 'Todos os ' + todosB.length + ' bairros que aparecem nos endereços do diretório têm pelo menos ' + (tr.fem ? 'uma ' : 'um ') + tr.sing + ' cadastrad' + (tr.fem ? 'a' : 'o') + '.');
+        lines.push('Isso vale só para o que está no diretório: bairros que ainda não têm nenhum equipamento cadastrado nem aparecem aqui.');
+      } else {
+        var ordR = Object.keys(contR).sort(function (a, b) { return (contR[b] - contR[a]) || (lab(a) < lab(b) ? -1 : 1); });
+        if (!ordR.length) lines.push('Não há ' + tr.plur + ' com bairro identificado no diretório.');
+        else {
+          var topo = ordR.filter(function (k) { return contR[k] === contR[ordR[0]]; });
+          lines.push(topo.length === 1
+            ? 'O bairro com mais ' + tr.plur + ' no diretório é **' + lab(topo[0]) + '**, com ' + contR[topo[0]] + '.'
+            : 'Há empate no topo: ' + topo.map(lab).join(', ') + ' (' + contR[topo[0]] + ' cada).');
+          var resto = ordR.filter(function (k) { return topo.indexOf(k) < 0; }).slice(0, 5);
+          if (resto.length) lines.push('Em seguida: ' + resto.map(function (k) { return lab(k) + ' (' + contR[k] + ')'; }).join(', ') + '.');
+        }
+      }
+      lines.push(tr.aviso);
+      return { reply: lines.join('\n'), mood: 'success', badge: 'Contagem', followups: ['Quantas ' + tr.plur + ' por bairro?'] };
+    }
+
+    // bairro pedido mas não encontrado nos endereços: não responde com o total da cidade por engano
+    if (pediuBairro && !porBairro) {
+      return { reply: 'Não encontrei esse bairro nos endereços do diretório, então não consigo contar. Confira a grafia ou diga o nome de um bairro vizinho (ex.: "quantas escolas no Caimbé?").', mood: 'notfound', badge: 'Contagem', followups: ['Quantas escolas por bairro?'] };
+    }
+
+    // ---- Boa Vista inteira (e, se pedido, bairro a bairro) ----
+    tipos.forEach(function (t) {
+      var itens = contItens(ix, t, filtroDe(t)), c = itens.length;
+      if (!c) { lines.push('Não há ' + rotuloT(t, true) + ' cadastrad' + (t.fem ? 'as' : 'os') + ' em Boa Vista no diretório do Argo.'); return; }
+      lines.push('No diretório do Argo constam **' + c + ' ' + (c === 1 ? rotuloT(t, false) : rotuloT(t, true)) + ' em Boa Vista**' + contResumoSub(itens, t) + '.');
+      var cont = {}, sem = 0;
+      itens.forEach(function (u) { if (u.key) cont[u.key] = (cont[u.key] || 0) + 1; else sem++; });
+      var ordem = Object.keys(cont).sort(function (a, b) { return (cont[b] - cont[a]) || (ix.porKey[a].label < ix.porKey[b].label ? -1 : 1); });
+      var lim = porBairro || ehLista ? 40 : 5;
+      if (ordem.length > 1) {
+        var maxN = cont[ordem[0]], todosUm = maxN === 1 && ordem.length <= 12;
+        var rotLista = porBairro || ehLista ? 'Distribuídas em ' + ordem.length + ' bairros. Por bairro: ' : todosUm ? 'Ficam em: ' : 'Bairros com mais ' + t.plur + ': ';
+        lines.push(rotLista + ordem.slice(0, lim).map(function (k) { return ix.porKey[k].label + (todosUm ? '' : ' (' + cont[k] + ')'); }).join(', ') + (ordem.length > lim ? ' e mais ' + (ordem.length - lim) + (ordem.length - lim === 1 ? ' bairro' : ' bairros') : '') + '.');
+      }
+      if (sem) lines.push(sem + (sem === 1 ? ' unidade está' : ' unidades estão') + ' sem bairro identificável no endereço cadastrado e só entra no total.');
+      guarda(itens);
+    });
+    lines.push(tipos[0].aviso);
+    var primeiro = tipos[0];
+    return { reply: lines.join('\n'), mood: 'success', badge: 'Contagem', followups: ['Quantas ' + rotuloT(primeiro, true) + ' no Centro?', 'Quantas ' + rotuloT(primeiro, true) + ' por bairro?'].slice(0, porBairro ? 1 : 2), units: todas.slice(0, 5), unitsAll: todas };
+  }
+
+  // ---------------------------------------------------------------------
   // Plano: decide quem responde
   //   devolve { kind:'crisis'|'directory'|'concept'|'none', result?, dir?, con? }
   // ---------------------------------------------------------------------
@@ -1642,6 +1932,9 @@
     // CID-11: código → transtorno e nome → código (tabela local, sem IA)
     var cd = cidAsk(text);
     if (cd) return { kind: 'directory', result: cd, dir: { units: [], confidence: 1, mode: 'list' }, con: { score: 0 } };
+    // "quantas escolas tem no bairro X?": número calculado nas fichas (nunca pela IA)
+    var cont = contagem(text);
+    if (cont) return { kind: 'directory', result: cont, dir: { units: cont.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
     // "qual CRAS atende o bairro X?": responde pela lista de cobertura das fichas
     var pend = seguimentoPendente(text);
     if (pend) return { kind: 'directory', result: pend, dir: { units: pend.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
@@ -1699,12 +1992,12 @@
   function init(opts) {
     opts = opts || {};
     data = Array.isArray(opts.data) ? opts.data : [];
-    index = null; vocab = null; expCache = {}; gloIndex = null; phoneIdx = null; terrIdx = null; terrAll = null; munIdx = null;
+    index = null; vocab = null; expCache = {}; gloIndex = null; phoneIdx = null; terrIdx = null; terrAll = null; munIdx = null; contIdx = null;
     if (opts.ia) for (var k in opts.ia) if (Object.prototype.hasOwnProperty.call(CFG, k)) CFG[k] = opts.ia[k];
   }
 
   return {
-    init: init, setCid: setCid, cid: cidAsk, norm: norm, piiBlock: piiBlock, crisis: crisis, plan: plan,
+    init: init, setCid: setCid, cid: cidAsk, norm: norm, piiBlock: piiBlock, crisis: crisis, plan: plan, contagem: contagem,
     directory: function (t, tabCat) { return directory(t, session, tabCat); },
     glossary: glossaryScore, compose: { directory: composeDirectory, glossary: composeGlossary },
     remember: remember, reset: reset, session: session,
