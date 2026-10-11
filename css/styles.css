@@ -6611,6 +6611,13 @@ details.card-fold[open] > *:not(summary) + *:not(summary) { margin-top: 1rem; }
 .tools-card.is-collapsed > h2 { margin-bottom: 0; }
 @media (prefers-reduced-motion: reduce) { .tools-fold-btn span { transition: none; } }
 .tools-hint { margin: 0.3rem 0 0; font-size: 0.8rem; color: var(--text-muted); }
+.wa-lote { margin-top: 0.9rem; padding-top: 0.7rem; border-top: 1px solid rgba(128, 128, 128, 0.3); }
+.wa-lote > summary { cursor: pointer; font-weight: 700; }
+.wa-fila { list-style: none; margin: 0.5rem 0; padding: 0; max-height: 11rem; overflow: auto; font-size: 0.85rem; }
+.wa-fila:empty { display: none; }
+.wa-fila li { padding: 0.2rem 0; border-bottom: 1px solid rgba(128, 128, 128, 0.15); }
+.wa-fila li.is-sent { color: var(--text-muted); }
+.wa-fila-st { float: right; color: var(--text-muted); }
 .tools-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.5rem; margin-top: 0.7rem; }
 .tools-row .btn-tech:disabled { opacity: 0.45; cursor: not-allowed; }
 .tools-lbl { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.78rem; color: var(--text-muted); flex: 1 1 130px; }
