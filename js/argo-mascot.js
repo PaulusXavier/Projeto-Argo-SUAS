@@ -741,6 +741,17 @@
       // marcava hint.hidden = true, mas o balão continuava na tela. Esta regra devolve
       // ao atributo hidden a força que ele deveria ter.
       '.argo-assistant-hint[hidden],.argo-assistant-panel[hidden]{display:none!important}' +
+      // Fases da resposta: o Argo "ouve" enquanto você digita e "fala" (cabeça assente, mão acena) enquanto escreve.
+      '.argo-assistant-listening .argo-mascot-head{animation:argoMascotListen 1.8s ease-in-out infinite}' +
+      '@keyframes argoMascotListen{0%,100%{transform:rotate(-5deg) translateY(.4px)}50%{transform:rotate(-3deg) translateY(-.4px)}}' +
+      '.argo-assistant-talking .argo-mascot-head{animation:argoMascotTalk .55s ease-in-out infinite}' +
+      '@keyframes argoMascotTalk{0%,100%{transform:rotate(-1deg) translateY(0)}50%{transform:rotate(1.4deg) translateY(-1.6px)}}' +
+      '.argo-assistant-talking .argo-mascot-wave{animation-duration:.9s}' +
+      '#argoAssistantStatus.argo-assistant-status-busy .argo-assistant-led{background:#6D4FD0;animation:argoMascotLed 1s ease-in-out infinite}' +
+      '.argo-assistant-src{font-size:11px;color:var(--text-muted,#A7B7CC);padding:0 4px}.argo-assistant-src summary{cursor:pointer;font-weight:700;padding:3px 0;list-style:none}' +
+      '.argo-assistant-src summary::-webkit-details-marker{display:none}.argo-assistant-src summary::before{content:"\\25B8 ";display:inline-block;transition:transform .15s}.argo-assistant-src[open] summary::before{transform:rotate(90deg)}' +
+      '.argo-assistant-src ul{margin:2px 0 4px;padding-left:16px}.argo-assistant-src li{margin:2px 0;line-height:1.35}.argo-assistant-src-hint{display:block;margin-top:2px;opacity:.85}' +
+      '.argo-assistant-chip-retry{border-style:dashed;font-weight:700}' +
       '@keyframes argoAssistantIn{0%{opacity:0;transform:translateY(6px)}100%{opacity:1;transform:translateY(0)}}' +
       '@keyframes argoAssistantTyping{0%,60%,100%{opacity:.3}30%{opacity:1}}' +
       '@media (max-width:560px){.argo-assistant-panel,.argo-assistant-panel.argo-assistant-wide{left:8px;right:8px;width:auto;height:min(86dvh,calc(100dvh - 100px))}}' +
@@ -951,6 +962,13 @@
     });
     if (!target.firstChild) target.textContent = String(text || '');
   }
+  // O humor do Argo acompanha o que ele diz: "não consta" vira cara de dúvida, em vez de sorriso padrão.
+  var RE_SEM_DADO = /\b(n[ãa]o consta|n[ãa]o encontrei|n[ãa]o tenho (essa|a) informa|n[ãa]o h[áa] (registro|informa)|sem informa[çc][ãa]o)/i;
+  function moodFromText(text, bad) {
+    if (bad) return 'error';
+    return RE_SEM_DADO.test(String(text || '').slice(0, 400)) ? 'notfound' : 'info';
+  }
+  var RE_AGRADECE = /\b(obrigad[oa]|valeu|brigad[oa]|muito bom|perfeito|ajudou)\b/i;
   function plainText(text) {
     return String(text == null ? '' : text).replace(/\*\*/g, '').replace(/^\s*[-•]\s+/gm, '• ').trim();
   }
@@ -1059,6 +1077,19 @@
       statusEl.querySelector('em').textContent = st.text;
       statusEl.className = 'argo-assistant-status-' + (st.level || 'ok');
     }
+    // Fase da resposta no cabeçalho ("consultando as normas…"): quem espera sabe o que o Argo está fazendo.
+    var phaseT = 0;
+    function setPhase(text) {
+      clearTimeout(phaseT);
+      if (!text) { refreshStatus(); return; }
+      statusEl.querySelector('em').textContent = text;
+      statusEl.className = 'argo-assistant-status-busy';
+    }
+    function phasesFor(kind) {
+      // kind: 'procura' (antes de saber o caminho) | 'normas' (esperando o início do stream)
+      setPhase(kind === 'procura' ? 'procurando no diretório…' : 'consultando as normas e o diretório…');
+      phaseT = setTimeout(function () { if (busy) setPhase('ainda trabalhando nisso… (dá para parar)'); }, 7000);
+    }
     window.addEventListener('online', refreshStatus);
     window.addEventListener('offline', refreshStatus);
 
@@ -1151,6 +1182,19 @@
         b.col.insertBefore(bd, b.col.firstChild);
       }
       if (result.note) { var n = document.createElement('div'); n.className = 'argo-assistant-note'; n.textContent = result.note; b.col.appendChild(n); }
+      var srcs = [], seen = {};
+      (result.sources || []).forEach(function (f) {
+        var nm = [f && f.documento, f && f.referencia].filter(Boolean).join(', ');
+        if (nm && !seen[nm]) { seen[nm] = 1; srcs.push(nm); }
+      });
+      if (srcs.length) {
+        var det = document.createElement('details'); det.className = 'argo-assistant-src';
+        var sm = document.createElement('summary'); sm.textContent = 'Trechos de norma consultados (' + Math.min(srcs.length, 4) + ')';
+        var ul = document.createElement('ul');
+        srcs.slice(0, 4).forEach(function (x) { var li = document.createElement('li'); li.textContent = x; ul.appendChild(li); });
+        var hn = document.createElement('span'); hn.className = 'argo-assistant-src-hint'; hn.textContent = 'São os trechos que a base achou para a pergunta; confira o texto oficial vigente.';
+        det.appendChild(sm); det.appendChild(ul); det.appendChild(hn); b.col.appendChild(det);
+      }
       if (result.units && result.units.length) {
         var wrap = document.createElement('div'); wrap.className = 'argo-assistant-units';
         result.units.slice(0, 5).forEach(function (u) { wrap.appendChild(buildUnit(u)); });
@@ -1160,12 +1204,21 @@
       if (plain && plain.length > 60 && !result.crisis) acts.appendChild(tinyBtn('Copiar', 'argo-assistant-mini-ghost', function (ev) { copyText(plain, ev.currentTarget); }));
       if (result.badge === 'IA') {
         acts.appendChild(tinyBtn('Refazer', 'argo-assistant-mini-ghost', function () { if (!busy && lastQuestion) ask(lastQuestion, { regen: true, silent: true }); }));
-        var up = tinyBtn('👍', 'argo-assistant-mini-ghost', function () { up.disabled = down.disabled = true; up.classList.add('is-on'); });
+        var up = tinyBtn('👍', 'argo-assistant-mini-ghost', function () {
+          up.disabled = down.disabled = true; up.classList.add('is-on');
+          poke(root.querySelector('#argoAssistantMascot svg.argo-mascot-icon'), 'love');
+          announce('Que bom que ajudou!');
+        });
         up.setAttribute('aria-label', 'Resposta útil');
         var down = tinyBtn('👎', 'argo-assistant-mini-ghost', function () {
           up.disabled = down.disabled = true; down.classList.add('is-on');
-          addMsg('Obrigado por avisar! Posso tentar de outro jeito, ou você pode buscar direto no diretório. Dica: quanto mais específica a pergunta (unidade, bairro, público), melhor a resposta.', 'bot', 'info');
-          renderQuick([{ label: 'Refazer a resposta', run: function () { if (!busy && lastQuestion) ask(lastQuestion, { regen: true, silent: true }); } }, { label: 'Mais assuntos', menu: true }]);
+          addMsg('Obrigado por avisar! Posso tentar de outro jeito. Quanto mais específica a pergunta (unidade, bairro, público), melhor a resposta.', 'bot', 'notfound');
+          renderQuick([
+            { label: 'Explicar de outro jeito', ask: 'Explique de outro jeito, mais simples e com um exemplo.', force: true },
+            { label: 'Mais curto, só o essencial', ask: 'Resuma em 2 ou 3 frases, só o essencial.', force: true },
+            { label: 'Refazer a resposta', run: function () { if (!busy && lastQuestion) ask(lastQuestion, { regen: true, silent: true }); } },
+            { label: 'Mais assuntos', menu: true }
+          ]);
         });
         down.setAttribute('aria-label', 'Resposta não ajudou');
         acts.appendChild(up); acts.appendChild(down);
@@ -1180,7 +1233,7 @@
         if (!a || !a.label) return;
         var btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'argo-assistant-chip' + (a.menu ? ' argo-assistant-chip-menu' : '') + (a.ask ? ' argo-assistant-chip-ask' : '');
+        btn.className = 'argo-assistant-chip' + (a.menu ? ' argo-assistant-chip-menu' : '') + (a.ask ? ' argo-assistant-chip-ask' : '') + (a.retry ? ' argo-assistant-chip-retry' : '');
         btn.textContent = a.label;
         btn.addEventListener('click', function () {
           if (a.menu) { addMsg('Claro! Por onde quer seguir?', 'bot', 'info'); renderQuick(defaultQuick()); return; }
@@ -1231,12 +1284,14 @@
       moodBoth(m);
       if (m !== 'info') moodT = setTimeout(function () { if (!busy) moodBoth('info'); }, 4000);
     }
+    function mascotBtnEl() { return root.querySelector('#argoAssistantMascot'); }
     function setBusy(on) {
       if (busy !== on) {
         if (on) { clearTimeout(moodT); pendingMood = null; moodBoth('thinking'); }
         else { var m = pendingMood || 'info'; pendingMood = null; reactMood(m); }
       }
       busy = on;
+      if (!on) { clearTimeout(phaseT); mascotBtnEl().classList.remove('argo-assistant-talking'); fab.classList.remove('argo-assistant-talking'); refreshStatus(); }
       fab.classList.toggle('argo-assistant-busy', on);
       sendBtn.innerHTML = on ? svgStop : svgSend;
       sendBtn.classList.toggle('is-stop', on);
@@ -1266,6 +1321,9 @@
       var b = null, bub = null, raf = 0, acc = '';
       abortCtl = (typeof AbortController !== 'undefined') ? new AbortController() : { signal: undefined, abort: function () {} };
       var stopped = false, finished = false;
+      var mascotBtn0 = root.querySelector('#argoAssistantMascot');
+      function talking(on) { mascotBtn0.classList.toggle('argo-assistant-talking', on); fab.classList.toggle('argo-assistant-talking', on); }
+      phasesFor('normas');
       abortCtl.signal && abortCtl.signal.addEventListener && abortCtl.signal.addEventListener('abort', function () { stopped = true; });
 
       function ensureBubble() {
@@ -1279,6 +1337,7 @@
       function paint() { raf = 0; if (bub && !finished) { renderMd(acc, bub); scrollDown(); } }
       function onDelta(piece, full) {
         if (myRun !== runId) return;
+        if (!b) { setPhase('escrevendo a resposta…'); talking(true); }
         ensureBubble();
         acc = (typeof full === 'string') ? full : acc + piece;
         if (!raf) raf = (window.requestAnimationFrame || setTimeout)(paint, 16);
@@ -1286,39 +1345,48 @@
       var p;
       try { p = result.stream.run(onDelta, abortCtl.signal); } catch (e) { p = Promise.reject(e); }
       return Promise.resolve(p).then(function (final) {
-        finished = true;
+        finished = true; talking(false);
         if (myRun !== runId) return;
         var f = (typeof final === 'string') ? { text: final } : (final || {});
         var text = f.text || acc;
         if (!b) { typing.remove(); b = makeBotRow(result.mood || 'info'); bub = document.createElement('div'); bub.className = 'argo-assistant-bubble argo-md'; b.col.appendChild(bub); log.appendChild(b.row); }
         bub.classList.remove('argo-assistant-streaming');
         renderMd(text, bub);
-        var finalResult = { badge: result.badge || 'IA', note: f.note || '', units: f.units || [], quickActions: f.quickActions || result.quickActions, followups: f.followups || result.followups, mood: result.mood };
+        var endMood = f.mood || moodFromText(text, f.bad);
+        if (endMood !== 'info') { pendingMood = endMood; swapMood(b.icon, endMood, 24); }
+        var finalResult = { badge: f.badge || result.badge || 'IA', note: f.note || '', sources: f.sources || [], units: f.units || [], quickActions: f.quickActions || result.quickActions, followups: f.followups || result.followups, mood: result.mood };
         decorate(b, finalResult, plainText(text));
         renderQuick(quickFor(finalResult));
         announce(text);
         scrollDown();
       }, function (err) {
-        finished = true;
+        finished = true; talking(false);
         if (myRun !== runId) return;
         var partial = (err && err.partial) || acc;
         if (b && partial && partial.length > 25) {
           bub.classList.remove('argo-assistant-streaming');
           renderMd(partial + (stopped ? '\n\n(resposta interrompida)' : '\n\n(a resposta foi cortada por falha de conexão)'), bub);
           decorate(b, { badge: 'IA' }, plainText(partial));
-          renderQuick(quickFor({ quickActions: (result.stream.fallback && result.stream.fallback.quickActions) || [], followups: [] }));
+          renderQuick(quickFor({ quickActions: (result.stream.fallback && result.stream.fallback.quickActions) || [], followups: [] }).concat(retryChip(err)));
           return;
         }
         if (b) b.row.remove();
         typing.remove();
-        if (stopped) { addMsg('Resposta interrompida.', 'bot', 'info'); renderQuick(defaultQuick()); return; }
+        if (stopped) { addMsg('Resposta interrompida.', 'bot', 'info'); renderQuick(defaultQuick().concat(retryChip(err))); return; }
         var msg = err && err.userMessage;
-        if (msg) { addMsg(msg, 'bot', 'notfound'); renderQuick(defaultQuick()); return; }
+        if (msg) { addMsg(msg, 'bot', 'notfound'); renderQuick(defaultQuick().concat(retryChip(err))); return; }
         showAnswer(result.stream.fallback || null);
+        var rc = retryChip(err);
+        if (rc.length) renderQuick(quickFor(result.stream.fallback || {}).concat(rc));
       }).then(function () {
         if (myRun !== runId) return;
         abortCtl = null; setBusy(false); finishUnread(); refreshStatus();
       });
+    }
+    // "Tentar de novo" quando a ida à IA falhou (rede, limite, interrupção). Não aparece para aviso de dado pessoal nem socorro.
+    function retryChip(err) {
+      if ((err && err.noRetry) || !lastQuestion) return [];
+      return [{ label: '↻ Tentar de novo', retry: true, run: function () { if (!busy && lastQuestion) ask(lastQuestion, { regen: true, silent: true }); } }];
     }
 
     // ---------- fluxo principal ----------
@@ -1330,7 +1398,10 @@
       var myRun = ++runId;
       quick.innerHTML = '';
       if (!meta.silent) addMsg(text, 'user');
+      if (RE_AGRADECE.test(text) && text.length < 60) poke(mascotBtnEl().querySelector('svg.argo-mascot-icon'), 'love');
+      mascotBtnEl().classList.remove('argo-assistant-listening');
       setBusy(true);
+      phasesFor('procura');
       var result;
       try { result = (typeof options.ask === 'function') ? options.ask(text, meta) : null; }
       catch (e) { result = null; }
@@ -1421,7 +1492,11 @@
       count.hidden = len < 400;
       if (len >= 400) count.textContent = len + '/500';
     }
-    input.addEventListener('input', autosize);
+    input.addEventListener('input', function () {
+      autosize();
+      mascotBtnEl().classList.toggle('argo-assistant-listening', !busy && input.value.trim().length > 0);
+    });
+    input.addEventListener('blur', function () { mascotBtnEl().classList.remove('argo-assistant-listening'); });
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       if (busy) { stop(); return; }
