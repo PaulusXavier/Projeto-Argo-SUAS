@@ -22813,8 +22813,37 @@ function argoAssistantAskHybrid(rawText, meta) {
   }
   if (conceito) return keep(conceito, plan.result.units);
   if (weak) return keep(weak, plan.result.units);
+  // Sem IA (offline ou desligada) e sem resposta pronta que sirva: a base de normas do Paulus, que já está no aparelho.
+  if (!iaOk && questionLike && (!local || local.fallback || (local.score || 0) < 2)) {
+    const norma = argoAskNormasOffline(rawText, local);
+    if (norma) return norma;
+  }
   if (local) return keep(local);
   return local;
+}
+
+// Pergunta de conteúdo sem IA: procura na base de normas do Paulus (assets/conhecimento.json, também em cache offline).
+// Volta como resposta em stream só para o mascote esperar a base carregar; se nada na base sustenta a pergunta,
+// rejeita e o mascote mostra a resposta de reserva (a mesma que mostraria antes), então o usuário nunca fica pior.
+function argoAskNormasOffline(rawText, local) {
+  const B = argoBrain();
+  if (!B || typeof Paulus === 'undefined' || !Paulus.consultarNormas) return null;
+  const reserva = local || { reply: 'Sem internet e não encontrei isso na base de normas. Posso procurar o termo direto no diretório.', mood: 'notfound', quickActions: [{ label: 'Buscar \"' + rawText.slice(0, 22) + '\" nos equipamentos', run: () => argoAssistantSearch(rawText), reply: 'Pronto! Joguei essa busca no diretório.', mood: 'success' }] };
+  return {
+    reply: '', mood: 'info', badge: 'Base SUAS',
+    quickActions: reserva.quickActions,
+    stream: {
+      fallback: reserva,
+      run: () => Paulus.consultarNormas(rawText, { historico: B.session.history }).then(r => {
+        if (!r) { if (local) B.remember(rawText, local.reply, []); throw new Error('sem norma'); }
+        const txt = B.cleanAI(r.texto);
+        if (!txt) throw new Error('vazia');
+        B.remember(rawText, txt, []);
+        const fonteTxt = argoFontesTexto(r.fontes).replace(/^Normas consultadas:/, 'Fonte:');
+        return { text: txt, note: ((r.avisos && r.avisos[0]) || 'Confira o texto oficial vigente.') + (fonteTxt ? ' ' + fonteTxt : '') };
+      })
+    }
+  };
 }
 
 // Trechos de norma que o Paulus consultou (documento + artigo), sem repetir. Texto honesto:
@@ -22849,6 +22878,7 @@ function argoStreamIA(B, rawText, payload, hooks) {
     aba: payload.pagina,
     semAcoes: true,                 // "abrir/buscar" já foram tratados pelo Argo antes de chegar aqui
     fichas: payload.contexto,
+    panorama: payload.panorama,     // totais reais do diretório por grupo ("quantos CAPS?"); sem isso a IA contaria fichas soltas
     historico: payload.historico,
     sinal: hooks.signal,
     onToken: (pedaco, tudo) => { acc = tudo; if (hooks.onDelta) hooks.onDelta(pedaco, tudo); },
