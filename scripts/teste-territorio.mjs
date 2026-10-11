@@ -46,5 +46,30 @@ confere('pergunta técnica não é barrada', !B.piiBlock('qual CRAS atende o bai
 confere('telefone fora do diretório é detectado', B.verifyPhones('ligue para (95) 91111-2222') === true);
 confere('intervalo de anos não é telefone', B.verifyPhones('vigência 2023-2026') === false);
 
+
+// ---- contagem por bairro: o número sai das fichas, não da IA ----
+const semAcento = t => String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const ESPECIAIS = /^(CAP-DVRR|CADAHS|CAS|CAEBV)$|^Centro Mun\. Integrado/i;
+const escolasBV = (() => {
+  const vistos = new Set();
+  return ctx.DATA.filter(d => /^(Rede Estadual|Rede Municipal - Escolas)$/.test(d.group || '') && /Boa Vista/.test(d.address) && !ESPECIAIS.test(d.name))
+    .filter(d => { const k = semAcento(d.name); if (vistos.has(k)) return false; vistos.add(k); return true; });
+})();
+r = resp('quantas escolas tem em Boa Vista');
+confere('total de escolas bate com a contagem independente (' + escolasBV.length + ')', r.kind === 'directory' && r.txt.includes('**' + escolasBV.length + ' escolas em Boa Vista**'), r.txt.slice(0, 90));
+const noCentro = escolasBV.filter(d => /\s-\s*Centro,/.test(d.address) || /^Centro,/.test(d.address)).length;
+r = resp('quantas escolas no Centro');
+confere('escolas no Centro bate com a contagem independente (' + noCentro + ')', r.kind === 'directory' && r.txt.includes('**' + noCentro + ' escolas'), r.txt.slice(0, 90));
+r = resp('quantas escolas tem no caimbe');
+confere('escolas no Caimbé (sem acento) e mostra a lista', r.kind === 'directory' && /Caimbé/.test(r.txt) && /Mário David Andreazza/.test(r.txt), r.txt.slice(0, 90));
+r = resp('quantas escolas no bairro Xanadu');
+confere('bairro inexistente não vira total da cidade', /Não encontrei esse bairro/.test(r.txt), r.txt.slice(0, 90));
+r = resp('quantas vagas tem na escola do Caimbé');
+confere('"vagas" não é pergunta de contagem do diretório', !/Contagem|constam|consta/.test(r.txt), r.txt.slice(0, 90));
+r = resp('quantos CRAS atendem o bairro Cauamé');
+confere('cobertura continua com o território (CRAS Cauamé)', /CRAS Cauamé/.test(r.txt), r.txt.slice(0, 90));
+r = resp('qual bairro tem mais escolas');
+confere('ranking: bairro com mais escolas', /Centro/.test(r.txt) && /com mais escolas/.test(r.txt), r.txt.slice(0, 90));
+
 console.log(falhas ? '\n' + falhas + ' falha(s).' : '\nTudo certo.');
 process.exit(falhas ? 1 : 0);
