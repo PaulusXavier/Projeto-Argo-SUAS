@@ -8,6 +8,8 @@
  *      o CRAS Cauamé" ou "escola estadual no Pintolândia" e responde com as
  *      fichas reais do diretório (nunca inventa endereço, telefone ou horário).
  *      Tolera erro de digitação, plural, sinônimos e siglas.
+ *   2b. CID-11: pergunta por código (6A02) ou por nome ("CID de ansiedade") e responde
+ *      direto da tabela do Capítulo 06 (assets/cid11.json), sem IA e sem internet.
  *   3. Base SUAS: glossário offline (CRAS, CREAS, PAIF, BPC, CadÚnico, RAPS,
  *      Conselho Tutelar, fluxos de violência etc.) com a base normativa.
  *   4. Memória da conversa: entende "e o horário?", "e o telefone dele?".
@@ -1486,6 +1488,150 @@
   }
 
   // ---------------------------------------------------------------------
+  // CID-11 (Capítulo 06, transtornos mentais): código → transtorno e nome → código.
+  // Resposta direta da tabela (assets/cid11.json), sem IA e sem internet: nunca inventa código.
+  // ---------------------------------------------------------------------
+  var cid = null; // { map, kids, list, grupos, fonte, aviso }
+  var CID_STOP = asSet(('qual quais o a os as de do da dos das no na nos nas em por para que e eh um uma ao com ' +
+    'codigo codigos cid cid11 11 numero cod diagnostico classificacao internacional doenca doencas ' +
+    'me diga diz dizer quero saber mostre mostrar buscar busca procurar procure ver tem existe seria significa significado ' +
+    'esse essa este esta isso aqui ali como se ficou fica sao ser eu voce favor pode podem consulta consultar').split(' '));
+  var CID_GENERICAS = asSet(['transtorno', 'transtornos', 'disturbio', 'disturbios', 'desordem', 'desordens', 'perturbacao', 'sindrome']);
+  // siglas usadas no dia a dia, que não aparecem nos títulos
+  var CID_SIGLAS = {
+    tea: 'espectro autismo', tdah: 'deficit atencao hiperatividade', toc: 'obsessivo compulsivo',
+    tept: 'estresse pos traumatico', tag: 'ansiedade generalizada', tdi: 'identidade dissociativo', tpb: 'personalidade borderline'
+  };
+  // CID-10 → agrupamento da CID-11 (quadro de comparação do Guia de Referência da CID-11, OMS)
+  var CID10_BLOCOS = [
+    ['F00', 'F09', 'Transtornos neurocognitivos'],
+    ['F10', 'F19', 'Transtornos decorrentes do uso de substâncias ou comportamentos aditivos'],
+    ['F20', 'F29', 'Esquizofrenia ou outros transtornos psicóticos primários'],
+    ['F30', 'F39', 'Transtornos do humor'],
+    ['F40', 'F48', 'Transtornos de ansiedade ou relacionados ao medo'],
+    ['F60', 'F69', 'Transtornos de personalidade e traços relacionados'],
+    ['F70', 'F79', 'Transtornos do neurodesenvolvimento'],
+    ['F80', 'F89', 'Transtornos do neurodesenvolvimento'],
+    ['F90', 'F98', 'Transtornos do neurodesenvolvimento']
+  ];
+  function cidStem(w) { return w.length > 5 ? w.slice(0, 5) : w; }
+  function setCid(json) {
+    cid = null;
+    if (!json || !Array.isArray(json.itens) || !json.itens.length) return;
+    var map = {}, kids = {}, list = [];
+    json.itens.forEach(function (it) {
+      var c = String(it[0]).toUpperCase(), t = String(it[1]);
+      var toks = tok(t).map(cidStem);
+      map[c] = t;
+      list.push({ c: c, t: t, tk: toks });
+      if (c.length > 4) { var cat = c.slice(0, 4); (kids[cat] = kids[cat] || []).push(c); }
+    });
+    cid = { map: map, kids: kids, list: list, grupos: json.grupos || {}, fonte: json.fonte || '', aviso: json.aviso || '' };
+  }
+  function cidNota() {
+    return 'Fonte: ' + (cid && cid.fonte ? cid.fonte : 'OMS, CID-11, Capítulo 06') +
+      '. Os títulos podem estar imprecisos: confirme em icd.who.int antes de registrar.';
+  }
+  function cidPai(c) {
+    // 6A20.0Z → 6A20.0 → 6A20
+    var p = c;
+    while (p.length > 4) { p = p.length > 6 ? p.slice(0, -1) : p.slice(0, p.indexOf('.')); if (cid.map[p] && p !== c) return p; }
+    return '';
+  }
+  function cidLinhaCodigo(c) {
+    if (!cid.map[c]) return null;
+    var pai = c.length > 4 ? cidPai(c) : '';
+    var cat = c.slice(0, 4);
+    var linhas = ['**' + c + '** — ' + cid.map[c]];
+    var g = cid.grupos[c.slice(0, 3)];
+    if (pai) linhas.push('- Dentro de **' + pai + '** — ' + cid.map[pai]);
+    else if (c.length > 4 && cid.map[cat]) linhas.push('- Dentro de **' + cat + '** — ' + cid.map[cat]);
+    if (g) linhas.push('- Grupo: ' + g);
+    var filhos = c.length === 4 ? (cid.kids[c] || []) : [];
+    if (filhos.length) {
+      var diretos = filhos.filter(function (k) { return !/^.{4}\.[0-9A-Z]{2,}/.test(k); });
+      var mostrar = (diretos.length ? diretos : filhos).slice(0, 10);
+      linhas.push('- Subcódigos (' + (diretos.length || filhos.length) + '):');
+      mostrar.forEach(function (k) { linhas.push('  - **' + k + '** — ' + cut(cid.map[k], 160)); });
+      if ((diretos.length || filhos.length) > mostrar.length) linhas.push('  - … e mais ' + ((diretos.length || filhos.length) - mostrar.length) + '. Pergunte pelo subcódigo para ver o nome.');
+    }
+    return linhas.join('\n');
+  }
+  function cidResultado(reply) {
+    return { reply: reply, mood: 'info', badge: 'CID-11', note: cidNota(), quickActions: [], followups: [], units: [] };
+  }
+  function cidBuscaPorNome(n) {
+    var q = n.split(' ').filter(function (t) { return t && !CID_STOP[t]; });
+    var exp = [];
+    q.forEach(function (t) { if (CID_SIGLAS[t]) exp = exp.concat(CID_SIGLAS[t].split(' ')); else exp.push(t); });
+    q = exp;
+    if (q.some(function (t) { return !CID_GENERICAS[t]; })) q = q.filter(function (t) { return !CID_GENERICAS[t]; });
+    q = uniq(q);
+    if (!q.length) return { vazio: true };
+    var qs = q.map(cidStem);
+    var min = Math.max(1, Math.ceil(q.length * 0.75));
+    var achados = [];
+    cid.list.forEach(function (it) {
+      var hit = 0;
+      qs.forEach(function (w) { if (it.tk.some(function (t) { return t === w || (w.length >= 4 && t.indexOf(w) === 0); })) hit++; });
+      if (hit >= min) achados.push({ it: it, hit: hit });
+    });
+    achados.sort(function (a, b) {
+      return (b.hit - a.hit) || (a.it.c.length - b.it.c.length) || (a.it.t.length - b.it.t.length) || (a.it.c < b.it.c ? -1 : 1);
+    });
+    return { achados: achados, termos: q };
+  }
+  function cidAsk(text) {
+    var n = norm(text);
+    var temCid = /(^| )cid( |$)/.test(n) || /(^| )cid ?11( |$)/.test(n);
+    var temCodigo = /(^| )codigos?( |$)/.test(n);
+    var upper = String(text).toUpperCase();
+    var codigos = [], m, re = /(^|[^0-9A-Z])(6[A-E][0-9A-Z]{2}(?:\.[0-9A-Z]{1,3})?)(?![0-9A-Z])/g;
+    while ((m = re.exec(upper))) if (codigos.indexOf(m[2]) < 0) codigos.push(m[2]);
+    if (codigos.length) {
+      if (!cid) return cidResultado('A tabela da CID-11 ainda não carregou neste aparelho. Abra o Argo uma vez com internet e tente de novo.');
+      var partes = [], faltou = [];
+      codigos.slice(0, 4).forEach(function (c) { var l = cidLinhaCodigo(c); if (l) partes.push(l); else faltou.push(c); });
+      if (faltou.length) {
+        faltou.forEach(function (c) {
+          var cat = c.slice(0, 4);
+          if (cid.map[cat] && c.length > 4) partes.push('Não achei o subcódigo **' + c + '** na tabela. A categoria **' + cat + '** existe:\n' + cidLinhaCodigo(cat));
+          else partes.push('Não achei **' + c + '** na tabela do Capítulo 06 (transtornos mentais, comportamentais ou do neurodesenvolvimento). Confira o código ou consulte icd.who.int.');
+        });
+      }
+      return cidResultado(partes.join('\n\n'));
+    }
+    var f = /(^|[^A-Z0-9])F([0-9]{2})(?:\.[0-9])?(?![0-9A-Z])/.exec(upper);
+    if (f && (temCid || temCodigo || /^\s*F[0-9]{2}(\.[0-9])?\s*[?.!]?\s*$/i.test(text))) {
+      var num = Number(f[2]);
+      var bloco = CID10_BLOCOS.filter(function (b) { return num >= Number(b[0].slice(1)) && num <= Number(b[1].slice(1)); })[0];
+      return cidResultado('**F' + f[2] + '** é código da **CID-10**; esta consulta é da **CID-11** (códigos 6A00 a 6E8Z).' +
+        (bloco ? '\n- Na CID-11, o bloco **' + bloco[0] + '-' + bloco[1] + '** corresponde a "' + bloco[2] + '" (quadro de comparação do Guia de Referência da CID-11).' : '') +
+        '\nPara achar o código novo, pergunte pelo nome. Exemplo: "CID de episódio depressivo".');
+    }
+    if (!(temCid || temCodigo)) return null;
+    // "o que é a CID-11?" é dúvida de conteúdo: segue para a base de normas/IA
+    if (/^(o que (e|eh)|para que serve|como funciona|qual a diferenca|o que mudou)\b/.test(n)) return null;
+    if (!cid) return cidResultado('A tabela da CID-11 ainda não carregou neste aparelho. Abra o Argo uma vez com internet e tente de novo.');
+    var r = cidBuscaPorNome(n);
+    // só a palavra "código" (sem "CID") não basta para sequestrar a pergunta: sem achado, segue o fluxo normal
+    if (r.vazio) {
+      if (!temCid) return null;
+      return cidResultado('Digite um **código** da CID-11 (ex.: 6A02) para ver o transtorno, ou o **nome** (ex.: "CID de ansiedade generalizada") para ver o código.\nA tabela cobre o Capítulo 06: transtornos mentais, comportamentais e do neurodesenvolvimento.');
+    }
+    if (!r.achados.length) {
+      if (!temCid) return null;
+      return cidResultado('Não achei "' + r.termos.join(' ') + '" na tabela do Capítulo 06. Tente outra palavra do nome (ex.: "depressivo", "ansiedade", "autismo") ou consulte icd.who.int.');
+    }
+    var topo = r.achados.slice(0, 8);
+    var txt = ['Códigos da CID-11 que combinam com "' + r.termos.join(' ') + '":'];
+    topo.forEach(function (a) { txt.push('- **' + a.it.c + '** — ' + cut(a.it.t, 110)); });
+    if (r.achados.length > topo.length) txt.push('Mostrando ' + topo.length + ' de ' + r.achados.length + '. Acrescente mais uma palavra do nome para refinar.');
+    txt.push('Para ver os detalhes de um deles, pergunte pelo código (ex.: ' + topo[0].it.c + ').');
+    return cidResultado(txt.join('\n'));
+  }
+
+  // ---------------------------------------------------------------------
   // Plano: decide quem responde
   //   devolve { kind:'crisis'|'directory'|'concept'|'none', result?, dir?, con? }
   // ---------------------------------------------------------------------
@@ -1493,6 +1639,9 @@
     opts = opts || {};
     var c = crisis(text);
     if (c) return { kind: 'crisis', result: withCrisisUnits(c) };
+    // CID-11: código → transtorno e nome → código (tabela local, sem IA)
+    var cd = cidAsk(text);
+    if (cd) return { kind: 'directory', result: cd, dir: { units: [], confidence: 1, mode: 'list' }, con: { score: 0 } };
     // "qual CRAS atende o bairro X?": responde pela lista de cobertura das fichas
     var pend = seguimentoPendente(text);
     if (pend) return { kind: 'directory', result: pend, dir: { units: pend.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
@@ -1555,7 +1704,7 @@
   }
 
   return {
-    init: init, norm: norm, piiBlock: piiBlock, crisis: crisis, plan: plan,
+    init: init, setCid: setCid, cid: cidAsk, norm: norm, piiBlock: piiBlock, crisis: crisis, plan: plan,
     directory: function (t, tabCat) { return directory(t, session, tabCat); },
     glossary: glossaryScore, compose: { directory: composeDirectory, glossary: composeGlossary },
     remember: remember, reset: reset, session: session,
