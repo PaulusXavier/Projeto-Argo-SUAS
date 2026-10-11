@@ -5459,7 +5459,7 @@
     filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.45));
   }
 
-  .login-mascot-figure svg { width: 100%; height: 100%; display: block; }
+  .login-mascot-figure svg { width: 100%; height: 100%; display: block; transform: rotate(var(--tilt, 0deg)); transition: transform 0.25s ease-out; }
   .login-mascot-figure:hover { transform: scale(1.08) rotate(-3deg); }
   .login-mascot-figure:focus-visible { outline: 3px solid #FFD400; outline-offset: 3px; }
   .login-mascot-figure.is-poked { animation: loginMascotPoke 0.45s ease; }
@@ -5549,6 +5549,7 @@
 
   @media (prefers-reduced-motion: reduce) {
     .login-mascot-bubble, .login-mascot-figure, .login-mascot-figure.is-poked { animation: none; transition: none; }
+    .login-mascot-figure svg { transform: none; transition: none; }
   }
 
   /* Telas largas (>= 1700px): sobra espaço à esquerda do cartão de login,
