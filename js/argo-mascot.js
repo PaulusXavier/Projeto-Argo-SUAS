@@ -28,6 +28,11 @@
  *   });
  *
  * TIPOS: 'info' (padrão, azul) · 'error' (vermelho) · 'notfound' (dourado) · 'success' (verde)
+ *        · 'thinking' (violeta: o Argo "pensando" — usado enquanto a IA responde)
+ *
+ * ÍCONE AVULSO: ArgoMascot.icon('info', 48). Abaixo de 48 px o desenho troca
+ * sozinho para uma versão compacta (cabeça maior, menos detalhes) que continua
+ * legível em avisos, chat e botão flutuante.
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -39,7 +44,8 @@
     info:     { color: 'var(--argo-mascot-info, #0091C2)' },
     error:    { color: 'var(--argo-mascot-error, #B91C1C)' },
     notfound: { color: 'var(--argo-mascot-notfound, #B45309)' },
-    success:  { color: 'var(--argo-mascot-success, #15803D)' }
+    success:  { color: 'var(--argo-mascot-success, #15803D)' },
+    thinking: { color: 'var(--argo-mascot-thinking, #6D4FD0)' }
   };
 
   var STYLE_ID = 'argo-mascot-styles';
@@ -69,7 +75,7 @@
     mood = normalizeType(mood);
     size = size || 40;
     var accent = THEME[mood].color;
-    var flagSymbol = { info: '★', error: '!', notfound: '?', success: '✓' }[mood];
+    var flagSymbol = { info: '★', error: '!', notfound: '?', success: '✓', thinking: '…' }[mood];
 
     // Imagem própria (opcional): mantém só uma bolinha de humor no canto.
     if (CUSTOM_IMAGE_SRC) {
@@ -98,6 +104,13 @@
     var glossGradId = 'argoMascot' + mascotUid + 'Gloss';
     var waterGradId = 'argoMascot' + mascotUid + 'Water';
     var hullClipId = 'argoMascot' + mascotUid + 'Clip';
+    var faceGradId = 'argoMascot' + mascotUid + 'Face';
+    var shirtGradId = 'argoMascot' + mascotUid + 'Shirt';
+    var sailShadeId = 'argoMascot' + mascotUid + 'SailShade';
+    var hullShadeId = 'argoMascot' + mascotUid + 'HullShade';
+    // Abaixo de 48 px o desenho vira a versão compacta: cabeça maior, escudos maiores
+    // e sem filigranas (trilhas de circuito, pinos do chip, costuras) que viram só borrão.
+    var compact = size < 48;
     var lite = size < 36; // ícones pequenos: sem enfeites animados (leve para listas/chat)
     var HULL_D = 'M9 49 Q36 63 65 63 Q94 63 121 47 Q121 82 98 97 Q86 103 65 103 Q44 103 32 97 Q9 82 9 49 Z';
 
@@ -131,10 +144,15 @@
       '<path class="argo-fx argo-mascot-glint" d="M33.4 34.6 Q33.7 37 36 37.4 Q33.7 37.8 33.4 40.2 Q33.1 37.8 30.8 37.4 Q33.1 37 33.4 34.6 Z" fill="#fff"/>';
 
     // ---- Rosto e pose por humor ----
+    function brow(d) { return '<path d="' + d + '" fill="none" stroke="' + PILOT.hair + '" stroke-width="2" stroke-linecap="round"/>'; }
+    // narizinho discreto (dá volume ao rosto sem pesar)
+    var nose = '<path d="M42.7 41 Q44.5 43.2 42.1 43.9" fill="none" stroke="#9A6038" stroke-width="1.3" stroke-linecap="round" opacity=".75"/>';
+    var brows = '';
     var cheeks = '<ellipse cx="31.4" cy="46" rx="2.8" ry="1.8" fill="' + BLUSH + '" opacity=".6"/><ellipse cx="52.6" cy="46" rx="2.8" ry="1.8" fill="' + BLUSH + '" opacity=".6"/>';
     var face, arms, extra = '';
 
     if (mood === 'success') {
+      brows = brow('M32.2 31.6 Q36.2 29.4 40.2 31.4') + brow('M43.8 31.4 Q47.8 29.4 51.8 31.6');
       face = stroke('M33.2 39.6 Q36.5 34.4 39.8 39.6', 2.2) + stroke('M44.2 39.6 Q47.5 34.4 50.8 39.6', 2.2) +
         '<path d="M36.8 43.6 Q42 54 47.2 43.6 Z" fill="' + MOUTH + '" stroke="' + EYE + '" stroke-width="1.8" stroke-linejoin="round"/>' +
         '<path d="M39.6 48.6 Q42 46.2 44.4 48.6 Q42 51 39.6 48.6 Z" fill="' + BLUSH + '"/>';
@@ -162,16 +180,31 @@
         '<circle cx="67" cy="11.4" r="1.8" fill="#fff" stroke="' + NAVY + '" stroke-width=".9"/>' +
         '<ellipse cx="76" cy="3" rx="7.4" ry="6" fill="#fff" stroke="' + NAVY + '" stroke-width="1.5"/>' +
         '<text x="76" y="6.6" font-size="9.4" font-weight="800" fill="' + accent + '" text-anchor="middle" font-family="Trebuchet MS,Verdana,sans-serif">?</text></g>';
+    } else if (mood === 'thinking') {
+      // olhar para cima e para o lado, sobrancelha levantada, mão no queixo e balão com "..." pulsando
+      face = '<g class="argo-mascot-look"><g class="argo-mascot-blink">' + eye(37.8, 37.6, 2.6) + eye(48.8, 37.6, 2.6) + '</g></g>' +
+        '<path d="M39.6 47.6 Q42.6 45.8 45.8 47.4" fill="none" stroke="' + EYE + '" stroke-width="2" stroke-linecap="round"/>';
+      brows = brow('M32 34.2 Q36 33 40.4 34.2') + brow('M43.6 30.8 Q48 28.4 52.6 31.4');
+      arms = arm(23, 63, 21, 61) + arm(61, 62, 52.4, 51.6);
+      extra = '<g class="argo-mascot-think"><circle cx="63" cy="15.6" r="1.2" fill="#fff" stroke="' + NAVY + '" stroke-width=".8"/>' +
+        '<circle cx="67" cy="11.4" r="1.8" fill="#fff" stroke="' + NAVY + '" stroke-width=".9"/>' +
+        '<ellipse cx="78" cy="3" rx="10" ry="6.4" fill="#fff" stroke="' + NAVY + '" stroke-width="1.5"/>' +
+        [72.8, 78, 83.2].map(function (x, i) { return '<circle class="argo-mascot-dot" style="animation-delay:' + (i * 0.22).toFixed(2) + 's" cx="' + x + '" cy="3" r="1.6" fill="' + accent + '"/>'; }).join('') + '</g>';
     } else { // info
-      face = '<g class="argo-mascot-look"><g class="argo-mascot-blink">' + eye(36.5, 39, 2.7) + eye(47.5, 39, 2.7) + '</g></g>' +
+      brows = '<g class="argo-mascot-brow">' + brow('M32 33.4 Q36 31.8 40.4 33.2') + brow('M43.6 33.2 Q48 31.8 52 33.4') + '</g>';
+      face = '<g class="argo-mascot-look"><g class="argo-mascot-blink">' + eye(36.5, 39, 2.7) + '<g class="argo-mascot-eyeR">' + eye(47.5, 39, 2.7) + '</g></g></g>' +
         '<path d="M36.2 46.4 Q42 53.4 47.8 46.4 Q42 47.8 36.2 46.4 Z" fill="#fff" stroke="' + EYE + '" stroke-width="1.7" stroke-linejoin="round"/>';
       arms = arm(23, 63, 21, 61) + '<g class="argo-mascot-wave">' + arm(60, 62, 70.5, 43) + '</g>';
+      // "Zzz": só aparece quando o app fica parado um tempo (classe argo-mascot-sleepy no <html>)
+      extra = '<g class="argo-fx argo-mascot-zzz">' + [[60, 15, 6.5, 0], [66, 9, 8.5, .5], [73, 3, 10.5, 1]].map(function (z) {
+        return '<text class="argo-mascot-z" style="animation-delay:' + z[3] + 's" x="' + z[0] + '" y="' + z[1] + '" font-size="' + z[2] + '" font-weight="800" fill="#fff" stroke="' + NAVY + '" stroke-width=".7" paint-order="stroke" font-family="Trebuchet MS,Verdana,sans-serif">z</text>';
+      }).join('') + '</g>';
     }
 
     // ---- Comandante: orelhas, cabeça, cabelo, óculos, rosto, polo cinza com crachá ----
     var pilot =
       // camisa polo (a parte de baixo fica escondida atrás do casco)
-      '<path d="M18 74 Q18 53 42 52 Q66 53 66 74 Z" fill="' + PILOT.shirt + '" stroke="' + INK + '" stroke-width="2.4" stroke-linejoin="round"/>' +
+      '<path d="M18 74 Q18 53 42 52 Q66 53 66 74 Z" fill="url(#' + shirtGradId + ')" stroke="' + INK + '" stroke-width="2.4" stroke-linejoin="round"/>' +
       // pescoço, orelhas e cabeça
       '<rect x="37" y="47" width="10" height="8" rx="3" fill="' + PILOT.skinDk + '"/>' +
       // gola da polo, botões e cordão do crachá
@@ -183,18 +216,20 @@
       // pin Ψ dourado (psicologia) no peito
       '<circle cx="30.6" cy="60.4" r="3" fill="' + GOLD + '" stroke="' + INK + '" stroke-width="1.1"/>' +
       '<path d="M29.1 58.6 Q29.1 61.6 30.6 61.6 Q32.1 61.6 32.1 58.6 M30.6 58.2 V62.6" fill="none" stroke="' + INK + '" stroke-width=".9" stroke-linecap="round"/>' +
-      '<g class="argo-mascot-head"><g transform="translate(42 54) scale(1.13) translate(-42 -54)">' +
+      '<g class="argo-mascot-head"><g transform="translate(42 54) scale(' + (compact ? 1.3 : 1.13) + ') translate(-42 -54)">' +
       '<ellipse cx="27.2" cy="39.5" rx="2.4" ry="3.6" fill="' + PILOT.skin + '" stroke="' + INK + '" stroke-width="1.6"/>' +
       '<ellipse cx="56.8" cy="39.5" rx="2.4" ry="3.6" fill="' + PILOT.skin + '" stroke="' + INK + '" stroke-width="1.6"/>' +
       // rosto um pouco alongado, com queixo firme e barba rala por baixo
-      '<path d="M27.4 34 Q27.4 21.6 42 21.6 Q56.6 21.6 56.6 34 Q56.6 44 53 48.6 Q48 53.8 42 53.8 Q36 53.8 31 48.6 Q27.4 44 27.4 34 Z" fill="' + PILOT.skin + '" stroke="' + INK + '" stroke-width="2.4" stroke-linejoin="round"/>' +
+      '<path d="M27.4 34 Q27.4 21.6 42 21.6 Q56.6 21.6 56.6 34 Q56.6 44 53 48.6 Q48 53.8 42 53.8 Q36 53.8 31 48.6 Q27.4 44 27.4 34 Z" fill="url(#' + faceGradId + ')" stroke="' + INK + '" stroke-width="2.4" stroke-linejoin="round"/>' +
       '<path d="M31.4 47.6 Q36 52.4 42 52.6 Q48 52.4 52.6 47.6 Q50 52.6 42 53 Q34 52.6 31.4 47.6 Z" fill="' + PILOT.skinDk + '" opacity=".38"/>' +
-      cheeks + face + glasses +
+      // sombra do queixo no pescoço/gola dá profundidade
+      cheeks + nose + face + brows + glasses +
       // cabelo preto curto, com topete volumoso caído para o lado e costeletas
       '<g class="argo-mascot-hair">' +
       '<path d="M26.6 36 Q23.8 15.5 41 14.6 Q59.6 14 57.4 36 Q56.6 29 53.6 26.4 Q49.6 28.4 45.4 23.6 Q42.4 28.8 36.6 27.8 Q31 27.4 29.6 36 Q28.2 37 26.6 36 Z" fill="' + PILOT.hair + '" stroke="' + INK + '" stroke-width="1.6" stroke-linejoin="round"/>' +
       '<path d="M37.4 26.6 Q36.6 31.6 40.4 32.4 Q39 29.4 41.4 26.8 Z" fill="' + PILOT.hair + '"/>' +
-      '<path d="M32.5 20.4 Q41 16.6 51.5 21" fill="none" stroke="#5A4638" stroke-width="1.3" stroke-linecap="round" opacity=".7"/>' +
+      '<path d="M32.5 20.4 Q41 16.6 51.5 21" fill="none" stroke="#6B5646" stroke-width="1.4" stroke-linecap="round" opacity=".8"/>' +
+      '<path d="M45 18.4 Q51 18.6 54.4 24" fill="none" stroke="#6B5646" stroke-width="1" stroke-linecap="round" opacity=".55"/>' +
       '</g></g></g>' +
       arms;
 
@@ -227,6 +262,18 @@
           '<linearGradient id="' + waterGradId + '" x1="0" y1="0" x2="0" y2="1">' +
             '<stop offset="0%" stop-color="#9BE0F7"/><stop offset="100%" stop-color="#3C9FCB"/>' +
           '</linearGradient>' +
+          '<radialGradient id="' + faceGradId + '" cx=".36" cy=".3" r=".85">' +
+            '<stop offset="0%" stop-color="#EBBC8F"/><stop offset="55%" stop-color="' + PILOT.skin + '"/><stop offset="100%" stop-color="#BC8758"/>' +
+          '</radialGradient>' +
+          '<linearGradient id="' + shirtGradId + '" x1="0" y1="0" x2="0" y2="1">' +
+            '<stop offset="0%" stop-color="#A2A5AB"/><stop offset="100%" stop-color="#6F7279"/>' +
+          '</linearGradient>' +
+          '<linearGradient id="' + sailShadeId + '" x1="0" y1="0" x2="0" y2="1">' +
+            '<stop offset="0%" stop-color="#fff" stop-opacity=".45"/><stop offset="55%" stop-color="#fff" stop-opacity="0"/><stop offset="100%" stop-color="#0F2E3A" stop-opacity=".2"/>' +
+          '</linearGradient>' +
+          '<linearGradient id="' + hullShadeId + '" x1="0" y1="0" x2="0" y2="1">' +
+            '<stop offset="55%" stop-color="#0A1F28" stop-opacity="0"/><stop offset="100%" stop-color="#0A1F28" stop-opacity=".38"/>' +
+          '</linearGradient>' +
           '<clipPath id="' + hullClipId + '"><path d="' + HULL_D + '"/></clipPath>' +
         '</defs>' +
         // aura suave na cor do humor + gaivota passando ao fundo
@@ -239,7 +286,9 @@
         '<g class="argo-mascot-sail">' +
         '<path d="M104 8 L121 46" stroke="' + NAVY + '" stroke-width=".9" stroke-linecap="round" opacity=".55"/>' +
         '<path d="M75 22 L116 15.6 C119 30 118 42 113 52 C105 64 92 66 82 60 C70 52 68 34 75 22 Z" fill="url(#' + sailGradId + ')" stroke="' + NAVY + '" stroke-width="2.4" stroke-linejoin="round"/>' +
+        '<path d="M75 22 L116 15.6 C119 30 118 42 113 52 C105 64 92 66 82 60 C70 52 68 34 75 22 Z" fill="url(#' + sailShadeId + ')"/>' +
         '<path d="M96 19 Q92 44 96 65 M85 22 Q80 42 86 60" fill="none" stroke="' + NAVY + '" stroke-width="1" opacity=".16" stroke-linecap="round"/>' +
+        (compact ? '' : '<path d="M77.6 24.4 L114 18.6 C116.4 31 115.4 41 111.2 50 C104 60.6 93 62.4 84.4 57.6 C73.6 50 71.6 35 77.6 24.4" fill="none" stroke="' + NAVY + '" stroke-width=".7" stroke-dasharray="1.8 2.2" opacity=".28"/>') +
         '<path d="M72 21.4 L118 14.6" stroke="' + NAVY + '" stroke-width="4.6" stroke-linecap="round"/>' +
         '<path d="M72 21.4 L118 14.6" stroke="' + MAST + '" stroke-width="2.4" stroke-linecap="round"/>' +
         // constelação Argo Navis (estrelas ligadas por linhas de luz) na vela
@@ -249,7 +298,7 @@
                  '<circle class="argo-mascot-star" style="animation-delay:' + t[3] + 's" cx="' + t[0] + '" cy="' + t[1] + '" r="' + t[2] + '" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width=".6"/>';
         }).join('') +
         // chip na cor do humor (o "remendo" virou um microchip com pinos)
-        '<path d="M86 47 v-2.4 M89 47 v-2.4 M92 47 v-2.4 M86 58 v2.4 M89 58 v2.4 M92 58 v2.4 M83.4 50 h-2.4 M83.4 53 h-2.4 M83.4 56 h-2.4 M94.6 50 h2.4 M94.6 53 h2.4 M94.6 56 h2.4" stroke="' + NAVY + '" stroke-width="1.1" stroke-linecap="round"/>' +
+        (compact ? '' : '<path d="M86 47 v-2.4 M89 47 v-2.4 M92 47 v-2.4 M86 58 v2.4 M89 58 v2.4 M92 58 v2.4 M83.4 50 h-2.4 M83.4 53 h-2.4 M83.4 56 h-2.4 M94.6 50 h2.4 M94.6 53 h2.4 M94.6 56 h2.4" stroke="' + NAVY + '" stroke-width="1.1" stroke-linecap="round"/>') +
         '<rect class="argo-mascot-chip" x="83.4" y="46.6" width="11.2" height="11.2" rx="2.6" fill="' + accent + '" stroke="' + NAVY + '" stroke-width="1.4"/>' +
         '<rect x="85.6" y="48.8" width="6.8" height="6.8" rx="1.6" fill="none" stroke="#fff" stroke-width=".9" stroke-dasharray="1.4 1.4" opacity=".85"/>' +
         '<circle cx="89" cy="52.2" r="1.3" fill="#fff"/>' +
@@ -282,16 +331,23 @@
           '<path d="M9 49 Q36 63 65 63 Q94 63 121 47 Q121 82 98 97 Q86 103 65 103 Q44 103 32 97 Q9 82 9 49 Z" fill="url(#' + hullGradId + ')" stroke="' + NAVY + '" stroke-width="2.8" stroke-linejoin="round"/>' +
           '<path d="' + HULL_D + '" fill="url(#' + glossGradId + ')"/>' +
           '<g class="argo-fx" clip-path="url(#' + hullClipId + ')"><path class="argo-mascot-shine" d="M-4 44 H8 L-6 108 H-18 Z" fill="#fff" opacity=".28"/></g>' +
+          '<path d="' + HULL_D + '" fill="url(#' + hullShadeId + ')"/>' +
+          (compact ? '' : '<g clip-path="url(#' + hullClipId + ')" fill="none" stroke="' + HULL_DK + '" stroke-width="1" opacity=".5" stroke-linecap="round">' +
+            '<path d="M6 66 Q36 70 65 70.4 Q94 70.4 124 62"/><path d="M6 91 Q36 92.6 65 92.6 Q94 92.6 124 88"/>' +
+            '<path d="M24 71 v-3 M58 71 v-2 M74 71 v-2 M108 68 v-3 M40 92 v3 M90 92 v3" stroke-width=".8"/></g>') +
           '<path d="M13 92 Q40 98 65 98 Q90 98 117 90" fill="none" stroke="' + HULL_LT + '" stroke-width="1.2" stroke-linecap="round" opacity=".45"/>' +
+          // luz de contorno (rim light) à direita, como se o sol viesse da popa
+          '<path d="M121 49 Q121 82 98 97" fill="none" stroke="#BFF3F2" stroke-width="1.3" stroke-linecap="round" opacity=".45"/>' +
           // trilhas de circuito (luz ciano) no casco
-          '<path d="M22 91 H34 L37 88 H46 M84 88 H93 L96 91 H108" fill="none" stroke="' + CYAN + '" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round" opacity=".75"/>' +
-          '<circle class="argo-mascot-led" cx="46" cy="88" r="1.2" fill="' + CYAN + '"/><circle class="argo-mascot-led" style="animation-delay:.9s" cx="84" cy="88" r="1.2" fill="' + CYAN + '"/>' +
+          (compact ? '' : '<path d="M22 91 H34 L37 88 H46 M84 88 H93 L96 91 H108" fill="none" stroke="' + CYAN + '" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round" opacity=".75"/>' +
+          '<circle class="argo-mascot-led" cx="46" cy="88" r="1.2" fill="' + CYAN + '"/><circle class="argo-mascot-led" style="animation-delay:.9s" cx="84" cy="88" r="1.2" fill="' + CYAN + '"/>') +
           // escudos redondos ao longo do casco, com ferro dourado no centro
-          [30, 47.5, 65, 82.5, 100].map(function (x, i) {
-            return '<circle cx="' + x + '" cy="80" r="7.4" fill="' + SHIELD + '" stroke="' + NAVY + '" stroke-width="1.8"/>' +
-                   '<circle cx="' + x + '" cy="80" r="5.4" fill="none" stroke="' + GOLD + '" stroke-width="1.1"/>' +
-                   '<circle class="argo-mascot-boss" style="animation-delay:' + (i * 0.28).toFixed(2) + 's" cx="' + x + '" cy="80" r="2.1" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width=".7"/>' +
-                   '<path d="M' + (x - 4.6) + ' ' + 77 + ' Q' + (x - 3.2) + ' ' + 74.6 + ' ' + (x - 0.6) + ' ' + 74.6 + '" fill="none" stroke="#fff" stroke-width="1" stroke-linecap="round" opacity=".5"/>';
+          (compact ? [34, 65, 96] : [30, 47.5, 65, 82.5, 100]).map(function (x, i) {
+            var r = compact ? 9.6 : 7.4;
+            return '<circle cx="' + x + '" cy="80" r="' + r + '" fill="' + SHIELD + '" stroke="' + NAVY + '" stroke-width="' + (compact ? 2.4 : 1.8) + '"/>' +
+                   '<circle cx="' + x + '" cy="80" r="' + (r - 2) + '" fill="none" stroke="' + GOLD + '" stroke-width="1.2"/>' +
+                   '<circle class="argo-mascot-boss" style="animation-delay:' + (i * 0.28).toFixed(2) + 's" cx="' + x + '" cy="80" r="' + (r * 0.32).toFixed(1) + '" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width=".7"/>' +
+                   '<path d="M' + (x - r * 0.62).toFixed(1) + ' ' + (80 - r * 0.4).toFixed(1) + ' Q' + (x - r * 0.43).toFixed(1) + ' ' + (80 - r * 0.68).toFixed(1) + ' ' + (x - r * 0.08).toFixed(1) + ' ' + (80 - r * 0.68).toFixed(1) + '" fill="none" stroke="#fff" stroke-width="1" stroke-linecap="round" opacity=".5"/>';
           }).join('') +
           // friso dourado no topo do casco, com fita de LED ciano
           '<path d="M9 49 Q36 63 65 63 Q94 63 121 47" fill="none" stroke="' + NAVY + '" stroke-width="6.6" stroke-linecap="round"/>' +
@@ -325,30 +381,125 @@
   // estao na pagina, em no maximo um quadro por vez — sem custo para a pagina.
   // ---------------------------------------------------------------------
   var lookBound = false;
+  var NS_SVG = 'http://www.w3.org/2000/svg';
+  var calmMotion = function () { return !!(typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); };
+
+  // Sobe um punhadinho de coração/estrela/confete do mascote (some sozinho).
+  function burst(svg, glyph, color, n) {
+    for (var i = 0; i < n; i++) {
+      var t = document.createElementNS(NS_SVG, 'text');
+      t.setAttribute('x', String(28 + i * (60 / Math.max(1, n - 1)) + (i % 2 ? 4 : -4)));
+      t.setAttribute('y', '16');
+      t.setAttribute('font-size', String(11 + (i % 3) * 2));
+      t.setAttribute('fill', color);
+      t.setAttribute('stroke', '#fff'); t.setAttribute('stroke-width', '.9'); t.setAttribute('paint-order', 'stroke');
+      t.setAttribute('class', 'argo-mascot-float');
+      t.setAttribute('text-anchor', 'middle');
+      t.style.animationDelay = (i * 0.11).toFixed(2) + 's';
+      t.textContent = glyph;
+      svg.appendChild(t);
+      (function (el) { setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 1500); })(t);
+    }
+  }
+
+  // Reação do mascote: 'hop' (pulinho + estrelas), 'wink' (piscadinha) ou 'love' (corações).
+  // Cinco toques seguidos viram uma voltinha completa do barco (e dispara o evento
+  // "argo-mascot:easter" no document, caso o app queira dar um prêmio).
+  var pokeCount = 0, pokeTimes = [];
+  function poke(svg, kind) {
+    if (!svg || !svg.classList || calmMotion()) return;
+    var kinds = ['hop', 'wink', 'love'];
+    kind = kind || kinds[pokeCount++ % kinds.length];
+    svg.classList.remove('argo-mascot-poked'); void svg.getBoundingClientRect(); svg.classList.add('argo-mascot-poked');
+    setTimeout(function () { svg.classList.remove('argo-mascot-poked'); }, 650);
+    var compactIcon = svg.classList.contains('argo-mascot-lite');
+    if (kind === 'wink') { svg.classList.add('argo-mascot-winking'); setTimeout(function () { svg.classList.remove('argo-mascot-winking'); }, 900); }
+    else if (!compactIcon && kind === 'love') burst(svg, '♥', '#E5486B', 3);
+    else if (!compactIcon) burst(svg, '★', '#F2B84B', 3);
+    var now = Date.now();
+    pokeTimes.push(now);
+    pokeTimes = pokeTimes.filter(function (t) { return now - t < 3500; });
+    if (pokeTimes.length >= 5) {
+      pokeTimes = [];
+      svg.classList.add('argo-mascot-spun');
+      if (!compactIcon) burst(svg, '✶', '#5EE6FF', 5);
+      setTimeout(function () { svg.classList.remove('argo-mascot-spun'); }, 1100);
+      try { document.dispatchEvent(new CustomEvent('argo-mascot:easter')); } catch (e) { /* navegador antigo */ }
+    }
+  }
+
+  // Troca só o desenho (humor) dentro de um elemento que já contém um mascote.
+  function swapMood(host, mood, sz) {
+    var old = host && host.querySelector('svg.argo-mascot-icon');
+    if (!old) return;
+    var tmp = document.createElement('span');
+    tmp.innerHTML = boatSVG(mood, sz);
+    old.parentNode.replaceChild(tmp.firstChild, old);
+  }
+
+  // "Vida" do mascote (uma vez por página): cada mascote olha para o cursor a partir
+  // da própria posição; no celular, olha para onde você tocou; reage a cliques; e cochila
+  // (olhos fechados + Zzz) se o app ficar ~30 s parado. Tudo desligado com "reduzir movimento".
   function bindLook() {
     if (lookBound || typeof window === 'undefined' || !window.matchMedia) return;
     lookBound = true;
-    var fine = window.matchMedia('(pointer: fine)');
-    var calm = window.matchMedia('(prefers-reduced-motion: reduce)');
-    if (!fine.matches || calm.matches) return;
-    var raf = 0, nx = 0, ny = 0;
+    if (calmMotion()) return;
+    var root = document.documentElement;
+    var raf = 0, mx = null, my = null, touchT = 0;
+
     function apply() {
       raf = 0;
-      var t = 'translate(' + (nx * 1.9).toFixed(2) + 'px,' + (ny * 1.3).toFixed(2) + 'px)';
-      var els = document.querySelectorAll('.argo-mascot-look');
-      for (var i = 0; i < els.length; i++) els[i].style.transform = t;
+      var els = document.querySelectorAll('.argo-mascot-icon:not(.argo-mascot-lite) .argo-mascot-look');
+      for (var i = 0; i < els.length; i++) {
+        var el = els[i];
+        if (mx === null) { el.style.transform = ''; continue; }
+        var svg = el.ownerSVGElement; if (!svg) continue;
+        var r = svg.getBoundingClientRect(); if (!r.width) continue;
+        var dx = mx - (r.left + r.width * 0.32), dy = my - (r.top + r.height * 0.33);
+        var d = Math.sqrt(dx * dx + dy * dy) || 1, k = Math.min(1, d / 150);
+        el.style.transform = 'translate(' + (dx / d * k * 2.2).toFixed(2) + 'px,' + (dy / d * k * 1.6).toFixed(2) + 'px)';
+      }
     }
-    function aim(x, y) {
-      nx = Math.max(-1, Math.min(1, (x / window.innerWidth - 0.5) * 2));
-      ny = Math.max(-1, Math.min(1, (y / window.innerHeight - 0.5) * 2));
-      if (!raf) raf = window.requestAnimationFrame(apply);
-    }
+    function aim(x, y) { mx = x; my = y; if (!raf) raf = window.requestAnimationFrame(apply); }
+    function release() { mx = null; my = null; if (!raf) raf = window.requestAnimationFrame(apply); }
+
     window.addEventListener('pointermove', function (e) {
       if (e.pointerType && e.pointerType !== 'mouse' && e.pointerType !== 'pen') return;
       aim(e.clientX, e.clientY);
     }, { passive: true });
-    // Mouse saiu da janela: olhos voltam ao centro.
-    document.documentElement.addEventListener('mouseleave', function () { nx = 0; ny = 0; if (!raf) raf = window.requestAnimationFrame(apply); });
+    // Toque: olha para onde você tocou e volta ao centro depois de 2 s.
+    window.addEventListener('pointerdown', function (e) {
+      if (e.pointerType !== 'touch') return;
+      aim(e.clientX, e.clientY);
+      clearTimeout(touchT); touchT = setTimeout(release, 2000);
+    }, { passive: true });
+    root.addEventListener('mouseleave', release);
+
+    // Cochilo por inatividade.
+    var sleepT = 0, lastAct = 0;
+    function arm() { clearTimeout(sleepT); sleepT = setTimeout(function () { if (!document.hidden) root.classList.add('argo-mascot-sleepy'); }, 30000); }
+    function wake() {
+      var now = Date.now();
+      var asleep = root.classList.contains('argo-mascot-sleepy');
+      if (!asleep && now - lastAct < 700) return;
+      lastAct = now;
+      if (asleep) root.classList.remove('argo-mascot-sleepy');
+      arm();
+    }
+    ['pointermove', 'pointerdown', 'keydown', 'touchstart', 'wheel'].forEach(function (ev) { window.addEventListener(ev, wake, { passive: true }); });
+    window.addEventListener('scroll', wake, { passive: true, capture: true });
+    arm();
+
+    // Clique/toque em qualquer mascote (ou botão que o contém) → reação.
+    // Espera um instante porque quem clica pode trocar o desenho (ex.: login).
+    document.addEventListener('click', function (e) {
+      var host = e.target && e.target.closest ? e.target.closest('svg.argo-mascot-icon, button, .argo-mascot-toast-icon') : null;
+      if (!host) return;
+      setTimeout(function () {
+        var svg = host.matches && host.matches('svg.argo-mascot-icon') ? host : host.querySelector('svg.argo-mascot-icon');
+        if (svg) poke(svg);
+      }, 40);
+    });
   }
 
   function ensureStyles() {
@@ -414,6 +565,32 @@
       '@keyframes argoMascotDrip{0%{transform:translateY(0);opacity:0}15%{opacity:1}100%{transform:translateY(16px);opacity:0}}' +
       '.argo-mascot-qmark{animation:argoMascotQ 2.6s ease-in-out infinite}' +
       '@keyframes argoMascotQ{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-3px) scale(1.07)}}' +
+      // sobrancelhas sobem de vez em quando; no humor "pensando" os pontinhos do balão pulsam
+      '.argo-mascot-brow{animation:argoMascotBrow 6.5s ease-in-out infinite}' +
+      '@keyframes argoMascotBrow{0%,86%,100%{transform:translateY(0)}91%{transform:translateY(-1.6px)}96%{transform:translateY(-.4px)}}' +
+      '.argo-mascot-dot{animation:argoMascotDot 1.2s ease-in-out infinite}' +
+      '@keyframes argoMascotDot{0%,70%,100%{opacity:.3}35%{opacity:1}}' +
+      '.argo-mascot-think{animation:argoMascotQ 2.2s ease-in-out infinite}' +
+      '.argo-mascot-m-thinking .argo-mascot-chip{animation-duration:.7s}.argo-mascot-m-thinking .argo-mascot-star{animation-duration:1.2s}.argo-mascot-m-thinking .argo-mascot-rock{animation-duration:5.5s}' +
+      // ---- interatividade: reações a clique, hover, cochilo ----
+      '.argo-mascot-poked{animation:argoMascotPoke .6s cubic-bezier(.3,1.4,.5,1)!important}' +
+      '@keyframes argoMascotPoke{0%{transform:scale(1,1)}22%{transform:scale(1.1,.88) translateY(2px)}50%{transform:scale(.94,1.12) translateY(-9px)}75%{transform:scale(1.03,.97) translateY(0)}100%{transform:scale(1,1)}}' +
+      '.argo-mascot-spun{transform-origin:50% 55%;animation:argoMascotSpin 1s cubic-bezier(.4,.1,.3,1)!important}' +
+      '@keyframes argoMascotSpin{0%{transform:rotate(0) scale(1)}40%{transform:rotate(200deg) scale(1.15)}100%{transform:rotate(360deg) scale(1)}}' +
+      '.argo-mascot-float{animation:argoMascotFloat 1.1s ease-out both;transform-box:fill-box;transform-origin:center;pointer-events:none}' +
+      '@keyframes argoMascotFloat{0%{opacity:0;transform:translateY(6px) scale(.5)}20%{opacity:1}100%{opacity:0;transform:translateY(-26px) scale(1.25) rotate(14deg)}}' +
+      '.argo-mascot-eyeR{transform-box:fill-box;transform-origin:center}' +
+      '.argo-mascot-winking .argo-mascot-eyeR{transform:scaleY(.08);transition:transform .08s}' +
+      '.argo-mascot-icon:not(.argo-mascot-lite):hover .argo-mascot-wave,.argo-mascot-icon:not(.argo-mascot-lite):hover .argo-mascot-wave2{animation-duration:.6s}' +
+      '.argo-mascot-icon:not(.argo-mascot-lite):hover .argo-mascot-flag{animation-duration:1s}' +
+      '.argo-mascot-zzz{opacity:0;transition:opacity .6s}' +
+      '.argo-mascot-z{animation:argoMascotZ 2.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}' +
+      '@keyframes argoMascotZ{0%,100%{transform:translate(0,2px) scale(.8);opacity:.4}50%{transform:translate(2px,-3px) scale(1.1);opacity:1}}' +
+      '.argo-mascot-sleepy .argo-mascot-m-info .argo-mascot-zzz{opacity:1}' +
+      '.argo-mascot-sleepy .argo-mascot-m-info .argo-mascot-blink{animation:none;transform:scaleY(.1)}' +
+      '.argo-mascot-sleepy .argo-mascot-m-info .argo-mascot-wave{animation:none;transform:rotate(18deg)}' +
+      '.argo-mascot-sleepy .argo-mascot-m-info .argo-mascot-brow{animation:none;transform:translateY(1px)}' +
+      '.argo-mascot-sleepy .argo-mascot-m-info.argo-mascot-bob{animation-duration:6s}' +
       // erro: o barquinho treme de nervoso
       '.argo-mascot-m-error .argo-mascot-rock{animation-duration:.9s}' +
       // sucesso: balança mais animado
@@ -890,6 +1067,7 @@
     function announce(text) { sr.textContent = ''; setTimeout(function () { sr.textContent = plainText(text).slice(0, 700); }, 30); }
 
     function makeBotRow(mood) {
+      if (busy) pendingMood = mood || null; else if (mood && mood !== 'info') reactMood(mood);
       var row = document.createElement('div');
       row.className = 'argo-assistant-msg argo-assistant-msg-bot';
       var ic = document.createElement('span');
@@ -1039,7 +1217,25 @@
       b.col.appendChild(bub); log.appendChild(b.row); scrollDown();
       return b.row;
     }
+    // Troca só o desenho do mascote (botão flutuante e cabeçalho) para o humor indicado.
+    var moodT = 0, pendingMood = null;
+    function setMascotMood(el, mood, sz) { swapMood(el, mood, sz); }
+    // Fab e cabeçalho: "pensando" enquanto a IA responde; depois reagem ao humor da
+    // resposta (sucesso, não achei, erro) por 4 s e voltam ao normal.
+    function moodBoth(m) {
+      setMascotMood(fab, m, 30);
+      setMascotMood(root.querySelector('#argoAssistantMascot'), m, 48);
+    }
+    function reactMood(m) {
+      clearTimeout(moodT);
+      moodBoth(m);
+      if (m !== 'info') moodT = setTimeout(function () { if (!busy) moodBoth('info'); }, 4000);
+    }
     function setBusy(on) {
+      if (busy !== on) {
+        if (on) { clearTimeout(moodT); pendingMood = null; moodBoth('thinking'); }
+        else { var m = pendingMood || 'info'; pendingMood = null; reactMood(m); }
+      }
       busy = on;
       fab.classList.toggle('argo-assistant-busy', on);
       sendBtn.innerHTML = on ? svgStop : svgSend;
@@ -1048,7 +1244,7 @@
       log.setAttribute('aria-busy', on ? 'true' : 'false');
     }
 
-    function finishUnread() { if (!isOpen) dot.hidden = false; }
+    function finishUnread() { if (!isOpen) { dot.hidden = false; poke(fab.querySelector('svg.argo-mascot-icon'), 'hop'); } }
 
     // Mostra a resposta pronta (ou o "não entendi") e os atalhos que a acompanham.
     function showAnswer(result) {
@@ -1271,6 +1467,8 @@
     dismiss: dismiss,
     emptyStateHTML: emptyStateHTML,
     mountAssistant: mountAssistant, // ArgoMascot.mountAssistant({...}) → botão flutuante + painel de conversa
+    poke: poke,           // ArgoMascot.poke(svgElement[, 'hop'|'wink'|'love']) → reação manual
+    setMood: swapMood,    // ArgoMascot.setMood(elementoQueContémOMascote, 'success', 48)
     icon: function (mood, size) { ensureStyles(); return boatSVG(mood, size); } // ArgoMascot.icon('success', 48) → string SVG avulso
   };
 });
