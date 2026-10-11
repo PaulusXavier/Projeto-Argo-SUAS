@@ -30,6 +30,7 @@ const ASSETS = [
   './js/argo-cerebro.js',
   './js/paulus.v1.js',
   './assets/conhecimento.json',
+  './assets/cid11.json',
   './manifest.json',
   './favicon.ico',
   './apple-touch-icon.png',
