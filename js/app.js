@@ -7953,14 +7953,14 @@ function render() {
           <ul>
             <li>Atenção Básica em Saúde (UBS, eSF, Consultório na Rua)</li>
             <li>Atenção Psicossocial Especializada (CAPS e Equipes Multiprofissionais de Saúde Mental)</li>
-            <li>Atenção de Urgência e Emergência (SAMU 192, UPA, Sala de Estabilização, Pronto-Socorro)</li>
+            <li>Atenção de Urgência e Emergência (SAMU 192, UPA, Sala de Estabilização, Pronto-Socorro) — <em>em Boa Vista não há UPA em funcionamento; a primeira foi autorizada em dez/2024</em></li>
             <li>Atenção Residencial de Caráter Transitório (Unidades de Acolhimento e Comunidades Terapêuticas)</li>
             <li>Atenção Hospitalar (leitos de saúde mental em Hospital Geral e em hospitais psiquiátricos)</li>
             <li>Estratégias de Desinstitucionalização (Serviços Residenciais Terapêuticos e Programa De Volta para Casa)</li>
             <li>Reabilitação Psicossocial (geração de trabalho e renda)</li>
           </ul>
           <p style="margin:0.6rem 0 0.3rem 0;"><strong>Direitos garantidos pela Lei n.º 10.216/2001 (art. 2º)</strong>, entre outros: acesso ao melhor tratamento disponível; tratamento com humanidade e respeito; proteção contra abuso e exploração; sigilo das informações; direito à presença médica a qualquer tempo para esclarecer internação involuntária; tratamento pelos meios menos invasivos possíveis; preferência por serviços comunitários de saúde mental.</p>
-          <p style="margin:0.6rem 0 0;">A internação psiquiátrica só é indicada quando os recursos extra-hospitalares se mostram insuficientes (art. 4º) e pode ser <em>voluntária</em>, <em>involuntária</em> (a pedido de terceiro, com comunicação obrigatória ao Ministério Público em até 72h) ou <em>compulsória</em> (determinada pela Justiça) — art. 6º.</p>
+          <p style="margin:0.6rem 0 0;">A internação psiquiátrica só é indicada quando os recursos extra-hospitalares se mostram insuficientes (art. 4º) e pode ser <em>voluntária</em>, <em>involuntária</em> (a pedido de terceiro) ou <em>compulsória</em> (determinada pela Justiça) — art. 6º. A internação involuntária deve ser comunicada ao Ministério Público em até 72h (art. 8º, § 1º).</p>
         </details>
       `;
     } else if (cat === 'hospitalar') {
@@ -7973,7 +7973,7 @@ function render() {
           <p style="margin:0.6rem 0 0.3rem 0;"><strong>1) Atenção Primária/Básica (porta de entrada preferencial):</strong> UBS e Equipes de Saúde da Família (eSF). Realiza acolhimento, consultas de rotina, pré-natal, vacinação, curativos, dispensação de medicamentos básicos e acompanhamento de doenças crônicas (hipertensão, diabetes). É aqui que o cidadão deve buscar atendimento em primeiro lugar, exceto em urgência/emergência.</p>
           <p style="margin:0.6rem 0 0.3rem 0;"><strong>2) Atenção Secundária (média complexidade):</strong> especialidades médicas (cardiologia, ortopedia, ginecologia etc.), exames de apoio diagnóstico e CAPS. O acesso normalmente depende de <strong>encaminhamento (referência)</strong> feito pela UBS, regulado pela <strong>Central de Regulação</strong> do município/estado, que agenda a vaga conforme fila e prioridade clínica.</p>
           <p style="margin:0.6rem 0 0.3rem 0;"><strong>3) Atenção Terciária (alta complexidade):</strong> hospitais de referência, UTI, cirurgias de alta complexidade, oncologia, hemodiálise. O acesso é feito por encaminhamento da atenção secundária ou, em casos graves, direto pela urgência/emergência.</p>
-          <p style="margin:0.6rem 0 0.3rem 0;"><strong>4) Urgência e Emergência:</strong> <strong>SAMU 192</strong> (atendimento móvel, remoções e primeiros socorros no local); <strong>UPA 24h</strong> (casos de urgência que não exigem internação); <strong>Pronto-Socorro Hospitalar</strong> (casos graves, com possível internação). Nesses pontos não é necessário encaminhamento prévio - o acesso é direto, mediante classificação de risco (Protocolo de Manchester), que define a ordem de atendimento pela gravidade, não por ordem de chegada.</p>
+          <p style="margin:0.6rem 0 0.3rem 0;"><strong>4) Urgência e Emergência:</strong> <strong>SAMU 192</strong> (atendimento móvel, remoções e primeiros socorros no local); <strong>UPA 24h</strong> (casos de urgência que não exigem internação; <em>em Boa Vista ainda não há UPA em funcionamento</em>); <strong>Pronto-Socorro Hospitalar</strong> (casos graves, com possível internação). Nesses pontos não é necessário encaminhamento prévio - o acesso é direto, mediante classificação de risco (Protocolo de Manchester), que define a ordem de atendimento pela gravidade, não por ordem de chegada.</p>
           <p style="margin:0.6rem 0 0.3rem 0;"><strong>Referência e contrarreferência:</strong> ao encaminhar um paciente para um serviço de maior complexidade (referência), a unidade de origem deve receber de volta as informações do atendimento realizado (contrarreferência), garantindo que a UBS continue coordenando o cuidado. Esse fluxo é formalizado por guias de encaminhamento e, cada vez mais, por prontuário eletrônico integrado (e-SUS APS/PEC).</p>
           <p style="margin:0.6rem 0 0.3rem 0;"><strong>Cartão Nacional de Saúde (CNS/Cartão SUS):</strong> documento obrigatório para qualquer atendimento no SUS, gerado no primeiro cadastro em uma UBS; identifica o usuário em todos os pontos da rede e viabiliza a regulação e o histórico de atendimentos.</p>
           <p style="margin:0.6rem 0;"><strong>Princípios que orientam o fluxo</strong> (Lei n.º 8.080/1990, art. 7º): <em>universalidade</em> (acesso para todos, sem custo), <em>equidade</em> (prioridade a quem tem maior necessidade, não a quem chega primeiro), <em>integralidade</em> (atendimento das necessidades em todos os níveis) e <em>regionalização/hierarquização</em> (organização por território e complexidade crescente).</p>
@@ -9298,7 +9298,7 @@ function buildCartaoFrente(tipo, item) {
         titulo: 'HGRR', sub: 'Hospital Geral de Roraima',
         corpo: ul([
           li('<strong>Leitos de saúde mental</strong> em hospital geral, como retaguarda da rede'),
-          li('Atendimento a <strong>situações de crise</strong> e internação de curta permanência (em regra, menos de 90 dias)'),
+          li('<strong>Urgência psiquiátrica 24h</strong>, situações de crise e internação breve, pelo tempo necessário para estabilizar a crise'),
           li('Internação <strong>voluntária, involuntária ou compulsória</strong> (Lei n.º 10.216/2001)')
         ]),
         rodape: 'Internação involuntária exige <strong>critérios clínicos</strong> e comunicação ao Ministério Público em até 72 h.'
@@ -16907,6 +16907,8 @@ const ARGO_LOGIN_FAQ = [
   { q: 'O que é o Argo?', mood: 'success', a: 'O Argo SUAS leva você à Rede de Políticas Públicas de Roraima: equipamentos, ficha de encaminhamento, notícias e a Central de PDF.' },
   { q: 'Funciona sem internet?', mood: 'info', a: 'O essencial fica guardado no aparelho e abre mesmo sem internet. As respostas da IA e as notícias precisam de conexão.' },
   { q: 'Esqueci a senha', mood: 'notfound', a: 'A senha é definida pela coordenação. Peça a ela para confirmar o acesso e confira o Caps Lock ao digitar.' },
+  { q: 'Posso usar no celular?', mood: 'success', a: 'Sim. O Argo é um app instalável: no navegador do celular, use "Adicionar à tela inicial" e ele abre como um aplicativo.' },
+  { q: 'Minha senha fica salva?', mood: 'info', a: 'A senha é conferida só neste aparelho e não é enviada a servidores. A opção "Manter-me conectado" vale apenas para esta aba.' },
   { q: 'Quem fez o Argo?', mood: 'success', a: 'O Argo é do autor do Vita. O atalho para o site dele está no painel de acesso, logo acima.' }
 ];
 function initLoginMascot() {
@@ -16948,6 +16950,99 @@ function initLoginMascot() {
   fig.addEventListener('click', (e) => { e.stopPropagation(); setOpen(!box.classList.contains('is-open')); });
   document.addEventListener('click', (e) => { if (box.classList.contains('is-open') && !box.contains(e.target)) setOpen(false); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && box.classList.contains('is-open')) { setOpen(false); fig.focus(); } });
+}
+
+// Interações extras do mascote do login. Só reagem a eventos da tela (foco, digitação,
+// Caps Lock, mostrar senha...). Nunca leem o conteúdo da senha: só se o campo está vazio ou não.
+function initLoginMascotFX() {
+  const screen = document.getElementById('loginScreen');
+  const box = document.getElementById('loginMascot');
+  const fig = document.getElementById('loginMascotFigure');
+  const line = document.getElementById('loginMascotLine');
+  const pw = document.getElementById('loginPassword');
+  const form = document.getElementById('loginForm');
+  if (!screen || !box || !fig || !line || !pw || typeof ArgoMascot === 'undefined' || typeof ArgoMascot.icon !== 'function') return;
+  const reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const small = () => !!(window.matchMedia && window.matchMedia('(max-width: 760px)').matches);
+  let backT = null, idleT = null, typingT = null, nudges = 0, state = '';
+  const busy = () => box.classList.contains('is-open'); // conversa por perguntas aberta: não interrompe
+
+  function say(title, text, mood, holdMs) {
+    if (busy()) return;
+    clearTimeout(argoLoginMascotTimer); clearTimeout(backT);
+    fig.innerHTML = ArgoMascot.icon(mood, small() ? 46 : 74);
+    line.classList.remove('is-error');
+    line.textContent = '';
+    const s = document.createElement('strong'); s.textContent = title;
+    line.append(s, ' ' + text);
+    if (!reduce) { fig.classList.remove('is-poked'); void fig.offsetWidth; fig.classList.add('is-poked'); }
+    if (holdMs) backT = setTimeout(() => { state = ''; argoLoginMascotReact('idle'); }, holdMs);
+  }
+  // só fala quando o "estado" muda (evita redesenhar o mascote a cada tecla)
+  function once(key, title, text, mood, holdMs) { if (state === key) return; state = key; say(title, text, mood, holdMs); }
+
+  // 1) Ocioso: depois de 25 s sem mexer em nada, convida a conversar (no máximo 2 vezes).
+  function armIdle() {
+    clearTimeout(idleT);
+    if (nudges >= 2) return;
+    idleT = setTimeout(() => {
+      if (document.hidden || screen.getClientRects().length === 0 || busy() || pw.value) { armIdle(); return; }
+      nudges++; say('Precisa de ajuda?', 'Toque em mim e escolha uma pergunta.', 'info', 7000);
+    }, 25000);
+  }
+  ['pointerdown', 'keydown'].forEach((ev) => screen.addEventListener(ev, armIdle, { passive: true }));
+  armIdle();
+
+  // 2) Campo da senha: foco, digitação e Caps Lock.
+  pw.addEventListener('focus', () => once('focus', 'Pode digitar.', 'A senha é conferida só neste aparelho. Eu não espio.', 'thinking', 6000));
+  pw.addEventListener('input', () => {
+    clearTimeout(typingT);
+    if (!pw.value) { state = ''; argoLoginMascotReact('idle'); return; }
+    once('typing', 'Digitando…', 'Prometo não olhar.', 'thinking');
+    typingT = setTimeout(() => { if (pw.value) { state = 'ready'; say('Pronto?', 'Aperte Enter ou toque em Entrar.', 'success'); } }, 1400);
+  });
+  const caps = (e) => {
+    if (typeof e.getModifierState !== 'function') return;
+    if (e.getModifierState('CapsLock')) once('caps', 'Caps Lock ligado.', 'A senha diferencia maiúsculas de minúsculas.', 'notfound');
+    else if (state === 'caps') { state = ''; argoLoginMascotReact('idle'); }
+  };
+  pw.addEventListener('keydown', caps); pw.addEventListener('keyup', caps);
+
+  // 3) Mostrar/ocultar senha, manter conectado e "esqueci a senha".
+  const toggle = document.getElementById('loginToggleVisibility');
+  if (toggle) toggle.addEventListener('click', () => setTimeout(() => {
+    if (pw.type === 'text') say('Senha à mostra!', 'Olhe ao redor: tem alguém vendo a tela?', 'info', 6000);
+    else say('Escondida de novo.', 'Assim é melhor.', 'success', 4000);
+  }, 0));
+  const remember = document.getElementById('loginRemember');
+  if (remember) remember.addEventListener('change', () => {
+    if (remember.checked) say('Combinado.', 'Só use isso em aparelho seu: a sessão fica nesta aba.', 'info', 7000);
+    else say('Tudo certo.', 'Vou pedir a senha de novo quando você voltar.', 'success', 5000);
+  });
+  const forgot = document.getElementById('loginForgotBtn');
+  if (forgot) forgot.addEventListener('click', () => say('Sem problema!', 'A coordenação passa a senha de novo. O aviso está logo abaixo.', 'notfound', 8000));
+
+  // 4) Enviar: "conferindo..." enquanto a senha é verificada (o erro, se houver, vem depois e prevalece).
+  if (form) form.addEventListener('submit', () => {
+    if (pw.disabled || (typeof authLockedUntil === 'number' && Date.now() < authLockedUntil)) return;
+    clearTimeout(typingT);
+    if (!pw.value) say('Falta a senha.', 'Digite a senha da equipe para entrar.', 'notfound', 5000);
+    else { state = 'checking'; say('Conferindo…', 'Um instante, estou abrindo o painel.', 'thinking'); }
+  });
+
+  // 5) O mascote acompanha o ponteiro com uma leve inclinação (só com mouse e sem "reduzir movimento").
+  if (!reduce && window.matchMedia && window.matchMedia('(pointer: fine)').matches) {
+    let raf = 0;
+    screen.addEventListener('pointermove', (e) => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const r = fig.getBoundingClientRect();
+        const dx = (e.clientX - (r.left + r.width / 2)) / Math.max(window.innerWidth / 2, 1);
+        fig.style.setProperty('--tilt', (Math.max(-1, Math.min(1, dx)) * 7).toFixed(1) + 'deg');
+      });
+    }, { passive: true });
+  }
 }
 
 function agendaToast(msg, kind) {
@@ -21564,6 +21659,7 @@ updateHeaderFooterStats();
 syncCategoryToggleLabel();
 initArgoAssistant();
 initLoginMascot();
+initLoginMascotFX();
 
 
 /* ============================================================
