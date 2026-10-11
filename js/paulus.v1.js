@@ -146,7 +146,10 @@ const SIGLAS = {
   paefi: ['protecao', 'atendimento', 'especializado', 'familias', 'individuos'],
   scfv: ['servico', 'convivencia', 'fortalecimento', 'vinculos'],
   cfp: ['conselho', 'federal', 'psicologia'],
-  crp: ['conselho', 'regional', 'psicologia']
+  crp: ['conselho', 'regional', 'psicologia'],
+  cid: ['classificacao', 'internacional', 'doencas'],
+  cif: ['classificacao', 'internacional', 'funcionalidade', 'incapacidade', 'saude'],
+  oms: ['organizacao', 'mundial', 'saude']
 };
 
 // Quantos trechos da base vão para a IA e para a resposta offline.
@@ -617,7 +620,15 @@ async function pedirIA(texto, opcoes) {
       referrerPolicy: 'no-referrer',
       signal: ctrl ? ctrl.signal : undefined
     });
-    if (!resp.ok) throw new Error('IA indisponível (' + resp.status + ').');
+    if (!resp.ok) {
+      // O Worker explica a falha em { erro } (limite por minuto, cota do dia...). Guarda o motivo para o app poder mostrá-lo.
+      let motivo = '';
+      try { const j = await resp.json(); motivo = j && j.erro ? String(j.erro).slice(0, 200) : ''; } catch (e) { /* corpo sem JSON */ }
+      const falha = new Error('IA indisponível (' + resp.status + ').');
+      falha.status = resp.status;
+      falha.motivo = motivo;
+      throw falha;
+    }
     const tipo = String(resp.headers.get('Content-Type') || '');
     let saida;
     if (tipo.indexOf('event-stream') !== -1 && resp.body && resp.body.getReader) {
@@ -686,6 +697,7 @@ async function perguntar(texto, opcoes) {
   await estado.pronto;
   const achados = estado.indice ? buscar(estado.indice, consultaComContexto(t, Array.isArray(o.historico) ? o.historico : estado.historico), { k: K_PADRAO }) : [];
 
+  let motivo = '';
   if (iaLigada()) {
     try {
       const r = await pedirIA(t, o);
@@ -697,6 +709,9 @@ async function perguntar(texto, opcoes) {
     } catch (e) {
       // Quem apertou "Parar" não quer resposta nenhuma (nem a da base offline).
       if (o.sinal && o.sinal.aborted) return { tipo: 'erro', texto: 'Interrompido.' };
+      // Limite de perguntas: a norma offline não resolve e o motivo importa (é só esperar).
+      if (e && e.status === 429) return { tipo: 'erro', texto: e.motivo || 'Muitas perguntas seguidas. Aguarde um minuto.', limite: true };
+      motivo = (e && e.motivo) || '';
       /* senão, cai para a base offline */
     }
   }
@@ -705,12 +720,29 @@ async function perguntar(texto, opcoes) {
   return {
     tipo: 'sem_resposta',
     texto: iaLigada()
-      ? 'Não consegui responder agora e não encontrei isso na base de normas. Tente de novo em instantes.'
-      : 'Sem internet ou sem IA ligada, e não encontrei isso na base de normas.'
+      ? 'Não consegui responder agora e não encontrei isso na base de normas. Tente de novo em instantes.' + (motivo ? ' (' + motivo + ')' : '')
+      : 'Sem internet ou sem IA ligada, e não encontrei isso na base de normas.',
+    motivo: motivo
   };
 }
 
-const Paulus = { init, perguntar, registrarAcao, registrarBusca, limpar, skin, iaLigada, temDadoPessoal, detectarCrise, versao: '0.1.1' };
+// Consulta SÓ a base de normas, no aparelho: sem IA, sem rede, sem ação/busca do app.
+// Para apps que têm o próprio fluxo e só querem a norma quando não há IA (ex.: Argo, offline).
+// Devolve o mesmo formato de perguntar() com tipo 'norma', ou null se nada na base sustenta a pergunta.
+// Dado pessoal na pergunta → null (a norma não depende de identificar ninguém).
+// opcoes.historico: conversa do app ({papel:'usuario'|..., texto}); sem ela usa a do Paulus.
+async function consultarNormas(texto, opcoes) {
+  const o = opcoes || {};
+  const t = String(texto == null ? '' : texto).replace(/\s+/g, ' ').trim().slice(0, cfg.maxPergunta);
+  if (!t || temDadoPessoal(t)) return null;
+  await estado.pronto;
+  if (!estado.indice) return null;
+  const hist = Array.isArray(o.historico) ? o.historico : estado.historico;
+  const achados = buscar(estado.indice, consultaComContexto(t, hist), { k: K_PADRAO });
+  return achados.length ? respostaDasNormas(achados) : null;
+}
+
+const Paulus = { init, perguntar, consultarNormas, registrarAcao, registrarBusca, limpar, skin, iaLigada, temDadoPessoal, detectarCrise, versao: '0.2.0' };
 
 root.Paulus = Paulus;
 if (typeof module === 'object' && module.exports) module.exports = Paulus;
