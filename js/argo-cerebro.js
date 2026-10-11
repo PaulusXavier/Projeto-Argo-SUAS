@@ -20,7 +20,7 @@
  *
  * Privacidade: nada daqui lê Bloco de notas, anotações ou dados de famílias.
  * Para a IA só saem: a pergunta (já filtrada), as últimas mensagens da conversa
- * e até 5 fichas do diretório público. A conversa vive só na memória da página.
+ * e até 10 fichas do diretório público. A conversa vive só na memória da página.
  *
  * Uso (app.js):  ArgoCerebro.init({ data: DATA, ia: { url: '...' } });
  */
@@ -810,7 +810,7 @@
   function cleanAI(text) {
     return String(text || '')
       .replace(/^\s*(argo|resposta)\s*:\s*/i, '')
-      .replace(/<\/?(fichas|pergunta|historico)>/gi, '')
+      .replace(/<\/?(fichas|normas|panorama|pergunta|historico)>/gi, '')
       .replace(/^#{1,6}\s*/gm, '')
       .replace(/^\s*\*\s+/gm, '- ')
       .replace(/\n{3,}/g, '\n\n')
