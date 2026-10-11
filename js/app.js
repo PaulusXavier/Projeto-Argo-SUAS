@@ -23071,6 +23071,8 @@ function argoStreamIA(B, rawText, payload, hooks) {
   }
   let acc = '';
   let fontes = [];
+  // O caminho do Paulus não passa por B.streamAI, que é quem alimenta o aiGate (intervalo mínimo e limite por minuto).
+  B.session.lastAi = Date.now(); B.session.aiTimes.push(B.session.lastAi);
   const falha = (msg, userMessage) => {
     const e = new Error(msg);
     e.partial = acc;
