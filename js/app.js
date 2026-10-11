@@ -23042,8 +23042,7 @@ function argoAskNormasOffline(rawText, local) {
         const txt = B.cleanAI(r.texto);
         if (!txt) throw new Error('vazia');
         B.remember(rawText, txt, []);
-        const fonteTxt = argoFontesTexto(r.fontes).replace(/^Normas consultadas:/, 'Fonte:');
-        return { text: txt, note: ((r.avisos && r.avisos[0]) || 'Confira o texto oficial vigente.') + (fonteTxt ? ' ' + fonteTxt : '') };
+        return { text: txt, note: (r.avisos && r.avisos[0]) || 'Confira o texto oficial vigente.', sources: r.fontes || [] };
       })
     }
   };
@@ -23067,16 +23066,20 @@ function argoFontesTexto(fontes) {
 // a conferência de dado pessoal/socorro e a base de normas.
 function argoStreamIA(B, rawText, payload, hooks) {
   if (typeof Paulus === 'undefined' || !Paulus.perguntar) {
-    return B.streamAI(payload, hooks).then(txt => ({ txt, fontes: [], offline: false }));
+    return B.streamAI(payload, hooks).then(txt => {
+      const p = B.separarSugestoes ? B.separarSugestoes(txt) : { texto: txt, sugestoes: [] };
+      return { txt: p.texto || txt, fontes: [], offline: false, sugestoes: p.sugestoes };
+    });
   }
   let acc = '';
   let fontes = [];
   // O caminho do Paulus não passa por B.streamAI, que é quem alimenta o aiGate (intervalo mínimo e limite por minuto).
   B.session.lastAi = Date.now(); B.session.aiTimes.push(B.session.lastAi);
-  const falha = (msg, userMessage) => {
+  const falha = (msg, userMessage, noRetry) => {
     const e = new Error(msg);
     e.partial = acc;
     if (userMessage) e.userMessage = userMessage;
+    if (noRetry) e.noRetry = true; // dado pessoal e socorro: repetir a mesma pergunta não resolve
     return e;
   };
   return Paulus.perguntar(rawText, {
@@ -23093,16 +23096,16 @@ function argoStreamIA(B, rawText, payload, hooks) {
     if (r.tipo === 'ia') {
       const txt = B.cleanAI(r.texto);
       if (!txt) throw falha('vazia');
-      return { txt, fontes: r.fontes && r.fontes.length ? r.fontes : fontes, offline: false };
+      return { txt, fontes: r.fontes && r.fontes.length ? r.fontes : fontes, offline: false, sugestoes: r.sugestoes || [] };
     }
     // IA indisponível: se nada chegou ainda, a base de normas pode ter o trecho certo
     if (r.tipo === 'norma' && !acc) {
       return { txt: B.cleanAI(r.texto), fontes: r.fontes || [], offline: true };
     }
-    if (r.tipo === 'erro' || r.tipo === 'bloqueio') throw falha(r.tipo, r.texto);
+    if (r.tipo === 'erro' || r.tipo === 'bloqueio') throw falha(r.tipo, r.texto, r.tipo === 'bloqueio');
     if (r.tipo === 'crise') {
       const tels = (r.telefones || []).map(t => t.numero + ' ' + t.nome).join(' · ');
-      throw falha('crise', r.texto + (tels ? '\n' + tels : ''));
+      throw falha('crise', r.texto + (tels ? '\n' + tels : ''), true);
     }
     throw falha(r.tipo || 'sem_resposta');
   });
@@ -23120,20 +23123,26 @@ function argoAskAI(rawText, tab, fallbackResult) {
     reply: '', mood: 'info', badge: 'IA',
     stream: {
       fallback: fallbackResult || { reply: 'Não consegui consultar a IA agora. Posso procurar o termo direto no diretório.', mood: 'notfound', quickActions: [{ label: 'Buscar "' + rawText.slice(0, 22) + '" nos equipamentos', run: () => argoAssistantSearch(rawText), reply: 'Pronto! Joguei essa busca no diretório.', mood: 'success' }] },
-      run: (onDelta, signal) => argoStreamIA(B, rawText, payload, { onDelta, signal }).then(({ txt, fontes, offline }) => {
+      run: (onDelta, signal) => argoStreamIA(B, rawText, payload, { onDelta, signal }).then(({ txt, fontes, offline, sugestoes }) => {
         const units = B.mentionedUnits(txt, ctxNames);
         B.remember(rawText, txt, units);
         const bad = B.verifyPhones(txt);
-        const fonteTxt = argoFontesTexto(fontes);
         let note = 'Confira os dados com a unidade antes de encaminhar.';
         if (offline) note = 'Trecho da base de normas do Paulus (sem IA agora). Confira o texto oficial vigente.';
-        if (fonteTxt) note += ' ' + fonteTxt;
-        if (bad) note = '⚠️ Um número citado não consta no diretório. Confirme com a unidade antes de usar.' + (fonteTxt ? ' ' + fonteTxt : '');
+        if (bad) note = '⚠️ Um número citado não consta no diretório. Confirme com a unidade antes de usar.';
+        // Perguntas de continuação: as da IA primeiro; se ela citou unidade e não sugeriu nada, as de contato.
+        const seguintes = (sugestoes || []).slice(0, 3);
+        if (!seguintes.length && units.length) seguintes.push('Qual o telefone?', 'Qual o horário?');
         return {
           text: txt,
           note,
+          bad: !!bad,                 // número que não consta no diretório: o mascote fica preocupado
+          badge: offline ? 'Base SUAS' : undefined,
+          sources: fontes || [],      // o mascote mostra como lista que abre e fecha
           units: argoUnitsForUi(units),
-          followups: units.length ? ['Qual o telefone?', 'Qual o horário?'] : []
+          followups: seguintes,
+          // Sem IA agora e a base de normas respondeu: dá um jeito de tentar de novo com a IA
+          quickActions: offline ? [{ label: '↻ Tentar com a IA de novo', ask: rawText, force: true }] : undefined
         };
       }, err => { if (err && err.partial) B.remember(rawText, err.partial, []); throw err; })
     }
