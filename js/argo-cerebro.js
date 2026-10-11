@@ -470,11 +470,11 @@
       base: 'Estatuto da Pessoa Idosa (Lei 10.741/2003).',
       actions: [{ label: 'Ver rede da pessoa idosa', cat: 'idoso' }, { label: 'Ver CREAS', cat: 'social' }], follow: ['O que é o PAEFI?'] },
     { id: 'raps', keys: ['raps', 'rede de atencao psicossocial', 'saude mental', 'reforma psiquiatrica'],
-      text: 'A **RAPS** organiza o cuidado em saúde mental e em álcool e outras drogas no SUS, em liberdade e no território.\n- **Atenção básica:** UBS.\n- **Atenção psicossocial:** CAPS (I, II, III, AD, AD III e infantojuvenil).\n- **Urgência:** SAMU 192, UPA e pronto-socorro.\n- **Hospital geral** e residenciais terapêuticos.\nA internação é recurso excepcional, depois de esgotadas as alternativas em meio aberto.',
+      text: 'A **RAPS** organiza o cuidado em saúde mental e em álcool e outras drogas no SUS, em liberdade e no território.\n**Em geral (norma nacional):**\n- **Atenção básica:** UBS e Consultório na Rua.\n- **Atenção psicossocial:** CAPS (I, II, III, AD, AD III, AD IV e infantojuvenil).\n- **Urgência:** SAMU 192, UPA, pronto-socorro e leito de saúde mental em hospital geral.\n- **Acolhimento transitório:** Unidade de Acolhimento.\nA internação é recurso excepcional, depois de esgotadas as alternativas em meio aberto.\n**Em Boa Vista:**\n- **CAPS II, CAPS III e CAPS AD III** (os dois últimos são estaduais), além das **UBS** com acolhimento em saúde mental e do **Consultório de Rua**.\n- **Urgência:** SAMU 192 e **HGRR** (urgência psiquiátrica 24h). **Não há UPA em funcionamento** (a primeira foi autorizada em dez/2024).\n- **Acolhimento transitório:** UAA. Não há CAPS infantil.',
       base: 'Lei 10.216/2001 e Portaria 3.088/2011 (consolidada na Portaria de Consolidação nº 3/2017).',
       actions: [{ label: 'Abrir Saúde (RAPS)', cat: 'saude' }], follow: ['O que é o CAPS?', 'Quais os telefones de emergência?'] },
     { id: 'caps', keys: ['caps', 'centro de atencao psicossocial'],
-      text: 'O **CAPS** é serviço aberto e comunitário da RAPS, para pessoas com sofrimento psíquico grave e persistente ou com necessidades decorrentes do uso de álcool e outras drogas.\n- **CAPS I/II/III:** transtornos mentais (adultos).\n- **CAPS AD / AD III:** álcool e drogas (o AD III funciona 24h).\n- **CAPS i:** crianças e adolescentes.\nO acesso pode ser direto ou por encaminhamento. Diga o bairro ou o nome que eu mostro a unidade.',
+      text: 'O **CAPS** é serviço aberto e comunitário da RAPS, para pessoas com sofrimento psíquico intenso, grave e persistente, ou com necessidades decorrentes do uso de álcool e outras drogas.\n**Em geral (norma nacional):**\n- **CAPS I/II/III:** transtornos mentais, todas as faixas etárias (o III funciona 24h).\n- **CAPS AD / AD III:** álcool e drogas (o AD III funciona 24h).\n- **CAPS i:** crianças e adolescentes.\n**Em Boa Vista:**\n- Há **CAPS II**, **CAPS III** e **CAPS AD III**; o III e o AD III são **estaduais**.\n- **Não há CAPS infantil:** o CAPS II atende crianças a partir de 4 anos.\n- Horário e endereço de cada unidade: veja a ficha.\nO acesso pode ser direto ou por encaminhamento. Diga o bairro ou o nome que eu mostro a unidade.',
       base: 'Portaria de Consolidação nº 3/2017.',
       actions: [{ label: 'Ver CAPS', search: 'CAPS' }], follow: ['O que é a RAPS?', 'Quais os telefones de emergência?'] },
     { id: 'ubs', keys: ['ubs', 'unidade basica de saude', 'atencao basica', 'atencao primaria', 'posto de saude'],
@@ -560,10 +560,10 @@
     var n = norm(text);
     if (RE_SUICIDIO.test(n)) {
       return {
-        reply: '**Isto pede atenção imediata.**\n- Risco **imediato** (plano, meios ao alcance, tentativa em curso): ligue **192 (SAMU)** ou **193** e não deixe a pessoa sozinha.\n- Apoio emocional 24h, gratuito: **188 (CVV)**.\n- Cuidado continuado: CAPS e UPA da região (mostro as unidades abaixo).\n**Como abordar:** acolha sem julgar, pergunte diretamente sobre a ideia de morrer, avalie o risco e o acesso a meios, mobilize a rede de apoio e registre o encaminhamento.',
+        reply: '**Isto pede atenção imediata.**\n- Risco **imediato** (plano, meios ao alcance, tentativa em curso): ligue **192 (SAMU)** ou **193** e não deixe a pessoa sozinha.\n- Apoio emocional 24h, gratuito: **188 (CVV)**.\n- Cuidado continuado: CAPS de referência e urgência psiquiátrica 24h no HGRR (mostro as unidades abaixo).\n**Como abordar:** acolha sem julgar, pergunte diretamente sobre a ideia de morrer, avalie o risco e o acesso a meios, mobilize a rede de apoio e registre o encaminhamento.',
         mood: 'error', badge: 'Alerta', crisis: true,
         note: 'Este assistente não substitui avaliação clínica nem o serviço de urgência.',
-        quickActions: [{ label: 'Ver CAPS', search: 'CAPS' }, { label: 'Ver Urgência/UPA', cat: 'hospitalar' }],
+        quickActions: [{ label: 'Ver CAPS', search: 'CAPS' }, { label: 'Ver urgência e hospitais', cat: 'hospitalar' }],
         followups: ['Quais os telefones de emergência?']
       };
     }
@@ -678,14 +678,14 @@
   function territorioFichas(text) {
     var n = norm(text);
     var kinds = kindsDe(n), explicito = kinds.length > 0;
-    var cob = RE_COBERTURA.test(n), mor = RE_MORADIA.test(n);
+    var cob = RE_COBERTURA.test(n), mor = RE_MORADIA.test(n), pedeT = RE_TECNICO.test(n);
     var hasServico = /\b(cadunico|cad unico|cadastro unico|bolsa familia|paif|scfv|assistencia social)\b/.test(n);
     if (explicito) {
       var soLegado = kinds.every(function (k) { return k === 'CRAS' || k === 'CREAS'; });
       if (soLegado ? !(cob || mor || RE_PERGUNTA.test(n) || /\bzona\b/.test(n)) : !(cob || mor)) return [];
     } else {
-      if (!((cob && mor) || ((cob || mor) && RE_EQUIP.test(n)))) return [];
-      kinds = hasServico ? ['CRAS'] : TERR_TODOS.slice();
+      if (!((cob && mor) || ((cob || mor) && RE_EQUIP.test(n)) || (pedeT && (cob || mor || RE_PERGUNTA.test(n))))) return [];
+      kinds = (hasServico || pedeT) ? ['CRAS'] : TERR_TODOS.slice();
     }
     var temLocal = kinds.some(function (k) { return tipoDe(k).modo === 'local'; });
     var idx = unionFor(temLocal ? uniq(kinds.concat(['CRAS', 'CREAS', 'CT', 'DP'])) : kinds);
@@ -706,7 +706,7 @@
               nome: sl.name, grupo: grupoDe(d), endereco: sl.address, horario: sl.hours, telefones: sl.phones.join(', '), descricao: '',
               servicos: tipo.modo === 'local'
                 ? 'FICA NO BAIRRO ' + lbl + ' (não há lista oficial de cobertura: a UBS de referência segue a área da equipe de saúde da família).'
-                : 'O BAIRRO ' + lbl + ' CONSTA NA LISTA OFICIAL DE BAIRROS ATENDIDOS DESTA UNIDADE (' + tipo.nome + ').'
+                : 'O BAIRRO ' + lbl + ' CONSTA NA LISTA OFICIAL DE BAIRROS ATENDIDOS DESTA UNIDADE (' + tipo.nome + ').' + (k === 'CRAS' && pedeT ? ' EQUIPE TÉCNICA: ' + equipeDe(lbl, x.unit.id, n).replace(/\*\*/g, '') : '')
             });
           });
         });
@@ -1080,15 +1080,38 @@
     }
     return best && !tie ? { key: best } : null;
   }
-  // técnico(a) fixo(a) do CRAS Cristiana para aquele bairro (equipe-cras-cristiana.js)
-  function tecnicoDe(label, unitId) {
-    if (!label || unitId !== 'cras-cristiana-vicente-nunes') return '';
+  // equipe técnica por bairro. Só há dado do CRAS Cristiana (equipe-cras-cristiana.js); nos demais CRAS
+  // o diretório não traz a equipe e a resposta diz isso, sem inventar nome.
+  // 'pergunta' = texto normalizado quando a pessoa perguntou pelo técnico (resposta completa); '' = só a linha curta.
+  function equipeDe(label, unitId, pergunta) {
+    if (!label) return '';
+    var nomeU = slim(fichaDe(unitId)).name || 'CRAS';
     var eq = (typeof EQUIPE_CRAS_CRISTIANA !== 'undefined') ? EQUIPE_CRAS_CRISTIANA : null;
-    if (!eq || !eq.fixedTeam) return '';
-    var alvo = ' ' + norm(label) + ' ', achou = '';
-    eq.fixedTeam.forEach(function (t) { if (!achou && (' ' + norm(t.bairros) + ' ').indexOf(alvo) > -1) achou = t.name + ' (' + t.role + ')'; });
-    return achou;
+    if (unitId !== 'cras-cristiana-vicente-nunes' || !eq || !eq.fixedTeam) {
+      return pergunta ? 'O diretório não traz a equipe técnica por bairro do **' + nomeU + '**. Confirme o(a) técnico(a) de referência de **' + label + '** diretamente com a unidade.' : '';
+    }
+    var alvo = ' ' + norm(label) + ' ';
+    var tem = function (txt) { return (' ' + norm(txt) + ' ').indexOf(alvo) > -1; };
+    var fmt = function (x) { return x.name + ' (' + x.role + ')'; };
+    var fixos = eq.fixedTeam.filter(function (x) { return tem(x.bairros); });
+    if (!pergunta) return fixos.length ? 'Técnico(a) de referência no bairro: ' + fixos.map(fmt).join(' e ') + '.' : '';
+    var vol = !!(eq.volanteTeam && eq.volanteTeam.length && tem(eq.volanteCoverage || ''));
+    var cobre = (eq.fixedCoverage || []).some(function (c) { return tem(c); });
+    var txt = '';
+    if (fixos.length) {
+      txt = 'Técnico(a) de referência de **' + label + '** no **' + nomeU + '**: ' + fixos.map(fmt).join(' e ') + '.';
+      var pedido = /psicolog/.test(pergunta) ? ['psicolog', 'psicólogo(a)'] : /assistente social|assistentes sociais/.test(pergunta) ? ['assistente social', 'assistente social'] : /pedagog/.test(pergunta) ? ['pedagog', 'pedagogo(a)'] : null;
+      if (pedido && !fixos.some(function (x) { return norm(x.role).indexOf(pedido[0]) > -1; })) txt += ' Não consta ' + pedido[1] + ' de referência para esse bairro no diretório.';
+    }
+    if (vol) {
+      txt += (fixos.length ? ' O bairro também recebe o atendimento itinerante (PAIF e CadÚnico) da equipe volante: '
+        : 'Não há técnico fixo cadastrado para **' + label + '**; o atendimento itinerante (PAIF e CadÚnico) é feito pela equipe volante: ') + eq.volanteTeam.map(fmt).join(', ') + '.';
+    } else if (!fixos.length && cobre) {
+      txt = 'O bairro **' + label + '** consta na cobertura do **' + nomeU + '**, mas o diretório não traz técnico de referência para ele. Confirme com a unidade.';
+    }
+    return txt;
   }
+  var RE_TECNICO = /\b(tecnico|tecnica|tecnicos|tecnicas|psicologo|psicologa|psicologos|psicologas|assistente social|assistentes sociais|pedagogo|pedagoga|referencia tecnica|equipe tecnica)\b/;
   var RE_COBERTURA = /\b(atende|atendem|atendimento|atendido|atendida|atendo|referencia|abrange|abrangem|cobre|cobertura|territorio|pertence|pertencem|responsavel|jurisdicao|circunscricao)\b/;
   var RE_MORADIA = /\b(bairro|moro|mora|moram|morando|morar|moramos|morador|moradora|moradores|moradia|vive|vivem|vivendo|residente|residindo|resido|reside|regiao|comunidade)\b/;
   var RE_PERGUNTA = /\b(qual|quais|onde|perto|proximo|procuro|procurar|fica|ficam)\b/;
@@ -1145,14 +1168,14 @@
     var kinds = kindsDe(n), explicito = kinds.length > 0;
     var hasServico = /\b(cadunico|cad unico|cadastro unico|bolsa familia|paif|scfv|assistencia social)\b/.test(n);
     var meuBairro = /\b(meu bairro|minha regiao|minha casa|onde moro|moro aqui)\b/.test(n);
-    var cob = RE_COBERTURA.test(n), mor = RE_MORADIA.test(n);
+    var cob = RE_COBERTURA.test(n), mor = RE_MORADIA.test(n), pedeTecnico = RE_TECNICO.test(n);
     if (explicito) {
       // CRAS/CREAS: qualquer menção (como sempre foi); os demais exigem cara de pergunta sobre território
       var soLegado = kinds.every(function (k) { return k === 'CRAS' || k === 'CREAS'; });
       if (!soLegado && !(cob || mor || RE_PERGUNTA.test(n))) return null;
     } else {
-      if (!((cob && mor) || (hasServico && mor) || ((cob || mor) && RE_EQUIP.test(n)))) return null;
-      kinds = hasServico ? ['CRAS'] : TERR_TODOS.slice();
+      if (!((cob && mor) || (hasServico && mor) || ((cob || mor) && RE_EQUIP.test(n)) || (pedeTecnico && (cob || mor || RE_PERGUNTA.test(n))))) return null;
+      kinds = (hasServico || pedeTecnico) ? ['CRAS'] : TERR_TODOS.slice();
     }
     var varios = kinds.length > 1;
     var tipos = kinds.map(tipoDe);
@@ -1247,8 +1270,17 @@
           var crU = cr.length ? cr[0].unit : null, crD = crU && fichaDe(crU.id);
           if (crD && crD.id) { var cs = slim(crD); lines.push('CREAS de referência: **' + cs.name + '**' + (cs.address ? ' · ' + cut(cs.address, 90) : '') + (cs.phones.length ? ' · ' + cs.phones.slice(0, 2).join(' / ') : '')); crJunto = true; }
         }
-        var tec = tecnicoDe(hits.length === 1 ? hits[0].items[0].label : '', f.id);
-        if (tec) lines.push('Técnico(a) de referência no bairro: ' + tec + '.');
+        if (!pedeTecnico) { var tec = equipeDe(hits.length === 1 ? hits[0].items[0].label : '', f.id, ''); if (tec) lines.push(tec); }
+      }
+      if (pedeTecnico && tipo.key === 'CRAS') {
+        var tl = [], vistos = {};
+        hits.slice(0, 3).forEach(function (h) {
+          gruposDe(itensDe(ix, h.key)).groups.forEach(function (x) {
+            var tx = equipeDe(h.items[0].label, x.unit.id, n);
+            if (tx && !vistos[tx]) { vistos[tx] = 1; tl.push(tx); }
+          });
+        });
+        if (tl.length) lines = tl.concat(lines);
       }
       lines.push(local ? tipo.aviso : 'Confirme com a unidade antes de encaminhar: a divisão dos territórios pode mudar e algumas ruas ficam no limite entre dois ' + tipo.plural + '.');
       var fu = [];
@@ -1981,7 +2013,7 @@
     try {
       var d = directory('CAPS AD III', { units: [] }, null);
       var caps = d.units.filter(function (u) { return /24|AD III/i.test(u.name + u.hours); }).slice(0, 1);
-      var up = directory('UPA pronto atendimento', { units: [] }, null).units.slice(0, 1);
+      var up = directory('HGRR', { units: [] }, null).units.filter(function (u) { return u.id === 'hgrr'; }).slice(0, 1);
       var all = caps.concat(up);
       if (all.length) r.units = all;
     } catch (e) { /* sem fichas: segue só com o texto */ }
