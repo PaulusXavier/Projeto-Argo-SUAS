@@ -6432,6 +6432,22 @@ function toolsExtrasHtml() {
       <button type="button" class="btn-tech btn-secondary" id="waQr" disabled>Gerar QR Code</button>
     </div>
     <p class="tools-hint">Abre o WhatsApp sem precisar salvar o contato. Os modelos são sugestões: ajuste ao seu serviço antes de enviar. Para outro país, comece com + e o código (ex.: +58…). O número não é salvo nem enviado a servidor: só vai para o WhatsApp quando você toca em Abrir conversa.</p>
+    <details class="wa-lote" id="waLote">
+      <summary>Convidar várias pessoas para um grupo</summary>
+      <p class="tools-hint">O WhatsApp não deixa ninguém ser adicionado a um grupo à força: cada pessoa entra tocando no link de convite. Aqui você manda esse convite para a lista inteira, uma conversa após a outra, sem salvar contato.</p>
+      <label class="tools-lbl">Link de convite do grupo<input id="waGrpLink" class="tools-input" type="url" inputmode="url" autocomplete="off" spellcheck="false" maxlength="120" placeholder="https://chat.whatsapp.com/…"></label>
+      <label class="tools-lbl">Telefones (um por linha; pode colar da planilha)<textarea id="waLoteNums" class="tools-input qr-text" rows="5" maxlength="9000" autocomplete="off" spellcheck="false" placeholder="(95) 99999-0000&#10;(95) 98888-1111"></textarea></label>
+      <label class="tools-lbl">Mensagem do convite (o link do grupo vai no final)<textarea id="waLoteMsg" class="tools-input qr-text" rows="3" maxlength="300">Olá! Aqui é do CRAS. Convidamos você para o nosso grupo de avisos no WhatsApp. Para entrar, é só tocar no link abaixo:</textarea></label>
+      <div id="waLoteOut" class="pc-out" role="status" aria-live="polite"></div>
+      <ol id="waLoteFila" class="wa-fila" aria-label="Fila de convites"></ol>
+      <div class="tools-row">
+        <button type="button" class="btn-tech btn-primary" id="waLoteNext" disabled>Enviar para o próximo</button>
+        <button type="button" class="btn-tech btn-secondary" id="waLoteSkip" disabled>Pular</button>
+        <button type="button" class="btn-tech btn-secondary" id="waLoteQr" disabled>QR Code do grupo</button>
+        <button type="button" class="btn-tech btn-secondary" id="waLoteReset" disabled>Recomeçar</button>
+      </div>
+      <p class="tools-hint">Cada toque em <strong>Enviar para o próximo</strong> abre a conversa com a mensagem pronta; é você quem toca em enviar no WhatsApp, e depois volta ao Argo. A lista só fica na memória desta página: some ao recarregar ou trancar o app. Convide apenas quem aceitou receber contato do serviço.</p>
+    </details>
   </section>
   <section class="tech-card tools-card" aria-label="Formatar texto">
     <h2>Formatar texto</h2>
@@ -6746,6 +6762,35 @@ function toolsFone(raw) {
   return { ok: true, d, wa: '55' + d, fmt, msg: aviso };
 }
 
+// ---- Convite em lote para grupo de WhatsApp (funções puras, sem tela) ----
+// Lê uma lista colada (um telefone por linha, ou linhas de planilha com nome e telefone).
+// Devolve { itens:[{ wa, fmt, aviso }], repetidos, invalidos:[linha], excedeu }. Não guarda nada.
+const WA_LOTE_MAX = 300;
+function toolsLoteLer(texto) {
+  const saida = { itens: [], repetidos: 0, invalidos: [], excedeu: false };
+  const vistos = new Set();
+  String(texto || '').split(/\r?\n|;/).forEach(linha => {
+    const l = linha.trim();
+    if (!l) return;
+    // linha de planilha ("Maria<TAB>(95) 99999-0000"): pega só o trecho que parece telefone
+    const m = l.match(/\+?\d[\d\s().\-]{8,}\d/);
+    const f = toolsFone(m ? m[0] : l);
+    if (!f.ok) { saida.invalidos.push(l.replace(/\s+/g, ' ').slice(0, 40)); return; }
+    if (vistos.has(f.wa)) { saida.repetidos++; return; }
+    if (saida.itens.length >= WA_LOTE_MAX) { saida.excedeu = true; return; }
+    vistos.add(f.wa);
+    saida.itens.push({ wa: f.wa, fmt: f.fmt, aviso: f.msg || '' });
+  });
+  return saida;
+}
+// O link de convite do grupo (WhatsApp → Dados do grupo → Convidar via link) tem sempre este formato.
+function toolsLoteLinkOk(link) {
+  return /^https:\/\/chat\.whatsapp\.com\/[A-Za-z0-9_-]{10,}$/.test(String(link || '').trim());
+}
+function toolsLoteMensagem(msg, link) {
+  return String(msg || '').trim() + '\n\n' + String(link || '').trim();
+}
+
 function initToolsMore() {
   const $ = id => document.getElementById(id);
   if (!$('waNum') || !$('txIn')) return;
@@ -6804,6 +6849,60 @@ function initToolsMore() {
     argoAviso('QR Code gerado com o link do WhatsApp.', 'success');
   });
   waCalc();
+
+  // ---------- Convite em lote para grupo
+  const gl = { enviados: new Set(), pulados: new Set(), fila: [] };
+  const glRender = () => {
+    const link = $('waGrpLink').value.trim(), lido = toolsLoteLer($('waLoteNums').value), out = $('waLoteOut'), ol = $('waLoteFila');
+    gl.fila = lido.itens;
+    const linkOk = toolsLoteLinkOk(link), msgOk = !!$('waLoteMsg').value.trim();
+    const pend = gl.fila.filter(i => !gl.enviados.has(i.wa) && !gl.pulados.has(i.wa));
+    const avisos = [];
+    if (link && !linkOk) avisos.push('O link do grupo deve ser como https://chat.whatsapp.com/ seguido do código. Copie em Dados do grupo → Convidar via link.');
+    if (!msgOk) avisos.push('Escreva a mensagem do convite.');
+    if (lido.repetidos) avisos.push(lido.repetidos + ' número(s) repetido(s) ignorado(s).');
+    if (lido.invalidos.length) avisos.push(lido.invalidos.length + ' linha(s) sem telefone válido: ' + lido.invalidos.slice(0, 3).map(esc).join(' · ') + (lido.invalidos.length > 3 ? ' …' : ''));
+    if (lido.excedeu) avisos.push('Limite de ' + WA_LOTE_MAX + ' números por vez: os demais ficaram de fora.');
+    const resumo = gl.fila.length
+      ? '<div class="pc-big pc-big-text"><span>Convites</span><strong>' + gl.enviados.size + ' de ' + gl.fila.length + ' enviados' + (gl.pulados.size ? ' · ' + gl.pulados.size + ' pulado(s)' : '') + '</strong></div>'
+        + (pend.length ? '<p class="tools-hint">Próximo: <strong>' + esc(pend[0].fmt) + '</strong></p>' : '<p class="tools-hint">Fila concluída.</p>')
+      : '<p class="tools-hint">Cole os telefones para montar a fila.</p>';
+    out.innerHTML = resumo + avisos.map(a => '<p class="pc-warn">' + a + '</p>').join('');
+    ol.innerHTML = gl.fila.map(i => {
+      const st = gl.enviados.has(i.wa) ? '✓ enviado' : gl.pulados.has(i.wa) ? '– pulado' : '○ aguardando';
+      return '<li class="' + (gl.enviados.has(i.wa) ? 'is-sent' : '') + '">' + esc(i.fmt) + ' <span class="wa-fila-st">' + st + '</span></li>';
+    }).join('');
+    const pronto = linkOk && msgOk && pend.length > 0;
+    $('waLoteNext').disabled = !pronto;
+    $('waLoteSkip').disabled = !pend.length;
+    $('waLoteQr').disabled = !linkOk;
+    $('waLoteReset').disabled = !(gl.enviados.size || gl.pulados.size);
+    return { pend, linkOk };
+  };
+  ['waGrpLink', 'waLoteNums', 'waLoteMsg'].forEach(id => $(id).addEventListener('input', glRender));
+  $('waLoteNext').addEventListener('click', () => {
+    const { pend, linkOk } = glRender();
+    if (!linkOk || !pend.length) return;
+    const alvo = pend[0];
+    // só avança se o WhatsApp realmente abriu (pop-up bloqueado → fica no mesmo número)
+    if (argoWhatsappSend(toolsLoteMensagem($('waLoteMsg').value, $('waGrpLink').value), { phone: alvo.wa })) gl.enviados.add(alvo.wa);
+    glRender();
+  });
+  $('waLoteSkip').addEventListener('click', () => {
+    const { pend } = glRender();
+    if (pend.length) gl.pulados.add(pend[0].wa);
+    glRender();
+  });
+  $('waLoteReset').addEventListener('click', () => { gl.enviados.clear(); gl.pulados.clear(); glRender(); });
+  $('waLoteQr').addEventListener('click', () => {
+    const link = $('waGrpLink').value.trim();
+    if (!toolsLoteLinkOk(link) || !$('qrText')) return;
+    $('qrText').value = link; $('qrText').dispatchEvent(new Event('input', { bubbles: true }));
+    const card = $('qrText').closest('section');
+    if (card) { card.hidden = false; card.classList.remove('is-collapsed'); card.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    argoAviso('QR Code gerado com o link do grupo.', 'success');
+  });
+  glRender();
 
   // ---------- Formatar texto
   const tx = $('txIn'); let before = null;
@@ -22713,6 +22812,14 @@ function argoBrain() {
     // Se o arquivo não carregar, o app segue com o transporte antigo do ArgoCerebro.
     if (typeof Paulus !== 'undefined' && ARGO_IA.url) {
       Paulus.init({ app: 'argo', endpoint: ARGO_IA.url, conhecimentoUrl: 'assets/conhecimento.json' });
+    }
+    // Tabela da CID-11 (Capítulo 06): carrega do aparelho/cache (sw.js a guarda para uso offline). Sem isso o cérebro
+    // responde "a tabela da CID-11 ainda não carregou" para qualquer código ou nome de transtorno.
+    if (typeof fetch === 'function' && typeof ArgoCerebro.setCid === 'function') {
+      fetch('assets/cid11.json', { credentials: 'omit' })
+        .then(r => (r.ok ? r.json() : null))
+        .then(j => { if (j) ArgoCerebro.setCid(j); })
+        .catch(() => { /* sem tabela: o cérebro avisa que ela não carregou */ });
     }
     argoBrainReady = true;
   }
