@@ -1308,6 +1308,10 @@
         decorate(b, result, plainText(result.reply));
         renderQuick(quickFor(result));
         announce(result.reply);
+        // Pedido explícito (ex.: "abre a agenda"): o app já devolve a ação pronta e o mascote a executa na hora.
+        if (typeof result.autoRun === 'function') {
+          try { result.autoRun(); } catch (e) { /* ação de navegação do app - ignora falha isolada */ }
+        }
       } else {
         addMsg('Hmm, essa eu não entendi bem. Tente com outras palavras ou escolha um destes caminhos:', 'bot', 'notfound');
         renderQuick(defaultQuick());
