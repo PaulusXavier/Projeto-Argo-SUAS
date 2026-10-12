@@ -2011,8 +2011,9 @@
   function withUnits(result, dir) { result.units = dir.units.slice(0, 5); result.unitsAll = dir.units; return result; }
   function withCrisisUnits(r) {
     try {
-      var d = directory('CAPS AD III', { units: [] }, null);
-      var caps = d.units.filter(function (u) { return /24|AD III/i.test(u.name + u.hours); }).slice(0, 1);
+      // Crise de saúde mental/ideação suicida: referência é o CAPS III (24h, saúde mental). O CAPS AD III é para álcool e outras drogas.
+      var d = directory('CAPS III', { units: [] }, null);
+      var caps = d.units.filter(function (u) { return u.id === 'caps-iii'; }).slice(0, 1);
       var up = directory('HGRR', { units: [] }, null).units.filter(function (u) { return u.id === 'hgrr'; }).slice(0, 1);
       var all = caps.concat(up);
       if (all.length) r.units = all;
