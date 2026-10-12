@@ -16842,6 +16842,101 @@ function argoAssistantDefaultQuickActions() {
   return list.slice(0, 6);
 }
 
+/* ============================================================
+   ARGO ↔ ABAS — "abre a agenda", "vai para o mapa", "me mostra as ferramentas".
+   Quando a pessoa PEDE uma aba, o mascote abre na hora (sem esperar um toque no botão).
+   Só age em pedido curto e claro: verbo de abrir + o nome da aba, e nada mais na frase.
+   "mostrar telefone do CAPS" ou "como abrir a agenda" não entram aqui: seguem o fluxo normal.
+   Tudo roda neste aparelho; nada disso vai para a IA.
+   ============================================================ */
+const ARGO_TAB_ALIASES = [
+  ['agenda', ['agenda', 'agenda argo', 'calendario']],
+  ['mapa', ['mapa', 'mapas', 'mapa dos equipamentos']],
+  ['tradutor', ['tradutor', 'traducao', 'traduzir']],
+  ['pdftools', ['pdf', 'pdfs', 'central de pdf', 'ferramentas de pdf']],
+  ['appsext', ['aplicativos', 'aplicativo', 'apps']],
+  ['noticias', ['noticias', 'noticia', 'novidades']],
+  ['cas', ['cas', 'registro cas', 'atendimento cas', 'registro de atendimento cas']],
+  ['cras', ['cras', 'registro cras', 'atendimento cras', 'painel do cras', 'registro de atendimento cras']],
+  ['all', ['inicio', 'pagina inicial', 'home', 'lista geral', 'rede intersetorial', 'rede de servicos', 'todos os servicos']],
+  ['favoritos', ['favoritos', 'favorito', 'meus favoritos']],
+  ['hospitalar', ['hospitalar', 'hospitais', 'rede hospitalar', 'atencao basica']],
+  ['saude', ['raps', 'caps', 'psicossocial', 'atencao psicossocial', 'saude mental']],
+  ['tea', ['tea', 'autismo', 'deficiencia', 'pessoa com deficiencia']],
+  ['social', ['protecao social', 'protecao basica', 'protecao especial', 'assistencia social']],
+  ['alimentar', ['seguranca alimentar', 'alimentar', 'nutricao']],
+  ['educacao', ['educacao', 'educacao basica', 'escolas']],
+  ['juridico', ['judiciario', 'poder judiciario', 'juridico', 'justica']],
+  ['conselho', ['conselho tutelar', 'tutelar']],
+  ['delegacias', ['delegacias', 'seguranca publica', 'policia']],
+  ['mulher', ['mulher', 'violencia contra a mulher', 'rede de enfrentamento']],
+  ['conselhosdireitos', ['conselhos de direitos', 'conselhos municipais', 'conselhos municipais de direitos']],
+  ['documentacao', ['documentacao', 'documentacao civil', 'documentos']],
+  ['bancos', ['bancos', 'rede bancaria', 'correspondentes']],
+  ['previdencia', ['previdencia', 'previdencia social', 'inss']],
+  ['migracao', ['migracao', 'servico de migracao', 'migrantes']],
+  ['trabalho', ['trabalho', 'emprego', 'trabalho e renda', 'renda']],
+  ['cultura', ['cultura', 'esporte', 'lazer', 'cultura esporte e lazer']],
+  ['habitacao', ['habitacao', 'moradia']],
+  ['mobilidade', ['mobilidade', 'mobilidade urbana', 'transporte']],
+  ['defesacivil', ['defesa civil', 'emergencia', 'situacoes de emergencia']],
+  ['informes', ['programas', 'projetos', 'informes', 'programas e projetos']],
+  ['ferramentas', ['ferramentas', 'anotacoes', 'bloco de notas', 'notas', 'planilha', 'planilhas', 'calculadora', 'calculadoras', 'relogio']]
+];
+
+// Pedido de abrir uma aba → { cat, name } ou null. Função pura (recebe o texto e a lista de abas do DOM).
+function argoResolveTabRequest(rawText, chips) {
+  const n = argoNorm(rawText);
+  if (!n || n.length > 70) return null;
+  const m = n.match(/^(?:(?:por favor|pode|poderia|podia|consegue|quero|queria|preciso|gostaria de|vamos|vamo|bora)\s+)*(?:(?:me|nos)\s+)?(?:abrir|abre|abra|abram|ir|va|vai|vamos|leva|leve|levar|mostra|mostre|mostrar|ver|veja|trocar|troca|troque|mudar|muda|mude|navegar|navega|acessar|acessa|acesse|entrar|entra|entre)\s+(.+)$/);
+  if (!m) return null;
+  let rest = m[1]
+    .replace(/^(?:(?:a|o|as|os|aba|abas|pagina|tela|secao|de|da|do|das|dos|na|no|nas|nos|para|pra|pro|ate|ao|em|meu|minha|meus|minhas|la|ai|aqui|um|uma)\s+)+/, '')
+    .replace(/(?:\s+(?:agora|ja|por favor|por gentileza|pra mim|para mim|ai|obrigado|obrigada))+$/, '')
+    .trim();
+  if (!rest) return null;
+  const list = chips || [];
+  const byCat = {};
+  list.forEach(c => { byCat[c.cat] = c; });
+  for (const [cat, names] of ARGO_TAB_ALIASES) {
+    if (names.indexOf(rest) > -1 && byCat[cat]) return { cat, name: byCat[cat].name || names[0] };
+  }
+  // nome (ou começo do nome) da própria aba, ex.: "notícias do MDS"
+  if (rest.length >= 4) {
+    const hits = list.filter(c => { const nm = argoNorm(c.name); return nm === rest || nm.indexOf(rest + ' ') === 0; });
+    if (hits.length === 1) return { cat: hits[0].cat, name: hits[0].name };
+  }
+  return null;
+}
+
+function argoOpenTabAsk(rawText) {
+  if (typeof document === 'undefined') return null;
+  const chips = [];
+  document.querySelectorAll('#filterBar .filter-chip[data-cat]').forEach(chip => {
+    if (chip.disabled) return;
+    const nm = ((chip.querySelector('span:not(.chip-icon):not(.chip-count)') || {}).textContent || '').trim();
+    chips.push({ cat: chip.dataset.cat, name: nm });
+  });
+  const hit = argoResolveTabRequest(rawText, chips);
+  if (!hit) return null;
+  const go = () => {
+    argoAssistantGoTo(hit.cat);
+    // No celular o painel do Argo cobre a tela: fecha para a aba aparecer.
+    try {
+      if (window.matchMedia && window.matchMedia('(max-width:560px)').matches && argoAssistantCtrl && argoAssistantCtrl.close) {
+        setTimeout(() => argoAssistantCtrl.close(), 700);
+      }
+    } catch (e) { /* ignora */ }
+  };
+  const shown = hit.name.length > 46 ? hit.name.slice(0, 45) + '…' : hit.name;
+  return {
+    reply: argoPick(['Pronto, abri "' + shown + '".', 'Abrindo "' + shown + '" para você.', 'Feito! "' + shown + '" está aberta.']),
+    mood: 'success',
+    quickActions: [],
+    autoRun: go
+  };
+}
+
 // Casamento por palavra-chave (não é IA). Cada intenção pontua pelas
 // palavras-chave encontradas (inteiras ou como início de palavra, para
 // aceitar plurais e conjugações); a de maior pontuação vence e, em empate,
@@ -16852,6 +16947,8 @@ function argoAssistantAsk(rawText) {
   if (!norm) return null;
   const agendaAnswer = argoAgendaAsk(rawText);
   if (agendaAnswer) return agendaAnswer;
+  const tabOpen = argoOpenTabAsk(rawText);
+  if (tabOpen) return tabOpen;
   const padded = ' ' + norm + ' ';
   const tokens = norm.split(' ');
 
@@ -23333,6 +23430,10 @@ function argoAssistantAskHybrid(rawText, meta) {
   // nem entram na memória da conversa (podem citar anotações pessoais).
   const agendaAnswer = argoAgendaAsk(rawText);
   if (agendaAnswer) return agendaAnswer;
+
+  // Pedido claro para abrir uma aba ("abre o mapa"): abre na hora, sem passar pela IA.
+  const tabOpen = argoOpenTabAsk(rawText);
+  if (tabOpen) return tabOpen;
 
   let plan = { kind: 'none' };
   let local = null;
