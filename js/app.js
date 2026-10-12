@@ -6475,7 +6475,7 @@ function toolsExtrasHtml() {
     <div id="shControls" hidden>
       <div class="pc-ref">
         <label class="tools-lbl">Coluna<select id="shCol" class="tools-input"></select></label>
-        <label class="tools-lbl">Duplicados: combinar com (opcional)<select id="shCol2" class="tools-input"></select></label>
+        <label class="tools-lbl">Segunda coluna (para cruzar ou combinar nos duplicados)<select id="shCol2" class="tools-input"></select></label>
       </div>
       <div class="tools-row">
         <button type="button" class="btn-tech btn-primary" id="shAuto">Conferir tudo</button>
@@ -6485,13 +6485,19 @@ function toolsExtrasHtml() {
         <button type="button" class="btn-tech btn-secondary" id="shNis">Conferir NIS</button>
         <button type="button" class="btn-tech btn-secondary" id="shCpf">Conferir CPF</button>
         <button type="button" class="btn-tech btn-secondary" id="shDate">Conferir datas</button>
+      </div>
+      <div class="tools-row" role="group" aria-label="Análises">
+        <button type="button" class="btn-tech btn-secondary" id="shCross" title="Cruza a coluna escolhida com a segunda coluna (ex.: bairro × situação)">Cruzar colunas</button>
+        <button type="button" class="btn-tech btn-secondary" id="shStats" title="Soma, média, mediana, menor e maior valor de uma coluna de números (ex.: renda)">Estatísticas (números)</button>
+        <button type="button" class="btn-tech btn-secondary" id="shAges" title="Distribui por faixa de idade a partir de uma coluna de data de nascimento">Faixas de idade</button>
+        <button type="button" class="btn-tech btn-secondary" id="shTop" title="Mostra os maiores e os menores valores de uma coluna de números">Maiores e menores</button>
         <button type="button" class="btn-tech btn-primary" id="shToAcomp" title="Abre esta planilha no cartão Acompanhamento de famílias, para editar, marcar retornos e baixar de novo">Levar para o acompanhamento</button>
       </div>
       <div class="tools-row">
         <label class="tools-lbl">Contar linhas em que a coluna<select id="shMode" class="tools-input">
           <option value="has">contém</option><option value="eq">é igual a</option><option value="empty">está vazia</option><option value="full">está preenchida</option></select></label>
         <label class="tools-lbl">Valor<input id="shVal" class="tools-input" type="text" autocomplete="off" placeholder="ex.: Centro"></label>
-        <button type="button" class="btn-tech btn-secondary" id="shFilt">Contar</button>
+        <button type="button" class="btn-tech btn-secondary" id="shFilt">Contar e listar</button>
       </div>
     </div>
     <div id="shOut" class="sh-out" role="status" aria-live="polite"></div>
@@ -7200,6 +7206,12 @@ function initToolsNav() {
   const saveList = (k, set) => { try { localStorage.setItem(k, JSON.stringify(Array.from(set))); } catch (e) { /* ignora */ } };
   const pins = new Set(readList(TOOLS_PINS_KEY));
   const folds = new Set(readList(TOOLS_FOLD_KEY));
+  // o tipo escolhido sobrevive a fechar e reabrir o app (só nesta sessão do navegador)
+  const CAT_KEY = 'argo_tools_cat_v1';
+  try {
+    const savedCat = sessionStorage.getItem(CAT_KEY);
+    if (savedCat && TOOLS_STATE.view.cat === 'all' && TOOLS_CATS.some(c => c[0] === savedCat)) TOOLS_STATE.view.cat = savedCat;
+  } catch (e) { /* ignora */ }
   const cards = Array.from(root.querySelectorAll(':scope > section.tools-card')).map((el, i) => {
     const label = el.getAttribute('aria-label') || '';
     const meta = TOOLS_CATALOG[label] || { id: 'x' + i, cat: 'outros', kw: '' };
@@ -7239,6 +7251,7 @@ function initToolsNav() {
 
   const apply = () => {
     const v = TOOLS_STATE.view;
+    try { sessionStorage.setItem(CAT_KEY, v.cat); } catch (e) { /* ignora */ }
     const terms = toolsNorm(v.q).split(/\s+/).filter(Boolean);
     let shown = 0;
     const visible = [];
@@ -7247,6 +7260,8 @@ function initToolsNav() {
       const okQ = terms.every(t => c.hay.indexOf(t) !== -1);
       const on = okCat && okQ;
       c.el.hidden = !on;
+      // ao buscar, um cartão recolhido que combina abre sozinho (a preferência de recolher não muda)
+      c.el.classList.toggle('is-collapsed', folds.has(c.id) && !(terms.length && on));
       if (on) { shown++; visible.push(c); }
     });
     root.querySelectorAll('.tools-fchip').forEach(b => {
@@ -7288,6 +7303,18 @@ function initToolsNav() {
     t = setTimeout(() => { TOOLS_STATE.view.q = val; apply(); }, 120);
   });
   $('toolsFind').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      clearTimeout(t); TOOLS_STATE.view.q = e.target.value; apply();
+      const first = cards.find(c => !c.el.hidden);
+      if (first) {
+        const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+        first.el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+        first.el.classList.add('tools-flash'); setTimeout(() => first.el.classList.remove('tools-flash'), 1400);
+        e.target.blur();
+      }
+      return;
+    }
     if (e.key === 'Escape' && e.target.value) { e.target.value = ''; TOOLS_STATE.view.q = ''; apply(); e.stopPropagation(); }
   });
   root.querySelector('.tools-filter').addEventListener('click', e => {
@@ -10180,6 +10207,7 @@ function renderPdfToolsCard() {
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolCompress')">Reduzir</button>
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolPdfWord')">PDF ⇄ Word</button>
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolPdfJpg')">PDF ⇄ JPG</button>
+          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolJpgPdf')">Digitalizar</button>
         </nav>
 
         <div class="pdftools-section-title">${ICONS.form}<span>Editar PDF</span><small>escrever, desenhar, realçar, cobrir e assinar</small></div>
@@ -10422,11 +10450,11 @@ ${extra.compress}
             <div class="pdftools-tool-header">
               <span class="pdftools-tool-icon">${ICONS.image}</span>
               <div>
-                <div class="pdftools-tool-title">JPG → PDF</div>
+                <div class="pdftools-tool-title">Digitalizar: fotos → PDF</div>
                 <div class="pdftools-tool-limit">Até 20 imagens · total de 40 MB</div>
               </div>
             </div>
-            <p class="pdftools-tool-desc">Junta uma ou mais imagens (JPG ou PNG) em um único arquivo PDF, na ordem escolhida.</p>
+            <p class="pdftools-tool-desc">Fotografe ou escolha as páginas do documento, corte as bordas (✂), deixe o papel limpo e sem sombra e gere um único PDF, na ordem escolhida. Para várias páginas, toque em “Tirar foto” uma vez por página.</p>
             <label class="pdftools-dropzone" for="pdftoolsJpgPdfInput" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="pdftoolsHandleDrop(event, 'jpgpdf')">
               <input type="file" id="pdftoolsJpgPdfInput" accept="image/jpeg,image/png" multiple onchange="pdftoolsAddJpgPdfFiles(this.files)">
               <div class="pdftools-dropzone-icon">${ICONS.image}</div>
@@ -10438,6 +10466,14 @@ ${extra.compress}
               <input type="file" id="pdftoolsJpgPdfCamera" accept="image/*" capture="environment" hidden onchange="pdftoolsAddJpgPdfFiles(this.files); this.value=''">
             </div>
             <ul class="pdftools-filelist" id="pdftoolsJpgPdfList"></ul>
+            <div class="pdftools-opts pdftools-opts-row">
+              <label class="pdftools-opt-label">Melhorar a imagem
+                <select id="pdftoolsJpgPdfFilter" class="tools-input"><option value="original" selected>Original (sem mudar)</option><option value="documento">Documento (tira sombra, papel branco, colorido)</option><option value="cinza">Documento em tons de cinza</option><option value="pb">Preto e branco (texto nítido, arquivo menor)</option></select>
+              </label>
+              <label class="pdftools-opt-label">Tamanho do arquivo
+                <select id="pdftoolsJpgPdfSize" class="tools-input"><option value="normal" selected>Normal (boa para imprimir)</option><option value="leve">Leve (e-mail e WhatsApp)</option></select>
+              </label>
+            </div>
             <div class="pdftools-opts pdftools-opts-row">
               <label class="pdftools-opt-label">Tamanho da página
                 <select id="pdftoolsJpgPdfPage" class="tools-input"><option value="a4" selected>A4 (imagem centralizada)</option><option value="imagem">Do tamanho da imagem</option></select>
@@ -16256,22 +16292,47 @@ const ARGO_ASSISTANT_INTENTS = [
   {
     keys: ['bom dia', 'boa tarde', 'boa noite', 'oi', 'ola', 'opa', 'eae', 'e ai'],
     mood: 'success',
-    reply: () => argoGreetingWord() + '! Que bom ter você a bordo. Me diga o que procura — um serviço, um bairro, uma ferramenta — ou escolha um atalho abaixo.'
+    reply: () => argoGreetingWord() + '! Que bom ter você a bordo, eu estava justamente de olho no horizonte. ' + argoPick(['Me diga o que procura: um serviço, um bairro, uma ferramenta.', 'Para onde vamos hoje? Um serviço, um bairro, uma ferramenta…', 'No que posso te ajudar? Se preferir, escolha um atalho abaixo.'])
   },
   {
     keys: ['obrigado', 'obrigada', 'valeu', 'brigado', 'agradeco'],
     mood: 'success',
-    reply: () => argoPick(['Por nada! Qualquer coisa, é só chamar.', 'Disponha! Bom atendimento.', 'Foi um prazer ajudar. Boa navegação!'])
+    reply: () => argoPick(['Por nada! Fico contente de ter ajudado. Qualquer coisa, é só chamar.', 'Disponha! Eu gosto quando a rota dá certo. Bom atendimento!', 'Foi um prazer. Se a próxima dúvida aparecer, eu estou por aqui.'])
   },
   {
     keys: ['tchau', 'ate logo', 'ate mais'],
     mood: 'info',
-    reply: 'Até logo! Se precisar, estarei por aqui — é só tocar no barquinho ou teclar ?.'
+    reply: 'Até logo! Eu fico por aqui, de vela recolhida, esperando o próximo chamado. É só tocar no barquinho ou teclar ?. Bom trabalho!'
   },
   {
     keys: ['quem e voce', 'quem e vc', 'o que voce faz', 'o que vc faz', 'para que serve', 'ajuda', 'como usar o app', 'como usar o argo', 'como funciona o app', 'como funciona o argo'],
     mood: 'success',
-    reply: 'Sou o Argo, o barquinho-guia do app. Conheço cada aba: encontro equipamentos da rede, abro a ferramenta certa, explico como gerar a ficha e leio as dicas de cada tela. Diga o que você quer fazer.'
+    reply: 'Eu sou o Paulus. Aqui no Argo SUAS eu apareço como o Argo, o barquinho-guia. Conheço cada aba: encontro equipamentos da rede, abro a ferramenta certa, explico como gerar a ficha e leio as dicas de cada tela. Diga o que você quer fazer e eu levo você até lá.'
+  },
+  {
+    keys: ['tudo bem', 'td bem', 'como vai', 'como voce esta', 'como vc esta', 'como voce ta', 'como vc ta', 'tudo certo'],
+    mood: 'success',
+    reply: () => argoPick(['Tudo bem por aqui, mar calmo! E com você? Se o dia estiver corrido, me diga o que precisa que eu ajudo a encurtar o caminho.', 'Estou ótimo, obrigado por perguntar! Pronto para o que vier. Como posso ajudar?'])
+  },
+  {
+    keys: ['quem te criou', 'quem criou', 'quem fez', 'quem desenvolveu', 'quem e o autor', 'quem e paulus', 'quem e o paulus', 'seu nome', 'como voce se chama', 'como vc se chama', 'qual seu nome'],
+    mood: 'success',
+    reply: 'Meu nome é Paulus. Fui criado por Paulo Xavier, psicólogo (CRP-20/09816), para apoiar o trabalho técnico de quem atua no SUAS. Aqui no Argo SUAS eu navego como o Argo, o barquinho com o comandante a bordo.'
+  },
+  {
+    keys: ['voce e uma ia', 'vc e uma ia', 'voce e ia', 'voce e robo', 'voce e um robo', 'voce e humano', 'voce e uma pessoa', 'voce e real', 'inteligencia artificial', 'voce e gente'],
+    mood: 'info',
+    reply: 'Sou um assistente digital, não uma pessoa. Respondo no seu aparelho e, quando a IA está ligada, também consulto uma IA para perguntas abertas. Posso errar, então confira telefone, endereço e normas na fonte antes de encaminhar. Quando eu não souber, eu digo que não sei.'
+  },
+  {
+    keys: ['piada', 'conta uma piada', 'me faz rir', 'algo engracado', 'me alegra'],
+    mood: 'success',
+    reply: () => argoPick(['Uma rápida: por que o barquinho nunca se perde no diretório? Porque eu sempre confiro o território antes de zarpar. 😄', 'Minha especialidade de humor é fraca, admito. Mas planilha sem duplicado já me arranca um sorriso.'])
+  },
+  {
+    keys: ['estou cansado', 'estou cansada', 'dia dificil', 'dia puxado', 'estressado', 'estressada', 'sobrecarregado', 'sobrecarregada', 'esgotado', 'esgotada', 'exausto', 'exausta'],
+    mood: 'info',
+    reply: 'Imagino que o dia esteja pesado. Trabalhar com a rede cobra muito da gente. Posso tirar da sua frente o que for burocrático: achar telefone, montar a ficha, conferir prazo. E se estiver pesando de verdade, vale respirar um pouco e conversar com a supervisão ou com alguém de confiança.'
   },
   {
     keys: ['dica', 'dicas', 'o que posso fazer aqui', 'o que da pra fazer', 'nesta aba', 'nessa aba', 'esta tela', 'essa tela'],
@@ -16296,7 +16357,7 @@ const ARGO_ASSISTANT_INTENTS = [
   },
   {
     keys: ['pdf', 'unir', 'juntar', 'unificar', 'converter', 'word', 'jpg'],
-    reply: 'Na "Central de PDF" você une até 20 arquivos (PDFs e fotos), divide ou extrai páginas, exclui ou gira páginas, aplica marca d\'água, reduz o tamanho de um PDF, numera as páginas e converte PDF ⇄ Word/JPG. Tudo acontece no seu navegador — nada é enviado para a internet.',
+    reply: 'Na "Central de PDF" você une até 20 arquivos (PDFs e fotos), divide ou extrai páginas, exclui ou gira páginas, aplica marca d\'água, reduz o tamanho de um PDF, numera as páginas e converte PDF ⇄ Word/JPG. Se você fotografar um documento com o celular, eu ajudo a deixá-lo como scanner: corta as bordas, tira a sombra e gera o PDF. Tudo acontece no seu navegador — nada é enviado para a internet.',
     action: { label: 'Abrir a Central de PDF', run: () => argoAssistantGoTo('pdftools'), reply: 'Abri a Central de PDF para você.', mood: 'success' }
   },
   {
@@ -16839,7 +16900,7 @@ function argoAssistantAsk(rawText) {
   return {
     reply: matches.length
       ? 'Achei ' + (matches.length === 1 ? 'uma aba que combina' : 'algumas abas que combinam') + ' com isso. Quer abrir? Se preferir, posso procurar o termo nos equipamentos.'
-      : 'Não tenho uma resposta pronta para isso, mas posso procurar "' + rawText.trim() + '" direto nos equipamentos da rede.',
+      : 'Essa eu não sei de cabeça, e prefiro não chutar. Mas posso procurar "' + rawText.trim() + '" direto nos equipamentos da rede.',
     mood: matches.length ? 'info' : 'notfound',
     quickActions: acts,
     fallback: !matches.length   // sem resposta pronta nem aba parecida: a IA (se ligada) pode tentar
@@ -16863,7 +16924,7 @@ let argoAssistantCtrl = null;
 function initArgoAssistant() {
   if (typeof ArgoMascot === 'undefined' || typeof ArgoMascot.mountAssistant !== 'function') return;
   argoAssistantCtrl = ArgoMascot.mountAssistant({
-    greeting: () => argoGreetingWord() + '! Eu sou o Argo, seu guia a bordo. Posso achar unidades da rede (telefone, endereço, horário), explicar dúvidas do SUAS, abrir abas e ferramentas. Pergunte do seu jeito ou toque num atalho.',
+    greeting: () => argoGreetingWord() + '! Eu sou o Paulus, e aqui no Argo SUAS apareço como o Argo, seu guia a bordo. Eu acho unidades da rede (telefone, endereço, horário), explico dúvidas do SUAS e abro abas e ferramentas. Pergunte do seu jeito ou toque num atalho.',
     ask: argoAssistantAskHybrid,
     defaultQuickActions: argoAssistantDefaultQuickActions,
     onUnit: argoAssistantOpenUnit,
@@ -19490,31 +19551,121 @@ async function pdftoolsMergePdfs() {
 const PDFTOOLS_IMG_MAX_LONG = 3508;
 const PDFTOOLS_IMG_MAX_SHORT = 2480;
 
-async function pdftoolsPrepareImage(file, rotation) {
+// Opções de "digitalizar" (só usadas em "JPG → PDF"):
+//   crop   = { l, t, r, b } fração (0 a 0,45) tirada de cada lado, depois de girar
+//   filter = 'original' | 'documento' | 'cinza' | 'pb'
+//   size   = 'normal' (A4 a 300 dpi) | 'leve' (menor, para e-mail e WhatsApp)
+const PDFTOOLS_SCAN_SIZES = {
+  normal: { long: PDFTOOLS_IMG_MAX_LONG, short: PDFTOOLS_IMG_MAX_SHORT, q: 0.88 },
+  leve: { long: 2000, short: 1400, q: 0.74 }
+};
+
+// Desenha a imagem girada e cortada num canvas, com o tamanho limitado, e aplica o filtro.
+function pdftoolsRenderScan(img, o) {
+  o = o || {};
+  const w = img.naturalWidth, h = img.naturalHeight;
+  const rot = (((o.rotation || 0) % 360) + 360) % 360;
+  const swap = rot === 90 || rot === 270;
+  const rw = swap ? h : w, rh = swap ? w : h; // tamanho depois de girar
+  const c = o.crop || {};
+  const cl = Math.min(0.45, Math.max(0, c.l || 0)), ct = Math.min(0.45, Math.max(0, c.t || 0));
+  const cr = Math.min(0.45, Math.max(0, c.r || 0)), cb = Math.min(0.45, Math.max(0, c.b || 0));
+  const cx = rw * cl, cy = rh * ct, cw = rw * (1 - cl - cr), ch = rh * (1 - ct - cb);
+  const maxLong = o.maxLong || PDFTOOLS_IMG_MAX_LONG, maxShort = o.maxShort || PDFTOOLS_IMG_MAX_SHORT;
+  const scale = Math.min(1, maxLong / Math.max(cw, ch), maxShort / Math.min(cw, ch));
+  const outW = Math.max(1, Math.round(cw * scale)), outH = Math.max(1, Math.round(ch * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = outW; canvas.height = outH;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, outW, outH);
+  ctx.translate(-cx * scale + rw * scale / 2, -cy * scale + rh * scale / 2);
+  ctx.rotate(rot * Math.PI / 180);
+  ctx.drawImage(img, -(w * scale) / 2, -(h * scale) / 2, w * scale, h * scale);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (o.filter && o.filter !== 'original') pdftoolsScanFilter(canvas, o.filter);
+  return canvas;
+}
+
+// Melhora foto de documento: tira sombra e fundo amarelado (compara cada ponto com a
+// claridade ao redor), clareia o papel e escurece o texto.
+//   documento = colorido, cinza = tons de cinza, pb = preto e branco (menor arquivo).
+function pdftoolsScanFilter(canvas, mode) {
+  const W = canvas.width, H = canvas.height;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const id = ctx.getImageData(0, 0, W, H), d = id.data;
+  const CELL = 8, gw = Math.ceil(W / CELL), gh = Math.ceil(H / CELL), n = gw * gh;
+  // média de cada canal (R, G, B) por célula de 8x8 pontos
+  const sum = [new Float32Array(n), new Float32Array(n), new Float32Array(n)], cnt = new Uint16Array(n);
+  for (let y = 0; y < H; y++) {
+    const row = (y >> 3) * gw;
+    for (let x = 0, i = y * W * 4; x < W; x++, i += 4) {
+      const k = row + (x >> 3);
+      sum[0][k] += d[i]; sum[1][k] += d[i + 1]; sum[2][k] += d[i + 2]; cnt[k]++;
+    }
+  }
+  // claridade média ao redor de cada célula (janela de ~1/5 da largura), por imagem integral
+  const stride = gw + 1, R = Math.max(3, Math.round(gw / 10));
+  const bg = sum.map(sm => {
+    const integ = new Float64Array(stride * (gh + 1));
+    for (let y = 0; y < gh; y++) {
+      let rowSum = 0;
+      for (let x = 0; x < gw; x++) {
+        rowSum += sm[y * gw + x] / (cnt[y * gw + x] || 1);
+        integ[(y + 1) * stride + x + 1] = integ[y * stride + x + 1] + rowSum;
+      }
+    }
+    const out = new Float32Array(n);
+    for (let y = 0; y < gh; y++) {
+      const y0 = Math.max(0, y - R), y1 = Math.min(gh, y + R + 1);
+      for (let x = 0; x < gw; x++) {
+        const x0 = Math.max(0, x - R), x1 = Math.min(gw, x + R + 1);
+        const t = integ[y1 * stride + x1] - integ[y0 * stride + x1] - integ[y1 * stride + x0] + integ[y0 * stride + x0];
+        out[y * gw + x] = Math.max(20, t / ((x1 - x0) * (y1 - y0)));
+      }
+    }
+    return out;
+  });
+  // curva de contraste: papel vira branco, texto fica firme
+  const lut = new Uint8Array(256);
+  for (let v = 0; v < 256; v++) lut[v] = Math.max(0, Math.min(255, Math.round(((v / 255 - 0.5) * 1.3 + 0.5) * 255)));
+  const pb = mode === 'pb', gray = mode === 'cinza' || pb;
+  const at = (m, y0, y1, x0, x1, tx, ty) => (m[y0 * gw + x0] * (1 - tx) + m[y0 * gw + x1] * tx) * (1 - ty) + (m[y1 * gw + x0] * (1 - tx) + m[y1 * gw + x1] * tx) * ty;
+  for (let y = 0; y < H; y++) {
+    const fy = Math.max(0, Math.min(gh - 1, y / CELL - 0.5)), y0 = Math.floor(fy), y1 = Math.min(gh - 1, y0 + 1), ty = fy - y0;
+    for (let x = 0, i = y * W * 4; x < W; x++, i += 4) {
+      const fx = Math.max(0, Math.min(gw - 1, x / CELL - 0.5)), x0 = Math.floor(fx), x1 = Math.min(gw - 1, x0 + 1), tx = fx - x0;
+      const br = at(bg[0], y0, y1, x0, x1, tx, ty), bgc = at(bg[1], y0, y1, x0, x1, tx, ty), bb = at(bg[2], y0, y1, x0, x1, tx, ty);
+      const r = d[i], g = d[i + 1], bl = d[i + 2];
+      if (gray) {
+        const lum = r * 0.299 + g * 0.587 + bl * 0.114, b = br * 0.299 + bgc * 0.587 + bb * 0.114;
+        let v;
+        if (pb) v = lum < b * 0.86 ? 0 : 255;
+        else v = lut[Math.min(255, Math.round(lum * 255 / (b * 1.12)))];
+        d[i] = d[i + 1] = d[i + 2] = v;
+      } else {
+        // cada cor é comparada com a própria claridade ao redor: o papel amarelado ou azulado vira branco
+        d[i] = lut[Math.min(255, Math.round(r * 255 / (br * 1.12)))];
+        d[i + 1] = lut[Math.min(255, Math.round(g * 255 / (bgc * 1.12)))];
+        d[i + 2] = lut[Math.min(255, Math.round(bl * 255 / (bb * 1.12)))];
+      }
+    }
+  }
+  ctx.putImageData(id, 0, 0);
+}
+
+async function pdftoolsPrepareImage(file, rotation, opts) {
   const url = URL.createObjectURL(file);
   try {
     const img = new Image();
     img.src = url;
     await img.decode();
-    const w = img.naturalWidth, h = img.naturalHeight;
-    const rot = (((rotation || 0) % 360) + 360) % 360;
-    const swap = rot === 90 || rot === 270;
-    const rw = swap ? h : w, rh = swap ? w : h; // tamanho depois de girar
-    const scale = Math.min(1, PDFTOOLS_IMG_MAX_LONG / Math.max(rw, rh), PDFTOOLS_IMG_MAX_SHORT / Math.min(rw, rh));
-    const outW = Math.max(1, Math.round(rw * scale));
-    const outH = Math.max(1, Math.round(rh * scale));
-    const canvas = document.createElement('canvas');
-    canvas.width = outW;
-    canvas.height = outH;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, outW, outH);
-    ctx.translate(outW / 2, outH / 2);
-    ctx.rotate(rot * Math.PI / 180);
-    ctx.drawImage(img, -(w * scale) / 2, -(h * scale) / 2, w * scale, h * scale);
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.88));
+    opts = opts || {};
+    const sz = PDFTOOLS_SCAN_SIZES[opts.size] || PDFTOOLS_SCAN_SIZES.normal;
+    const canvas = pdftoolsRenderScan(img, { rotation, crop: opts.crop, filter: opts.filter, maxLong: sz.long, maxShort: sz.short });
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', opts.filter === 'pb' ? Math.min(sz.q, 0.8) : sz.q));
     if (!blob) throw new Error('não foi possível gerar a imagem');
-    return { bytes: await blob.arrayBuffer(), width: outW, height: outH };
+    return { bytes: await blob.arrayBuffer(), width: canvas.width, height: canvas.height };
   } finally {
     URL.revokeObjectURL(url);
   }
@@ -19563,7 +19714,7 @@ function pdftoolsAddJpgPdfFiles(fileList) {
     if (currentTotal + file.size > PDFTOOLS_JPGPDF_MAX_BYTES) { skippedLimit = true; return; }
     const isDuplicate = pdftoolsJpgPdfState.files.some(f => f.file.name === file.name && f.file.size === file.size);
     if (isDuplicate) return;
-    pdftoolsJpgPdfState.files.push({ id: 'j' + Date.now() + Math.random().toString(36).slice(2), file, rotation: 0 });
+    pdftoolsJpgPdfState.files.push({ id: 'j' + Date.now() + Math.random().toString(36).slice(2), file, rotation: 0, crop: { l: 0, t: 0, r: 0, b: 0 }, url: URL.createObjectURL(file) });
   });
   const input = document.getElementById('pdftoolsJpgPdfInput');
   if (input) input.value = '';
@@ -19580,9 +19731,11 @@ function pdftoolsRenderJpgPdfList() {
   const totalBytes = pdftoolsJpgPdfState.files.reduce((s, f) => s + (f.file.size || 0), 0);
   list.innerHTML = pdftoolsJpgPdfState.files.map((f, idx) => `
     <li class="pdftools-fileitem">
+      <span class="pdftools-thumb" aria-hidden="true"><img src="${f.url}" alt="" style="transform: rotate(${f.rotation || 0}deg)"></span>
       <span class="pdftools-fileitem-name">${idx + 1}. ${escapeHtml(f.file.name)}</span>
-      <span class="pdftools-fileitem-meta">${pdftoolsFormatBytes(f.file.size)}${f.rotation ? ` · girado ${f.rotation}°` : ''}</span>
+      <span class="pdftools-fileitem-meta">${pdftoolsFormatBytes(f.file.size)}${f.rotation ? ` · girado ${f.rotation}°` : ''}${pdftoolsHasCrop(f.crop) ? ' · cortado' : ''}</span>
       <span class="pdftools-fileitem-btns">
+        <button type="button" class="pdftools-icon-btn${pdftoolsHasCrop(f.crop) ? ' is-active' : ''}" title="Ajustar: cortar bordas e ver como fica" aria-label="Ajustar ${escapeHtml(f.file.name)}" onclick="pdftoolsAdjustJpgPdfFile('${f.id}')">✂</button>
         <button type="button" class="pdftools-icon-btn" title="Mover para cima" ${idx === 0 ? 'disabled' : ''} onclick="pdftoolsMoveJpgPdfFile('${f.id}', -1)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
         </button>
@@ -19611,12 +19764,17 @@ function pdftoolsMoveJpgPdfFile(id, dir) {
   pdftoolsRenderJpgPdfList();
 }
 
+function pdftoolsHasCrop(c) { return !!c && (c.l > 0 || c.t > 0 || c.r > 0 || c.b > 0); }
+
 function pdftoolsClearJpgPdfFiles() {
+  pdftoolsJpgPdfState.files.forEach(f => { try { URL.revokeObjectURL(f.url); } catch (e) { /* ignora */ } });
   pdftoolsJpgPdfState.files = [];
   pdftoolsRenderJpgPdfList();
 }
 
 function pdftoolsRemoveJpgPdfFile(id) {
+  const gone = pdftoolsJpgPdfState.files.find(f => f.id === id);
+  if (gone) { try { URL.revokeObjectURL(gone.url); } catch (e) { /* ignora */ } }
   pdftoolsJpgPdfState.files = pdftoolsJpgPdfState.files.filter(f => f.id !== id);
   pdftoolsRenderJpgPdfList();
 }
@@ -19631,6 +19789,93 @@ function pdftoolsRotateJpgPdfFile(id) {
   pdftoolsRenderJpgPdfList();
 }
 
+// Janela "Ajustar": gira, corta as bordas (4 barras) e mostra como a foto fica com o
+// filtro escolhido, antes de gerar o PDF. Nada sai do aparelho.
+async function pdftoolsAdjustJpgPdfFile(id) {
+  const item = pdftoolsJpgPdfState.files.find(f => f.id === id);
+  if (!item || document.getElementById('pdftoolsAdjust')) return;
+  const filter = (document.getElementById('pdftoolsJpgPdfFilter') || {}).value || 'original';
+  const img = new Image();
+  img.src = item.url;
+  try { await img.decode(); } catch (e) { pdftoolsSetStatus('pdftoolsJpgPdfStatus', 'Não foi possível abrir esta imagem para ajustar.', 'error'); return; }
+  const st = { rot: item.rotation || 0, c: Object.assign({ l: 0, t: 0, r: 0, b: 0 }, item.crop), view: 'cut' };
+  const opener = document.activeElement;
+  const wrap = document.createElement('div');
+  wrap.id = 'pdftoolsAdjust'; wrap.className = 'pdftools-adjust';
+  wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true'); wrap.setAttribute('aria-label', 'Ajustar foto');
+  const sl = (k, label) => `<label class="pdftools-adj-sl">${label}<input type="range" min="0" max="45" step="1" value="${Math.round(st.c[k] * 100)}" data-k="${k}"><output>${Math.round(st.c[k] * 100)}%</output></label>`;
+  wrap.innerHTML = `<div class="pdftools-adj-box">
+    <div class="pdftools-adj-head"><strong>Ajustar foto</strong><button type="button" class="pdftools-icon-btn" data-a="close" aria-label="Fechar sem salvar">✕</button></div>
+    <div class="pdftools-adj-view"><canvas id="pdftoolsAdjCanvas"></canvas></div>
+    <div class="pdftools-adj-tabs" role="group" aria-label="Visualização">
+      <button type="button" class="pdftools-sort-btn is-on" data-view="cut" aria-pressed="true">Cortar</button>
+      <button type="button" class="pdftools-sort-btn" data-view="result" aria-pressed="false">Ver resultado${filter === 'original' ? '' : ' com o filtro'}</button>
+      <button type="button" class="pdftools-sort-btn" data-a="rot" title="Girar 90° para a direita">${PDFTOOLS_ICON_ROTATE} Girar</button>
+    </div>
+    <div class="pdftools-adj-sliders">${sl('t', 'Cortar em cima')}${sl('b', 'Cortar embaixo')}${sl('l', 'Cortar à esquerda')}${sl('r', 'Cortar à direita')}</div>
+    <div class="pdftools-actions"><button type="button" class="pdftools-btn" data-a="ok">Aplicar</button>
+      <button type="button" class="pdftools-btn-ghost" data-a="reset">Tirar cortes</button>
+      <button type="button" class="pdftools-btn-ghost" data-a="close">Cancelar</button></div></div>`;
+  document.body.appendChild(wrap);
+  const cv = wrap.querySelector('#pdftoolsAdjCanvas');
+  let timer = null;
+  const paint = () => {
+    const cut = st.view === 'cut';
+    // na aba "Cortar" mostra a foto inteira com o que será tirado escurecido
+    const base = pdftoolsRenderScan(img, { rotation: st.rot, crop: cut ? null : st.c, filter: cut ? 'original' : filter, maxLong: 900, maxShort: 900 });
+    cv.width = base.width; cv.height = base.height;
+    const x = cv.getContext('2d');
+    x.drawImage(base, 0, 0);
+    if (cut) {
+      const W = cv.width, H = cv.height, l = st.c.l * W, r = st.c.r * W, t = st.c.t * H, b = st.c.b * H;
+      x.fillStyle = 'rgba(15, 23, 42, 0.55)';
+      x.fillRect(0, 0, W, t); x.fillRect(0, H - b, W, b); x.fillRect(0, t, l, H - t - b); x.fillRect(W - r, t, r, H - t - b);
+      x.strokeStyle = '#0091C2'; x.lineWidth = 2; x.strokeRect(l + 1, t + 1, W - l - r - 2, H - t - b - 2);
+    }
+  };
+  const later = () => { clearTimeout(timer); timer = setTimeout(paint, st.view === 'result' ? 150 : 0); };
+  const close = save => {
+    clearTimeout(timer);
+    if (save) { item.rotation = st.rot; item.crop = st.c; }
+    document.removeEventListener('keydown', onKey, true);
+    wrap.remove();
+    if (save) pdftoolsRenderJpgPdfList();
+    try { if (opener && opener.focus) opener.focus(); } catch (e) { /* ignora */ }
+  };
+  const onKey = e => {
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(false); }
+    else if (e.key === 'Tab') { // mantém o foco dentro da janela
+      const f = Array.from(wrap.querySelectorAll('button, input')).filter(n => !n.disabled);
+      if (!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  };
+  document.addEventListener('keydown', onKey, true);
+  wrap.addEventListener('input', e => {
+    const k = e.target.dataset && e.target.dataset.k; if (!k) return;
+    st.c[k] = Number(e.target.value) / 100;
+    e.target.nextElementSibling.textContent = e.target.value + '%';
+    // não deixa cortar tudo: lados opostos somam no máximo 80%
+    const opp = { l: 'r', r: 'l', t: 'b', b: 't' }[k];
+    if (st.c[k] + st.c[opp] > 0.8) { st.c[opp] = 0.8 - st.c[k]; const o = wrap.querySelector('[data-k="' + opp + '"]'); o.value = Math.round(st.c[opp] * 100); o.nextElementSibling.textContent = o.value + '%'; }
+    later();
+  });
+  wrap.addEventListener('click', e => {
+    if (e.target === wrap) { close(false); return; }
+    const v = e.target.closest('[data-view]');
+    if (v) { st.view = v.dataset.view; wrap.querySelectorAll('[data-view]').forEach(b => { const on = b === v; b.classList.toggle('is-on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); }); paint(); return; }
+    const a = e.target.closest('[data-a]'); if (!a) return;
+    if (a.dataset.a === 'close') close(false);
+    else if (a.dataset.a === 'ok') close(true);
+    else if (a.dataset.a === 'rot') { st.rot = (st.rot + 90) % 360; paint(); }
+    else if (a.dataset.a === 'reset') { st.c = { l: 0, t: 0, r: 0, b: 0 }; wrap.querySelectorAll('[data-k]').forEach(i => { i.value = 0; i.nextElementSibling.textContent = '0%'; }); paint(); }
+  });
+  paint();
+  const okBtn = wrap.querySelector('[data-a="ok"]'); if (okBtn) okBtn.focus();
+}
+
 async function pdftoolsRunJpgToPdf() {
   if (!pdftoolsJpgPdfState.files.length) return;
   const btn = document.getElementById('pdftoolsJpgPdfBtn');
@@ -19639,6 +19884,8 @@ async function pdftoolsRunJpgToPdf() {
   let currentName = '';
   const pageEl = document.getElementById('pdftoolsJpgPdfPage');
   const pageMode = pageEl && pageEl.value === 'imagem' ? 'imagem' : 'a4';
+  const scanFilter = (document.getElementById('pdftoolsJpgPdfFilter') || {}).value || 'original';
+  const scanSize = (document.getElementById('pdftoolsJpgPdfSize') || {}).value || 'normal';
   const nameEl = document.getElementById('pdftoolsJpgPdfFilename');
   const outName = ((nameEl && nameEl.value || '').replace(/[\\/:*?"<>|]+/g, '').replace(/\.pdf$/i, '').trim()) || 'imagens-convertidas';
   try {
@@ -19646,9 +19893,11 @@ async function pdftoolsRunJpgToPdf() {
     const doc = await PDFLib.PDFDocument.create();
     for (const item of pdftoolsJpgPdfState.files) {
       currentName = item.file.name;
-      const prepared = await pdftoolsPrepareImage(item.file, item.rotation || 0);
+      const prepared = await pdftoolsPrepareImage(item.file, item.rotation || 0, { crop: item.crop, filter: scanFilter, size: scanSize });
       const jpg = await doc.embedJpg(prepared.bytes);
       pdftoolsAddImagePage(doc, jpg, prepared, pageMode);
+      pdftoolsSetStatus('pdftoolsJpgPdfStatus', `Processando página ${doc.getPageCount()} de ${pdftoolsJpgPdfState.files.length}...`, 'info');
+      await new Promise(r => setTimeout(r, 0)); // deixa a tela respirar entre as fotos
     }
     currentName = '';
     const bytes = await doc.save();
@@ -21784,10 +22033,13 @@ function initSheetAnalyzer() {
       text += b.title + '\n';
       (b.lines || []).forEach(l => { html += '<div>' + sheetEsc(l) + '</div>'; text += l + '\n'; });
       if (b.table && b.table.rows.length) {
+        const bc = Number.isInteger(b.table.barCol) ? b.table.barCol : -1;
+        const bmax = bc >= 0 ? Math.max.apply(null, b.table.rows.map(r => Number(r[bc]) || 0).concat(1)) : 1;
         html += '<div class="sh-scroll"><table class="sh-table"><thead><tr>'
-          + b.table.head.map(h => '<th scope="col">' + sheetEsc(h) + '</th>').join('')
+          + b.table.head.map(h => '<th scope="col">' + sheetEsc(h) + '</th>').join('') + (bc >= 0 ? '<th scope="col"><span class="sr-only">Gráfico</span></th>' : '')
           + '</tr></thead><tbody>'
-          + b.table.rows.map(r => '<tr>' + r.map(c => '<td>' + sheetEsc(c) + '</td>').join('') + '</tr>').join('')
+          + b.table.rows.map(r => '<tr>' + r.map(c => '<td>' + sheetEsc(c) + '</td>').join('')
+            + (bc >= 0 ? '<td class="sh-barcell" aria-hidden="true"><span class="sh-bar" style="width:' + Math.max(2, Math.round((Number(r[bc]) || 0) * 100 / bmax)) + '%"></span></td>' : '') + '</tr>').join('')
           + '</tbody></table></div>';
         text += b.table.head.join('\t') + '\n' + b.table.rows.map(r => r.join('\t')).join('\n') + '\n';
       }
@@ -21832,7 +22084,95 @@ function initSheetAnalyzer() {
       lines: [cheias + ' linhas preenchidas, ' + vazias + ' vazias, ' + arr.length + ' valores diferentes.'
         + (arr.length > LIM_TABELA ? ' Mostrando os ' + LIM_TABELA + ' mais frequentes.' : '')],
       table: { head: ['Valor', 'Linhas', '% das preenchidas'], rows: arr.slice(0, LIM_TABELA).map(e => [sheetMask(e.label), e.n, sheetPct(e.n, cheias)]),
-        full: arr.map(e => [sheetMask(e.label), e.n, sheetPct(e.n, cheias)]) }
+        full: arr.map(e => [sheetMask(e.label), e.n, sheetPct(e.n, cheias)]), barCol: 1 }
+    };
+  };
+
+  // ---- números no formato brasileiro: "1.234,56", "R$ 1.200,00", "850"
+  const num = v => {
+    let t = String(v == null ? '' : v).replace(/R\$|\s/g, '');
+    if (!t) return NaN;
+    if (t.indexOf(',') !== -1) t = t.replace(/\./g, '').replace(',', '.');
+    else if (/^-?\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '');
+    return /^-?\d+(\.\d+)?$/.test(t) ? parseFloat(t) : NaN;
+  };
+  const fmt = n => Number.isFinite(n) ? n.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) : '–';
+  const numericCol = c => {
+    const vals = [], ruins = [];
+    let vazias = 0;
+    S.rows.forEach((r, i) => {
+      const v = cell(r, c).trim();
+      if (!v) { vazias++; return; }
+      const n = num(v);
+      if (Number.isNaN(n)) ruins.push([S.nums[i], sheetMask(v)]); else vals.push({ n, line: S.nums[i] });
+    });
+    return { vals, ruins, vazias };
+  };
+
+  const stats = c => {
+    const { vals, ruins, vazias } = numericCol(c);
+    if (!vals.length) return { title: 'Estatísticas — ' + S.head[c], lines: ['Essa coluna não tem números. Escolha uma coluna como renda, valor ou quantidade.'] };
+    const a = vals.map(x => x.n).sort((x, y) => x - y), n = a.length, soma = a.reduce((x, y) => x + y, 0);
+    const med = n % 2 ? a[(n - 1) / 2] : (a[n / 2 - 1] + a[n / 2]) / 2;
+    const lines = ['Números lidos: ' + n + '. Vazias: ' + vazias + '. Não numéricas: ' + ruins.length + '.'];
+    if (ruins.length) lines.push('Valores que não são número (linhas na planilha): ' + ruins.slice(0, 8).map(r => r[0] + ' “' + r[1] + '”').join(', ') + (ruins.length > 8 ? '…' : '') + '.');
+    const rows = [['Soma', fmt(soma)], ['Média', fmt(soma / n)], ['Mediana', fmt(med)], ['Menor', fmt(a[0])], ['Maior', fmt(a[n - 1])], ['Zeros', a.filter(x => x === 0).length]];
+    return { title: 'Estatísticas — ' + S.head[c], lines, table: { head: ['Medida', 'Valor'], rows } };
+  };
+
+  const topBottom = c => {
+    const { vals } = numericCol(c);
+    if (!vals.length) return { title: 'Maiores e menores — ' + S.head[c], lines: ['Essa coluna não tem números.'] };
+    const a = vals.slice().sort((x, y) => x.n - y.n);
+    return {
+      title: 'Maiores e menores — ' + S.head[c],
+      lines: ['Linha = número da linha na planilha. Mostrando os 10 maiores e os 10 menores; o .csv traz a coluna inteira ordenada.'],
+      table: { head: ['Linha (maiores)', 'Valor', 'Linha (menores)', 'Valor'],
+        rows: Array.from({ length: Math.min(10, a.length) }, (_, i) => { const hi = a[a.length - 1 - i], lo = a[i]; return [hi.line, fmt(hi.n), lo.line, fmt(lo.n)]; }),
+        full: a.slice().reverse().map(x => [x.line, fmt(x.n)]), fullHead: ['Linha', 'Valor (do maior ao menor)'] }
+    };
+  };
+
+  const FAIXAS = [['0 a 6 anos', 0, 6], ['7 a 14 anos', 7, 14], ['15 a 17 anos', 15, 17], ['18 a 29 anos', 18, 29], ['30 a 59 anos', 30, 59], ['60 anos ou mais', 60, 200]];
+  const ages = c => {
+    const hoje = new Date();
+    const cont = FAIXAS.map(() => 0), ruins = [];
+    let vazias = 0, soma = 0, n = 0;
+    S.rows.forEach((r, i) => {
+      const v = cell(r, c).trim();
+      if (!v) { vazias++; return; }
+      if (sheetCheckDate(v, hoje)) { ruins.push(S.nums[i]); return; }
+      const m = v.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})/) || v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+      const iso = /^\d{4}-/.test(v);
+      const y = +(iso ? m[1] : m[3]), mo = +m[2], d = +(iso ? m[3] : m[1]);
+      let age = hoje.getFullYear() - y;
+      if (hoje.getMonth() + 1 < mo || (hoje.getMonth() + 1 === mo && hoje.getDate() < d)) age--;
+      const k = FAIXAS.findIndex(f => age >= f[1] && age <= f[2]);
+      if (k >= 0) { cont[k]++; soma += age; n++; }
+    });
+    const lines = [n + ' pessoas com data válida (idade em ' + hoje.toLocaleDateString('pt-BR') + '). Vazias: ' + vazias + '. Datas com problema: ' + ruins.length + (ruins.length ? ' (linhas ' + ruins.slice(0, 8).join(', ') + (ruins.length > 8 ? '…' : '') + ')' : '') + '.'];
+    if (n) lines.push('Idade média: ' + fmt(soma / n) + ' anos.');
+    const rows = FAIXAS.map((f, i) => [f[0], cont[i], sheetPct(cont[i], n)]);
+    return { title: 'Faixas de idade — ' + S.head[c], lines, table: { head: ['Faixa', 'Pessoas', '%'], rows, barCol: 1 } };
+  };
+
+  // Tabela cruzada: valores da coluna A nas linhas, da coluna B nas colunas.
+  const cross = (c, c2) => {
+    if (!Number.isInteger(c2) || c2 < 0 || c2 === c) return { title: 'Cruzar colunas', lines: ['Escolha, em “Segunda coluna”, uma coluna diferente da primeira.'] };
+    const cnt = (col) => { const m = new Map(); S.rows.forEach(r => { const v = cell(r, col).trim(); if (!v) return; const k = sheetNorm(v), e = m.get(k); if (e) e.n++; else m.set(k, { k, label: v, n: 1 }); }); return [...m.values()].sort((a, b) => b.n - a.n || a.label.localeCompare(b.label, 'pt-BR')); };
+    const A = cnt(c), B = cnt(c2);
+    const grid = new Map(); let usadas = 0;
+    S.rows.forEach(r => { const a = sheetNorm(cell(r, c)), b = sheetNorm(cell(r, c2)); if (!a || !b) return; usadas++; const k = a + '\u0001' + b; grid.set(k, (grid.get(k) || 0) + 1); });
+    const build = (la, lb) => {
+      const head = [S.head[c] + ' \\ ' + S.head[c2]].concat(lb.map(x => sheetMask(x.label)), ['Total']);
+      const rows = la.map(a => { let tot = 0; const cells = lb.map(b => { const n = grid.get(a.k + '\u0001' + b.k) || 0; tot += n; return n || ''; }); return [sheetMask(a.label)].concat(cells, [tot]); });
+      return { head, rows };
+    };
+    const small = build(A.slice(0, 15), B.slice(0, 8)), full = build(A, B.slice(0, 60));
+    return {
+      title: 'Cruzamento — ' + S.head[c] + ' × ' + S.head[c2],
+      lines: [usadas + ' linhas com as duas colunas preenchidas. Mostrando ' + Math.min(15, A.length) + ' de ' + A.length + ' valores nas linhas e ' + Math.min(8, B.length) + ' de ' + B.length + ' nas colunas; o .csv traz mais.'],
+      table: { head: small.head, rows: small.rows, full: full.rows, fullHead: full.head }
     };
   };
 
@@ -21888,12 +22228,18 @@ function initSheetAnalyzer() {
     const achadas = [];
     S.rows.forEach((r, i) => {
       const v = sheetNorm(cell(r, c));
-      if (mode === 'has' ? v.includes(q) : mode === 'eq' ? v === q : mode === 'empty' ? v === '' : v !== '') { n++; if (achadas.length < 40) achadas.push(S.nums[i]); }
+      if (mode === 'has' ? v.includes(q) : mode === 'eq' ? v === q : mode === 'empty' ? v === '' : v !== '') { n++; achadas.push(i); }
     });
     const desc = { has: 'contém “' + val.trim() + '”', eq: 'é igual a “' + val.trim() + '”', empty: 'está vazio', full: 'está preenchido' }[mode];
+    const cols = Math.min(8, S.head.length);
+    const linha = i => [S.nums[i]].concat(S.head.slice(0, cols).map((h, k) => sheetMask(cell(S.rows[i], k))));
     const lines = [n + ' de ' + S.rows.length + ' linhas (' + sheetPct(n, S.rows.length) + ') em que ' + S.head[c] + ' ' + desc + '.'];
-    if (achadas.length) lines.push('Linhas na planilha: ' + achadas.join(', ') + (n > achadas.length ? '… (primeiras ' + achadas.length + ')' : '') + '.');
-    return { title: 'Contar linhas — ' + S.head[c], lines };
+    if (n > LIM_TABELA) lines.push('Listando as ' + LIM_TABELA + ' primeiras (e as ' + cols + ' primeiras colunas); o .csv traz todas as linhas com todas as colunas.');
+    return {
+      title: 'Contar linhas — ' + S.head[c], lines,
+      table: n ? { head: ['Linha'].concat(S.head.slice(0, cols)), rows: achadas.slice(0, LIM_TABELA).map(linha),
+        full: achadas.map(i => [S.nums[i]].concat(S.head.map((h, k) => sheetMask(cell(S.rows[i], k))))), fullHead: ['Linha'].concat(S.head) } : null
+    };
   };
 
   // Primeiras linhas, para conferir se o cabeçalho foi lido na linha certa.
@@ -21915,7 +22261,7 @@ function initSheetAnalyzer() {
       (b.lines || []).forEach(l => out.push(csvCell(l)));
       if (b.table) {
         const rows = b.table.full || b.table.rows;
-        if (rows.length) { out.push(b.table.head.map(csvCell).join(';')); rows.forEach(r => out.push(r.map(csvCell).join(';'))); }
+        if (rows.length) { out.push((b.table.fullHead || b.table.head).map(csvCell).join(';')); rows.forEach(r => out.push(r.map(csvCell).join(';'))); }
       }
       out.push('');
     });
@@ -22024,6 +22370,10 @@ function initSheetAnalyzer() {
   on('shFreq', () => freq(colIdx()));
   on('shDup', () => { const v = $('shCol2').value; return dup(colIdx(), v === '' ? -1 : parseInt(v, 10)); });
   on('shPeek', amostra);
+  on('shCross', () => { const v = $('shCol2').value; return cross(colIdx(), v === '' ? -1 : parseInt(v, 10)); });
+  on('shStats', () => stats(colIdx()));
+  on('shAges', () => ages(colIdx()));
+  on('shTop', () => topBottom(colIdx()));
   $('shCsv').addEventListener('click', baixarCsv);
   on('shNis', () => validate(colIdx(), sheetCheckNis, 'NIS'));
   on('shCpf', () => validate(colIdx(), sheetCheckCpf, 'CPF'));
@@ -23031,7 +23381,7 @@ function argoAssistantAskHybrid(rawText, meta) {
 function argoAskNormasOffline(rawText, local) {
   const B = argoBrain();
   if (!B || typeof Paulus === 'undefined' || !Paulus.consultarNormas) return null;
-  const reserva = local || { reply: 'Sem internet e não encontrei isso na base de normas. Posso procurar o termo direto no diretório.', mood: 'notfound', quickActions: [{ label: 'Buscar \"' + rawText.slice(0, 22) + '\" nos equipamentos', run: () => argoAssistantSearch(rawText), reply: 'Pronto! Joguei essa busca no diretório.', mood: 'success' }] };
+  const reserva = local || { reply: 'Estou sem internet e não achei isso na minha base de normas. Não quero inventar resposta. Posso procurar o termo direto no diretório.', mood: 'notfound', quickActions: [{ label: 'Buscar \"' + rawText.slice(0, 22) + '\" nos equipamentos', run: () => argoAssistantSearch(rawText), reply: 'Pronto! Joguei essa busca no diretório.', mood: 'success' }] };
   return {
     reply: '', mood: 'info', badge: 'Base SUAS',
     quickActions: reserva.quickActions,
@@ -23122,14 +23472,14 @@ function argoAskAI(rawText, tab, fallbackResult) {
   return {
     reply: '', mood: 'info', badge: 'IA',
     stream: {
-      fallback: fallbackResult || { reply: 'Não consegui consultar a IA agora. Posso procurar o termo direto no diretório.', mood: 'notfound', quickActions: [{ label: 'Buscar "' + rawText.slice(0, 22) + '" nos equipamentos', run: () => argoAssistantSearch(rawText), reply: 'Pronto! Joguei essa busca no diretório.', mood: 'success' }] },
+      fallback: fallbackResult || { reply: 'Não consegui consultar a IA agora. Posso procurar o termo direto no diretório, se você quiser.', mood: 'notfound', quickActions: [{ label: 'Buscar "' + rawText.slice(0, 22) + '" nos equipamentos', run: () => argoAssistantSearch(rawText), reply: 'Pronto! Joguei essa busca no diretório.', mood: 'success' }] },
       run: (onDelta, signal) => argoStreamIA(B, rawText, payload, { onDelta, signal }).then(({ txt, fontes, offline, sugestoes }) => {
         const units = B.mentionedUnits(txt, ctxNames);
         B.remember(rawText, txt, units);
         const bad = B.verifyPhones(txt);
-        let note = 'Confira os dados com a unidade antes de encaminhar.';
-        if (offline) note = 'Trecho da base de normas do Paulus (sem IA agora). Confira o texto oficial vigente.';
-        if (bad) note = '⚠️ Um número citado não consta no diretório. Confirme com a unidade antes de usar.';
+        let note = 'Posso errar: confira os dados com a unidade antes de encaminhar.';
+        if (offline) note = 'Estou sem IA agora, mas achei este trecho na minha base de normas. Confira o texto oficial vigente.';
+        if (bad) note = '⚠️ Citei um número que não consta no diretório. Confirme com a unidade antes de usar.';
         // Perguntas de continuação: as da IA primeiro; se ela citou unidade e não sugeriu nada, as de contato.
         const seguintes = (sugestoes || []).slice(0, 3);
         if (!seguintes.length && units.length) seguintes.push('Qual o telefone?', 'Qual o horário?');
