@@ -525,7 +525,7 @@ const MAX_FICHAS = 10;
 const PADRAO = {
   app: '',
   endpoint: '',            // endereço do Worker; vazio = IA desligada
-  maxPergunta: 500,
+  maxPergunta: 1200,
   maxHistorico: 6,         // mensagens (3 trocas) enviadas à IA
   porMinuto: 8,            // limite local (o Worker também limita)
   minIntervaloMs: 1200,
@@ -662,7 +662,7 @@ function estourouLimiteLocal() {
 function historicoParaEnvio(externo) {
   const lista = Array.isArray(externo) ? externo : estado.historico;
   return lista.slice(-cfg.maxHistorico).map(function (h) {
-    return { papel: h.papel, texto: String(h.texto).slice(0, 600) };
+    return { papel: h.papel, texto: String(h.texto).slice(0, 1200) };
   });
 }
 
