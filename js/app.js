@@ -16124,14 +16124,39 @@ function closeCardFocus(opts) {
   const grid = document.getElementById('grid');
   if (!grid) return;
 
+  // Botão "Ampliar" (canto do card): abre mesmo em cima de áreas que normalmente ignoram o clique.
+  grid.addEventListener('click', (e) => {
+    const btn = e.target && e.target.closest ? e.target.closest('.card-expand-btn') : null;
+    if (!btn) return;
+    e.stopPropagation();
+    const card = btn.closest(CARD_FOCUS_SELECTOR);
+    if (card) openCardFocus(card);
+  });
+
+  function decorar(root) {
+    if (!root || root.nodeType !== 1) return;
+    const lista = [];
+    if (root.matches && root.matches(CARD_FOCUS_SELECTOR)) lista.push(root);
+    if (root.querySelectorAll) root.querySelectorAll(CARD_FOCUS_SELECTOR).forEach(c => lista.push(c));
+    lista.forEach(card => {
+      if (card.querySelector(':scope > .card-expand-btn')) return;
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'card-expand-btn';
+      b.setAttribute('aria-label', 'Ampliar em tela cheia');
+      b.title = 'Ampliar em tela cheia';
+      b.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>';
+      card.appendChild(b);
+    });
+  }
+  decorar(grid);
+
   grid.addEventListener('click', (e) => {
     const t = e.target;
     if (!t || !t.closest) return;
     const card = t.closest(CARD_FOCUS_SELECTOR);
     if (!card || card.classList.contains('is-expanded')) return;
     if (t.closest(CARD_FOCUS_IGNORE)) return;
-    // Cartões de ferramenta (calculadoras etc.) só ampliam pelo título.
-    if (card.classList.contains('tools-card') && !t.closest('h2')) return;
     // Quem está selecionando texto para copiar não quer ampliar.
     const sel = window.getSelection && window.getSelection();
     if (sel && !sel.isCollapsed && String(sel).trim()) return;
@@ -16156,7 +16181,8 @@ function closeCardFocus(opts) {
 
   // A lista foi refeita (busca, anexo salvo...): o card aberto saiu do DOM.
   // Reabre o mesmo cartão se ele ainda existir; senão, fecha.
-  new MutationObserver(() => {
+  new MutationObserver((muts) => {
+    muts.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType === 1 && !n.classList.contains('card-expand-btn') && !n.classList.contains('card-focus-spacer')) decorar(n); }));
     if (!cardFocusEl || cardFocusEl.isConnected) return;
     const id = cardFocusId;
     const again = id ? grid.querySelector('.tech-card[data-unit-id="' + id.replace(/["\\]/g, '\\$&') + '"]') : null;
