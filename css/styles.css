@@ -5299,6 +5299,121 @@
     body.tab-focus { overflow: visible !important; }
   }
 
+  /* ===================== Card ampliado =====================
+     Clicar num card o abre em tela cheia (mesmo esquema do modo destaque das
+     abas): o card só ganha .is-expanded e uma barra "Fechar". Um espaçador
+     (.card-focus-spacer) segura o lugar dele na lista. Ver initCardFocus(). */
+  .card-focus-bar { display: none; }
+  .card-focus-spacer { visibility: hidden; pointer-events: none; }
+
+  /* Sem travar a rolagem do fundo (overflow:hidden faria sumir a barra de
+     rolagem e a lista "pularia" de lugar); o card tem overscroll-behavior:contain. */
+  /* Os outros cards ficam fora do alcance do Tab/leitor de tela enquanto um está aberto. */
+
+  .tech-card.is-expanded {
+    position: fixed;
+    inset: 0;
+    z-index: 960; /* acima do modo destaque da aba (950); abaixo do cartão de abertura (1200) e do login */
+    width: auto;
+    max-width: none;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    cursor: default;
+    content-visibility: visible;
+    transform: none !important;
+    padding-bottom: calc(2rem + env(safe-area-inset-bottom));
+    animation: cardExpandIn 0.2s var(--ease) both;
+  }
+
+  @keyframes cardExpandIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tech-card.is-expanded { animation: none; }
+  }
+
+  .tech-card.is-expanded::before { display: none; }
+
+  .tech-card.is-expanded > .card-focus-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    flex-shrink: 0;
+    padding: calc(0.65rem + env(safe-area-inset-top)) max(clamp(0.75rem, 3vw, 2rem), env(safe-area-inset-left), env(safe-area-inset-right)) 0.65rem;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-ui);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .card-focus-label {
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--brand-primary);
+  }
+
+  /* Conteúdo numa coluna larga e centralizada, com letra um pouco maior. */
+  .tech-card.is-expanded > :not(.card-focus-bar) {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .tech-card.is-expanded > .card-top { border-bottom: 0; padding-top: 1.75rem; background: none; }
+  .tech-card.is-expanded > .card-top h2 { font-size: clamp(1.4rem, 3.2vw, 2rem); }
+  .tech-card.is-expanded > .card-body { font-size: 1rem; flex: 0 0 auto; }
+  .tech-card.is-expanded .tech-notes { min-height: 40vh; font-size: 1rem; }
+
+  /* Botão "Ampliar" no canto de cada card (visível sempre; mais forte ao passar o mouse). */
+  .card-expand-btn {
+    position: absolute;
+    top: 0.65rem;
+    right: 0.7rem;
+    z-index: 5;
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 10px;
+    border: 1px solid var(--border-ui);
+    background: var(--bg-card);
+    color: var(--brand-primary);
+    cursor: pointer;
+    opacity: 0.75;
+    transition: opacity 0.2s var(--ease), background 0.2s var(--ease), border-color 0.2s var(--ease);
+  }
+  .tech-card:hover > .card-expand-btn,
+  .card-expand-btn:focus-visible { opacity: 1; border-color: var(--brand-primary); background: rgba(0, 145, 194, 0.08); }
+  .card-expand-btn:focus-visible { outline: 3px solid rgba(0, 145, 194, 0.45); outline-offset: 2px; }
+  .tech-card.is-expanded > .card-expand-btn { display: none; }
+  /* Título do card não passa por baixo do botão. */
+  .tech-card:has(> .card-expand-btn) > .card-top, .tools-card:has(> .card-expand-btn) > h2 { padding-right: 3.4rem; }
+  .tech-card.is-expanded > .card-top { padding-right: 1.75rem; }
+
+  /* O botão flutuante do Argo some enquanto um card ocupa a tela toda. */
+  body.card-focus .argo-assistant-fab,
+  body.card-focus .argo-assistant-hint { display: none !important; }
+
+  @media print {
+    .card-focus-bar, .card-expand-btn { display: none !important; }
+  }
+
   /* ===================== Tela de Login ===================== */
   #loginScreen {
     position: fixed;
