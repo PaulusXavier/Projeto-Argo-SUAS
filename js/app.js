@@ -6779,7 +6779,7 @@ function toolsExtrasHtml() {
   <section class="tech-card tools-card" aria-label="Link de WhatsApp">
     <h2>Link de WhatsApp</h2>
     <label class="tools-lbl">Telefone com DDD<input id="waNum" class="tools-input" type="tel" inputmode="tel" autocomplete="off" maxlength="25" placeholder="ex.: (95) 99999-0000"></label>
-    <label class="tools-lbl">Mensagem pronta (opcional)<textarea id="waMsg" class="tools-input qr-text" rows="2" maxlength="300" placeholder="ex.: Olá! Aqui é do CRAS. Pode falar agora?"></textarea></label>
+    <label class="tools-lbl">Mensagem pronta (opcional)<textarea id="waMsg" spellcheck="true" lang="pt-BR" autocorrect="on" autocapitalize="sentences" class="tools-input qr-text" rows="2" maxlength="300" placeholder="ex.: Olá! Aqui é do CRAS. Pode falar agora?"></textarea></label>
     <div class="tools-chips" aria-label="Modelos de mensagem">${WA_MODELOS.map((m, k) => '<button type="button" class="tools-chip" data-wam="' + k + '">' + m[0] + '</button>').join('')}</div>
     <div id="waOut" class="pc-out" role="status" aria-live="polite"></div>
     <div class="tools-row">
@@ -6793,7 +6793,7 @@ function toolsExtrasHtml() {
       <p class="tools-hint">O WhatsApp não deixa ninguém ser adicionado a um grupo à força: cada pessoa entra tocando no link de convite. Aqui você manda esse convite para a lista inteira, uma conversa após a outra, sem salvar contato.</p>
       <label class="tools-lbl">Link de convite do grupo<input id="waGrpLink" class="tools-input" type="url" inputmode="url" autocomplete="off" spellcheck="false" maxlength="120" placeholder="https://chat.whatsapp.com/…"></label>
       <label class="tools-lbl">Telefones (um por linha; pode colar da planilha)<textarea id="waLoteNums" class="tools-input qr-text" rows="5" maxlength="9000" autocomplete="off" spellcheck="false" placeholder="(95) 99999-0000&#10;(95) 98888-1111"></textarea></label>
-      <label class="tools-lbl">Mensagem do convite (o link do grupo vai no final)<textarea id="waLoteMsg" class="tools-input qr-text" rows="3" maxlength="300">Olá! Aqui é do CRAS. Convidamos você para o nosso grupo de avisos no WhatsApp. Para entrar, é só tocar no link abaixo:</textarea></label>
+      <label class="tools-lbl">Mensagem do convite (o link do grupo vai no final)<textarea id="waLoteMsg" spellcheck="true" lang="pt-BR" autocorrect="on" autocapitalize="sentences" class="tools-input qr-text" rows="3" maxlength="300">Olá! Aqui é do CRAS. Convidamos você para o nosso grupo de avisos no WhatsApp. Para entrar, é só tocar no link abaixo:</textarea></label>
       <div id="waLoteOut" class="pc-out" role="status" aria-live="polite"></div>
       <ol id="waLoteFila" class="wa-fila" aria-label="Fila de convites"></ol>
       <div class="tools-row">
@@ -7491,7 +7491,7 @@ function renderToolsCard() {
     +   '<div class="notes-side"><div class="notes-side-top"><input id="toolNoteSearch" class="tools-input" type="search" placeholder="Buscar nas notas" aria-label="Buscar nas notas">'
     +   '<button type="button" class="btn-tech btn-primary" id="toolNoteNew">+ Nova</button></div>'
     +   '<ul id="toolNoteList" class="notes-list" aria-label="Suas notas"></ul></div>'
-    +   '<div class="notes-main"><textarea id="toolPad" class="tools-pad" aria-label="Texto da nota" placeholder="Escreva aqui. O texto é salvo automaticamente, cifrado, neste aparelho. Dica: Ctrl+S salva na hora."></textarea>'
+    +   '<div class="notes-main"><textarea id="toolPad" spellcheck="true" lang="pt-BR" autocorrect="on" autocapitalize="sentences" class="tools-pad" aria-label="Texto da nota" placeholder="Escreva aqui. O texto é salvo automaticamente, cifrado, neste aparelho. Dica: Ctrl+S salva na hora."></textarea>'
     +   '<div class="tools-bar"><span id="toolPadInfo" class="tools-hint" role="status"></span>'
     +   '<select id="toolPadTpl" class="tools-select" aria-label="Criar nota a partir de um modelo"><option value="">Modelo…</option><option value="atend">Atendimento</option><option value="visita">Visita domiciliar</option><option value="tel">Contato por telefone</option><option value="fam">Acompanhamento familiar</option><option value="reuniao">Reunião de equipe</option><option value="dia">Tarefas do dia</option></select>'
     +   '<button type="button" class="btn-tech btn-secondary" id="toolPadStamp" title="Inserir data e hora no cursor">Data/hora</button>'
@@ -8863,7 +8863,7 @@ function render() {
           ${renderUserDataFields(i.id)}
           <div class="notes-box">
             <label for="notes-${i.id}" class="label-tech">Anotações Técnicas / Conduta</label>
-            <textarea id="notes-${i.id}" class="tech-notes" placeholder="Registre aqui a avaliação, conduta ou observações técnicas..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
+            <textarea id="notes-${i.id}" class="tech-notes" spellcheck="true" lang="pt-BR" autocorrect="on" autocapitalize="sentences" placeholder="Registre aqui a avaliação, conduta ou observações técnicas..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
           </div>
           ${BPC_GUIDE_IDS.includes(i.id) ? '' : renderSecondUnitField(i.id, i.name)}
           <div class="image-attach-wrapper" id="img-wrap-${i.id}">
@@ -8915,7 +8915,7 @@ function render() {
         ${BPC_GUIDE_IDS.includes(i.id) ? '' : `
         <div class="notes-box">
           <label for="notes-${i.id}" class="label-tech">Anotações Técnicas / Conduta</label>
-          <textarea id="notes-${i.id}" class="tech-notes" placeholder="Registre aqui a avaliação, conduta ou observações técnicas..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
+          <textarea id="notes-${i.id}" class="tech-notes" spellcheck="true" lang="pt-BR" autocorrect="on" autocapitalize="sentences" placeholder="Registre aqui a avaliação, conduta ou observações técnicas..." oninput="saveNote('${i.id}', this.value)">${escapeHtml(safeStorage.get('note_'+i.id, ''))}</textarea>
         </div>`}
         ${BPC_GUIDE_IDS.includes(i.id) ? '' : renderSecondUnitField(i.id, i.name)}
         <div class="image-attach-wrapper" id="img-wrap-${i.id}">
@@ -11512,7 +11512,7 @@ function renderTranslatorCard() {
                 <button type="button" class="tradutor-speak-btn" id="tradutorSpeakFrom" onclick="tradutorSpeakToggle('from')">${ICONS.volume} Ouvir</button>
               </div>
             </div>
-            <textarea id="tradutorInput" placeholder="Digite ou fale aqui o texto em português..." oninput="tradutorHandleInput()" onkeydown="tradutorHandleInputKey(event)" maxlength="${TRADUTOR_MAX_CHARS}"></textarea>
+            <textarea id="tradutorInput" spellcheck="true" lang="pt-BR" autocorrect="on" autocapitalize="sentences" placeholder="Digite ou fale aqui o texto em português..." oninput="tradutorHandleInput()" onkeydown="tradutorHandleInputKey(event)" maxlength="${TRADUTOR_MAX_CHARS}"></textarea>
             <div class="tradutor-charcount" id="tradutorCharCount">0/${TRADUTOR_MAX_CHARS}</div>
           </div>
           <div class="tradutor-pane">
@@ -14443,7 +14443,7 @@ function renderNotesCard() {
         </div>
         ${renderUserDataFields(activeNote.id)}
         <label for="generalNoteArea" class="sr-only">Texto da anotação</label>
-        <textarea id="generalNoteArea" class="notes-textarea" placeholder="Escreva aqui um encaminhamento, resumo do caso ou observações..." oninput="saveGeneralNote('${activeNote.id}', this.value)">${escapeHtml(content)}</textarea>
+        <textarea id="generalNoteArea" spellcheck="true" lang="pt-BR" autocorrect="on" autocapitalize="sentences" class="notes-textarea" placeholder="Escreva aqui um encaminhamento, resumo do caso ou observações..." oninput="saveGeneralNote('${activeNote.id}', this.value)">${escapeHtml(content)}</textarea>
         <div class="notes-save-status" id="generalNoteStatus" aria-live="polite">
           ${ICONS.info}
           <span id="generalNoteStatusText">${content.length} caractere${content.length === 1 ? '' : 's'} · salva automaticamente</span>
@@ -18597,7 +18597,7 @@ function agendaEnsureModals() {
         <div id="agendaEntriesList" class="agenda-entries-list"></div>
         <div id="agendaEditBanner" class="agenda-edit-banner" hidden><span>Editando uma anotação</span><button type="button" onclick="agendaCancelEdit()">Cancelar edição</button></div>
         <label for="agendaNoteInput" class="agenda-sr-only">Anotação do dia</label>
-        <textarea id="agendaNoteInput" rows="3" maxlength="500" placeholder="Escrever nova anotação…" class="agenda-textarea" oninput="agendaUpdateNoteCounter()"></textarea>
+        <textarea id="agendaNoteInput" spellcheck="true" lang="pt-BR" autocorrect="on" autocapitalize="sentences" rows="3" maxlength="500" placeholder="Escrever nova anotação…" class="agenda-textarea" oninput="agendaUpdateNoteCounter()"></textarea>
         <div class="agenda-note-meta">
           <span id="agendaNoteHint" class="agenda-note-hint"></span>
           <span id="agendaNoteCounter" class="agenda-note-counter">0/500</span>
