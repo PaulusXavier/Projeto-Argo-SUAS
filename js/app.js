@@ -1546,6 +1546,60 @@ function toggleFavorite(id) {
 }
 
 // ---------------------------------------------------------------------
+// Recentes: a aba "Recentes" mostra as últimas 6 unidades que o técnico
+// abriu (tocou no card, ligou, abriu a rota, expandiu o registro técnico,
+// gerou a guia etc.), da mais recente para a mais antiga. Substitui a antiga
+// aba "Favoritos". Guardado só neste aparelho, como lista de ids públicos
+// do diretório (nenhum dado de usuário atendido), em localStorage puro.
+// ---------------------------------------------------------------------
+const RECENTS_KEY = 'argo_recentes';
+const RECENTS_MAX = 6;
+
+function getRecentIds() {
+  try {
+    const raw = localStorage.getItem(RECENTS_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(arr)) return [];
+    // descarta ids que não existem mais no diretório e limita a 6
+    return arr.filter(id => typeof id === 'string' && DATA.some(i => i.id === id)).slice(0, RECENTS_MAX);
+  } catch (e) {
+    return [];
+  }
+}
+
+function recordRecent(id) {
+  if (!id) return;
+  const list = getRecentIds();
+  if (list[0] === id) return; // já é o mais recente: nada a fazer
+  const next = [id, ...list.filter(x => x !== id)].slice(0, RECENTS_MAX);
+  try {
+    localStorage.setItem(RECENTS_KEY, JSON.stringify(next));
+  } catch (e) { return; }
+  // Só atualiza o número do chip. Não chama render(): refazer a lista no meio
+  // do clique apagaria o que a pessoa está digitando e, na aba Recentes,
+  // reordenaria os cards debaixo do dedo. A ordem nova aparece no próximo render.
+  updateChipCounts();
+}
+
+// Um único ouvinte no grid (fase de captura, para valer mesmo quando um botão
+// do card usa stopPropagation). Cards de unidade carregam data-unit-id.
+(function initRecentTracking() {
+  function attach() {
+    const grid = document.getElementById('grid');
+    if (!grid || grid.dataset.recentsBound) return;
+    grid.dataset.recentsBound = '1';
+    const handler = (e) => {
+      const card = e.target && e.target.closest ? e.target.closest('.tech-card[data-unit-id]') : null;
+      if (card) recordRecent(card.getAttribute('data-unit-id'));
+    };
+    grid.addEventListener('click', handler, true);
+    grid.addEventListener('focusin', handler, true);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', attach);
+  else attach();
+})();
+
+// ---------------------------------------------------------------------
 // Ordenar por proximidade: usa a geolocalização do navegador (posição
 // atual do dispositivo) e compara com a localização de cada equipamento,
 // obtida por geocodificação do endereço cadastrado via Nominatim
@@ -3210,7 +3264,7 @@ function renderCrasCard(i, query) {
 // cada troca de aba. Como o conjunto de categorias de cada unidade (i.cat)
 // nunca muda depois que o app carrega, a varredura das ~370 unidades × ~24
 // categorias é sempre o mesmo resultado, refeita à toa. Agora ela roda uma
-// única vez (cacheada em _staticChipCounts) e só o total de favoritos, que
+// única vez (cacheada em _staticChipCounts) e só o total de recentes, que
 // realmente muda com a interação da pessoa, é recalculado a cada chamada.
 let _staticChipCounts = null;
 function updateChipCounts() {
@@ -3248,7 +3302,7 @@ function updateChipCounts() {
     _staticChipCounts = counts;
   }
   const counts = _staticChipCounts;
-  counts.favoritos = getFavoriteIds().size;
+  counts.recentes = getRecentIds().length;
   counts.anotacoes = getNotesIndex().length;
 
   const setCount = (id, value) => {
@@ -3279,7 +3333,7 @@ function updateChipCounts() {
   setCount('count-cultura', counts.cultura);
   setCount('count-defesacivil', counts.defesacivil);
   setCount('count-conselhosdireitos', counts.conselhosdireitos);
-  setCount('count-favoritos', counts.favoritos);
+  setCount('count-recentes', counts.recentes);
   setCount('count-anotacoes', counts.anotacoes);
 }
 
@@ -8580,8 +8634,13 @@ function render() {
   // Busca (ver "Motor de busca"): várias palavras, sem acento, com relevância.
   // Só se nada for encontrado é que se tenta corrigir erros de digitação.
   const sq = argoParseQuery(document.getElementById('mainSearch').value);
+  // Aba "Recentes": não é uma categoria de i.cat, e sim a lista das últimas
+  // unidades abertas (máx. 6), guardada neste aparelho.
+  const isRecentTab = cat === 'recentes';
+  const recentIds = isRecentTab ? getRecentIds() : [];
   const matchCat = i => cat === 'all' ||
-                        (cat === 'social' ? (i.cat.includes('social') || i.cat.includes('idoso')) :
+                        (isRecentTab ? recentIds.includes(i.id) :
+                        cat === 'social' ? (i.cat.includes('social') || i.cat.includes('idoso')) :
                         i.cat.includes(cat));
   const argoScores = new Map();
   const runFilter = (q) => {
@@ -8647,6 +8706,12 @@ function render() {
       .map(x => x.item);
   }
 
+  // Aba "Recentes": a ordem é a do acesso (mais recente primeiro), sem
+  // separar interior nem agrupar por seção.
+  if (isRecentTab && !proximityState.active && !relevanceMode) {
+    filtered = filtered.slice().sort((a, b) => recentIds.indexOf(a.id) - recentIds.indexOf(b.id));
+  }
+
   // Em qualquer aba, mantém os equipamentos do interior como um
   // segmento à parte, sempre exibido por último, depois dos
   // equipamentos de Boa Vista.
@@ -8661,7 +8726,7 @@ function render() {
   // Aplicado em qualquer aba (inclusive "Todos"): tabs sem itens do
   // interior (CAS, CRAS, Anotações, etc.) simplesmente não sofrem alteração,
   // pois "interior" fica vazio e a condição abaixo não entra em ação.
-  if (!proximityState.active && !relevanceMode && cat !== 'cas' && cat !== 'cras' && cat !== 'anotacoes') {
+  if (!proximityState.active && !relevanceMode && !isRecentTab && cat !== 'cas' && cat !== 'cras' && cat !== 'anotacoes') {
     const boaVista = filtered.filter(i => !i.cat.includes('interior'));
     const interior = filtered.filter(i => i.cat.includes('interior'));
     if (boaVista.length && interior.length) {
@@ -8685,7 +8750,9 @@ function render() {
     }
     grid.innerHTML = `<div class="empty-state" style="padding:0">${
       (typeof ArgoMascot !== 'undefined')
-        ? ArgoMascot.emptyStateHTML('Nenhum registro encontrado', { type: 'notfound', hint: 'Tente ajustar os termos da busca ou selecionar outra categoria.' })
+        ? ((isRecentTab && !sq)
+            ? ArgoMascot.emptyStateHTML('Nenhuma unidade acessada ainda', { type: 'info', hint: 'As últimas 6 unidades que você abrir aparecem aqui, da mais recente para a mais antiga.' })
+            : ArgoMascot.emptyStateHTML('Nenhum registro encontrado', { type: 'notfound', hint: 'Tente ajustar os termos da busca ou selecionar outra categoria.' }))
         : '<strong style="display:block;padding:3.5rem 1.5rem">Nenhum registro encontrado</strong>'
     }${crossHtml}</div>`;
     return;
@@ -8705,7 +8772,7 @@ function render() {
     // ou por município no interior) sempre que o campo "group" do item mudar
     // em relação ao anterior na lista já filtrada.
     const prevItem = filtered[idx - 1];
-    const groupChanged = !proximityState.active && !relevanceMode && i.group && i.group !== (prevItem ? prevItem.group : undefined) && !i.cat.includes('cas') && !i.cat.includes('cras');
+    const groupChanged = !proximityState.active && !relevanceMode && !isRecentTab && i.group && i.group !== (prevItem ? prevItem.group : undefined) && !i.cat.includes('cas') && !i.cat.includes('cras');
     const groupDivider = groupChanged ? `
       <div class="group-section-divider" style="grid-column:1/-1; display:flex; align-items:center; gap:10px; margin:${idx === socialDividerIndex ? '0.6rem' : '1.25rem'} 0 0.15rem;">
         <span style="display:inline-flex; align-items:center; gap:6px; font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:var(--brand-primary); background:rgba(0,145,194,0.08); padding:5px 12px; border-radius:999px;">
@@ -8774,7 +8841,7 @@ function render() {
       ].filter(Boolean).join('');
 
       return dividers + `
-      <div class="tech-card informe-card">
+      <div class="tech-card informe-card" data-unit-id="${escapeHtml(i.id)}">
         <div class="card-top">
           <div style="display:flex; align-items:center; gap:0.55rem;">
             <span class="informe-badge">${ICONS.info}</span>
@@ -8820,7 +8887,7 @@ function render() {
     }
 
     return dividers + `
-    <div class="tech-card${isPolice ? ' police-card' : ''}${isInterior ? ' interior-card' : ''}">
+    <div class="tech-card${isPolice ? ' police-card' : ''}${isInterior ? ' interior-card' : ''}" data-unit-id="${escapeHtml(i.id)}">
       <div class="card-top">
         <div style="display:flex; align-items:center; gap:0.55rem;">
           ${isPolice ? `<span class="police-badge">${ICONS.police}</span>` : ''}
@@ -16140,7 +16207,8 @@ function navHashCat() {
 }
 
 function applyHashRoute() {
-  const cat = navHashCat();
+  let cat = navHashCat();
+  if (cat === 'favoritos') cat = 'recentes'; // atalho/link antigo da aba que foi substituída
   if (!cat || !appIsUnlocked()) return;
   const chip = document.querySelector('#filterBar .filter-chip[data-cat="' + cat.replace(/"/g, '') + '"]');
   // Troca a entrada atual por um endereço limpo; o clique abaixo cria a entrada
@@ -16702,9 +16770,9 @@ const ARGO_ASSISTANT_INTENTS = [
     action: { label: 'Abrir Notícias', run: () => argoAssistantGoTo('noticias'), reply: 'Abri as Notícias. Tente os temas rápidos no topo, como Bolsa Família ou CadÚnico.', mood: 'success' }
   },
   {
-    keys: ['favorito', 'favoritos', 'salvos', 'estrela'],
-    reply: 'Marque a estrela de uma unidade para guardá-la em "Favoritos" — assim os serviços que você mais usa ficam a um toque.',
-    action: { label: 'Abrir Favoritos', run: () => argoAssistantGoTo('favoritos'), reply: 'Abri seus Favoritos.', mood: 'success' }
+    keys: ['recente', 'recentes', 'recentemente', 'ultimos acessos', 'acessados', 'favorito', 'favoritos', 'salvos'],
+    reply: 'A aba "Recentes" guarda as últimas 6 unidades que você abriu — assim os serviços que você mais usa ficam a um toque.',
+    action: { label: 'Abrir Recentes', run: () => argoAssistantGoTo('recentes'), reply: 'Abri seus Recentes.', mood: 'success' }
   },
   {
     keys: ['anotacao', 'anotacoes', 'bloco de notas', 'calculadora', 'relogio', 'ferramentas', 'novo caso'],
@@ -17114,7 +17182,7 @@ function argoPick(list) { return list[Math.floor(Math.random() * list.length)]; 
 // que muda conforme a aba aberta no momento).
 const ARGO_TAB_TIPS = {
   all: 'Na busca, escreva bairro, serviço ou nome da unidade. Cada card tem "Gerar Guia" (ficha de encaminhamento), mapa e a estrela de favoritos.',
-  favoritos: 'Aqui ficam as unidades marcadas com estrela. Para tirar uma, toque na estrela de novo no card.',
+  recentes: 'Aqui ficam as últimas 6 unidades que você abriu, da mais recente para a mais antiga. Abrir outra unidade empurra a mais antiga para fora.',
   agenda: 'Toque num dia para anotar; cada anotação pode ser editada ou marcada como feita. O botão 🖨️ imprime o mês aberto. Use "Hoje" para voltar ao dia atual. Em PageUp/PageDown você troca de mês. Para ver as anotações em outros aparelhos, configure o código de sincronização. Pergunte ao Argo: "o que tem hoje?", "próximo feriado", "dias úteis em novembro" ou "anotar amanhã: ligar para o CRAS".',
   mapa: 'Toque num pino para ver a unidade, ou busque pelo nome. "Qual CRAS/CREAS atende o bairro?" mostra a unidade de referência. "Minha localização" lista as mais próximas.',
   tradutor: 'Escreva ou fale em português e escolha o idioma. Dá para salvar frases próprias para usar de novo.',
@@ -17190,7 +17258,7 @@ const ARGO_TAB_ALIASES = [
   ['cas', ['cas', 'registro cas', 'atendimento cas', 'registro de atendimento cas']],
   ['cras', ['cras', 'registro cras', 'atendimento cras', 'painel do cras', 'registro de atendimento cras']],
   ['all', ['inicio', 'pagina inicial', 'home', 'lista geral', 'rede intersetorial', 'rede de servicos', 'todos os servicos']],
-  ['favoritos', ['favoritos', 'favorito', 'meus favoritos']],
+  ['recentes', ['recentes', 'recente', 'recentemente', 'acessados recentemente', 'ultimos acessados', 'favoritos', 'favorito', 'meus favoritos']],
   ['hospitalar', ['hospitalar', 'hospitais', 'rede hospitalar', 'atencao basica']],
   ['saude', ['raps', 'caps', 'psicossocial', 'atencao psicossocial', 'saude mental']],
   ['tea', ['tea', 'autismo', 'deficiencia', 'pessoa com deficiencia']],
