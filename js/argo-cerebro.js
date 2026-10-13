@@ -32,6 +32,7 @@
 
   var CFG = {
     url: '',
+    interpretaMs: 6000,     // espera máxima pela interpretação da pergunta (passa direto se demorar)
     firstByteMs: 20000,     // espera máxima pela primeira resposta
     idleMs: 15000,          // silêncio máximo entre pedaços do streaming
     maxPergunta: 500,
@@ -929,6 +930,55 @@
       if (err && !err.partial) err.partial = full;
       throw err;
     });
+  }
+
+  // ---------------------------------------------------------------------
+  // Interpretação: antes de procurar ou responder, a IA lê a pergunta com a conversa e a devolve
+  // completa e autônoma ("e o horário?" -> "Qual o horário do CRAS Cauamé?"), no formato que as
+  // regras abaixo sabem consultar com dados reais. Não responde nada ao profissional.
+  // Qualquer problema (sem internet, Worker antigo, demora, resposta estranha) devolve null e o
+  // mascote segue com a pergunta original: nunca fica pior do que sem este passo.
+  // ---------------------------------------------------------------------
+  var INTENCOES = ['ubs_psicologo', 'territorio', 'diretorio', 'contagem', 'cid', 'conceito', 'norma', 'navegar', 'agenda', 'saudacao', 'fora_do_escopo', 'outro'];
+  function interpretar(text, opts) {
+    opts = opts || {};
+    text = String(text || '').trim().slice(0, CFG.maxPergunta);
+    if (!text || !aiOn() || typeof fetch !== 'function') return Promise.resolve(null);
+    if (piiBlock(text)) return Promise.resolve(null);
+    var agora = Date.now();
+    var recentes = session.aiTimes.filter(function (t) { return agora - t < 60000; });
+    if (recentes.length >= CFG.porMinuto) return Promise.resolve(null);   // cota local: a resposta tem prioridade
+    var hist = session.history.slice(-CFG.maxHistorico);
+    var ctl = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctl) ctl.abort(); }, CFG.interpretaMs);
+    if (opts.signal && ctl) {
+      if (opts.signal.aborted) ctl.abort(); else opts.signal.addEventListener('abort', function () { ctl.abort(); });
+    }
+    return fetch(CFG.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ v: 2, modo: 'interpretar', pergunta: text, historico: hist, pagina: String(opts.tabName || '').slice(0, 80) }),
+      signal: ctl ? ctl.signal : undefined
+    }).then(function (r) {
+      return r.ok ? r.json() : null;
+    }).then(function (j) {
+      clearTimeout(timer);
+      var i = j && j.interpretacao;
+      if (!i || typeof i !== 'object' || typeof i.pergunta !== 'string') return null;
+      var pergunta = i.pergunta.replace(/\s+/g, ' ').trim().slice(0, 300);
+      if (!pergunta || piiBlock(pergunta)) pergunta = text;
+      var bairro = typeof i.bairro === 'string' ? i.bairro.replace(/\s+/g, ' ').trim().slice(0, 60) : '';
+      if (!/^[A-Za-zÀ-ÿ0-9 .'\-ºª]*$/.test(bairro) || piiBlock(bairro)) bairro = '';
+      var esclarecer = typeof i.esclarecer === 'string' ? i.esclarecer.replace(/\s+/g, ' ').trim().slice(0, 240) : '';
+      if (piiBlock(esclarecer)) esclarecer = '';
+      return {
+        pergunta: pergunta,
+        intencao: INTENCOES.indexOf(i.intencao) >= 0 ? i.intencao : 'outro',
+        bairro: bairro,
+        esclarecer: esclarecer,
+        mudou: norm(pergunta) !== norm(text)
+      };
+    }).catch(function () { clearTimeout(timer); return null; });
   }
 
   // ---------------------------------------------------------------------
@@ -2030,7 +2080,7 @@
   }
 
   return {
-    init: init, setCid: setCid, cid: cidAsk, norm: norm, piiBlock: piiBlock, crisis: crisis, plan: plan, contagem: contagem,
+    interpretar: interpretar, init: init, setCid: setCid, cid: cidAsk, norm: norm, piiBlock: piiBlock, crisis: crisis, plan: plan, contagem: contagem,
     directory: function (t, tabCat) { return directory(t, session, tabCat); },
     glossary: glossaryScore, compose: { directory: composeDirectory, glossary: composeGlossary },
     remember: remember, reset: reset, session: session,
