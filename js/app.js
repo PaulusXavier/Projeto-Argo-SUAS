@@ -349,6 +349,8 @@ function lockApp(reason) {
   const appRoot = document.getElementById('appRoot');
   const loginScreen = document.getElementById('loginScreen');
   if (appRoot) appRoot.dataset.locked = 'true';
+  // (guarda pelo <body>: no carregamento da página as variáveis do card ampliado ainda não existem)
+  if (document.body.classList.contains('card-focus') && typeof closeCardFocus === 'function') closeCardFocus();
   if (typeof closeTabFocus === 'function') closeTabFocus();
   if (argoAssistantCtrl && typeof argoAssistantCtrl.close === 'function') argoAssistantCtrl.close();
   if (argoAssistantCtrl && typeof argoAssistantCtrl.reset === 'function') argoAssistantCtrl.reset();
@@ -15977,6 +15979,8 @@ document.getElementById('tabFocusSearch').addEventListener('input', (e) => {
 });
 
 window.addEventListener('popstate', () => {
+  // Card ampliado por cima da aba: o "voltar" fecha só o card (ver initCardFocus).
+  if (cardFocusPopExpected || isCardFocusOpen()) return;
   if (tabFocusPopExpected) { tabFocusPopExpected = false; return; }
   if (isTabFocusOpen()) {
     tabFocusHistoryPushed = false;
@@ -15986,6 +15990,7 @@ window.addEventListener('popstate', () => {
 
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape' || !isTabFocusOpen()) return;
+  if (isCardFocusOpen()) return; // o Esc fecha primeiro o card ampliado
   // Se houver algo mais "por cima" (gaveta de categorias, cartão de abertura,
   // janelas da agenda), o Esc pertence a esse elemento primeiro.
   if (categorySidebar.classList.contains('is-open')) return;
@@ -15998,6 +16003,176 @@ document.addEventListener('keydown', (e) => {
   if (agendaModalOpen) return;
   closeTabFocus();
 });
+
+/* ---- Card ampliado: clicar num card o abre em tela cheia ----
+   Mesmo mecanismo do modo destaque das abas: o card NÃO é remontado nem
+   copiado — ele só ganha a classe .is-expanded (position: fixed, ver
+   styles.css) e uma barra com o botão "Fechar". Um espaçador do mesmo
+   tamanho segura o lugar dele na lista, então ao fechar a rolagem continua
+   exatamente onde estava. Fecha com o botão, Esc ou "voltar" do celular.
+   Se a lista for refeita (ex.: depois de anexar um arquivo), o card é
+   reaberto sozinho. */
+const CARD_FOCUS_SELECTOR = '.tech-card[data-unit-id], .cas-card, .cras-card, .tools-card';
+const CARD_FOCUS_IGNORE = 'a, button, input, textarea, select, label, summary, canvas, video, audio, iframe, ' +
+  '[contenteditable], .leaflet-container, .card-fold > :not(summary), .pdf-preview, .image-preview, ' +
+  '.card-actions, .card-quick, .card-focus-bar, .cras-lookup, [data-no-expand]';
+let cardFocusEl = null;
+let cardFocusId = '';
+let cardFocusSpacer = null;
+let cardFocusFolds = [];
+let cardFocusHistoryPushed = false;
+let cardFocusPopExpected = false;
+
+function isCardFocusOpen() {
+  return !!cardFocusEl;
+}
+
+function cardFocusApply(card) {
+  const spacer = document.createElement('div');
+  spacer.className = 'card-focus-spacer';
+  spacer.setAttribute('aria-hidden', 'true');
+  spacer.style.height = card.offsetHeight + 'px';
+  card.parentNode.insertBefore(spacer, card);
+
+  const bar = document.createElement('div');
+  bar.className = 'card-focus-bar';
+  bar.innerHTML =
+    '<span class="card-focus-label">Visão ampliada</span>' +
+    '<button type="button" class="tab-focus-close card-focus-close" aria-label="Fechar e voltar à lista" title="Fechar (Esc)">' +
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+    '<span>Fechar</span></button>';
+  bar.querySelector('button').addEventListener('click', () => closeCardFocus());
+
+  // "Registro técnico" abre junto, para ver tudo; volta ao estado anterior ao fechar.
+  cardFocusFolds = [];
+  card.querySelectorAll('details.card-fold').forEach(d => {
+    cardFocusFolds.push({ el: d, wasOpen: d.open });
+    d.open = true;
+  });
+
+  const h = card.querySelector('h2');
+  card.classList.add('is-expanded');
+  card.setAttribute('role', 'dialog');
+  card.setAttribute('aria-modal', 'true');
+  if (h) card.setAttribute('aria-label', h.textContent.trim());
+  card.insertBefore(bar, card.firstChild);
+  card.scrollTop = 0;
+
+  cardFocusEl = card;
+  cardFocusSpacer = spacer;
+  cardFocusId = card.getAttribute('data-unit-id') || '';
+  document.body.classList.add('card-focus');
+  setTabFocusInert(true);
+  refreshMapSizeAfterFocusChange();
+  requestAnimationFrame(() => {
+    const b = card.querySelector('.card-focus-close');
+    if (b) { try { b.focus({ preventScroll: true }); } catch (e) { /* ignora */ } }
+  });
+}
+
+function cardFocusRelease() {
+  const card = cardFocusEl;
+  if (card) {
+    card.classList.remove('is-expanded');
+    card.removeAttribute('role');
+    card.removeAttribute('aria-modal');
+    card.removeAttribute('aria-label');
+    const bar = card.querySelector(':scope > .card-focus-bar');
+    if (bar) bar.remove();
+  }
+  if (cardFocusSpacer) cardFocusSpacer.remove();
+  cardFocusFolds.forEach(f => { if (f.el.isConnected) f.el.open = f.wasOpen; });
+  cardFocusFolds = [];
+  cardFocusEl = null;
+  cardFocusSpacer = null;
+  document.body.classList.remove('card-focus');
+  // Se a aba ainda está em tela cheia, a página de fundo continua inerte.
+  setTabFocusInert(isTabFocusOpen());
+}
+
+function openCardFocus(card) {
+  if (!card || cardFocusEl === card) return;
+  if (cardFocusEl) cardFocusRelease();
+  cardFocusApply(card);
+  try {
+    history.pushState({ argoCardFocus: true }, '');
+    cardFocusHistoryPushed = true;
+  } catch (e) {
+    cardFocusHistoryPushed = false;
+  }
+}
+
+function closeCardFocus(opts) {
+  if (!cardFocusEl) return;
+  const card = cardFocusEl;
+  cardFocusRelease();
+  if (cardFocusHistoryPushed) {
+    cardFocusHistoryPushed = false;
+    if (!(opts && opts.fromPopstate)) {
+      cardFocusPopExpected = true;
+      setTimeout(() => { cardFocusPopExpected = false; }, 600);
+      try { history.back(); } catch (e) { cardFocusPopExpected = false; }
+    }
+  }
+  refreshMapSizeAfterFocusChange();
+  if (card.isConnected) {
+    try { card.scrollIntoView({ block: 'nearest' }); } catch (e) { /* ignora */ }
+  }
+}
+
+(function initCardFocus() {
+  const grid = document.getElementById('grid');
+  if (!grid) return;
+
+  grid.addEventListener('click', (e) => {
+    const t = e.target;
+    if (!t || !t.closest) return;
+    const card = t.closest(CARD_FOCUS_SELECTOR);
+    if (!card || card.classList.contains('is-expanded')) return;
+    if (t.closest(CARD_FOCUS_IGNORE)) return;
+    // Cartões de ferramenta (calculadoras etc.) só ampliam pelo título.
+    if (card.classList.contains('tools-card') && !t.closest('h2')) return;
+    // Quem está selecionando texto para copiar não quer ampliar.
+    const sel = window.getSelection && window.getSelection();
+    if (sel && !sel.isCollapsed && String(sel).trim()) return;
+    openCardFocus(card);
+  });
+
+  window.addEventListener('popstate', () => {
+    if (cardFocusPopExpected) { cardFocusPopExpected = false; return; }
+    if (isCardFocusOpen()) {
+      cardFocusHistoryPushed = false;
+      closeCardFocus({ fromPopstate: true });
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !isCardFocusOpen()) return;
+    if (categorySidebar.classList.contains('is-open')) return;
+    const greeting = document.getElementById('argoGreetingModal');
+    if (greeting && greeting.classList.contains('visible')) return;
+    closeCardFocus();
+  });
+
+  // A lista foi refeita (busca, anexo salvo...): o card aberto saiu do DOM.
+  // Reabre o mesmo cartão se ele ainda existir; senão, fecha.
+  new MutationObserver(() => {
+    if (!cardFocusEl || cardFocusEl.isConnected) return;
+    const id = cardFocusId;
+    const again = id ? grid.querySelector('.tech-card[data-unit-id="' + id.replace(/["\\]/g, '\\$&') + '"]') : null;
+    if (cardFocusSpacer) cardFocusSpacer.remove();
+    cardFocusEl = null;
+    cardFocusSpacer = null;
+    if (again) { cardFocusApply(again); return; }
+    cardFocusRelease();
+    if (cardFocusHistoryPushed) {
+      cardFocusHistoryPushed = false;
+      cardFocusPopExpected = true;
+      setTimeout(() => { cardFocusPopExpected = false; }, 600);
+      try { history.back(); } catch (e) { cardFocusPopExpected = false; }
+    }
+  }).observe(grid, { childList: true, subtree: true });
+})();
 
 // Sugestões enquanto digita (ver "Sugestões enquanto digita"): busca principal e busca do modo destaque.
 const argoSuggestLists = [
@@ -23820,12 +23995,14 @@ function argoUnitsForUi(units) {
 // no fluxo local: socorro, dado pessoal, agenda, "abrir aba", frases muito curtas, "Aprofundar com a IA",
 // "tentar de novo" e a resposta ao "de qual bairro?". Sem IA, sem internet ou se a interpretação falhar
 // ou demorar, o fluxo local roda com a pergunta original (nunca fica pior do que antes).
+// Mensagem longa (mais de 300 caracteres, ex.: um caso descrito em termos gerais) já é autônoma: não é reescrita,
+// senão a interpretação a encurtaria para ~200 caracteres e a IA perderia os detalhes.
 function argoAssistantAskHybrid(rawText, meta) {
   const B = argoBrain();
   meta = meta || {};
   const texto = String(rawText == null ? '' : rawText).trim();
   const pular = !B || typeof B.interpretar !== 'function' || !B.aiOn() || meta.forceAI || meta.regen || meta.semInterpretar ||
-    texto.length < 4 || _ubsPsiAguarda || B.crisis(texto) || B.piiBlock(texto) || argoAgendaAsk(texto) || argoOpenTabAsk(texto);
+    texto.length < 4 || texto.length > 300 || _ubsPsiAguarda || B.crisis(texto) || B.piiBlock(texto) || argoAgendaAsk(texto) || argoOpenTabAsk(texto);
   if (pular) return argoAssistantAskHybridCore(rawText, meta);
   const tab = argoActiveTabInfo();
   return B.interpretar(texto, { tabName: tab.name }).then(i => {
@@ -23874,7 +24051,10 @@ function argoAssistantAskHybridCore(rawText, meta) {
   if (tabOpen) return tabOpen;
 
   // UBS com psicólogo por bairro: responde na hora com os dados do diretório (a IA entra só se a pessoa pedir).
-  const ubsPsi = argoUbsPsicoAsk(rawText);
+  // Mensagem longa (mais de 300 caracteres: um caso descrito, um pedido de texto) vai à IA com as palavras da pessoa;
+  // citar uma unidade ou um bairro no meio dela não pode virar resposta pronta do diretório.
+  const longMsg = rawText.trim().length > 300 && B.aiOn();
+  const ubsPsi = longMsg ? null : argoUbsPsicoAsk(rawText);
   if (ubsPsi) return keep(ubsPsi, ubsPsi.units);
 
   let plan = { kind: 'none' };
@@ -23882,7 +24062,7 @@ function argoAssistantAskHybridCore(rawText, meta) {
   if (!meta.forceAI && !meta.regen) {
     plan = B.plan(rawText, { tabCat: tab.cat });
     // Socorro e consulta ao diretório (telefone, endereço, horário, bairro) continuam respondidos na hora, com os dados reais.
-    if (plan.kind === 'crisis' || plan.kind === 'directory') {
+    if (plan.kind === 'crisis' || (plan.kind === 'directory' && !longMsg)) {
       return keep(argoAssistantToUi(plan.result, rawText, false), plan.result.units);
     }
     // Dúvida de conteúdo (pergunta de verdade): com a IA ligada, ela responde com a norma e a conversa; o verbete pronto
@@ -23893,7 +24073,7 @@ function argoAssistantAskHybridCore(rawText, meta) {
     local = argoAssistantAsk(rawText);
     // uma palavra solta ("serviço", "unidade") não deve sequestrar uma pergunta que a IA entende melhor
     const longQ = questionLike && B.aiOn();
-    if (local && !local.fallback && (local.score || 0) >= 2 && ((local.score || 0) >= 4 || !longQ)) return keep(local);
+    if (!longMsg && local && !local.fallback && (local.score || 0) >= 2 && ((local.score || 0) >= 4 || !longQ)) return keep(local);
   } else {
     local = argoAssistantAsk(rawText);
   }
@@ -24080,7 +24260,7 @@ function argoAskAI(rawText, tab, fallbackResult) {
 
   /* ---- deslizar para trocar de aba (celular, modo destaque) ---- */
   const SWIPE_BLOCK = 'input, textarea, select, button, a, summary, label, table, pre, canvas, [contenteditable], ' +
-    '.leaflet-container, [data-no-swipe], #agendaBook, #agendaCalendarGrid, .pdftools-fileitem, .tab-focus-bar, #notesRoot';
+    '.leaflet-container, [data-no-swipe], #agendaBook, #agendaCalendarGrid, .pdftools-fileitem, .tab-focus-bar, #notesRoot, .tech-card.is-expanded';
   const LIST_ONLY = ['pdftools', 'tradutor', 'noticias', 'mapa', 'agenda', 'appsext', 'ferramentas', 'anotacoes'];
   let sx = 0, sy = 0, st = 0, tracking = false;
 
