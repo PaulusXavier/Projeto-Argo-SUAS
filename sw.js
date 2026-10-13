@@ -35,7 +35,6 @@ const ASSETS = [
   './favicon.ico',
   './apple-touch-icon.png',
   './assets/img/icon-192.png',
-  './assets/img/mascote-192.png',
   './assets/img/icon-512.png',
   './assets/img/icon-maskable-512.png',
   './assets/img/argo-navis-historico.jpg',
