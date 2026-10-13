@@ -2560,6 +2560,168 @@ function cleanPrintField(value, fallback) {
 
 // Cartão de atalho em destaque (título + descrição + tipo de destino),
 // usado pelos painéis CRAS (RMA) e CAS (registros e planilhas).
+// ---------------------------------------------------------------------
+// "Qual UBS tem psicólogo para este bairro?" (Boa Vista). Lê as UBS do
+// diretório (grupo "UBS (Boa Vista)"): quem tem atendimento psicológico e
+// os bairros de abrangência de cada macroárea, escritos na descrição.
+// Serve a aba CRAS (campo de busca) e o mascote/IA (pergunta em texto livre).
+// ---------------------------------------------------------------------
+let _ubsPsiIdx = null;
+function ubsPsiIndice() {
+  if (_ubsPsiIdx) return _ubsPsiIdx;
+  const entradas = [];            // { key, label, macro, d, campo }
+  const semPsi = [];              // UBS do bairro sem psicólogo próprio (só para avisar)
+  const plano = h => String(h || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  (typeof DATA !== 'undefined' ? DATA : []).forEach(d => {
+    if (!/^ubs-/.test(d.id || '')) return;
+    const texto = plano((d.desc || '') + ' ' + (d.services || ''));
+    const psi = /atendimento psicol[oó]gico|psic[oó]logo\(a\) pr[oó]prio/i.test(texto) && !/⚠️/.test(d.desc || '');
+    if (d.group !== 'UBS (Boa Vista)' && !/Boa Vista/.test(d.address || '')) return;
+    if (!psi) { semPsi.push(d); return; }
+    const m = plano(d.desc).match(/Bairros de abrang[eê]ncia \(Macro[aá]rea (\d+)\):\s*(.+?)\.?\s*$/i);
+    if (m) {
+      m[2].split(/,(?![^()]*\))/).forEach(item => {
+        const par = item.match(/^\s*([^()]+?)\s*(?:\(([^)]*)\))?\s*$/);
+        if (!par) return;
+        [par[1], par[2]].filter(Boolean).forEach((nome, k) => {
+          const limpo = nome.replace(/^(Conj\.|Cid\.)\s*/i, c => c.toLowerCase().startsWith('cid') ? 'Cidade ' : 'Conjunto ');
+          entradas.push({ key: crasNormalize(limpo), label: par[1].trim(), macro: Number(m[1]), d, campo: false, alias: k === 1 });
+        });
+      });
+    } else {
+      // Sem lista de abrangência (informação de campo): vale para o bairro onde a UBS fica.
+      const b = texto.match(/localizada no bairro ([^.]+)\./i);
+      const vila = (d.address || '').match(/\(Conj\. ([^)]+)\)/);
+      if (b) entradas.push({ key: crasNormalize(b[1]), label: b[1].trim(), macro: null, d, campo: true });
+      if (vila) entradas.push({ key: crasNormalize(vila[1]), label: vila[1].trim(), macro: null, d, campo: true });
+    }
+  });
+  const bairros = Array.from(new Set(entradas.map(e => e.label))).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  _ubsPsiIdx = { entradas, semPsi, bairros };
+  return _ubsPsiIdx;
+}
+
+// Procura o bairro digitado. Devolve grupos { label, macro, campo, ubs:[d] } (um por bairro encontrado).
+function ubsPsiBuscar(raw) {
+  const q = crasNormalize(raw).replace(/^(bairro|no bairro|do bairro|na|no|do|da)\s+/, '').trim();
+  if (!(q.length >= 3 || (q.length >= 2 && /^\d+$/.test(q)))) return null;
+  const idx = ubsPsiIndice();
+  // Nome exato e nomes que contêm a busca (ex.: "Caranã" acha "Jardim Caranã"); o apelido entre
+  // parênteses (ex.: "Cid. Satélite IV") só vale quando nada mais combina.
+  const contem = e => e.key.includes(q) || (e.key.length >= 4 && q.includes(e.key));
+  let hits = idx.entradas.filter(e => !e.alias && (e.key === q || contem(e)));
+  if (!hits.length) hits = idx.entradas.filter(e => e.alias && contem(e));
+  const grupos = [];
+  hits.forEach(e => {
+    // mesmo bairro (mesmo nome) vira um grupo só, mesmo que a informação venha de fontes diferentes
+    let g = grupos.find(x => crasNormalize(x.label) === crasNormalize(e.label));
+    if (!g) { g = { label: e.label, macro: e.macro, campo: false, ubs: [], campoIds: [] }; grupos.push(g); }
+    if (g.macro == null && e.macro != null) g.macro = e.macro;
+    if (!g.ubs.includes(e.d)) g.ubs.push(e.d);
+    if (e.campo && !g.campoIds.includes(e.d.id)) g.campoIds.push(e.d.id);
+  });
+  grupos.forEach(g => { g.campo = g.campoIds.length > 0; });
+  const noBairro = idx.semPsi.filter(d => crasNormalize(d.address).includes(q) && q.length >= 4);
+  return { q, grupos, noBairro };
+}
+
+function ubsPsiFone(d) {
+  const f = (d.phones || []).filter(p => /\d{4}/.test(p));
+  return f.length ? f[0] : '';
+}
+
+function ubsPsiHtml(raw) {
+  const r = ubsPsiBuscar(raw);
+  if (!r) return '';
+  if (!r.grupos.length) {
+    return `<div class="cras-lookup-note">Não encontrei este bairro entre os que têm UBS com psicólogo. Confira a grafia ou escolha um da lista.${
+      r.noBairro.length ? ' Há UBS no bairro (' + r.noBairro.map(d => escapeHtml(d.name)).join(', ') + '), mas sem psicólogo registrado no diretório; confirme na própria unidade.' : ''}</div>`;
+  }
+  return r.grupos.map(g => {
+    const linhas = g.ubs.map(d => {
+      const fone = ubsPsiFone(d);
+      const tel = fone ? ` · <a href="tel:${fone.replace(/\D/g, '')}">${escapeHtml(fone)}</a>` : '';
+      return `<div class="cras-result-row">
+        <span class="team-name">${escapeHtml(d.name)}</span>
+        <span class="team-role-badge">${g.campoIds.includes(d.id) ? 'Informação de campo' : 'Macroárea ' + g.macro}</span>
+        <span class="cras-result-where">${escapeHtml(String(d.address || '').replace(/^N\/?A$/i, ''))}${tel}</span>
+      </div>`;
+    }).join('');
+    const aviso = '';
+    return `<div class="ubs-psi-grupo"><div class="ubs-psi-bairro">${escapeHtml(g.label)}</div>${linhas}${aviso}</div>`;
+  }).join('') + (r.noBairro.length ? `<div class="cras-lookup-note">${r.noBairro.map(d => escapeHtml(d.name)).join(', ')} fica${r.noBairro.length > 1 ? 'm' : ''} no bairro, mas sem psicólogo registrado; o atendimento psicológico é nas UBS acima.</div>` : '') + `<div class="cras-lookup-note">Dados do diretório do Argo. Confirme agenda e documentos exigidos direto com a UBS antes de encaminhar.</div>`;
+}
+
+// Pergunta em texto livre ao mascote: "qual UBS tem psicólogo no Caimbé?".
+// Só responde quando há UBS/posto/unidade de saúde e psicologia na frase; senão deixa seguir.
+function argoUbsPsicoAsk(rawText) {
+  const n = argoNorm(rawText);
+  if (!n) return null;
+  if (!/\b(psicolog\w*|saude mental)\b/.test(n)) return null;
+  if (!/\b(ubs|ubss|posto|postos|unidade basica|unidades basicas|unidade de saude|unidades de saude|centro de saude)\b/.test(n)) return null;
+  const idx = ubsPsiIndice();
+  if (!idx.entradas.length) return null;
+  const padded = ' ' + n + ' ';
+  // bairro citado: o maior nome conhecido que aparece na frase
+  const cand = Array.from(new Set(idx.entradas.map(e => e.key))).filter(k => k.length >= 3 && padded.indexOf(' ' + k + ' ') > -1)
+    .sort((a, b) => b.length - a.length);
+  const irParaAba = (bairro) => ({
+    label: 'Abrir na aba CRAS',
+    run: () => {
+      argoAssistantGoTo('cras');
+      setTimeout(() => {
+        const inp = document.getElementById('ubsPsiInput');
+        if (!inp) return;
+        inp.value = bairro; crasRunUbsPsi(bairro);
+        const sec = document.getElementById('cras-sec-equipe'); if (sec) { sec.open = true; sec.scrollIntoView({ block: 'start' }); }
+      }, 350);
+      if (argoAssistantCtrl && argoAssistantCtrl.close) argoAssistantCtrl.close();
+    },
+    reply: 'Abri a busca na aba do CRAS.', mood: 'success'
+  });
+  if (!cand.length) {
+    return {
+      reply: 'Eu consigo dizer qual UBS de Boa Vista tem psicólogo para cada bairro. **De qual bairro é a pessoa?** Por exemplo: “Qual UBS tem psicólogo no Caimbé?”',
+      mood: 'info',
+      quickActions: [irParaAba('')]
+    };
+  }
+  const r = ubsPsiBuscar(cand[0]);
+  if (!r || !r.grupos.length) return null;
+  const B = argoBrain();
+  const linhas = [];
+  r.grupos.forEach(g => {
+    linhas.push('Para **' + g.label + '**' + (g.macro ? ' (Macroárea ' + g.macro + ')' : '') + ':');
+    g.ubs.forEach(d => linhas.push('- **' + d.name + '**' + (ubsPsiFone(d) ? ' · ' + ubsPsiFone(d) : '') + (g.campoIds.includes(d.id) ? ' (informação de campo: confirme se há psicólogo(a) e agenda)' : '')));
+  });
+  if (r.noBairro.length) linhas.push('', r.noBairro.map(d => d.name).join(', ') + (r.noBairro.length > 1 ? ' ficam' : ' fica') + ' no bairro, mas sem psicólogo registrado: o atendimento psicológico é nas UBS acima.');
+  linhas.push('', 'Os dados são do diretório do Argo. Confirme agenda e documentos com a UBS antes de encaminhar.');
+  const label = r.grupos[0].label;
+  const acts = [irParaAba(label)];
+  if (B && B.aiOn && B.aiOn()) {
+    acts.push({ label: '✨ Aprofundar com a IA', ask: 'Quais UBS de Boa Vista atendem com psicólogo o bairro ' + label + ' e como a pessoa chega a esse atendimento? Responda só com o que consta no diretório e nas normas.', force: true });
+  }
+  const unidades = [];
+  r.grupos.forEach(g => g.ubs.forEach(d => { if (!unidades.includes(d)) unidades.push(d); }));
+  return {
+    reply: linhas.join('\n'),
+    mood: 'success',
+    badge: 'Saúde mental · UBS',
+    quickActions: acts,
+    units: argoUnitsForUi(unidades.slice(0, 5).map(d => ({
+      id: d.id, name: d.name, fullName: d.fullName || '', group: d.group || '', cat: Array.isArray(d.cat) ? d.cat.slice() : [],
+      address: String(d.address || '').replace(/^N\/?A$/i, ''), hours: String(d.hours || ''), phones: (d.phones || []).filter(p => /\d{4}/.test(p)),
+      website: d.website || '', services: String(d.services || '')
+    })))
+  };
+
+}
+
+function crasRunUbsPsi(value) {
+  const out = document.getElementById('ubsPsiResult');
+  if (out) out.innerHTML = ubsPsiHtml(value);
+}
+
 function renderRegistroTile(l) {
   const url = l.url || '';
   let meta = l.meta;
@@ -2714,6 +2876,17 @@ function crasLookupHtml(raw) {
     : `<div class="cras-lookup-note">Nenhum bairro com esse nome na abrangência deste CRAS. Confira a grafia ou toque em um dos bairros da lista.</div>`;
 }
 
+// Seções recolhidas do painel CRAS, lembradas no aparelho ({ chave: true|false }).
+function crasSecoesFechadas() {
+  try { return JSON.parse(localStorage.getItem('argo.crasSecoes') || '{}') || {}; } catch (e) { return {}; }
+}
+function crasSalvarSecao(chave, fechada) {
+  try {
+    const m = crasSecoesFechadas(); m[chave] = fechada;
+    localStorage.setItem('argo.crasSecoes', JSON.stringify(m));
+  } catch (e) { /* sem armazenamento: a seção só não fica lembrada */ }
+}
+
 function renderCrasCard(i, query) {
   const q = query || null; // consulta estruturada (argoParseQuery) ou null
 
@@ -2802,6 +2975,14 @@ function renderCrasCard(i, query) {
           <div class="cras-lookup-result" id="crasBairroResult" role="status" aria-live="polite"></div>
         </div>
 
+        <div class="cras-lookup" role="search" aria-label="Buscar UBS com psicólogo por bairro">
+          <label class="cras-lookup-label" for="ubsPsiInput">Qual UBS tem psicólogo para este bairro?</label>
+          <input id="ubsPsiInput" class="cras-lookup-input" type="search" list="ubsPsiBairros" placeholder="Digite o bairro, por exemplo: Caimbé" autocomplete="off" autocapitalize="words" enterkeyhint="search">
+          <datalist id="ubsPsiBairros">${ubsPsiIndice().bairros.map(b => `<option value="${escapeHtml(b)}"></option>`).join('')}</datalist>
+          <div class="cras-lookup-result" id="ubsPsiResult" role="status" aria-live="polite"></div>
+          <button type="button" class="cras-nav-btn ubs-psi-ask" id="ubsPsiAsk">Perguntar ao Argo (mascote e IA)</button>
+        </div>
+
         <div class="team-tables">
           <div class="team-subcard">
             <div class="team-subcard-header fixa">${ICONS.map} Equipe de Referência Territorial</div>
@@ -2845,37 +3026,42 @@ function renderCrasCard(i, query) {
         </div>
   ` : '';
 
-  return `
-    <div class="tech-card cras-card">
-      <div class="card-top">
-        <div style="display:flex; justify-content:space-between; align-items:start;">
-          <div style="display:flex; align-items:center; gap:0.55rem;">
-            <span class="cras-badge">${ICONS.building}</span>
-            <h2 style="margin:0;">${i.name}</h2>
-          </div>
-        </div>
-        <span class="subtitle">🏢 Equipe Técnica e Atendimento CRAS · Sistemas Municipais, Federais e RMA</span>
-      </div>
-      <div class="card-body">
-        <div class="cras-section-title">${ICONS.map} Informações Gerais</div>
+  // Seções recolhíveis (<details>): o estado fica lembrado no aparelho e a
+  // busca global sempre abre todas, para o resultado não ficar escondido.
+  const fechadas = crasSecoesFechadas();
+  function secao(chave, titulo, corpo, fechadaPadrao) {
+    const fechada = q ? false : (chave in fechadas ? fechadas[chave] : !!fechadaPadrao);
+    return `
+        <details class="cras-sec" id="cras-sec-${chave}" data-sec="${chave}"${fechada ? '' : ' open'}>
+          <summary class="cras-section-title">${titulo}<span class="cras-sec-caret" aria-hidden="true"></span></summary>
+          <div class="cras-sec-body">${corpo}</div>
+        </details>`;
+  }
+
+  const navItens = [
+    ['rma', 'Registro mensal'],
+    ...(hasTeam ? [['equipe', 'Equipe']] : []),
+    ['sistemas', 'Sistemas'],
+    ['info', 'Informações']
+  ];
+  const navHtml = `<nav class="cras-nav" aria-label="Ir para uma seção do painel">${
+    navItens.map(([k, t]) => `<button type="button" class="cras-nav-btn" data-cras-goto="${k}">${t}</button>`).join('')
+  }</nav>`;
+
+  const infoCorpo = `
         <div class="info-group"><span class="info-icon">${ICONS.map}</span><div><span class="label-tech">Localização</span>${i.address}</div></div>
         <div class="info-group"><span class="info-icon">${ICONS.clock}</span><div><span class="label-tech">Disponibilidade</span>${i.hours}</div></div>
         <div class="info-group"><span class="info-icon">${ICONS.phone}</span><div><span class="label-tech">Contato Técnico</span>${phoneHtml}</div></div>
         <div class="desc-box">
           <span class="label-tech">Escopo do Painel</span>
           ${i.desc}
-        </div>
+        </div>`;
 
-        <div class="cras-section-title">${ICONS.barchart} Registro Mensal (RMA)</div>
-        <div class="cras-rma-grid">
-          ${rmaTiles || emptyRow}
-        </div>
+  const rmaCorpo = `<div class="cras-rma-grid">${rmaTiles || emptyRow}</div>`;
 
-        ${hasTeam ? `<div class="cras-section-title">${ICONS.building} Equipe Técnica</div>` : ''}
-        ${teamSection}
-        ${i.teamPanelLink ? `<div class="cras-link-list" style="margin-top:0.6rem;">${linkRow(i.teamPanelLink.label, i.teamPanelLink.url, ICONS[i.teamPanelLink.icon] || ICONS.form)}</div>` : ''}
+  const equipeCorpo = `${teamSection}${i.teamPanelLink ? `<div class="cras-link-list" style="margin-top:0.6rem;">${linkRow(i.teamPanelLink.label, i.teamPanelLink.url, ICONS[i.teamPanelLink.icon] || ICONS.form)}</div>` : ''}`;
 
-        <div class="cras-section-title">${ICONS.folder} Atalhos e Sistemas</div>
+  const sistemasCorpo = `
         <div class="cras-groups">
           <div class="cras-group">
             <div class="cras-group-header">Sistemas Municipais e Gestão</div>
@@ -2897,7 +3083,27 @@ function renderCrasCard(i, query) {
               ${driveRows || emptyRow}
             </div>
           </div>
+        </div>`;
+
+  // Ordem pensada no uso diário: registro e equipe primeiro, sistemas depois,
+  // e os dados fixos da unidade (endereço, horário, telefone) por último.
+  return `
+    <div class="tech-card cras-card">
+      <div class="card-top">
+        <div style="display:flex; justify-content:space-between; align-items:start;">
+          <div style="display:flex; align-items:center; gap:0.55rem;">
+            <span class="cras-badge">${ICONS.building}</span>
+            <h2 style="margin:0;">${i.name}</h2>
+          </div>
         </div>
+        <span class="subtitle">🏢 Equipe Técnica e Atendimento CRAS · Sistemas Municipais, Federais e RMA</span>
+      </div>
+      <div class="card-body">
+        ${navHtml}
+        ${secao('rma', `${ICONS.barchart} Registro Mensal (RMA)`, rmaCorpo, false)}
+        ${hasTeam ? secao('equipe', `${ICONS.building} Equipe Técnica`, equipeCorpo, false) : ''}
+        ${secao('sistemas', `${ICONS.folder} Atalhos e Sistemas`, sistemasCorpo, false)}
+        ${secao('info', `${ICONS.map} Informações Gerais`, infoCorpo, true)}
       </div>
     </div>
   `;
@@ -15374,7 +15580,31 @@ function crasRunLookup(value) {
 }
 document.getElementById('grid').addEventListener('input', (e) => {
   if (e.target && e.target.id === 'crasBairroInput') crasRunLookup(e.target.value);
+  if (e.target && e.target.id === 'ubsPsiInput') crasRunUbsPsi(e.target.value);
 });
+// "Perguntar ao Argo": abre o mascote já com a pergunta (a resposta vem dos dados; a IA pode aprofundar).
+document.getElementById('grid').addEventListener('click', (e) => {
+  if (!e.target.closest || !e.target.closest('#ubsPsiAsk')) return;
+  const inp = document.getElementById('ubsPsiInput');
+  const b = inp ? inp.value.trim() : '';
+  if (!argoAssistantCtrl) return;
+  argoAssistantCtrl.open();
+  argoAssistantCtrl.ask(b ? 'Qual UBS tem psicólogo no bairro ' + b + '?' : 'Qual UBS tem psicólogo para o bairro da pessoa?');
+});
+// Atalhos de seção do painel CRAS: abre a seção (se estiver recolhida) e rola até ela.
+document.getElementById('grid').addEventListener('click', (e) => {
+  const btn = e.target.closest ? e.target.closest('.cras-nav-btn') : null;
+  if (!btn) return;
+  const sec = document.getElementById('cras-sec-' + btn.dataset.crasGoto);
+  if (!sec) return;
+  if (!sec.open) sec.open = true;
+  sec.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+});
+// "toggle" não borbulha: captura no grid para lembrar o que a pessoa recolheu.
+document.getElementById('grid').addEventListener('toggle', (e) => {
+  const d = e.target;
+  if (d && d.classList && d.classList.contains('cras-sec') && !document.getElementById('mainSearch').value.trim()) crasSalvarSecao(d.dataset.sec, !d.open);
+}, true);
 document.getElementById('grid').addEventListener('click', (e) => {
   const chip = e.target.closest ? e.target.closest('.cras-chip') : null;
   if (!chip) return;
@@ -16949,6 +17179,8 @@ function argoAssistantAsk(rawText) {
   if (agendaAnswer) return agendaAnswer;
   const tabOpen = argoOpenTabAsk(rawText);
   if (tabOpen) return tabOpen;
+  const ubsPsi = argoUbsPsicoAsk(rawText);
+  if (ubsPsi) return ubsPsi;
   const padded = ' ' + norm + ' ';
   const tokens = norm.split(' ');
 
@@ -17295,7 +17527,7 @@ function renderAgendaCard() {
           border-left-width: 4px; border-radius: 8px;
         }
         .agenda-sync-card-head { display: flex; align-items: center; gap: 8px; }
-        .agenda-today-icon { font-size: 14px; line-height: 1; }
+        .agenda-today-icon { font-size: 14px; line-height: 1; display: inline-flex; align-items: center; } .agenda-today-icon svg { width: 34px; height: 34px; }
         .agenda-sync-card-title { flex: 1; font-size: 13px; font-weight: 800; color: var(--cover); }
         .agenda-sync-card-time { font-size: 11px; font-weight: 700; color: var(--ink-muted); white-space: nowrap; }
         .agenda-today-text { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.45; }
@@ -17551,7 +17783,7 @@ function renderAgendaCard() {
 
           <div id="agendaTodayBanner" class="agenda-today-banner" role="status" aria-live="polite">
             <div class="agenda-sync-card-head">
-              <span class="agenda-today-icon" aria-hidden="true">🔔</span>
+              <span class="agenda-today-icon" aria-hidden="true">${(typeof ArgoMascot !== 'undefined' && ArgoMascot.icon) ? ArgoMascot.icon('info', 34) : '🔔'}</span>
               <span class="agenda-sync-card-title">Resumo da semana</span>
               <span id="agendaSyncCardTime" class="agenda-sync-card-time"></span>
               <button type="button" class="agenda-today-close" onclick="agendaDismissTodayBanner()" aria-label="Fechar o resumo da semana">✕</button>
@@ -18832,11 +19064,11 @@ async function agendaShowTodayNotification(title, body) {
   if ('serviceWorker' in navigator) {
     try {
       const reg = await navigator.serviceWorker.ready;
-      reg.showNotification(title, { body, icon: './assets/img/icon-192.png', badge: './assets/img/icon-192.png', tag: 'argo-agenda-today' });
+      reg.showNotification(title, { body, icon: './assets/img/mascote-192.png', badge: './assets/img/icon-192.png', tag: 'argo-agenda-today' });
       return;
     } catch (e) { /* cai para notificação simples abaixo */ }
   }
-  new Notification(title, { body, icon: './assets/img/icon-192.png' });
+  new Notification(title, { body, icon: './assets/img/mascote-192.png' });
 }
 
 const AGENDA_WEEKDAY_ABBR = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -23434,6 +23666,10 @@ function argoAssistantAskHybrid(rawText, meta) {
   // Pedido claro para abrir uma aba ("abre o mapa"): abre na hora, sem passar pela IA.
   const tabOpen = argoOpenTabAsk(rawText);
   if (tabOpen) return tabOpen;
+
+  // UBS com psicólogo por bairro: responde na hora com os dados do diretório (a IA entra só se a pessoa pedir).
+  const ubsPsi = argoUbsPsicoAsk(rawText);
+  if (ubsPsi) return keep(ubsPsi, ubsPsi.units);
 
   let plan = { kind: 'none' };
   let local = null;
