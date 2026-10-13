@@ -2597,7 +2597,16 @@ function ubsPsiIndice() {
     }
   });
   const bairros = Array.from(new Set(entradas.map(e => e.label))).sort((a, b) => a.localeCompare(b, 'pt-BR'));
-  _ubsPsiIdx = { entradas, semPsi, bairros };
+  // Bairro onde fica cada UBS sem psicólogo (o trecho depois do último " - " do endereço): serve para o mascote
+  // reconhecer "Pricumã" ou "Liberdade" e avisar que a UBS do bairro não tem psicólogo, igual ao painel.
+  const bairrosSemPsi = [];
+  semPsi.forEach(d => {
+    const m = String(d.address || '').match(/-\s*([^,-]+?)\s*,\s*Boa Vista/i);
+    const nome = m ? m[1].trim() : '';
+    const key = crasNormalize(nome);
+    if (key.length >= 4 && !bairrosSemPsi.some(b => b.key === key)) bairrosSemPsi.push({ key, label: nome });
+  });
+  _ubsPsiIdx = { entradas, semPsi, bairros, bairrosSemPsi };
   return _ubsPsiIdx;
 }
 
@@ -2654,17 +2663,29 @@ function ubsPsiHtml(raw) {
 
 // Pergunta em texto livre ao mascote: "qual UBS tem psicólogo no Caimbé?".
 // Só responde quando há UBS/posto/unidade de saúde e psicologia na frase; senão deixa seguir.
+// Se a pessoa perguntou sem dizer o bairro, o mascote pergunta "de qual bairro?" e a PRÓXIMA mensagem
+// (ex.: "13 de Setembro") é lida como o bairro, em vez de cair na busca geral do diretório.
+let _ubsPsiAguarda = false;
 function argoUbsPsicoAsk(rawText) {
+  const aguardava = _ubsPsiAguarda;
+  _ubsPsiAguarda = false;
   const n = argoNorm(rawText);
   if (!n) return null;
-  if (!/\b(psicolog\w*|saude mental)\b/.test(n)) return null;
-  if (!/\b(ubs|ubss|posto|postos|unidade basica|unidades basicas|unidade de saude|unidades de saude|centro de saude)\b/.test(n)) return null;
+  const temPsi = /\b(psicolog\w*|saude mental)\b/.test(n);
+  const temUbs = /\b(ubs|ubss|posto|postos|unidade basica|unidades basicas|unidade de saude|unidades de saude|centro de saude)\b/.test(n);
+  // resposta curta ao "de qual bairro?": vale só se a mensagem é curta e não é outro pedido
+  const respostaCurta = aguardava && n.split(' ').length <= 8;
+  if (!(temPsi && temUbs) && !respostaCurta) return null;
   const idx = ubsPsiIndice();
   if (!idx.entradas.length) return null;
   const padded = ' ' + n + ' ';
-  // bairro citado: o maior nome conhecido que aparece na frase
-  const cand = Array.from(new Set(idx.entradas.map(e => e.key))).filter(k => k.length >= 3 && padded.indexOf(' ' + k + ' ') > -1)
-    .sort((a, b) => b.length - a.length);
+  // bairro citado: o maior nome conhecido que aparece na frase (inclui bairros cuja UBS não tem psicólogo)
+  // (compara sem pontuação, como o texto da pergunta; a busca em si usa o nome original do bairro)
+  const porNorma = new Map();
+  idx.entradas.forEach(e => { if (!porNorma.has(argoNorm(e.key))) porNorma.set(argoNorm(e.key), e.key); });
+  idx.bairrosSemPsi.forEach(b => { if (!porNorma.has(argoNorm(b.key))) porNorma.set(argoNorm(b.key), b.key); });
+  const cand = Array.from(porNorma.keys()).filter(k => k.length >= 3 && padded.indexOf(' ' + k + ' ') > -1)
+    .sort((a, b) => b.length - a.length).map(k => porNorma.get(k));
   const irParaAba = (bairro) => ({
     label: 'Abrir na aba CRAS',
     run: () => {
@@ -2679,20 +2700,39 @@ function argoUbsPsicoAsk(rawText) {
     },
     reply: 'Abri a busca na aba do CRAS.', mood: 'success'
   });
+  if (!(temPsi && temUbs)) {
+    // resposta curta: o que sobra depois do nome do bairro só pode ser enfeite ("no bairro", "do", "em"...)
+    const enfeite = new Set(['bairro', 'no', 'na', 'do', 'da', 'em', 'o', 'a', 'e', 'eh', 'e', 'meu', 'pessoa', 'mora', 'moro', 'moram', 'dela', 'dele', 'fica', 'seria', 'eh']);
+    const sobra = cand.length ? padded.replace(' ' + argoNorm(cand[0]) + ' ', ' ').split(' ').filter(Boolean) : ['?'];
+    if (!cand.length || !sobra.every(t => enfeite.has(t))) return null;
+  }
   if (!cand.length) {
+    if (!(temPsi && temUbs)) return null; // resposta curta que não é bairro: segue o fluxo normal
+    _ubsPsiAguarda = true;
     return {
-      reply: 'Eu consigo dizer qual UBS de Boa Vista tem psicólogo para cada bairro. **De qual bairro é a pessoa?** Por exemplo: “Qual UBS tem psicólogo no Caimbé?”',
+      reply: 'Eu consigo dizer qual UBS de Boa Vista tem psicólogo para cada bairro. **De qual bairro é a pessoa?** Por exemplo: “Caimbé” ou “13 de Setembro”.',
       mood: 'info',
       quickActions: [irParaAba('')]
     };
   }
   const r = ubsPsiBuscar(cand[0]);
-  if (!r || !r.grupos.length) return null;
+  if (!r) return null;
   const B = argoBrain();
   const linhas = [];
+  if (!r.grupos.length) {
+    if (!r.noBairro.length) return null;
+    // Há UBS no bairro, mas nenhuma com psicólogo registrado (e o bairro não consta na lista de abrangência).
+    linhas.push('Não encontrei este bairro entre os que têm UBS com psicólogo.');
+    linhas.push('', r.noBairro.map(d => d.name).join(', ') + (r.noBairro.length > 1 ? ' ficam' : ' fica') + ' no bairro, mas sem psicólogo registrado no diretório; confirme na própria unidade.');
+    linhas.push('', 'Os dados são do diretório do Argo. Confirme agenda e documentos com a UBS antes de encaminhar.');
+    return { reply: linhas.join('\n'), mood: 'info', badge: 'Saúde mental · UBS', quickActions: [irParaAba(cand[0])] };
+  }
+  const endereco = d => String(d.address || '').replace(/^N\/?A$/i, '');
   r.grupos.forEach(g => {
+    if (linhas.length) linhas.push('');
     linhas.push('Para **' + g.label + '**' + (g.macro ? ' (Macroárea ' + g.macro + ')' : '') + ':');
-    g.ubs.forEach(d => linhas.push('- **' + d.name + '**' + (ubsPsiFone(d) ? ' · ' + ubsPsiFone(d) : '') + (g.campoIds.includes(d.id) ? ' (informação de campo: confirme se há psicólogo(a) e agenda)' : '')));
+    g.ubs.forEach(d => linhas.push('- **' + d.name + '**' + (g.campoIds.includes(d.id) ? ' (informação de campo: confirme se há psicólogo(a) e agenda)' : '') +
+      (endereco(d) ? '\n  ' + endereco(d) : '') + (ubsPsiFone(d) ? ' · ' + ubsPsiFone(d) : '')));
   });
   if (r.noBairro.length) linhas.push('', r.noBairro.map(d => d.name).join(', ') + (r.noBairro.length > 1 ? ' ficam' : ' fica') + ' no bairro, mas sem psicólogo registrado: o atendimento psicológico é nas UBS acima.');
   linhas.push('', 'Os dados são do diretório do Argo. Confirme agenda e documentos com a UBS antes de encaminhar.');
@@ -2710,11 +2750,10 @@ function argoUbsPsicoAsk(rawText) {
     quickActions: acts,
     units: argoUnitsForUi(unidades.slice(0, 5).map(d => ({
       id: d.id, name: d.name, fullName: d.fullName || '', group: d.group || '', cat: Array.isArray(d.cat) ? d.cat.slice() : [],
-      address: String(d.address || '').replace(/^N\/?A$/i, ''), hours: String(d.hours || ''), phones: (d.phones || []).filter(p => /\d{4}/.test(p)),
+      address: endereco(d), hours: String(d.hours || ''), phones: (d.phones || []).filter(p => /\d{4}/.test(p)),
       website: d.website || '', services: String(d.services || '')
     })))
   };
-
 }
 
 function crasRunUbsPsi(value) {
@@ -23645,8 +23684,42 @@ function argoUnitsForUi(units) {
   }));
 }
 
-// Ponto de entrada do mascote.
+// Ponto de entrada do mascote: primeiro a IA INTERPRETA a pergunta (lê a conversa, completa o que ficou
+// subentendido, corrige a digitação e a põe na forma que o app sabe consultar com dados reais); depois as
+// consultas locais e a resposta seguem como sempre, já com a pergunta bem entendida. Fica de fora, direto
+// no fluxo local: socorro, dado pessoal, agenda, "abrir aba", frases muito curtas, "Aprofundar com a IA",
+// "tentar de novo" e a resposta ao "de qual bairro?". Sem IA, sem internet ou se a interpretação falhar
+// ou demorar, o fluxo local roda com a pergunta original (nunca fica pior do que antes).
 function argoAssistantAskHybrid(rawText, meta) {
+  const B = argoBrain();
+  meta = meta || {};
+  const texto = String(rawText == null ? '' : rawText).trim();
+  const pular = !B || typeof B.interpretar !== 'function' || !B.aiOn() || meta.forceAI || meta.regen || meta.semInterpretar ||
+    texto.length < 4 || _ubsPsiAguarda || B.crisis(texto) || B.piiBlock(texto) || argoAgendaAsk(texto) || argoOpenTabAsk(texto);
+  if (pular) return argoAssistantAskHybridCore(rawText, meta);
+  const tab = argoActiveTabInfo();
+  return B.interpretar(texto, { tabName: tab.name }).then(i => {
+    if (!i) return argoAssistantAskHybridCore(rawText, meta);
+    // Só quando nem a frase nem a conversa dizem o que falta: pergunta de volta, em vez de chutar.
+    if (i.esclarecer && !['ubs_psicologo', 'saudacao', 'agenda', 'navegar', 'fora_do_escopo'].includes(i.intencao)) {
+      B.remember(texto, i.esclarecer, []);
+      return { reply: i.esclarecer, mood: 'info', badge: 'Entendendo a pergunta', quickActions: [] };
+    }
+    // Cumprimento, agenda, "abrir tela" e assunto alheio seguem com as palavras da pessoa.
+    if (['saudacao', 'agenda', 'navegar', 'fora_do_escopo'].includes(i.intencao)) return argoAssistantAskHybridCore(rawText, meta);
+    let q = i.pergunta || texto;
+    // UBS com psicólogo: a forma é sempre a mesma, para o local reconhecer o bairro mesmo que a IA mude a frase.
+    if (i.intencao === 'ubs_psicologo') {
+      q = i.bairro ? 'Qual UBS tem psicólogo no bairro ' + i.bairro + '?' : 'Qual UBS tem psicólogo para o bairro da pessoa?';
+    }
+    // Dado pessoal na reescrita: volta para a pergunta original (o Core avisa se for o caso).
+    if (B.piiBlock(q) || B.crisis(q)) q = texto;
+    return argoAssistantAskHybridCore(q, meta);
+  }, () => argoAssistantAskHybridCore(rawText, meta));
+}
+
+// Fluxo local + IA de resposta (recebe a pergunta já interpretada).
+function argoAssistantAskHybridCore(rawText, meta) {
   const B = argoBrain();
   if (!B) return argoAssistantAsk(rawText);
   meta = meta || {};
