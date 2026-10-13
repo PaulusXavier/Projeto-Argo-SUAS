@@ -588,6 +588,64 @@
     .hero-eyebrow svg, .hero-eyebrow-sep { display: none; }
   }
 
+  /* ---- Cabeçalho: estrelas brilhando ----
+     Pontos que cintilam em tempos diferentes, algumas estrelas de 4 pontas
+     douradas e uma estrela cadente ocasional. Só opacity/transform são
+     animados (barato para o celular); sem movimento com "reduzir animações". */
+  .hero-stars { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .hero-stars i {
+    position: absolute; left: var(--x); top: var(--y);
+    width: var(--s, 3px); height: var(--s, 3px);
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 6px 1px rgba(255, 255, 255, 0.7);
+    opacity: 0.25;
+    animation: heroTwinkle var(--d, 3.5s) ease-in-out var(--l, 0s) infinite;
+  }
+  .hero-stars i.gold { background: var(--hero-gold-soft); box-shadow: 0 0 8px 2px rgba(242, 203, 126, 0.65); }
+  .hero-stars i.sp {
+    border-radius: 0;
+    box-shadow: none;
+    background: radial-gradient(circle, rgba(255, 236, 190, 0.95) 0, rgba(242, 203, 126, 0.35) 28%, rgba(242, 203, 126, 0) 62%);
+    animation-name: heroSparkle;
+  }
+  .hero-stars i.sp::before, .hero-stars i.sp::after {
+    content: ""; position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 2px;
+  }
+  .hero-stars i.sp::before { width: 100%; height: 2px; background: linear-gradient(90deg, transparent, #fff6dc 50%, transparent); }
+  .hero-stars i.sp::after  { width: 2px; height: 100%; background: linear-gradient(180deg, transparent, #fff6dc 50%, transparent); }
+  .hero-stars i.shoot {
+    left: 80%; top: 10%; width: 90px; height: 2px; border-radius: 2px;
+    background: linear-gradient(90deg, #fff, rgba(255, 255, 255, 0));
+    box-shadow: 0 0 8px 1px rgba(255, 255, 255, 0.5);
+    opacity: 0;
+    animation: heroShoot 11s linear 4s infinite;
+  }
+  @keyframes heroTwinkle {
+    0%, 100% { opacity: 0.18; transform: scale(0.7); }
+    50%      { opacity: 1;    transform: scale(1.25); }
+  }
+  @keyframes heroSparkle {
+    0%, 100% { opacity: 0.15; transform: scale(0.45) rotate(0deg); }
+    50%      { opacity: 1;    transform: scale(1)    rotate(45deg); }
+  }
+  @keyframes heroShoot {
+    0%       { opacity: 0; transform: translate3d(0, 0, 0) rotate(-35deg); }
+    2%       { opacity: 1; }
+    8%       { opacity: 0; transform: translate3d(-280px, 196px, 0) rotate(-35deg); }
+    100%     { opacity: 0; transform: translate3d(-280px, 196px, 0) rotate(-35deg); }
+  }
+  @media (max-width: 600px) {
+    .hero-stars i:nth-child(n+13):not(.sp):not(.shoot) { display: none; }
+    .hero-stars i.shoot { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-stars i { animation: none; opacity: 0.6; }
+    .hero-stars i.shoot { display: none; }
+  }
+
   @keyframes heroRise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
   .hero .container > * { animation: heroRise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
   .hero .container > :nth-child(2) { animation-delay: 0.08s; }
@@ -6805,7 +6863,7 @@ details.card-fold[open] > *:not(summary) + *:not(summary) { margin-top: 1rem; }
   .filter-chip[data-cat="noticias"], .quick-nav-btn[data-goto="noticias"] { --ic: #0284c7; }
   .filter-chip[data-cat="cas"], .quick-nav-btn[data-goto="cas"] { --ic: #0d9488; }
   .filter-chip[data-cat="cras"], .quick-nav-btn[data-goto="cras"] { --ic: #0d9488; }
-  .filter-chip[data-cat="favoritos"], .quick-nav-btn[data-goto="favoritos"] { --ic: #f59e0b; }
+  .filter-chip[data-cat="recentes"], .quick-nav-btn[data-goto="recentes"] { --ic: #f59e0b; }
   .filter-chip[data-cat="hospitalar"], .quick-nav-btn[data-goto="hospitalar"] { --ic: #e11d48; }
   .filter-chip[data-cat="saude"], .quick-nav-btn[data-goto="saude"] { --ic: #db2777; }
   .filter-chip[data-cat="tea"], .quick-nav-btn[data-goto="tea"] { --ic: #2563eb; }
