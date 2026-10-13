@@ -2784,14 +2784,41 @@ function renderRegistroTile(l) {
   `;
 }
 
+// Situação de funcionamento do CAS (Boa Vista, UTC-4, sem horário de verão),
+// calculada a partir de i.schedule. Retorna null se a unidade não tiver horário.
+function casOpenStatus(sch, now) {
+  if (!sch || !Array.isArray(sch.days) || !sch.open || !sch.close) return null;
+  const toMin = t => { const [h, m] = String(t).split(':').map(Number); return h * 60 + (m || 0); };
+  let wd, minutes;
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Boa_Vista', weekday: 'short', hour: 'numeric', minute: 'numeric', hour12: false }).formatToParts(now || new Date());
+    const get = t => (parts.find(p => p.type === t) || {}).value;
+    wd = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(get('weekday'));
+    minutes = (Number(get('hour')) % 24) * 60 + Number(get('minute'));
+  } catch (e) { return null; }
+  if (wd < 0 || isNaN(minutes)) return null;
+  const o = toMin(sch.open), c = toMin(sch.close);
+  const nomes = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+  if (sch.days.includes(wd) && minutes >= o && minutes < c) {
+    const falta = c - minutes;
+    return { open: true, text: 'Aberto agora · fecha às ' + sch.close + (falta <= 60 ? ' (em ' + falta + ' min)' : '') };
+  }
+  if (sch.days.includes(wd) && minutes < o) return { open: false, text: 'Fechado · abre hoje às ' + sch.open };
+  for (let k = 1; k <= 7; k++) {
+    const d = (wd + k) % 7;
+    if (sch.days.includes(d)) return { open: false, text: 'Fechado · abre ' + (k === 1 ? 'amanhã' : nomes[d]) + ' às ' + sch.open };
+  }
+  return { open: false, text: 'Fechado' };
+}
+
 function renderCasCard(i, query) {
   const q = query || null; // consulta estruturada (argoParseQuery) ou null
 
-  function linkRow(label, url, icon) {
+  function linkRow(label, url, icon, extra) {
     return `
       <a class="cas-link-item" href="${url}" target="_blank" rel="noopener noreferrer">
         ${icon}
-        <span>${label}</span>
+        <span class="cas-link-label">${label}${extra ? `<small>${extra}</small>` : ''}</span>
         <span class="cas-link-arrow" aria-hidden="true">${ICONS.external}</span>
       </a>
     `;
@@ -2809,44 +2836,45 @@ function renderCasCard(i, query) {
     return matched.length ? matched : all;
   }
 
-  const adminRows = buildGroup(i.adminLinks).map(l => linkRow(l.label, l.url, ICONS[l.icon] || ICONS.form)).join('');
+  const adminRows = buildGroup(i.adminLinks).map(l => linkRow(l.label, l.url, ICONS[l.icon] || ICONS.form, /sei\./i.test(l.url) ? 'Sistema Eletrônico de Informações' : 'Portal do servidor')).join('');
   const systemTiles = buildGroup(i.systemLinks).map(renderRegistroTile).join('');
-  const driveRows = buildGroup(i.driveLinks).map(l => linkRow(l.label, l.url, ICONS.folder)).join('');
+  const driveRows = buildGroup(i.driveLinks).map(l => linkRow(l.label, l.url, ICONS.cloud, 'Google Drive')).join('');
   const mapTiles = buildGroup(i.mapLinks).map(renderRegistroTile).join('');
 
   const emptyRow = `<div style="padding:0.9rem 1.1rem; color:var(--text-muted); font-size:0.8rem;">Nenhum atalho encontrado.</div>`;
 
-  return `
-    <div class="tech-card cas-card">
-      <div class="card-top">
-        <div style="display:flex; justify-content:space-between; align-items:start;">
-          <div style="display:flex; align-items:center; gap:0.55rem;">
-            <span class="cas-badge">${ICONS.folder}</span>
-            <h2 style="margin:0;">${i.name}</h2>
-          </div>
-        </div>
-        <span class="subtitle">🗂️ Atendimento CAS · Acesso Rápido a Sistemas e Arquivos</span>
-      </div>
-      <div class="card-body">
-        <div class="cas-section-title">${ICONS.map} Informações Gerais</div>
-        <div class="info-group"><span class="info-icon">${ICONS.map}</span><div><span class="label-tech">Localização</span>${i.address}</div></div>
-        <div class="info-group"><span class="info-icon">${ICONS.clock}</span><div><span class="label-tech">Disponibilidade</span>${i.hours}</div></div>
-        <div class="desc-box">
-          <span class="label-tech">Escopo do Painel</span>
-          ${i.desc}
-        </div>
+  // Seções recolhíveis (mesmo comportamento do painel CRAS: estado lembrado
+  // no aparelho; a busca global abre todas para o resultado não ficar escondido).
+  const fechadas = crasSecoesFechadas();
+  function secao(chave, titulo, corpo, fechadaPadrao) {
+    const k = 'cas-' + chave;
+    const fechada = q ? false : (k in fechadas ? fechadas[k] : !!fechadaPadrao);
+    return `
+        <details class="cras-sec" id="cras-sec-${k}" data-sec="${k}"${fechada ? '' : ' open'}>
+          <summary class="cras-section-title">${titulo}<span class="cras-sec-caret" aria-hidden="true"></span></summary>
+          <div class="cras-sec-body">${corpo}</div>
+        </details>`;
+  }
 
-        <div class="cas-section-title">${ICONS.table} Registros e Planilhas (2026)</div>
-        <div class="cras-rma-grid cras-rma-grid-pairs">
-          ${systemTiles || emptyRow}
-        </div>
+  const navItens = [['registros', 'Registros'], ['atalhos', 'Atalhos'], ['territorio', 'Território'], ['info', 'Informações']];
+  const navHtml = `<nav class="cras-nav" aria-label="Ir para uma seção do painel">${
+    navItens.map(([k, t]) => `<button type="button" class="cras-nav-btn" data-cras-goto="cas-${k}">${t}</button>`).join('')
+  }</nav>`;
 
-        <div class="cas-section-title">${ICONS.map} Território</div>
-        <div class="cras-rma-grid">
-          ${mapTiles || emptyRow}
-        </div>
+  const st = casOpenStatus(i.schedule);
+  const statusHtml = st ? `<span class="cas-status ${st.open ? 'is-open' : 'is-closed'}" role="status"><span class="cas-status-dot" aria-hidden="true"></span>${st.text}</span>` : '';
 
-        <div class="cas-section-title">${ICONS.folder} Atalhos</div>
+  const addr = String(i.address || '');
+  const hasAddr = addr && !/^N\/?A/i.test(addr);
+  const mapsHref = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(addr);
+  const addrActions = hasAddr ? `
+          <div class="cas-addr-actions">
+            <a class="cas-mini-btn" href="${mapsHref}" target="_blank" rel="noopener noreferrer">${ICONS.map} Como chegar</a>
+            <button type="button" class="cas-mini-btn cas-copy-btn" data-copy="${escapeHtml(addr)}">${ICONS.copy} Copiar endereço</button>
+          </div>` : '';
+
+  const registrosCorpo = `<div class="cras-rma-grid cras-rma-grid-pairs">${systemTiles || emptyRow}</div>`;
+  const atalhosCorpo = `
         <div class="cas-groups">
           <div class="cas-group">
             <div class="cas-group-header">Administrativo</div>
@@ -2861,7 +2889,36 @@ function renderCasCard(i, query) {
               ${driveRows || emptyRow}
             </div>
           </div>
+        </div>`;
+  const territorioCorpo = `<div class="cras-rma-grid">${mapTiles || emptyRow}</div>`;
+  const infoCorpo = `
+        <div class="info-group"><span class="info-icon">${ICONS.map}</span><div><span class="label-tech">Localização</span>${addr}${addrActions}</div></div>
+        <div class="info-group"><span class="info-icon">${ICONS.clock}</span><div><span class="label-tech">Disponibilidade</span>${i.hours}</div></div>
+        <div class="desc-box">
+          <span class="label-tech">Escopo do Painel</span>
+          ${i.desc}
+        </div>`;
+
+  // Ordem pensada no uso diário: registros e atalhos primeiro; os dados fixos
+  // da unidade (endereço, horário, escopo) ficam recolhidos por padrão.
+  return `
+    <div class="tech-card cas-card">
+      <div class="card-top">
+        <div style="display:flex; justify-content:space-between; align-items:start; gap:0.75rem; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:0.55rem;">
+            <span class="cas-badge">${ICONS.folder}</span>
+            <h2 style="margin:0;">${i.name}</h2>
+          </div>
+          ${statusHtml}
         </div>
+        <span class="subtitle">🗂️ Atendimento CAS · Acesso Rápido a Sistemas e Arquivos</span>
+      </div>
+      <div class="card-body">
+        ${navHtml}
+        ${secao('registros', `${ICONS.table} Registros e Planilhas (2026)`, registrosCorpo, false)}
+        ${secao('atalhos', `${ICONS.folder} Atalhos`, atalhosCorpo, false)}
+        ${secao('territorio', `${ICONS.map} Território`, territorioCorpo, false)}
+        ${secao('info', `${ICONS.building} Informações Gerais`, infoCorpo, true)}
       </div>
     </div>
   `;
@@ -15638,6 +15695,11 @@ document.getElementById('grid').addEventListener('click', (e) => {
   if (!sec) return;
   if (!sec.open) sec.open = true;
   sec.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+});
+// Botão "Copiar endereço" do painel CAS.
+document.getElementById('grid').addEventListener('click', (e) => {
+  const b = e.target.closest ? e.target.closest('.cas-copy-btn') : null;
+  if (b && typeof toolsCopy === 'function') toolsCopy(b.dataset.copy || '', 'Endereço copiado.');
 });
 // "toggle" não borbulha: captura no grid para lembrar o que a pessoa recolheu.
 document.getElementById('grid').addEventListener('toggle', (e) => {
