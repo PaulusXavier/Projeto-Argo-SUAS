@@ -5139,6 +5139,7 @@ const DATA = [
     cat: ["cas"],
     address: "R. James Meirelles Sobreiro Júnior, 1876 - Cidade Satélite, Boa Vista-RR, 69317-530",
     hours: "Segunda a sábado, 08:00 às 22:00",
+    schedule: { days: [1, 2, 3, 4, 5, 6], open: "08:00", close: "22:00" },
     phones: ["N/A"],
     services: "Acesso rápido a sistemas administrativos (SEI, Dados Pessoais) e sistemas de 2026 (Matrículas, Registro Diário), além das pastas compartilhadas da equipe no Google Drive.",
     desc: "Painel de atalhos técnicos do Centro de Atendimento Social (CAS) para uso interno da equipe, reunindo acesso ao SEI (assinatura de relatórios), ao portal do servidor (dados pessoais), aos formulários e planilhas dos Sistemas 2026 (Matrículas, Registro Diário) e às pastas de trabalho de cada técnico no Google Drive.",
