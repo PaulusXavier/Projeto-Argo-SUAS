@@ -3666,6 +3666,52 @@
     .cras-groups { grid-template-columns: 1fr; }
   }
 
+  /* Painel CRAS: atalhos de seção e seções recolhíveis */
+  .cras-nav {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding: 0 0 0.2rem;
+    scrollbar-width: none;
+  }
+  .cras-nav::-webkit-scrollbar { display: none; }
+  .cras-nav-btn {
+    flex: 0 0 auto;
+    padding: 0.45rem 0.9rem;
+    border: 1px solid var(--border-ui);
+    border-radius: 999px;
+    background: var(--bg-card);
+    color: var(--brand-cras);
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color 0.2s var(--ease), background 0.2s var(--ease);
+  }
+  .cras-nav-btn:hover { border-color: var(--brand-cras); background: rgba(13, 148, 136, 0.08); }
+  .cras-nav-btn:focus-visible, .cras-sec > summary:focus-visible { outline: 2px solid var(--brand-cras); outline-offset: 2px; }
+  .cras-sec { scroll-margin-top: 9rem; margin-top: 1.4rem; }
+  .cras-nav + .cras-sec { margin-top: 1rem; }
+  .cras-sec > summary.cras-section-title {
+    margin: 0;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+  }
+  .cras-sec > summary::-webkit-details-marker { display: none; }
+  .cras-sec[open] > summary.cras-section-title { margin-bottom: 0.9rem; }
+  .cras-sec-caret {
+    margin-left: auto;
+    width: 0.55rem;
+    height: 0.55rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
+    transition: transform 0.2s var(--ease);
+  }
+  .cras-sec[open] > summary .cras-sec-caret { transform: rotate(-135deg); }
+  @media (prefers-reduced-motion: reduce) { .cras-sec-caret, .cras-nav-btn { transition: none; } }
+
   .cras-group {
     border: 1px solid var(--border-ui);
     border-radius: 10px;
@@ -4136,6 +4182,16 @@
   }
 
   .cras-result-row .team-name { display: inline; }
+
+  .ubs-psi-grupo { display: flex; flex-direction: column; gap: 0.5rem; }
+  .ubs-psi-bairro {
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--brand-cras);
+  }
+  .ubs-psi-ask { align-self: flex-start; margin-top: 0.7rem; }
 
   .cras-result-where {
     font-size: 0.8rem;
