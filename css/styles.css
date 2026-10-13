@@ -7194,3 +7194,32 @@ tr.is-closed > td { opacity: 0.6; }
 .pdftools-adj-sl input { grid-column: 1 / -1; width: 100%; min-height: 28px; accent-color: var(--brand-primary); }
 .pdftools-adj-sl output { font-weight: 700; color: var(--text-main); }
 @media (max-width: 480px) { .pdftools-adj-sliders { grid-template-columns: minmax(0, 1fr); } }
+
+  /* Painel CAS: seções recolhíveis e atalhos com a tinta verde do CAS,
+     status de funcionamento e ações no endereço. */
+  .cas-card .cras-section-title { color: var(--brand-cas); border-bottom-color: rgba(0, 151, 57, 0.25); }
+  .cas-card .cras-section-title svg { color: var(--brand-cas); }
+  .cas-card .cras-nav-btn { color: var(--cas-ink); }
+  .cas-card .cras-nav-btn:hover { border-color: var(--brand-cas); background: rgba(0, 151, 57, 0.08); }
+  .cas-card .cras-nav-btn:focus-visible, .cas-card .cras-sec > summary:focus-visible { outline-color: var(--brand-cas); }
+  .cas-link-label { display: flex; flex-direction: column; min-width: 0; }
+  .cas-link-label small { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); }
+  .cas-link-item { min-height: 44px; }
+  .cas-status {
+    display: inline-flex; align-items: center; gap: 0.45rem;
+    padding: 0.3rem 0.75rem; border-radius: 999px;
+    font-size: 0.74rem; font-weight: 800; border: 1px solid var(--border-ui);
+    background: var(--bg-card); color: var(--text-muted);
+  }
+  .cas-status-dot { width: 0.55rem; height: 0.55rem; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+  .cas-status.is-open { color: var(--cas-ink); border-color: rgba(0, 151, 57, 0.4); background: rgba(0, 151, 57, 0.08); }
+  .cas-status.is-closed { color: var(--text-muted); }
+  .cas-addr-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.6rem; }
+  .cas-mini-btn {
+    display: inline-flex; align-items: center; gap: 0.4rem; min-height: 40px;
+    padding: 0.35rem 0.85rem; border: 1px solid var(--border-ui); border-radius: 999px;
+    background: var(--bg-card); color: var(--cas-ink); font: inherit; font-size: 0.78rem; font-weight: 700;
+    text-decoration: none; cursor: pointer; transition: border-color 0.2s var(--ease), background 0.2s var(--ease);
+  }
+  .cas-mini-btn:hover { border-color: var(--brand-cas); background: rgba(0, 151, 57, 0.08); }
+  .cas-mini-btn:focus-visible { outline: 2px solid var(--brand-cas); outline-offset: 2px; }
