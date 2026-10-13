@@ -35,7 +35,7 @@
     interpretaMs: 6000,     // espera máxima pela interpretação da pergunta (passa direto se demorar)
     firstByteMs: 20000,     // espera máxima pela primeira resposta
     idleMs: 15000,          // silêncio máximo entre pedaços do streaming
-    maxPergunta: 500,
+    maxPergunta: 1200,
     maxHistorico: 6,        // mensagens (3 trocas) enviadas à IA
     maxContexto: 7,         // fichas do diretório enviadas à IA (pergunta comum)
     maxContextoAmplo: 10,   // idem, para perguntas de panorama ("quantos", "todos", "liste"...)
@@ -588,7 +588,7 @@
     userText = String(userText || '').trim();
     if (userText && !piiBlock(userText)) session.history.push({ papel: 'usuario', texto: userText.slice(0, CFG.maxPergunta) });
     botText = String(botText || '').replace(/\*\*/g, '').trim();
-    if (botText) session.history.push({ papel: 'argo', texto: botText.slice(0, 600) });
+    if (botText) session.history.push({ papel: 'argo', texto: botText.slice(0, 1200) });
     while (session.history.length > 8) session.history.shift();
     if (units && units.length) session.units = units.slice(0, 5);
   }
