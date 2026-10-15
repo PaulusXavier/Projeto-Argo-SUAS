@@ -81,8 +81,29 @@ function semAcento(s) {
 }
 
 
+// Sinais de ideação suicida que a palavra "suicídio" não cobre (texto já sem acento e em minúsculas).
+// Servem a duas listas: o cartão de crise e o "nunca é pergunta técnica". Só entram expressões que quase não têm outro sentido
+// no trabalho do SUAS ("não aguento mais a demanda" NÃO entra; "não aguento mais viver" entra).
+const SINAIS_SUICIDIO = [
+  'nao (?:aguento|suporto|consigo) mais (?:viver|essa vida|esta vida|continuar vivo|continuar viva)',
+  '(?:minha|sua|a) vida nao tem (?:mais )?sentido',
+  'nao (?:vejo|tenho) (?:mais )?(?:sentido em viver|sentido na vida|razao (?:pra|para) viver|motivo (?:pra|para) viver)',
+  'quer(?:o|ia|endo)? (?:sumir|desaparecer) (?:de vez|para sempre|pra sempre|do mundo|deste mundo|dessa vida)',
+  'quer(?:o|ia|endo)? (?:estar|ficar) morto|quer(?:o|ia|endo)? (?:estar|ficar) morta|quer(?:o|ia|endo)? nao ter nascido',
+  'vontade de morrer|desejo de morrer|(?:seria|era|sera) melhor (?:se )?(?:eu |ela |ele )?(?:nao existisse|estivesse mort[oa]|sem mim)',
+  '(?:dar|dando|por|pondo) fim (?:a |na |em )?(?:propria |minha |sua |a )?vida',
+  '(?:me|se) (?:enforcar|enforcando|afogar|afogando|envenenar|envenenando)',
+  '(?:me|se) jogar (?:da|do|de|embaixo|debaixo)',
+  'pular (?:da|do|de) (?:ponte|predio|janela|viaduto|sacada|terraco|laje|cima)'
+].join('|');
+
+// Sinais de overdose e intoxicação além de "overdose" e "engoliu remédio".
+const SINAIS_CLINICA = /\b(?:(?:tomou|tomei|tomaram|ingeriu|engoliu|bebeu) (?:varios|muitos|muitas|uma cartela|a cartela|todos os|todo o|um monte de)(?: \w+)? ?(?:comprimidos?|remedios?|medicamentos?|pilulas?|cartelas?)|(?:tomou|bebeu|ingeriu) (?:veneno|chumbinho|soda caustica))\b/;
+
 // Frases que, em qualquer pergunta, indicam alguém em risco (e não dúvida técnica).
-const FRASE_DE_RISCO = /\b(me matar|se matar|quer(?:o|endo|er|ia)? morrer|nao quer(?:o|er)? mais viver|tirar (?:a |minha |sua |propria )*vida|acabar com (?:a |minha |sua )*vida|acabar com tudo|pensando em morrer|se cortando|me cortando|se cortar|me cortar)\b/;
+const FRASE_DE_RISCO_BASE = /\b(me matar|se matar|quer(?:o|endo|er|ia)? morrer|nao quer(?:o|er)? mais viver|tirar (?:a |minha |sua |propria )*vida|acabar com (?:a |minha |sua )*vida|acabar com tudo|pensando em morrer|se cortando|me cortando|se cortar|me cortar)\b/;
+const SINAIS_SUICIDIO_RE = new RegExp('\\b(?:' + SINAIS_SUICIDIO + ')\\b');
+function fraseDeRisco(t) { return FRASE_DE_RISCO_BASE.test(t) || SINAIS_SUICIDIO_RE.test(t); }
 // Caso concreto, relato ou momento: "ela falou em suicídio", "tentou ontem", "a usuária está com ideação".
 const CASO_OU_MOMENTO = /\b(disse|disseram|falou|falaram|fala em|contou|relatou|verbalizou|mencionou|ameac\w+|tentou|tentando|esta com|estao com|estou com|ficou com|esteve com|hoje|ontem|agora|neste momento|nesse momento|acabou de|esta semana|essa semana)\b/;
 // Pedido de método, meio, dose ou letalidade nunca é pergunta técnica.
@@ -94,27 +115,63 @@ const PRIMEIRA_PESSOA = /\b(me matar|quero morrer|nao quero mais viver|(?:tirar|
 // Na dúvida, é socorro: relato de caso, momento, primeira pessoa, pedido de método e a palavra solta mantêm o cartão de crise.
 function ehPerguntaTecnicaSuicidio(texto) {
   const t = semAcento(texto);
-  if (FRASE_DE_RISCO.test(t) || CASO_OU_MOMENTO.test(t) || PEDIDO_DE_METODO.test(t)) return false;
+  if (fraseDeRisco(t) || CASO_OU_MOMENTO.test(t) || PEDIDO_DE_METODO.test(t)) return false;
   return tipoDePerguntaSuicidio(t) !== null;
 }
+
+// Perguntas GERAIS ("o que fazer em caso de risco de vida?", "quantas crianças em perigo o CREAS atende?"): termos vagos
+// como "em perigo" ou "risco de vida" não disparam o cartão, porque ali ninguém está pedindo socorro. Para ser geral, a frase
+// precisa abrir como pergunta, trazer um sinal de generalidade E não ter marca de caso ou de momento ("hoje", "agora", "disse").
+const GERAL_ABERTURA = /^(?:como|qual|quais|quanto|quantos|quantas|o que|quando|onde|existe|ha)\b/;
+const GERAL_SINAL = /\b(?:caso de|casos de|em casos|fluxo|protocolo|procedimento|quantos?|quantas?|atende|atendem|quando (?:a |o |uma |um )?(?:crianca|adolescente|idos[oa]|mulher|pessoa|familia)s?)\b/;
+// Relato de violência sexual ou de abuso só vira cartão quando há caso ("a criança relatou...", "hoje", "ontem"); sem caso é dúvida técnica.
+const CASO_VIOLENCIA = new RegExp(CASO_OU_MOMENTO.source + '|\\b(?:revelou|relata|sofre|sofreu|sofrendo|vitima de)\\b');
+function perguntaGeral(t) { return GERAL_ABERTURA.test(t.trim()) && GERAL_SINAL.test(t) && !CASO_OU_MOMENTO.test(t); }
 
 const PADROES = [
   {
     tipo: 'suicidio',
     titulo: 'Risco de vida: acione ajuda agora',
     re: /\b(suicid\w*|me matar|se matar|ele se matar|ela se matar|quer(?:o|endo|er|ia)? morrer|nao quer(?:o|er)? mais viver|tirar (?:a |minha |sua |propria )*vida|acabar com (?:a |minha |sua )*vida|acabar com tudo|automutil\w*|autolesao|auto lesao|se cortando|me cortando|se cortar|me cortar|pensando em morrer|ideacao)\b/,
+    extra: SINAIS_SUICIDIO_RE,
     numeros: ['192', '188', '193']
   },
   {
     tipo: 'violencia',
     titulo: 'Violência em andamento: acione ajuda agora',
-    re: /\b((?:esta|estao|estou|estamos) (?:sendo )?(?:agredid|espancad|ameacad)\w*|sendo (?:agredid|espancad|ameacad)\w*|violencia (?:em curso|agora|em andamento)|abuso (?:em andamento|acontecendo agora)|risco de vida|risco iminente|em perigo|correndo perigo|socorro)\b/,
+    re: /\b((?:esta|estao|estou|estamos) (?:sendo )?(?:agredid|espancad|ameacad)\w*|sendo (?:agredid|espancad|ameacad)\w*|violencia (?:em curso|agora|em andamento)|abuso (?:em andamento|acontecendo agora))\b/,
+    numeros: ['190', '180', '100']
+  },
+  {
+    // termos vagos: só valem fora de pergunta geral; "socorro financeiro/social..." é pedido de benefício, não de ajuda
+    tipo: 'violencia',
+    titulo: 'Violência em andamento: acione ajuda agora',
+    re: /\b(risco de vida|risco iminente|em perigo|correndo perigo|socorro(?! (?:financeiro|social|alimentar|emergencial|material|habitacional)))\b/,
+    geral: true,
+    numeros: ['190', '180', '100']
+  },
+  {
+    // agressão física relatada (presente ou passado recente): "a vizinha apanha do marido", "ele bate na filha"
+    tipo: 'violencia',
+    titulo: 'Relato de violência: proteja a pessoa e acione a rede',
+    re: /\b(?:apanh(?:a|am|ando|ou|aram|ei) (?:d[eoa]s?|em|muito|bastante|toda|todo|todos|todas|sempre|dele|dela)\b|espanc\w+|bat(?:e|eu|em|endo) (?:n[oa]s?|em) (?:filh\w*|espos\w*|mulher|marido|crianc\w*|menin\w*|adolescent\w*|mae|pai|net[oa]s?|namorad\w*|companheir\w*|idos\w*|avo\w*|irma\w*|bebe\w*|dela|dele)\b|bat(?:e|eu|em|endo) n(?:ele|ela|eles|elas)\b)/,
+    texto: 'RELATO',
+    numeros: ['190', '180', '100']
+  },
+  {
+    // violência sexual e abuso: só com caso (ver CASO_VIOLENCIA)
+    tipo: 'violencia',
+    titulo: 'Relato de violência: proteja a pessoa e acione a rede',
+    re: /\b(?:abuso sexual|abusad[oa]|abusou|estupr\w+|violencia sexual|violentad[oa]|molestad[oa]|molestou)\b/,
+    exigeCaso: true,
+    texto: 'RELATO',
     numeros: ['190', '180', '100']
   },
   {
     tipo: 'clinica',
     titulo: 'Emergência de saúde: acione ajuda agora',
     re: /\b(overdose|parou de respirar|(?:esta|ficou|estava|encontrei|encontramos) (?:\w+ )?(?:inconsciente|desacordad[oa])|desmaiou|convuls\w*|engoliu (?:remedio|veneno)s?)\b/,
+    extra: SINAIS_CLINICA,
     numeros: ['192', '193']
   }
 ];
@@ -127,15 +184,24 @@ const TEXTO_PESSOAL = 'Sinto muito que você esteja passando por isso. Você nã
 // Para o profissional diante de um caso: só os cuidados imediatos da cartilha ABP/CFM (2014). Não lista meios nem classifica o risco.
 const TEXTO_TERCEIRO = 'Se há risco imediato, não deixe a pessoa sozinha: fique com ela, converse com calma e sem julgamento, e ligue para o SAMU (192). Se o perigo for imediato, peça uma ambulância, em vez de levá-la por conta própria. Lembre que perguntar não aumenta o risco e costuma trazer alívio (cartilha ABP/CFM, 2014). Depois, acione o serviço de referência (UBS ou CAPS) e a coordenação. Eu não classifico o risco de uma pessoa específica: isso é avaliação da equipe. Se a sua dúvida for geral (como avaliar, abordar ou encaminhar), pergunte sem relatar um caso e eu respondo com a cartilha.';
 
+// Relato de violência (ela apanha, a criança contou de um abuso): protege primeiro, depois a rede. Não classifica o caso nem fala em sigilo.
+const TEXTO_RELATO = 'Se a pessoa corre risco agora, ligue 190. Violência contra a mulher: 180. Contra criança, adolescente ou pessoa idosa: Disque 100. A suspeita de violência contra criança ou adolescente deve ser comunicada ao Conselho Tutelar. Depois, acione o CREAS ou o serviço de referência e a coordenação, e registre o que foi relatado sem pedir que a pessoa conte tudo de novo. Se a sua dúvida for sobre o fluxo, reformule sem relatar um caso e eu ajudo.';
+
+// Quem fala de si, além de PRIMEIRA_PESSOA. Fica de fora se a frase relata o que outra pessoa disse ("ela falou que queria sumir").
+const PRIMEIRA_PESSOA_EXTRA = /\b(?:minha vida nao tem (?:mais )?sentido|nao (?:aguento|suporto|consigo) mais (?:viver|essa vida|esta vida)|nao (?:vejo|tenho) (?:mais )?(?:sentido em viver|sentido na vida|razao (?:pra|para) viver|motivo (?:pra|para) viver)|quer(?:o|ia) (?:sumir|desaparecer)|(?:vou|quero|pensando em|penso em|ia) me (?:jogar|enforcar|afogar|envenenar)|vou pular|queria estar morto|queria estar morta|queria nao ter nascido|(?:vou|quero) dar fim a minha vida)\b/;
+const RELATA_TERCEIRO = /\b(?:disse|disseram|falou|falaram|contou|relatou|verbalizou|mencionou)\b/;
+
 // Devolve null se não for pedido de socorro.
 function detectarCrise(texto) {
   // "Pronto Socorro" é um serviço de saúde, não um pedido de socorro ("qual o endereço do pronto-socorro?")
   const t = semAcento(texto).replace(/pronto[ -]+socorro/g, 'pronto atendimento');
   for (const p of PADROES) {
-    if (!p.re.test(t)) continue;
+    if (!p.re.test(t) && !(p.extra && p.extra.test(t))) continue;
+    if (p.geral && perguntaGeral(t)) continue;
+    if (p.exigeCaso && !CASO_VIOLENCIA.test(t)) continue;
     if (p.tipo === 'suicidio') {
       if (ehPerguntaTecnicaSuicidio(texto)) continue;
-      const pessoal = PRIMEIRA_PESSOA.test(t);
+      const pessoal = PRIMEIRA_PESSOA.test(t) || (PRIMEIRA_PESSOA_EXTRA.test(t) && !RELATA_TERCEIRO.test(t));
       const numeros = pessoal ? ['188', '192'] : p.numeros;
       return {
         tipo: 'crise',
@@ -150,7 +216,7 @@ function detectarCrise(texto) {
       tipo: 'crise',
       subtipo: p.tipo,
       titulo: p.titulo,
-      texto: TEXTO_PADRAO,
+      texto: p.texto === 'RELATO' ? TEXTO_RELATO : TEXTO_PADRAO,
       telefones: EMERGENCIAS.filter(e => p.numeros.includes(e.numero))
     };
   }
@@ -201,7 +267,12 @@ const SIGLAS = {
   caps: ['centro', 'atencao', 'psicossocial'],
   raps: ['rede', 'atencao', 'psicossocial'],
   pcd: ['pessoa', 'deficiencia'],
-  mds: ['ministerio', 'desenvolvimento', 'social']
+  mds: ['ministerio', 'desenvolvimento', 'social'],
+  paf: ['plano', 'acompanhamento', 'familiar'],
+  tsft: ['trabalho', 'social', 'familias', 'territorios'],
+  rma: ['relatorio', 'mensal', 'atendimentos'],
+  gpte: ['grupos', 'populacionais', 'tradicionais', 'especificos'],
+  spsbd: ['servico', 'protecao', 'social', 'basica', 'domicilio']
 };
 
 // Quantos trechos da base vão para a IA e para a resposta offline.
@@ -461,6 +532,56 @@ function ocultarSugestoes(parcial) {
   return t;
 }
 
+// ---------------------------------------------------------------- ações propostas pela IA
+// Quando o app informa o que sabe abrir ou fazer, o modelo pode terminar a resposta com UMA linha
+// "AÇÕES NO APP: id1 | id2". Isso vira botões (a pessoa decide tocar) e NUNCA aparece no texto.
+// A IA só escolhe ids que o app mandou: o que não estiver na lista é descartado aqui.
+// O rótulo é composto de propósito ("ações no app"): "Ações:" sozinho aparece em respostas normais.
+
+const RE_ACOES = /(?:^|\n)[ \t]*(?:\*\*)?a(?:ç|c)(?:õ|o)es[ \t]+no[ \t]+app[ \t]*(?:\*\*)?[ \t]*:(?:\*\*)?[ \t]*([^\n]*)/i;
+const RE_ID_ACAO = /^[a-z0-9_-]{1,40}$/i;
+const MAX_ACOES_PROPOSTAS = 2;
+
+function separarAcoes(texto, permitidas) {
+  const t = String(texto == null ? '' : texto);
+  const m = RE_ACOES.exec(t);
+  if (!m) return { texto: t.trim(), acoes: [] };
+  const validas = {};
+  (Array.isArray(permitidas) ? permitidas : []).forEach(function (id) { validas[String(id).toLowerCase()] = String(id); });
+  const vistos = {};
+  const acoes = [];
+  m[1].split(/\s*[|,;]\s*/).forEach(function (bruto) {
+    const id = bruto.replace(/^[\s`*"'“”(\[]+|[\s`*"'“”.)\]]+$/g, '').toLowerCase();
+    if (!RE_ID_ACAO.test(id) || !validas[id] || vistos[id]) return;
+    vistos[id] = true;
+    acoes.push(validas[id]);
+  });
+  // Tira só a linha da marcação; o resto do texto (inclusive as SUGESTÕES depois dela) fica.
+  const semLinha = t.slice(0, m.index) + t.slice(m.index + m[0].length);
+  return { texto: semLinha.replace(/\n{3,}/g, '\n\n').trim(), acoes: acoes.slice(0, MAX_ACOES_PROPOSTAS) };
+}
+
+// Durante o streaming: esconde o rótulo (inclusive parcial, "AÇ", "**Ações no a") e tudo que vem depois.
+function ocultarAcoes(parcial) {
+  const t = String(parcial == null ? '' : parcial);
+  const m = RE_ACOES.exec(t);
+  if (m) return t.slice(0, m.index).replace(/\s+$/, '');
+  const nl = t.lastIndexOf('\n');
+  const ult = nl > -1 ? t.slice(nl + 1) : t;
+  const alvo = ult.replace(/[*\s]/g, '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  if (alvo.length >= 3 && 'acoesnoapp:'.indexOf(alvo) === 0) return (nl > -1 ? t.slice(0, nl) : '').replace(/\s+$/, '');
+  return t;
+}
+
+// Os dois rótulos de uma vez (a ordem em que o modelo os escreve não importa).
+function ocultarControles(parcial) { return ocultarAcoes(ocultarSugestoes(parcial)); }
+
+function separarControles(texto, permitidas) {
+  const a = separarAcoes(texto, permitidas);
+  const s = separarSugestoes(a.texto);
+  return { texto: s.texto, sugestoes: s.sugestoes, acoes: a.acoes };
+}
+
 // ---- client/skins.mjs ----
 // "Peles" do Paulus: só texto e configuração. O desenho do mascote continua em cada app
 // (argo-mascot.js, anona-mascot.js...). Para o Paulus, o mascote é o rosto; aqui ficam o nome,
@@ -477,20 +598,26 @@ const SKINS = {
   anona: {
     app: 'anona',
     mascote: 'Anona',
-    saudacao: 'Oi! Eu sou o Paulus, aqui como Anona. Posso explicar o app e as regras de condicionalidades.',
-    sugestoes: ['como funciona o acompanhamento de condicionalidades?', 'abrir calendário']
+    saudacao: 'Oi! Eu sou o Paulus, aqui como Anona. Posso explicar o app, abrir cartões e tirar dúvidas sobre condicionalidades. Não tenho acesso às suas notas nem às planilhas das famílias.',
+    sugestoes: ['como funciona o acompanhamento de condicionalidades?', 'o que é a repercussão?', 'abrir calendário']
   },
   toth: {
     app: 'toth',
     mascote: 'Toth',
-    saudacao: 'Oi! Eu sou o Paulus, aqui como Toth. Posso ajudar a usar o diário de campo e a achar telas e funções.',
-    sugestoes: ['como organizar um registro de campo?', 'abrir registros']
+    saudacao: 'Oi! Eu sou o Paulus, aqui como Toth. Posso explicar o app, abrir filtros e tirar dúvidas do SUAS e da prática da psicologia. Não tenho acesso aos seus registros.',
+    sugestoes: ['como estruturar o registro de um atendimento?', 'o que o CFP orienta sobre sigilo no registro?', 'abrir acompanhamento']
+  },
+  grafia: {
+    app: 'grafia',
+    mascote: 'Grafia',
+    saudacao: 'Oi! Eu sou o Paulus, aqui como Grafia. Posso explicar o app, abrir uma nova nota e tirar dúvidas do SUAS e da escrita técnica. Não tenho acesso às suas notas.',
+    sugestoes: ['como estruturar uma anotação profissional?', 'o que o CFP orienta sobre sigilo e guarda de registros?', 'nova nota']
   },
   umbrella: {
     app: 'umbrella',
     mascote: 'Umbrella',
-    saudacao: 'Oi! Eu sou o Paulus. Posso ajudar a usar o app e tirar dúvidas do SUAS.',
-    sugestoes: ['o que posso fazer neste app?']
+    saudacao: 'Oi! Eu sou o Paulus, aqui como Umbrella. Posso ajudar a usar o app, abrir telas e tirar dúvidas do PAIF e do SUAS. Não tenho acesso aos dados das famílias.',
+    sugestoes: ['qual a diferença entre atendimento e acompanhamento?', 'como construir o PAF junto com a família?', 'abrir prioridades']
   }
 };
 
@@ -521,6 +648,7 @@ const AVISO_PESSOAL = 'Para proteger as famílias, não consigo analisar mensage
 
 // Igual ao limite do Worker (worker/prompt.mjs). Antes eram 5 aqui, e o Argo mandava até 10 (lista de bairros, "liste todos").
 const MAX_FICHAS = 10;
+const MAX_ACOES_ENVIADAS = 20;
 
 const PADRAO = {
   app: '',
@@ -571,14 +699,15 @@ function init(opcoes) {
   return Paulus;
 }
 
-// Ação de navegação. { id, rotulos:['mapa','mapa de unidades'], executar(), confirmar?:true }
+// Ação de navegação. { id, rotulos:['mapa','mapa de unidades'], titulo?:'Mapa de unidades', descricao?, executar(), confirmar?:true }
+// Além de "abrir ...", a IA pode PROPOR a ação como botão (r.acoes); quem toca é a pessoa.
 // Ações que alteram ou apagam dados DEVEM ter confirmar:true.
 function registrarAcao(a) {
   if (!a || !a.id || typeof a.executar !== 'function' || !Array.isArray(a.rotulos) || !a.rotulos.length) {
     throw new Error('Paulus.registrarAcao: use { id, rotulos:[...], executar() }');
   }
   estado.acoes = estado.acoes.filter(function (x) { return x.id !== a.id; });
-  estado.acoes.push({ id: a.id, rotulos: a.rotulos.map(normalizar).filter(Boolean), descricao: a.descricao || '', executar: a.executar, confirmar: !!a.confirmar });
+  estado.acoes.push({ id: a.id, titulo: String(a.titulo || a.rotulos[0] || a.id), rotulos: a.rotulos.map(normalizar).filter(Boolean), descricao: a.descricao || '', executar: a.executar, confirmar: !!a.confirmar });
 }
 
 // Busca dentro do app. { id, rotulos:['unidade','equipamento'], buscar(consulta) -> [{titulo, detalhe?, abrir?()}] }
@@ -694,6 +823,20 @@ function telefonesDesconhecidos(texto, fichas) {
   });
 }
 
+// Ações que a IA pode PROPOR neste app: as registradas ou as passadas na chamada (opcoes.acoes, para apps com o próprio cérebro).
+// Cada uma: { id, rotulo|titulo, descricao?, confirmar?, executar? }. Só id, nome e descrição vão ao Worker; nada executa sozinho.
+function acoesDisponiveis(externas) {
+  const lista = Array.isArray(externas) ? externas : estado.acoes;
+  const saida = [];
+  for (const a of lista) {
+    if (!a || !RE_ID_ACAO.test(String(a.id || ''))) continue;
+    const rotulo = String(a.rotulo || a.titulo || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+    if (!rotulo) continue;
+    saida.push({ id: String(a.id), rotulo: rotulo, descricao: String(a.descricao || '').replace(/\s+/g, ' ').trim().slice(0, 100), confirmar: !!a.confirmar, executar: a.executar });
+  }
+  return saida.slice(0, MAX_ACOES_ENVIADAS);
+}
+
 function lerSSE(resp, ganchos, controle) {
   return new Promise(function (resolve, reject) {
     const leitor = resp.body.getReader();
@@ -718,8 +861,8 @@ function lerSSE(resp, ganchos, controle) {
           if (typeof ev.t === 'string') {
             recebeu = true;
             acumulado += ev.t;
-            // O rótulo "SUGESTÕES:" e o que vem depois nunca chegam à tela.
-            if (ganchos.onToken) ganchos.onToken(ev.t, ocultarSugestoes(acumulado));
+            // Os rótulos "AÇÕES NO APP:" e "SUGESTÕES:" (e o que vem depois) nunca chegam à tela.
+            if (ganchos.onToken) ganchos.onToken(ev.t, ocultarControles(acumulado));
           }
         }
         if (fim) {
@@ -744,6 +887,9 @@ async function pedirIA(texto, opcoes) {
     fichas: fichas,
     stream: true
   };
+  // O que o app sabe abrir/fazer: a IA só pode propor ids desta lista.
+  const acoes = acoesDisponiveis(opcoes.acoes);
+  if (acoes.length) corpo.acoes = acoes.map(function (a) { return { id: a.id, rotulo: a.rotulo, descricao: a.descricao }; });
   // Visão geral do diretório (totais por grupo), montada pelo app. Só vai quando o app a manda.
   if (typeof opcoes.panorama === 'string' && opcoes.panorama.trim()) corpo.panorama = opcoes.panorama.trim().slice(0, 3000);
 
@@ -786,15 +932,19 @@ async function pedirIA(texto, opcoes) {
       const j = await resp.json();
       if (!j || typeof j.resposta !== 'string' || !j.resposta) throw new Error(j && j.erro ? String(j.erro) : 'Resposta vazia.');
       saida = { texto: j.resposta, fontes: Array.isArray(j.fontes) ? j.fontes : [] };
-      if (opcoes.onToken) opcoes.onToken(saida.texto, ocultarSugestoes(saida.texto));
+      if (opcoes.onToken) opcoes.onToken(saida.texto, ocultarControles(saida.texto));
     }
-    const partes = separarSugestoes(saida.texto);
+    const partes = separarControles(saida.texto, acoes.map(function (a) { return a.id; }));
     saida.texto = partes.texto || saida.texto;
+    const propostas = partes.acoes.map(function (id) {
+      const a = acoes.filter(function (x) { return x.id === id; })[0];
+      return { id: a.id, rotulo: a.rotulo, confirmar: a.confirmar, executar: a.executar };
+    });
     const avisos = ['Resposta gerada por IA. Confira antes de usar em atendimento.'];
     if (telefonesDesconhecidos(saida.texto, fichas).length) {
       avisos.push('A IA citou um telefone que não consta no diretório. Confirme com a unidade antes de passar adiante.');
     }
-    return { tipo: 'ia', texto: saida.texto, fontes: saida.fontes, sugestoes: partes.sugestoes, avisos: avisos, geradoPorIA: true };
+    return { tipo: 'ia', texto: saida.texto, fontes: saida.fontes, sugestoes: partes.sugestoes, acoes: propostas, avisos: avisos, geradoPorIA: true };
   } finally {
     if (timer) clearTimeout(timer);
   }
@@ -893,7 +1043,7 @@ async function consultarNormas(texto, opcoes) {
   return achados.length ? respostaDasNormas(achados) : null;
 }
 
-const Paulus = { init, perguntar, consultarNormas, registrarAcao, registrarBusca, limpar, skin, iaLigada, temDadoPessoal, detectarCrise, versao: '0.3.0' };
+const Paulus = { init, perguntar, consultarNormas, registrarAcao, registrarBusca, limpar, skin, iaLigada, temDadoPessoal, detectarCrise, versao: '0.4.0' };
 
 root.Paulus = Paulus;
 if (typeof module === 'object' && module.exports) module.exports = Paulus;
