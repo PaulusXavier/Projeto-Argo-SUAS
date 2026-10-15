@@ -24163,6 +24163,27 @@ function argoFontesTexto(fontes) {
 // err.partial (texto que já chegou) e err.userMessage (aviso para mostrar no lugar da resposta).
 // A conversa e as fichas continuam sendo as do ArgoCerebro (payload); o Paulus só faz a ida à IA,
 // a conferência de dado pessoal/socorro e a base de normas.
+// Telas do Argo que a IA pode PROPOR como botão (a IA não abre nada: quem toca é a pessoa).
+// id = o que o Paulus envia ao Worker; cat = a aba aberta por argoAssistantGoTo.
+const ARGO_ACOES_IA = [
+  { id: 'mapa', cat: 'mapa', rotulo: 'Mapa dos Equipamentos', descricao: 'Mapa com a localização das unidades' },
+  { id: 'agenda', cat: 'agenda', rotulo: 'Agenda Argo', descricao: 'Agenda e compromissos' },
+  { id: 'recentes', cat: 'recentes', rotulo: 'Recentes', descricao: 'Últimas unidades abertas' },
+  { id: 'ferramentas', cat: 'ferramentas', rotulo: 'Ferramentas e Anotações', descricao: 'Relógio, cálculos, planilha e bloco de notas' },
+  { id: 'cras', cat: 'cras', rotulo: 'Registro de Atendimento (CRAS)', descricao: 'Registro de atendimentos do CRAS' },
+  { id: 'cas', cat: 'cas', rotulo: 'Registro de Atendimento (CAS)', descricao: 'Registro de atendimentos do CAS' },
+  { id: 'pdftools', cat: 'pdftools', rotulo: 'Central de PDF', descricao: 'Ferramentas para PDF' },
+  { id: 'tradutor', cat: 'tradutor', rotulo: 'Tradutor', descricao: 'Tradutor Es/En/Fr' },
+  { id: 'noticias', cat: 'noticias', rotulo: 'Notícias', descricao: 'Notícias do MDS, MEC e Saúde' },
+  { id: 'raps', cat: 'saude', rotulo: 'Rede RAPS', descricao: 'Rede de Atenção Psicossocial (CAPS, UBS de saúde mental)' },
+  { id: 'social', cat: 'social', rotulo: 'Proteção Social (CRAS/CREAS)', descricao: 'Proteção Social Básica e Especial' },
+  { id: 'tea', cat: 'tea', rotulo: 'Rede TEA e PCD', descricao: 'Atenção à Pessoa com Deficiência e TEA' },
+  { id: 'conselho', cat: 'conselho', rotulo: 'Conselho Tutelar', descricao: 'Proteção à criança e ao adolescente' },
+  { id: 'mulher', cat: 'mulher', rotulo: 'Rede de Enfrentamento à Violência contra a Mulher', descricao: 'Serviços de atenção à mulher' },
+  { id: 'previdencia', cat: 'previdencia', rotulo: 'Previdência (INSS)', descricao: 'Agências e serviços do INSS' },
+  { id: 'documentacao', cat: 'documentacao', rotulo: 'Documentação Civil', descricao: 'Serviços de documentação civil e fiscal' }
+];
+
 function argoStreamIA(B, rawText, payload, hooks) {
   if (typeof Paulus === 'undefined' || !Paulus.perguntar) {
     return B.streamAI(payload, hooks).then(txt => {
@@ -24184,6 +24205,8 @@ function argoStreamIA(B, rawText, payload, hooks) {
   return Paulus.perguntar(rawText, {
     aba: payload.pagina,
     semAcoes: true,                 // "abrir/buscar" já foram tratados pelo Argo antes de chegar aqui
+    // A IA pode PROPOR estas telas como botões (Paulus v0.4.0); nada abre sozinho.
+    acoes: ARGO_ACOES_IA.map(a => ({ id: a.id, rotulo: a.rotulo, descricao: a.descricao, executar: () => argoAssistantGoTo(a.cat) })),
     fichas: payload.contexto,
     panorama: payload.panorama,     // totais reais do diretório por grupo ("quantos CAPS?"); sem isso a IA contaria fichas soltas
     historico: payload.historico,
@@ -24195,7 +24218,7 @@ function argoStreamIA(B, rawText, payload, hooks) {
     if (r.tipo === 'ia') {
       const txt = B.cleanAI(r.texto);
       if (!txt) throw falha('vazia');
-      return { txt, fontes: r.fontes && r.fontes.length ? r.fontes : fontes, offline: false, sugestoes: r.sugestoes || [] };
+      return { txt, fontes: r.fontes && r.fontes.length ? r.fontes : fontes, offline: false, sugestoes: r.sugestoes || [], acoes: r.acoes || [] };
     }
     // IA indisponível: se nada chegou ainda, a base de normas pode ter o trecho certo
     if (r.tipo === 'norma' && !acc) {
@@ -24222,7 +24245,7 @@ function argoAskAI(rawText, tab, fallbackResult) {
     reply: '', mood: 'info', badge: 'IA',
     stream: {
       fallback: fallbackResult || { reply: 'Não consegui consultar a IA agora. Posso procurar o termo direto no diretório, se você quiser.', mood: 'notfound', quickActions: [{ label: 'Buscar "' + rawText.slice(0, 22) + '" nos equipamentos', run: () => argoAssistantSearch(rawText), reply: 'Pronto! Joguei essa busca no diretório.', mood: 'success' }] },
-      run: (onDelta, signal) => argoStreamIA(B, rawText, payload, { onDelta, signal }).then(({ txt, fontes, offline, sugestoes }) => {
+      run: (onDelta, signal) => argoStreamIA(B, rawText, payload, { onDelta, signal }).then(({ txt, fontes, offline, sugestoes, acoes }) => {
         const units = B.mentionedUnits(txt, ctxNames);
         B.remember(rawText, txt, units);
         const bad = B.verifyPhones(txt);
@@ -24241,7 +24264,10 @@ function argoAskAI(rawText, tab, fallbackResult) {
           units: argoUnitsForUi(units),
           followups: seguintes,
           // Sem IA agora e a base de normas respondeu: dá um jeito de tentar de novo com a IA
-          quickActions: offline ? [{ label: '↻ Tentar com a IA de novo', ask: rawText, force: true }] : undefined
+          quickActions: offline
+            ? [{ label: '↻ Tentar com a IA de novo', ask: rawText, force: true }]
+            // Telas propostas pela IA: botão "Abrir ..." (o mascote confirma com uma frase curta)
+            : ((acoes || []).length ? acoes.map(a => ({ label: 'Abrir ' + a.rotulo, run: a.executar, reply: 'Abri: ' + a.rotulo + '.', mood: 'success' })) : undefined)
         };
       }, err => { if (err && err.partial) B.remember(rawText, err.partial, []); throw err; })
     }
