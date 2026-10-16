@@ -17517,8 +17517,14 @@ function argoOpenTabAsk(rawText) {
     const nm = ((chip.querySelector('span:not(.chip-icon):not(.chip-count)') || {}).textContent || '').trim();
     chips.push({ cat: chip.dataset.cat, name: nm });
   });
+  // "abre o SITE do Toth": a palavra "site" decide; vale antes de aba e de card.
+  if (/(^| )(site|sites|link|portal)( |$)/.test(argoNorm(rawText))) {
+    const sit = argoOpenSiteAsk(rawText);
+    if (sit) return sit;
+  }
   const hit = argoResolveTabRequest(rawText, chips);
-  if (!hit) return null;
+  // Não é uma aba: pode ser o nome de um card ("abre o Hospital Coronel Mota") ou de um app/site ("abre o Toth").
+  if (!hit) return argoOpenCardAsk(rawText) || argoOpenSiteAsk(rawText);
   const go = () => {
     argoAssistantGoTo(hit.cat);
     // No celular o painel do Argo cobre a tela: fecha para a aba aparecer.
@@ -17534,6 +17540,173 @@ function argoOpenTabAsk(rawText) {
     mood: 'success',
     quickActions: [],
     autoRun: go
+  };
+}
+
+/* ============================================================
+   ARGO ↔ CARDS — "abre o Hospital Coronel Mota", "abrir a ficha da UBS Pintolândia".
+   Mesmo princípio das abas: pedido curto (verbo de abrir + nome da unidade) abre na hora.
+   Leva para a lista geral, filtra pelo nome e amplia o card em tela cheia.
+   Nome que serve para mais de uma unidade: o mascote oferece um botão por unidade.
+   Só roda depois de argoOpenTabAsk não achar aba com o nome pedido.
+   ============================================================ */
+const ARGO_CARD_STOP = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'a', 'o', 'as', 'os', 'em', 'no', 'na']);
+
+// Pedido de abrir um card → { exact: unidade | null, list: [unidades] } ou null. Função pura.
+function argoResolveCardRequest(rawText, data) {
+  const n = argoNorm(rawText);
+  if (!n || n.length > 90) return null;
+  const m = n.match(/^(?:(?:por favor|pode|poderia|podia|consegue|quero|queria|preciso|gostaria de|vamos|vamo|bora)\s+)*(?:(?:me|nos)\s+)?(?:abrir|abre|abra|ir|va|vai|vamos|leva|leve|levar|mostra|mostre|mostrar|ver|veja|ampliar|amplia|amplie|acessar|acessa|acesse|entrar|entra|entre)\s+(.+)$/);
+  if (!m) return null;
+  let rest = m[1]
+    .replace(/^(?:(?:a|o|as|os|de|da|do|das|dos|na|no|nas|nos|para|pra|pro|ate|ao|em|la|ai|aqui|um|uma|card|cards|cartao|ficha|fichas|unidade|equipamento|servico|site|sites|pagina|link|portal|oficial|app|aplicativo)\s+)+/, '')
+    .replace(/(?:\s+(?:agora|ja|por favor|por gentileza|pra mim|para mim|ai|obrigado|obrigada))+$/, '')
+    .trim();
+  if (rest.length < 3 || /^(site|sites|pagina|link|portal|oficial|app|aplicativo|card|cards|cartao|ficha|fichas|unidade|equipamento|servico)$/.test(rest)) return null;
+  const words = rest.split(' ').filter(w => !ARGO_CARD_STOP.has(w));
+  if (!words.length) return null;
+
+  const scored = [];
+  (data || []).forEach(u => {
+    if (!u || !u.id) return;
+    const names = [u.name, u.fullName].filter(Boolean).map(argoNorm);
+    // sigla entre parênteses do nome completo, ex.: "(HCSA)"
+    const sig = /\(([A-Za-zÀ-ú0-9 ]{2,12})\)/.exec(String(u.fullName || ''));
+    if (sig) names.push(argoNorm(sig[1]));
+    if (names.indexOf(rest) > -1) { scored.push({ u, s: 100 }); return; }
+    let best = 0;
+    names.forEach(nm => {
+      const toks = nm.split(' ');
+      const ok = words.every(w => toks.some(t => t === w || (w.length >= 4 && t.indexOf(w) === 0)));
+      if (!ok) return;
+      // quanto mais o pedido cobre o nome, mais forte o casamento
+      const cover = words.length / Math.max(1, toks.filter(t => !ARGO_CARD_STOP.has(t)).length);
+      best = Math.max(best, 10 + cover * 50);
+    });
+    if (best) scored.push({ u, s: best });
+  });
+  if (!scored.length) return null;
+  scored.sort((a, b) => b.s - a.s);
+  // Palavra solta e genérica ("abrir hospital") casaria dezenas de fichas: aí é pergunta, não pedido de card.
+  if (scored[0].s < 100 && scored.length > 6) return null;
+  const top = scored[0];
+  const tied = scored.filter(x => x.s === top.s);
+  if (top.s >= 100 && tied.length === 1) return { exact: top.u, list: [top.u] };
+  if (tied.length === 1 && (scored.length === 1 || top.s - scored[1].s >= 20)) return { exact: top.u, list: [top.u] };
+  return { exact: null, list: scored.slice(0, 4).map(x => x.u) };
+}
+
+// Abre o card de uma unidade: lista geral + busca pelo nome + visão ampliada.
+function argoAssistantOpenCard(unit) {
+  if (!unit) return;
+  // Fecha um card que já esteja ampliado e a busca/aba antiga, para a lista refazer limpa.
+  if (typeof closeCardFocus === 'function' && isCardFocusOpen()) closeCardFocus();
+  const input = document.getElementById('mainSearch');
+  argoAssistantGoTo('all');
+  const find = () => document.querySelector('#grid .tech-card[data-unit-id="' + String(unit.id).replace(/["\\]/g, '\\$&') + '"]');
+  const fill = () => {
+    if (!input || input.disabled) return;
+    input.value = unit.name || '';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    clearTimeout(searchDebounceTimer);       // não espera o intervalo da digitação: refaz a lista já
+    render();
+  };
+  let tries = 0;
+  const attempt = () => {
+    fill();
+    const card = find();
+    if (card) {
+      try { card.scrollIntoView({ block: 'center' }); } catch (e) { /* ignora */ }
+      openCardFocus(card);
+      return;
+    }
+    // lista em montagem (abas de painel limpam o grid no próximo quadro): tenta de novo, poucas vezes
+    if (++tries < 6) setTimeout(attempt, 120);
+  };
+  requestAnimationFrame(attempt);
+}
+
+function argoOpenCardAsk(rawText) {
+  if (typeof document === 'undefined' || typeof DATA === 'undefined') return null;
+  const hit = argoResolveCardRequest(rawText, DATA);
+  if (!hit) return null;
+  const short = u => { const t = u.name || ''; return t.length > 46 ? t.slice(0, 45) + '…' : t; };
+  if (hit.exact) {
+    const u = hit.exact;
+    const go = () => {
+      argoAssistantOpenCard(u);
+      // No celular o painel do Argo cobre a tela: fecha para o card aparecer.
+      try {
+        if (window.matchMedia && window.matchMedia('(max-width:560px)').matches && argoAssistantCtrl && argoAssistantCtrl.close) {
+          setTimeout(() => argoAssistantCtrl.close(), 700);
+        }
+      } catch (e) { /* ignora */ }
+    };
+    return {
+      reply: argoPick(['Pronto, abri o card de "' + short(u) + '".', 'Abrindo o card de "' + short(u) + '" para você.', 'Feito! "' + short(u) + '" está aberto.']),
+      mood: 'success',
+      quickActions: [],
+      autoRun: go
+    };
+  }
+  return {
+    reply: 'Achei mais de uma unidade com esse nome. Qual delas você quer abrir?',
+    mood: 'info',
+    quickActions: hit.list.map(u => ({
+      label: 'Abrir: ' + (short(u).length > 30 ? short(u).slice(0, 29) + '…' : short(u)),
+      run: () => { argoAssistantOpenCard(u); try { if (argoAssistantCtrl && argoAssistantCtrl.close && window.matchMedia('(max-width:560px)').matches) setTimeout(() => argoAssistantCtrl.close(), 700); } catch (e) { /* ignora */ } },
+      reply: 'Pronto, abri o card de "' + short(u) + '".',
+      mood: 'success'
+    }))
+  };
+}
+
+/* ============================================================
+   ARGO ↔ SITES — "abre o Toth", "abre o site da Setrabes", "abrir o site do Bolsa Família".
+   Sites que o mascote conhece: os apps da aba Aplicativos (EXTERNAL_APPS) e o "Site Oficial"
+   das fichas do diretório (campo website). Só abre endereço http(s) que já está nos dados do app.
+   Os navegadores só deixam abrir uma aba nova quando a pessoa acabou de tocar em algo; se o
+   pedido chegar tarde demais (resposta assíncrona), o bloqueio é normal: o botão "Abrir ..."
+   que acompanha a resposta resolve com um toque.
+   ============================================================ */
+function argoOpenUrl(url) {
+  if (!/^https?:\/\//i.test(String(url || ''))) return false;
+  try { return !!window.open(url, '_blank', 'noopener,noreferrer'); } catch (e) { return false; }
+}
+
+function argoSiteCandidates() {
+  const list = [];
+  (typeof EXTERNAL_APPS !== 'undefined' ? EXTERNAL_APPS : []).forEach((a, k) => {
+    if (a && a.url) list.push({ id: 'app-' + k, name: a.name.replace(/\s+[—–-]\s+.*$/, ''), fullName: a.name, url: a.url, label: a.name });
+  });
+  (typeof DATA !== 'undefined' ? DATA : []).forEach(u => {
+    if (u && u.website) list.push({ id: u.id, name: u.name, fullName: u.fullName, url: u.website, label: u.name });
+  });
+  return list;
+}
+
+function argoOpenSiteAsk(rawText) {
+  if (typeof document === 'undefined') return null;
+  const hit = argoResolveCardRequest(rawText, argoSiteCandidates());
+  if (!hit) return null;
+  // várias fichas podem apontar para o mesmo site (ex.: Setrabes): conta uma vez só
+  const seen = new Set();
+  const uniq = hit.list.filter(c => !seen.has(c.url) && seen.add(c.url));
+  const short = c => { const t = c.label || ''; return t.length > 46 ? t.slice(0, 45) + '…' : t; };
+  const mk = c => ({ label: 'Abrir site: ' + (short(c).length > 28 ? short(c).slice(0, 27) + '…' : short(c)), run: () => argoOpenUrl(c.url), reply: 'Abri o site de "' + short(c) + '" em outra aba.', mood: 'success' });
+  if (uniq.length === 1) {
+    const c = uniq[0];
+    return {
+      reply: argoPick(['Abrindo o site de "' + short(c) + '" (' + appsextHost(c.url) + ') em outra aba. Se o navegador bloquear, toque no botão abaixo.', 'Certo! Site de "' + short(c) + '" a caminho. Se nada abrir, toque no botão abaixo.']),
+      mood: 'success',
+      quickActions: [mk(c)],
+      autoRun: () => argoOpenUrl(c.url)
+    };
+  }
+  return {
+    reply: 'Achei mais de um site que combina. Qual deles você quer abrir?',
+    mood: 'info',
+    quickActions: uniq.slice(0, 4).map(mk)
   };
 }
 
