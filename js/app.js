@@ -2087,10 +2087,14 @@ function applyStoredTheme() {
   updateThemeToggleUI();
 }
 
-function toggleTheme() {
-  const next = getEffectiveTheme() === 'dark' ? 'light' : 'dark';
-  safeStorage.set(THEME_KEY, next);
+function setTheme(mode) {
+  if (mode !== 'light' && mode !== 'dark') return;
+  safeStorage.set(THEME_KEY, mode);
   applyStoredTheme();
+}
+
+function toggleTheme() {
+  setTheme(getEffectiveTheme() === 'dark' ? 'light' : 'dark');
 }
 
 const BF_HIGHLIGHT_HTML = `
@@ -17017,7 +17021,7 @@ const ARGO_ASSISTANT_INTENTS = [
   },
   {
     keys: ['tema', 'modo escuro', 'modo claro', 'escuro', 'claro', 'dark'],
-    reply: 'É o ícone de sol/lua no topo. Se quiser, troco agora.',
+    reply: 'É o ícone de sol/lua no topo. Mas é só me pedir: diga "modo escuro" ou "modo claro" que eu troco na hora.',
     action: { label: 'Alternar tema agora', run: () => { if (typeof toggleTheme === 'function') toggleTheme(); }, reply: 'Tema alternado ✨', mood: 'success' }
   },
   {
@@ -17509,6 +17513,57 @@ function argoResolveTabRequest(rawText, chips) {
   return null;
 }
 
+// Pedido para trocar o tema ("modo escuro", "muda para claro", "tira o modo escuro",
+// "alterna o tema"): o mascote troca na hora, sem precisar clicar no botão de sol/lua.
+// Função pura de interpretação em argoResolveThemeRequest; esta aplica o efeito.
+// Dúvidas ("como mudo o tema?") não são comando e seguem para a resposta de ajuda.
+function argoResolveThemeRequest(rawText) {
+  const n = argoNorm(rawText);
+  if (!n || n.length > 90) return null;
+  if (/^(como|onde|qual|quais|o que|por que|porque|quando|existe|tem)( |$)/.test(n)) return null;
+  const tgt = /(^| )(escuro|escura|dark|noturno|noite)( |$)/.test(n) || /(^| )(claro|clara|light|diurno)( |$)/.test(n);
+  const hasWord = /(^| )(modo|tema|fundo|visual|aparencia|tela|cor)( |$)/.test(n);
+  const hasVerb = /(^| )(muda|mude|mudar|troca|troque|trocar|alterna|alterne|alternar|coloca|coloque|colocar|poe|ponha|por|ativa|ative|ativar|liga|ligue|ligar|desativa|desative|desativar|desliga|desligue|desligar|tira|tire|tirar|remove|volta|volte|voltar|quero|prefiro|usa|use|usar)( |$)/.test(n);
+  // Só "claro"/"escuro" soltos ("claro, obrigado") não valem: precisa de "modo/tema/fundo..." ou de verbo + alvo.
+  if (!(hasWord && (tgt || hasVerb)) && !(hasVerb && tgt)) return null;
+  if (!hasWord && !/(^| )(escuro|escura|dark|noturno|light)( |$)/.test(n) && !/(^| )(para|pra|pro|no|em) (o )?(claro|clara|diurno)( |$)/.test(n)) return null;
+  const off = /(^| )(desativa|desative|desativar|desliga|desligue|desligar|tira|tire|tirar|remove|sem)( |$)/.test(n);
+  // Vale a última cor citada: "de claro para escuro" → escuro.
+  let last = null, lastAt = -1;
+  [['dark', /(escuro|escura|dark|noturno|noite)/g], ['light', /(claro|clara|light|diurno)/g]].forEach(([mode, re]) => {
+    let m; while ((m = re.exec(n))) { if (m.index > lastAt) { lastAt = m.index; last = mode; } }
+  });
+  if (!last) return /(^| )(alterna|alterne|alternar|troca|troque|trocar|inverte|inverta)( |$)/.test(n) ? 'toggle' : null;
+  return off ? (last === 'dark' ? 'light' : 'dark') : last;
+}
+
+function argoThemeAsk(rawText) {
+  if (typeof document === 'undefined') return null;
+  const want = argoResolveThemeRequest(rawText);
+  if (!want) return null;
+  const now = getEffectiveTheme();
+  const target = want === 'toggle' ? (now === 'dark' ? 'light' : 'dark') : want;
+  const nome = target === 'dark' ? 'escuro' : 'claro';
+  if (target === now) {
+    return { reply: 'O modo ' + nome + ' já está ativo 🙂', mood: 'info', quickActions: [] };
+  }
+  const go = () => {
+    setTheme(target);
+    // No celular o painel do Argo cobre a tela: fecha para a mudança aparecer.
+    try {
+      if (window.matchMedia && window.matchMedia('(max-width:560px)').matches && argoAssistantCtrl && argoAssistantCtrl.close) {
+        setTimeout(() => argoAssistantCtrl.close(), 900);
+      }
+    } catch (e) { /* ignora */ }
+  };
+  return {
+    reply: argoPick(['Pronto, mudei para o modo ' + nome + '.', 'Feito! Agora está no modo ' + nome + '.', 'Modo ' + nome + ' ativado ✨']),
+    mood: 'success',
+    quickActions: [{ label: 'Voltar ao modo ' + (target === 'dark' ? 'claro' : 'escuro'), run: () => setTheme(now), reply: 'Voltei ao modo ' + (now === 'dark' ? 'escuro' : 'claro') + '.', mood: 'success' }],
+    autoRun: go
+  };
+}
+
 function argoOpenTabAsk(rawText) {
   if (typeof document === 'undefined') return null;
   const chips = [];
@@ -17720,6 +17775,8 @@ function argoAssistantAsk(rawText) {
   if (!norm) return null;
   const agendaAnswer = argoAgendaAsk(rawText);
   if (agendaAnswer) return agendaAnswer;
+  const themeAnswer = argoThemeAsk(rawText);
+  if (themeAnswer) return themeAnswer;
   const tabOpen = argoOpenTabAsk(rawText);
   if (tabOpen) return tabOpen;
   const ubsPsi = argoUbsPsicoAsk(rawText);
@@ -24201,7 +24258,8 @@ function argoAssistantAskHybrid(rawText, meta) {
   meta = meta || {};
   const texto = String(rawText == null ? '' : rawText).trim();
   const pular = !B || typeof B.interpretar !== 'function' || !B.aiOn() || meta.forceAI || meta.regen || meta.semInterpretar ||
-    texto.length < 4 || texto.length > 300 || _ubsPsiAguarda || B.crisis(texto) || B.piiBlock(texto) || argoAgendaAsk(texto) || argoOpenTabAsk(texto);
+    texto.length < 4 || texto.length > 300 || _ubsPsiAguarda || B.crisis(texto) || B.piiBlock(texto) || argoAgendaAsk(texto) || argoThemeAsk(texto) || argoOpenTabAsk(texto) ||
+    (typeof B.psi === 'function' && B.psi(texto).score >= 3);
   if (pular) return argoAssistantAskHybridCore(rawText, meta);
   const tab = argoActiveTabInfo();
   return B.interpretar(texto, { tabName: tab.name }).then(i => {
@@ -24245,6 +24303,10 @@ function argoAssistantAskHybridCore(rawText, meta) {
   const agendaAnswer = argoAgendaAsk(rawText);
   if (agendaAnswer) return agendaAnswer;
 
+  // Pedido para trocar o tema ("modo escuro"): troca na hora, sem passar pela IA.
+  const themeAnswer = argoThemeAsk(rawText);
+  if (themeAnswer) return themeAnswer;
+
   // Pedido claro para abrir uma aba ("abre o mapa"): abre na hora, sem passar pela IA.
   const tabOpen = argoOpenTabAsk(rawText);
   if (tabOpen) return tabOpen;
@@ -24263,6 +24325,11 @@ function argoAssistantAskHybridCore(rawText, meta) {
     // Socorro e consulta ao diretório (telefone, endereço, horário, bairro) continuam respondidos na hora, com os dados reais.
     if (plan.kind === 'crisis' || (plan.kind === 'directory' && !longMsg)) {
       return keep(argoAssistantToUi(plan.result, rawText, false), plan.result.units);
+    }
+    // Dúvida do psicólogo no SUAS: verbete curado, com a norma citada. Responde na hora, mesmo com a IA ligada
+    // (a resposta precisa ser a da norma); a IA fica a um toque, em "Aprofundar com a IA".
+    if (plan.kind === 'psi' && !longMsg) {
+      return keep(argoAssistantToUi(plan.result, rawText, true), plan.result.units);
     }
     // Dúvida de conteúdo (pergunta de verdade): com a IA ligada, ela responde com a norma e a conversa; o verbete pronto
     // só entra se a IA falhar ou estiver desligada. Frase curta de navegação ("abrir mapa") não é pergunta e segue como antes.
