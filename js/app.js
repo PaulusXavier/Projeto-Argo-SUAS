@@ -785,7 +785,7 @@ function logout(reason) {
    conectado" é apagado). Protege o caso de alguém sair do posto com o app
    aberto. Também tranca ao voltar de uma aba escondida por mais tempo que o
    limite (celular bloqueado, aba em segundo plano). */
-const AUTO_LOCK_IDLE_MS = 15 * 60 * 1000; // 15 min
+const AUTO_LOCK_IDLE_MS = 45 * 60 * 1000; // 45 min
 let _autoLockTimer = null;
 let _autoLockHiddenAt = 0;
 
@@ -17564,8 +17564,56 @@ function argoThemeAsk(rawText) {
   };
 }
 
+/* ============================================================
+   ARGO ↔ SISTEMAS DE TRABALHO — "abra o SIBEC", "abre o Sicon", "abrir o Cidade Social"...
+   Atalhos dos sistemas que a equipe do CRAS usa todo dia (mesmos links do painel de Atendimento CRAS).
+   O SIBEC usa o endereço de entrada do sistema (o link de login da Caixa traz um "state" de sessão
+   que expira e não serve de atalho). Pede um verbo de abrir (ou "site/link/portal"), para
+   "o que é o Sicon?" continuar sendo explicação e não abrir página.
+   ============================================================ */
+const ARGO_SISTEMAS = [
+  { nome: 'SIBEC (Caixa)', url: 'https://www.beneficiossociais.caixa.gov.br/sibec2/sisgrSibec', keys: ['sibec'] },
+  { nome: 'SICON / SIGPBF (MDS)', url: 'https://www.mds.gov.br/mds-sigpbf-web/carregarTelaLogin.jsf', keys: ['sicon', 'sigpbf'] },
+  { nome: 'Cidade Social', url: 'https://cidadesocial1.ae3tecnologia.com.br/login', keys: ['cidade social', 'cidadesocial'] },
+  { nome: 'BV Cidadão', url: 'https://bvcidadao.prefeitura.boavista.br/proton/login.asp', keys: ['bv cidadao', 'bvcidadao'] },
+  { nome: 'Banco de Talentos', url: 'https://bt.pmbv.rr.gov.br/SMT73/open.do?sys=SMT', keys: ['banco de talentos', 'banco talentos'] },
+  { nome: 'Portal CadÚnico', url: 'https://cadunico.dataprev.gov.br/portal/', keys: ['cadunico', 'cad unico', 'cadastro unico'] },
+  { nome: 'Carteira do Idoso', url: 'https://carteiraidoso.cidadania.gov.br/', keys: ['carteira do idoso', 'carteira idoso', 'carteira da pessoa idosa', 'carteira de idoso'] }
+];
+const ARGO_RE_ABRIR = /(^| )(abr[ae]|abrir|abra|abri|acess[ae]|acessar|entr[ae] n[oa]|entrar n[oa]|ir para|va para|vai para|quero (ir|entrar|acessar)|me leva|leve|link|site|portal|sistema)( |$)/;
+
+function argoOpenSistemaAsk(rawText) {
+  if (typeof document === 'undefined') return null;
+  const n = ' ' + argoNorm(rawText) + ' ';
+  if (!ARGO_RE_ABRIR.test(n.trim())) return null;
+  // pergunta sobre o sistema ("o que é", "como funciona") não é pedido de abrir
+  if (/(^| )(o que (e|significa)|como (funciona|faco|fazer)|para que serve|qual (a )?(sigla|diferenca))( |$)/.test(n.trim()) && !/(^| )(abr[ae]|abrir|abra|acess[ae]r?)( |$)/.test(n.trim())) return null;
+  const achados = [];
+  ARGO_SISTEMAS.forEach(sis => {
+    if (sis.keys.some(k => n.indexOf(' ' + k + ' ') > -1)) achados.push(sis);
+  });
+  if (!achados.length) return null;
+  const mk = sis => ({ label: 'Abrir ' + sis.nome, run: () => argoOpenUrl(sis.url), reply: 'Abri "' + sis.nome + '" em outra aba.', mood: 'success' });
+  if (achados.length === 1) {
+    const sis = achados[0];
+    return {
+      reply: argoPick(['Abrindo o ' + sis.nome + ' em outra aba. Se o navegador bloquear, toque no botão abaixo.', 'Certo! ' + sis.nome + ' a caminho. Se nada abrir, toque no botão abaixo.']),
+      mood: 'success',
+      quickActions: [mk(sis)],
+      autoRun: () => argoOpenUrl(sis.url)
+    };
+  }
+  return {
+    reply: 'Pedi mais de um sistema, e o navegador só deixa abrir um por toque. Toque no que quer abrir:',
+    mood: 'info',
+    quickActions: achados.map(mk)
+  };
+}
+
 function argoOpenTabAsk(rawText) {
   if (typeof document === 'undefined') return null;
+  const sistema = argoOpenSistemaAsk(rawText);
+  if (sistema) return sistema;
   const chips = [];
   document.querySelectorAll('#filterBar .filter-chip[data-cat]').forEach(chip => {
     if (chip.disabled) return;
