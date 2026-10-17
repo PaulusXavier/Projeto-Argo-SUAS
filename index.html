@@ -58,43 +58,34 @@
 
       <img class="login-story-emblem" src="assets/img/argo-navis-historico.jpg" alt="" aria-hidden="true">
 
-      <div class="login-story-top">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#29ABE2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        <span class="login-story-eyebrow">Acesso Restrito</span>
-      </div>
-
-
       <div class="login-story-content">
         <p class="login-story-brand">
           Argo<span>SUAS</span>
         </p>
         <p class="login-story-tagline">Rede de Políticas Públicas de Roraima</p>
-        <p class="login-story-desc">Diretório técnico de equipamentos de Políticas Públicas do estado de Roraima.</p>
-        <div class="login-story-tags" aria-hidden="true">
-          <span>Assistência Social</span><span>Educação</span><span>Saúde</span><span>Segurança Pública</span>
-        </div>
+        <ul class="login-story-list">
+          <li>Equipamentos da rede, com telefone, endereço e ficha de encaminhamento</li>
+          <li>Agenda, mapa, notícias e Central de PDF</li>
+          <li>Funciona sem internet depois do primeiro acesso</li>
+        </ul>
       </div>
     </div>
 
     <div class="login-panel">
-      <span class="login-eyebrow">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        Equipe Técnica
-      </span>
-      <h1 id="loginTitle" class="login-title">Entrar no painel</h1>
+      <h1 id="loginTitle" class="login-title">Entrar no Argo SUAS</h1>
       <svg class="login-river" viewBox="0 0 84 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <path d="M0,5 C10,0 15,10 25,5 C35,0 40,10 50,5 C60,0 65,10 75,5 C78,4 81,5 84,5" stroke-width="2" stroke-linecap="round"/>
       </svg>
-      <p class="login-sub">Use a senha compartilhada da equipe para acessar o diretório de equipamentos.</p>
+      <p class="login-sub">Acesso da equipe técnica do SUAS em Boa Vista - RR. Digite a senha compartilhada da equipe.</p>
 
       <p class="login-notice" id="loginNotice" role="status" hidden></p>
 
       <form id="loginForm" autocomplete="off" novalidate>
         <div class="login-field">
-          <label for="loginPassword">Senha de acesso</label>
+          <label for="loginPassword">Senha da equipe</label>
           <div class="login-input-wrapper">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            <input type="password" id="loginPassword" name="password" placeholder="Digite a senha da equipe" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" required aria-describedby="loginCapsLockHint loginErrorText" aria-invalid="false">
+            <input type="password" id="loginPassword" name="password" placeholder="Senha" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" required aria-describedby="loginCapsLockHint loginErrorText" aria-invalid="false">
             <button type="button" id="loginToggleVisibility" class="login-toggle-visibility" aria-label="Mostrar senha" aria-pressed="false">
               <svg class="icon-eye" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
               <svg class="icon-eye-off" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.62 21.62 0 0 1 5.06-6.06M9.9 4.24A10.4 10.4 0 0 1 12 4c7 0 11 8 11 8a21.6 21.6 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
@@ -135,7 +126,7 @@
 
         <p class="login-trust-note">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          <span>Verificação feita neste dispositivo — a senha não é enviada a servidores.</span>
+          <span>A senha é conferida neste aparelho e não vai para nenhum servidor.</span>
         </p>
       </form>
 
@@ -143,16 +134,12 @@
          title="Abrir o site de Paulo Xavier (Vita) em nova aba">
         <span class="login-vita-mark" aria-hidden="true">Ψ</span>
         <span class="login-vita-text">
-          <span class="login-vita-eyebrow">Conheça o site do autor</span>
+          <span class="login-vita-eyebrow">Site do autor</span>
           <span class="login-vita-title">Vita · Paulo Xavier, Psicólogo</span>
         </span>
         <span class="login-vita-arrow" aria-hidden="true">↗</span>
       </a>
 
-      <p class="login-footnote">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-        <span>Acesso destinado à <strong>equipe técnica do SUAS</strong> em Boa Vista - RR. Em caso de dúvida sobre a senha, contate a coordenação.</span>
-      </p>
       <details class="login-details">
         <summary>Privacidade e uso em computador compartilhado</summary>
         <p>Nomes, endereços, NIS, anotações e anexos salvos neste navegador ficam cifrados com esta senha — quem não souber a senha não consegue lê-los, mesmo acessando o arquivo do site ou o armazenamento do navegador. Ainda assim, o código do app pode ser visto por qualquer pessoa com a URL. Antes de emprestar ou devolver um computador compartilhado, use "Apagar dados salvos neste dispositivo" no rodapé para remover nomes, anotações e anexos de atendidos.</p>
