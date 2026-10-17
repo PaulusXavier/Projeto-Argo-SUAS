@@ -10,6 +10,8 @@
  *      Tolera erro de digitação, plural, sinônimos e siglas.
  *   2b. CID-11: pergunta por código (6A02) ou por nome ("CID de ansiedade") e responde
  *      direto da tabela do Capítulo 06 (assets/cid11.json), sem IA e sem internet.
+ *   2c. Base do psicólogo no SUAS: respostas curadas, com a norma citada (documentos do CFP,
+ *      sigilo, demandas do Sistema de Justiça, comunicação de violência, limites do papel).
  *   3. Base SUAS: glossário offline (CRAS, CREAS, PAIF, BPC, CadÚnico, RAPS,
  *      Conselho Tutelar, fluxos de violência etc.) com a base normativa.
  *   4. Memória da conversa: entende "e o horário?", "e o telefone dele?".
@@ -549,6 +551,199 @@
       reply: entry.text, mood: 'info', badge: 'Base SUAS',
       note: entry.base ? 'Base: ' + entry.base : '',
       quickActions: entry.actions || [], followups: (entry.follow || []).slice(0, 3), glossId: entry.id
+    };
+  }
+
+  // ---------------------------------------------------------------------
+  // Base do psicólogo no SUAS (respostas curadas, offline, com a norma citada)
+  //
+  // Cada verbete responde UMA dúvida prática e diz de onde vem. Só entra aqui o que foi
+  // conferido em texto oficial (CFP, CNAS, leis). Onde a norma não diz algo, o verbete
+  // também não diz. Para acrescentar: copie um verbete, troque id/keys/text/base e
+  // atualize PSI_REV. "keys" aceitam frases (com ou sem acento) e "a+b" (as duas palavras).
+  // Não substitui orientação do CRP, da coordenação ou da assessoria jurídica.
+  // ---------------------------------------------------------------------
+  var PSI_REV = 'out/2026';
+  var PSI_BASE = [
+    // ---- Papel e limites ----
+    { id: 'psi-psicoterapia', cat: 'Papel e limites',
+      keys: ['psicoterapia no suas', 'psicoterapia no cras', 'psicoterapia no creas', 'terapia no cras', 'terapia no creas', 'terapia no suas', 'atendimento clinico no suas', 'atendimento clinico no cras', 'atendimento clinico no creas', 'atendimento psicoterapico', 'posso fazer psicoterapia', 'fazer terapia com o usuario', 'clinica no suas'],
+      text: 'No SUAS o foco é **psicossocial**, não psicoterápico.\n- **CRAS:** compreender os processos subjetivos ligados à vulnerabilidade, prevenir rupturas de vínculos familiares e comunitários, favorecer a autonomia e encaminhar à saúde quando for preciso. Evite patologizar ou categorizar os usuários.\n- **CREAS:** atuação psicossocial; o sofrimento psíquico é lido a partir dos contextos de vulnerabilidade e violência vividos. Os casos que exigem **psicoterapia** vão para a rede de saúde (UBS, CAPS).\n- Psicoterapia é modalidade da política de Saúde.',
+      base: 'Referências Técnicas do CREPOP/CFP para atuação no CRAS e no CREAS (2013), a partir de orientações do MDS.',
+      actions: [{ label: 'Ver UBS', search: 'UBS' }, { label: 'Ver CAPS', search: 'CAPS' }], follow: ['Quando encaminhar para a saúde?', 'O que o psicólogo faz no SUAS?'] },
+
+    { id: 'psi-obrigatorio', cat: 'Papel e limites',
+      keys: ['psicologo obrigatorio', 'psicologo e obrigatorio', 'psicologa obrigatoria', 'equipe de referencia', 'equipe minima', 'quantos psicologos', 'nob rh', 'nob rh suas', 'composicao da equipe', 'categorias profissionais do suas'],
+      text: 'Pela **Resolução CNAS 17/2011**, que ratifica a equipe de referência da NOB-RH/SUAS, o **psicólogo é categoria obrigatória**:\n- **Proteção Social Básica (CRAS):** assistente social e psicólogo.\n- **Proteção Especial de média complexidade (CREAS):** assistente social, psicólogo e advogado.\n- **Proteção Especial de alta complexidade:** assistente social e psicólogo.\n**CRAS, por famílias referenciadas (NOB-RH/SUAS, 2006):** até 2.500 = 2 técnicos de nível superior; até 3.500 = 3; a cada 5.000 = 4 (dois assistentes sociais, um psicólogo e um profissional de outra categoria do SUAS). Confira a versão vigente da NOB-RH antes de usar o número em ofício ou pedido de contratação.',
+      base: 'Res. CNAS 17/2011, art. 1º, parágrafo único; NOB-RH/SUAS (Res. CNAS 269/2006).',
+      actions: [], follow: ['O que o psicólogo faz no SUAS?'] },
+
+    { id: 'psi-funcao', cat: 'Papel e limites',
+      keys: ['funcao privativa', 'atribuicao privativa', 'atribuicoes do psicologo no suas', 'o que o psicologo faz no suas', 'o que faz o psicologo no cras', 'o que faz o psicologo no creas', 'papel do psicologo no suas', 'papel do psicologo no cras', 'atuacao do psicologo no suas', 'atuacao do psicologo no cras'],
+      text: 'No SUAS **não há função privativa** de uma categoria: as atividades da equipe de referência são compartilhadas, e cada profissional contribui com o seu saber (o mesmo vale para os benefícios eventuais).\nPara a Psicologia, as referências do CREPOP/CFP indicam atuação **psicossocial e não clínica**, com foco em vínculos, autonomia e território. Você mantém a **autonomia** para escolher o referencial teórico, técnico e metodológico, dentro da ciência psicológica, da ética e da legislação profissional.',
+      base: 'Cartilha SUAS do CRP-MG (CRP 04) com base nas Orientações Técnicas do MDS; Referências Técnicas do CREPOP/CFP; Nota Técnica CFP 02/2023.',
+      actions: [], follow: ['Posso fazer psicoterapia no SUAS?', 'Quais documentos posso emitir?'] },
+
+    { id: 'psi-autonomia', cat: 'Papel e limites',
+      keys: ['autonomia tecnica', 'autonomia profissional', 'desvio de funcao', 'a chefia pediu', 'a coordenacao pediu', 'o gestor mandou', 'a secretaria exige', 'pedido da coordenacao', 'pressao da gestao'],
+      text: 'A **autonomia técnica** é protegida: a Nota Técnica CFP 02/2023 orienta preservar a liberdade para definir o referencial teórico, técnico e metodológico e as condições técnicas e éticas do trabalho.\nSe uma solicitação (da gestão, de outro órgão ou da Justiça) extrapola as atribuições do cargo ou do serviço, **informe por escrito** quais são essas atribuições e os limites que elas impõem à resposta, e encaminhe a demanda a quem couber.\nEm dúvida ética, procure a **Comissão de Orientação e Fiscalização do seu CRP**.',
+      base: 'Nota Técnica CFP 02/2023 (seção de recomendações); Código de Ética Profissional (Res. CFP 10/2005).',
+      actions: [], follow: ['E se o juiz pedir um relatório?'] },
+
+    // ---- Documentos ----
+    { id: 'psi-documentos', cat: 'Documentos',
+      keys: ['quais documentos', 'que documentos posso emitir', 'documentos que o psicologo pode emitir', 'tipos de documento psicologico', 'tipos de documentos psicologicos', 'modalidades de documento', 'resolucao 06 2019', 'resolucao 6 2019', 'resolucao cfp 6 2019', 'resolucao cfp 06 2019', 'documentos escritos do psicologo', 'documentos psicologicos'],
+      text: 'A **Resolução CFP 06/2019** prevê seis modalidades de documento escrito:\n- **Declaração:** comparecimento, acompanhamento e tempo/dias/horários. Sem sintomas nem estados psicológicos.\n- **Atestado psicológico:** certifica situação, estado ou funcionamento psicológico, com base em avaliação psicológica.\n- **Relatório psicológico:** descreve e detalha a atuação profissional; pode trazer orientações e encaminhamentos, mas **não tem finalidade de diagnóstico**.\n- **Relatório multiprofissional:** resulta de atuação em equipe, com profissionais de outras áreas.\n- **Laudo psicológico:** resulta de um processo de avaliação psicológica e subsidia decisões ligadas à demanda.\n- **Parecer psicológico:** análise técnica escrita que responde a uma questão ou a documentos questionados; não resulta de avaliação nem de intervenção.',
+      base: 'Res. CFP 06/2019, arts. 8º a 14 (vigente; Manual Orientativo do CFP, nov/2025).',
+      actions: [], follow: ['Qual a diferença entre relatório e laudo?', 'Quanto tempo guardar os documentos?'] },
+
+    { id: 'psi-relatorio-laudo', cat: 'Documentos',
+      keys: ['laudo+relatorio', 'laudo+parecer', 'relatorio+parecer', 'diferenca entre relatorio e laudo', 'diferenca entre laudo e relatorio', 'diferenca entre laudo e parecer', 'relatorio psicologico ou laudo', 'laudo ou relatorio', 'o que e laudo psicologico', 'o que e um laudo', 'o que e relatorio psicologico', 'o que e parecer psicologico', 'quando fazer laudo'],
+      text: 'Pela Resolução CFP 06/2019:\n- **Relatório psicológico:** descreve e detalha a **sua atuação** (o que foi feito, com condicionantes históricos e sociais), podendo trazer orientações, recomendações e encaminhamentos. **Não visa diagnóstico.** É o documento típico do trabalho no SUAS.\n- **Laudo psicológico:** vem de um **processo de avaliação psicológica** e subsidia decisões da demanda. Exige avaliação formal, o que costuma estar fora das atribuições do serviço socioassistencial.\n- **Parecer psicológico:** análise técnica que responde a uma questão-problema ou a documentos já produzidos; não resulta de avaliação nem de intervenção.\nPara o Sistema de Justiça, a Nota Técnica CFP 02/2023 orienta **não elaborar laudo com afirmações categóricas ou conclusões definitivas**.',
+      base: 'Res. CFP 06/2019, arts. 11, 13 e 14; Nota Técnica CFP 02/2023.',
+      actions: [], follow: ['Quais documentos posso emitir?', 'E se o juiz pedir um laudo?'] },
+
+    { id: 'psi-multi', cat: 'Documentos',
+      keys: ['relatorio multiprofissional', 'relatorio em conjunto', 'relatorio conjunto', 'relatorio com a assistente social', 'relatorio com o assistente social', 'relatorio da equipe', 'relatorio em equipe', 'relatorio tecnico em conjunto'],
+      text: 'O **relatório multiprofissional** resulta do trabalho em equipe e pode ser assinado em conjunto com profissionais de outras áreas (Res. CFP 06/2019, art. 12). Estrutura mínima:\n1. **Identificação:** título, pessoa ou instituição atendida, solicitante, finalidade e autores com categoria e registro.\n2. **Descrição da demanda:** o que motivou o trabalho, quem informou e o que levou à solicitação.\n3. **Procedimento:** raciocínio técnico-científico e procedimentos; os **privativos da Psicologia ficam separados** dos demais.\n4. **Análise:** cada profissional analisa **em separado**, com subtítulo (nome e categoria).\n5. **Conclusão:** pode ser conjunta; fecha com local, data, carimbo, rubrica das páginas e assinatura na última.\nColoque só o necessário à finalidade (Código de Ética, art. 12).',
+      base: 'Res. CFP 06/2019, art. 12; Código de Ética Profissional, art. 12.',
+      actions: [], follow: ['Quanto tempo guardar os documentos?'] },
+
+    { id: 'psi-declaracao', cat: 'Documentos',
+      keys: ['declaracao de comparecimento', 'declaracao psicologica', 'o que pode constar na declaracao', 'declaracao de acompanhamento', 'declaracao para o trabalho', 'declaracao para a escola'],
+      text: 'A **declaração** é objetiva e sucinta: registra **comparecimento, acompanhamento** (em curso ou realizado) e **tempo, dias e horários**.\n**Não pode** registrar sintomas, situações ou estados psicológicos. Se a pessoa precisa de um documento que diga algo sobre o estado psicológico, a modalidade é outra (atestado ou relatório), e cada uma tem requisitos próprios.',
+      base: 'Res. CFP 06/2019, art. 9º e § 1º.',
+      actions: [], follow: ['Quais documentos posso emitir?'] },
+
+    { id: 'psi-atestado', cat: 'Documentos',
+      keys: ['atestado psicologico', 'atestado de saude mental', 'posso dar atestado', 'atestado para afastamento', 'atestado para o trabalho', 'dar atestado ao usuario', 'emitir atestado'],
+      text: 'O **atestado psicológico** certifica uma situação, estado ou funcionamento psicológico **com base em avaliação psicológica**; pode justificar faltas, aptidão para atividades e afastamentos (Res. CFP 06/2019, art. 10).\nO CRP pode pedir, em até cinco anos, a **fundamentação técnico-científica** do atestado, então ela precisa estar no registro documental.\nNo SUAS, avalie antes se o serviço e o cargo comportam avaliação psicológica; a Nota Técnica CFP 02/2023 lembra que as atribuições do serviço limitam a resposta. Quando só for preciso comprovar presença, use a **declaração**.',
+      base: 'Res. CFP 06/2019, art. 10 e §§ 2º a 4º; Nota Técnica CFP 02/2023.',
+      actions: [], follow: ['O que pode constar na declaração?'] },
+
+    { id: 'psi-guarda', cat: 'Documentos',
+      keys: ['prazo de guarda', 'quanto tempo guardar', 'guardar prontuario', 'guarda de documentos', 'guarda dos documentos', 'arquivar prontuario', 'por quanto tempo guardar', 'tempo de guarda', 'guarda do registro', 'prazo do prontuario'],
+      text: 'A guarda mínima é de **5 anos**, em meio físico ou digital, incluindo o material que fundamentou os documentos (Res. CFP 06/2019, art. 15). O prazo conta a partir do último registro e pode ser **ampliado** por lei, ordem judicial ou circunstância específica. A responsabilidade é sua **e da instituição**.\n- **Crianças e adolescentes:** o Manual Orientativo do CFP (nov/2025) recomenda **não usar os 5 anos como parâmetro**: preserve as informações até a maioridade e observe os prazos legais aplicáveis.\n- **Prontuário em saúde** (psicológico ou multiprofissional): até 20 anos (Lei 13.787/2018).\nSe o seu trabalho acaba (exoneração, fim do contrato, extinção do serviço), a Res. 06/2019 (art. 15, § 3º) trata do destino dos documentos.',
+      base: 'Res. CFP 06/2019, art. 15; Res. CFP 01/2009, art. 4º; Manual Orientativo de Registro e Elaboração de Documentos Psicológicos (CFP, nov/2025).',
+      actions: [], follow: ['O que registrar no atendimento?'] },
+
+    { id: 'psi-registro', cat: 'Documentos',
+      keys: ['o que registrar', 'registro documental', 'como registrar o atendimento', 'como registrar atendimento', 'o que deve constar no registro', 'prontuario do psicologo', 'prontuario psicologico', 'prontuario suas', 'evolucao do atendimento', 'registro do atendimento'],
+      text: 'O **registro documental** (Res. CFP 01/2009, art. 2º) reúne:\n- identificação do usuário ou da instituição;\n- **avaliação da demanda** e definição dos objetivos do trabalho;\n- **evolução do trabalho** e procedimentos técnico-científicos adotados;\n- registro de **encaminhamento ou encerramento**;\n- cópia dos documentos que você emitiu (data, finalidade e destinatário);\n- documentos de avaliação psicológica, em pasta de acesso exclusivo seu.\nEm equipe multiprofissional, o prontuário é **único**, com só as informações indispensáveis aos demais profissionais. O **Prontuário SUAS** é padronizado e preenchido por profissionais de nível superior do CRAS e do CREAS; a família tem direito de conhecer o conteúdo.',
+      base: 'Res. CFP 01/2009 (alterada pela 05/2010); Manual Orientativo do CFP (nov/2025), seções 3.5 e 6.5.',
+      actions: [], follow: ['Quanto tempo guardar os documentos?'] },
+
+    { id: 'psi-entrega', cat: 'Documentos',
+      keys: ['entregar relatorio', 'entregar o relatorio', 'entrega de documento', 'entrega do documento', 'entrevista devolutiva', 'quem pode receber o relatorio', 'protocolo de entrega', 'a familia pode pedir o relatorio', 'usuario pedir o relatorio', 'entregar o laudo'],
+      text: 'A entrega do documento é feita **diretamente** à pessoa atendida, ao responsável legal ou ao solicitante, de preferência em **entrevista devolutiva**, com **protocolo de entrega assinado**: quem recebe assume a responsabilidade pelo uso e pelo sigilo.\nOs envolvidos têm direito de receber informações sobre o serviço e de acessar o documento. Documento para outro órgão deve trazer só o necessário à finalidade e pode levar a cláusula de caráter sigiloso e uso restrito.',
+      base: 'Res. CFP 06/2019, arts. 4º, § 4º, e 16, § 1º.',
+      actions: [], follow: ['Posso quebrar o sigilo?'] },
+
+    // ---- Sigilo ----
+    { id: 'psi-sigilo-quebra', cat: 'Sigilo',
+      keys: ['quebra de sigilo', 'quebrar sigilo', 'quebrar o sigilo', 'posso quebrar o sigilo', 'limites do sigilo', 'excecao ao sigilo', 'excecoes ao sigilo', 'quando posso revelar', 'revelar informacao do atendimento', 'sigilo profissional do psicologo', 'artigo 10 do codigo de etica'],
+      text: 'No **Código de Ética do Psicólogo (Res. CFP 10/2005)**:\n- **Art. 9º:** o sigilo protege a intimidade das pessoas, grupos ou organizações atendidos.\n- **Art. 10:** nos casos **previstos em lei** (como a comunicação de violência contra criança ao Conselho Tutelar) o dever legal se cumpre. Fora deles, havendo conflito com os princípios fundamentais do Código, você **pode decidir pela quebra**, baseando a decisão na busca do **menor prejuízo**.\n- **Parágrafo único:** na quebra, restrinja-se às informações **estritamente necessárias**.\nDecida com calma, registre a justificativa e, havendo dúvida, consulte a Comissão de Orientação e Fiscalização do CRP.',
+      base: 'Código de Ética Profissional do Psicólogo (Res. CFP 10/2005), arts. 9º e 10.',
+      actions: [], follow: ['Preciso comunicar violência ao Conselho Tutelar?', 'Posso compartilhar com a rede?'] },
+
+    { id: 'psi-sigilo-crianca', cat: 'Sigilo',
+      keys: ['informar os pais', 'pais querem saber', 'o pai quer saber', 'a mae quer saber', 'responsaveis querem saber', 'sigilo com crianca', 'sigilo com adolescente', 'sigilo de crianca', 'sigilo de adolescente', 'o que dizer aos pais', 'pai pediu relatorio do filho', 'mae pediu relatorio do filho', 'pais pedem relatorio'],
+      text: 'No atendimento de **criança, adolescente ou interdito**, aos responsáveis deve ser comunicado **apenas o essencial** para que se promovam medidas em benefício de quem foi atendido (Código de Ética, art. 13).\nIsso vale para o relatório pedido pelos pais: entregue o que for necessário à proteção e ao cuidado, sem repassar o conteúdo íntimo da escuta. Boa prática: combine o que será dito com a própria criança ou adolescente, sempre que possível, e registre. Se o próprio responsável é suspeito de violência, a comunicação segue o fluxo de proteção (Conselho Tutelar), não o pedido dele.',
+      base: 'Código de Ética Profissional do Psicólogo (Res. CFP 10/2005), art. 13; Lei 13.431/2017.',
+      actions: [], follow: ['Preciso comunicar violência ao Conselho Tutelar?'] },
+
+    { id: 'psi-sigilo-rede', cat: 'Sigilo',
+      keys: ['compartilhar com a rede', 'compartilhar informacao', 'compartilhar informacoes', 'passar informacao para outro servico', 'passar informacoes para a rede', 'sigilo na equipe', 'sigilo em equipe', 'sigilo na equipe multiprofissional', 'discussao de caso', 'estudo de caso', 'reuniao de rede', 'informacao para a escola', 'informacao para a ubs'],
+      text: 'Com profissionais de outras áreas e com a rede:\n- **Compartilhe só o relevante** para qualificar o serviço, resguardando o caráter confidencial e **assinalando a responsabilidade de quem recebe** de preservar o sigilo (Código de Ética, art. 6º).\n- Nos registros de equipe multiprofissional, **só o necessário** para os objetivos do trabalho (art. 12).\n- Demandas fora do seu campo vão a quem seja habilitado para elas.\nBoa prática: contato prévio com o serviço, ficha objetiva (motivo, o que foi feito, o que se espera) e contrarreferência combinada.',
+      base: 'Código de Ética Profissional do Psicólogo (Res. CFP 10/2005), arts. 6º e 12.',
+      actions: [], follow: ['Como encaminhar com responsabilidade?'] },
+
+    // ---- Sistema de Justiça ----
+    { id: 'psi-oficio', cat: 'Sistema de Justiça',
+      keys: ['oficio do juiz', 'oficio da promotoria', 'oficio judicial', 'oficio do ministerio publico', 'requisicao judicial', 'requisicao do ministerio publico', 'juiz pediu relatorio', 'juiz pediu um relatorio', 'juiz pedir um relatorio', 'juiz pedir relatorio', 'juiz pede relatorio', 'o juiz quer um relatorio', 'juiz quer relatorio', 'promotor pediu relatorio', 'ministerio publico pediu relatorio', 'vara da infancia pediu', 'pedido da justica', 'demanda do sistema de justica', 'demandas do sistema de justica', 'nota tecnica 02 2023', 'nota tecnica cfp 02 2023', 'justica pediu relatorio', 'defensoria pediu relatorio', 'recebi um oficio'],
+      text: 'Para ofícios e requisições do Sistema de Justiça, a **Nota Técnica CFP 02/2023** orienta:\n- **Responda** quando a requisição vier da autoridade competente, a partir do seu campo de atuação.\n- **Avalie a demanda** pelo Código de Ética e **informe as atribuições** do serviço e do cargo, que limitam a resposta.\n- Se ainda **não há registro** sobre a família, busque primeiro a articulação com a rede.\n- **Você escolhe o documento técnico** (Res. CFP 06/2019), geralmente relatório. Informe o acompanhamento **sem julgamentos, diagnósticos, perícia, investigação de fatos ou medidas de responsabilização**.\n- **Converse com a família** sobre o pedido e sobre o que será informado.\n- Prazo curto: **peça mais prazo, com justificativa**.\n- Não cabe **assessorar a autoridade**: limite-se ao estritamente necessário.\nEm dúvida, procure o CRP ou o jurídico do órgão.',
+      base: 'Nota Técnica CFP 02/2023 (seção de recomendações); Res. CFP 06/2019; Código de Ética Profissional.',
+      actions: [], follow: ['E se pedirem um laudo ou perícia?', 'Fui intimado para audiência'] },
+
+    { id: 'psi-pericia', cat: 'Sistema de Justiça',
+      keys: ['pericia', 'perito', 'perita', 'nomeacao como perito', 'nomeada perita', 'nomeado perito', 'fazer pericia no suas', 'laudo pericial', 'laudo para a justica', 'juiz pediu laudo', 'juiz quer laudo', 'juiz pediu um laudo', 'o juiz quer um laudo', 'juiz pedir um laudo', 'juiz pedir laudo', 'juiz pede laudo', 'pedirem um laudo', 'pedirem pericia', 'pedirem um laudo ou pericia', 'pedido de laudo', 'avaliacao psicologica de usuario', 'avaliacao psicologica da familia', 'estudo psicologico para a justica'],
+      text: 'Segundo a **Nota Técnica CFP 02/2023**:\n- **Não aceite nomeação como perito(a)** de pessoas ou famílias acompanhadas pelo serviço público em que você atua.\n- **Não elabore laudo com afirmações categóricas ou conclusões definitivas.**\n- A escuta no SUAS (e no SUS) tem **caráter protetivo**: não é prova pericial, nem serve para apurar fatos ou punir famílias.\nLaudos e avaliações que extrapolam o SUAS cabem a peritos e às equipes multiprofissionais do próprio Sistema de Justiça. Responda ao juízo informando o acompanhamento no serviço e justificando por escrito os limites técnicos e éticos.',
+      base: 'Nota Técnica CFP 02/2023; Cartilha SUAS do CRP-MG (CONPAS/CFP, Demandas do Sistema de Justiça).',
+      actions: [], follow: ['E se o juiz pedir um relatório?'] },
+
+    { id: 'psi-inquirir', cat: 'Sistema de Justiça',
+      keys: ['ouvir a vitima', 'inquirir crianca', 'inquirir a crianca', 'oitiva', 'perguntar detalhes do abuso', 'entrevistar a crianca sobre a violencia', 'perguntar sobre o abuso', 'investigar a violencia', 'apurar a violencia', 'ouvir o acusado', 'tomar depoimento', 'colher depoimento', 'fazer perguntas a crianca sobre abuso', 'devo perguntar a crianca'],
+      text: 'A **Nota Técnica CFP 02/2023** orienta **não realizar inquirição ou oitiva** de vítimas ou acusados para fins judiciais, e não investigar fatos: a escuta do SUAS é protetiva.\nNa Lei 13.431/2017, a **escuta especializada** é entrevista sobre a situação de violência na rede de proteção, com o relato **limitado ao estritamente necessário** à finalidade de proteção; a oitiva para produzir prova é o **depoimento especial**, feito perante a autoridade policial ou judicial.\nNa prática: acolha o que a criança trouxer, **sem insistir nem pedir detalhes**, registre com as palavras dela e faça a comunicação ao Conselho Tutelar.',
+      base: 'Nota Técnica CFP 02/2023; Lei 13.431/2017, arts. 7º, 8º e 14, § 1º (intervenção mínima).',
+      actions: [{ label: 'Ver Conselho Tutelar', cat: 'conselho' }], follow: ['Qual a diferença entre escuta especializada e depoimento especial?', 'Preciso comunicar violência ao Conselho Tutelar?'] },
+
+    { id: 'psi-audiencia', cat: 'Sistema de Justiça',
+      keys: ['audiencia', 'fui intimado', 'fui intimada', 'intimacao', 'intimada para audiencia', 'intimado para audiencia', 'depor em juizo', 'depoimento em juizo', 'sou testemunha', 'convocada para depor', 'convocado para depor'],
+      text: 'Se você foi convocado(a) a **depor ou a comparecer a audiência**:\n- Você participa pela **posição institucional** que ocupa, **não como testemunha** em caráter individual (Nota Técnica CFP 02/2023).\n- Preste **apenas as informações estritamente necessárias** e observe o sigilo profissional.\n- O Código de Ética (art. 11) permite prestar informações em juízo, nos limites do capítulo do sigilo.\n- O Manual Orientativo do CFP orienta não se recusar a responder e **buscar orientação jurídica ou do CRP** antes.\nAvise a coordenação e, se puder, converse antes com a família sobre o que será dito.',
+      base: 'Nota Técnica CFP 02/2023; Código de Ética Profissional, arts. 10 e 11; Manual Orientativo do CFP (nov/2025), seção 6.4.',
+      actions: [], follow: ['E se o juiz pedir um relatório?'] },
+
+    // ---- Violência contra criança e adolescente ----
+    { id: 'psi-comunicar', cat: 'Violência',
+      keys: ['dever de comunicar', 'sou obrigada a comunicar', 'sou obrigado a comunicar', 'obrigatoriedade de comunicar', 'preciso comunicar o conselho tutelar', 'tenho que comunicar o conselho tutelar', 'comunicar o conselho tutelar', 'comunicar violencia', 'comunicar a violencia', 'comunicacao de violencia e sigilo', 'sigilo e violencia contra crianca', 'violencia e sigilo', 'suspeita de violencia o que fazer', 'denunciar violencia e sigilo', 'preciso notificar'],
+      text: 'Sim, é dever previsto em lei:\n- **ECA, art. 13:** casos de suspeita ou confirmação de castigo físico, tratamento cruel ou degradante e maus-tratos contra criança ou adolescente são **obrigatoriamente comunicados ao Conselho Tutelar**.\n- **Lei 13.431/2017, art. 13:** quem souber ou presenciar violência contra criança ou adolescente deve comunicar **imediatamente** ao serviço de denúncias (Disque 100), ao Conselho Tutelar ou à polícia, que informam o Ministério Público.\nA **suspeita basta**: não é preciso ter prova. Relate só o necessário à proteção (Código de Ética, art. 10, parágrafo único) e registre no prontuário o que foi comunicado, quando e a quem. Não conduza investigação.',
+      base: 'ECA (Lei 8.069/1990), art. 13; Lei 13.431/2017, art. 13; Código de Ética Profissional, art. 10.',
+      actions: [{ label: 'Ver Conselho Tutelar', cat: 'conselho' }, { label: 'Ver CREAS', cat: 'social' }], follow: ['Qual a diferença entre escuta especializada e depoimento especial?', 'Quais são os tipos de violência?'] },
+
+    { id: 'psi-escuta-depoimento', cat: 'Violência',
+      keys: ['escuta especializada', 'depoimento especial', 'diferenca entre escuta especializada e depoimento especial', 'escuta especializada ou depoimento especial', 'o que e escuta especializada', 'o que e depoimento especial'],
+      text: 'Pela **Lei 13.431/2017**:\n- **Escuta especializada (art. 7º):** entrevista sobre a situação de violência com criança ou adolescente, feita **perante órgão da rede de proteção**, com o relato **limitado ao estritamente necessário** para a finalidade de proteção.\n- **Depoimento especial (art. 8º):** oitiva da criança ou adolescente, vítima ou testemunha, **perante autoridade policial ou judicial**; tramita em segredo de justiça.\nO objetivo de ambos é **evitar a revitimização**. O psicólogo do SUAS acolhe e protege; **não inquire** (Nota Técnica CFP 02/2023).',
+      base: 'Lei 13.431/2017, arts. 7º, 8º e 12, § 6º; Nota Técnica CFP 02/2023.',
+      actions: [], follow: ['Posso perguntar detalhes do abuso?', 'Preciso comunicar violência ao Conselho Tutelar?'] },
+
+    { id: 'psi-tipos-violencia', cat: 'Violência',
+      keys: ['tipos de violencia', 'formas de violencia', 'tipos de violencia contra crianca', 'violencia psicologica', 'violencia institucional', 'violencia patrimonial', 'alienacao parental', 'o que e violencia psicologica', 'o que e violencia institucional', 'o que e abuso sexual', 'exploracao sexual comercial'],
+      text: 'A **Lei 13.431/2017 (art. 4º)** define as formas de violência contra criança e adolescente:\n- **Física:** ofende a integridade ou a saúde corporal ou causa sofrimento físico.\n- **Psicológica:** discriminação, depreciação, ameaça, humilhação, isolamento, bullying; **alienação parental**; e **exposição a crime violento** contra membro da família.\n- **Sexual:** abuso sexual, **exploração sexual comercial** e tráfico de pessoas para fim sexual.\n- **Institucional:** praticada por instituição pública ou conveniada, inclusive quando **revitimiza**.\n- **Patrimonial:** retenção, subtração ou destruição de documentos, bens, valores ou recursos econômicos da criança (acrescentada pela Lei 14.344/2022).',
+      base: 'Lei 13.431/2017, art. 4º (inciso V pela Lei 14.344/2022).',
+      actions: [], follow: ['Preciso comunicar violência ao Conselho Tutelar?'] },
+
+    // ---- Encaminhamento ----
+    { id: 'psi-encaminhar-saude', cat: 'Encaminhamento',
+      keys: ['quando encaminhar para a saude', 'quando encaminhar para psicoterapia', 'quando encaminhar para o caps', 'quando encaminhar para a ubs', 'encaminhar para psicoterapia', 'encaminhar para atendimento clinico', 'encaminhar para a saude', 'caso para psicoterapia', 'quando o caso e do caps', 'caso grave encaminhar'],
+      text: 'No SUAS o acompanhamento é psicossocial; o caso que **exige psicoterapia** vai para a **rede de saúde**.\n- **UBS:** porta de entrada do SUS e cuidado em saúde mental na atenção básica.\n- **CAPS:** sofrimento psíquico intenso, grave e persistente, ou necessidades decorrentes do uso de álcool e outras drogas (CAPS AD).\n- **Crise ou risco de vida:** SAMU 192 e urgência psiquiátrica; em Boa Vista, o CAPS III e o HGRR.\nFaça **contato prévio**, ficha objetiva, oriente a pessoa sobre local e documentos e combine a **contrarreferência**. O acompanhamento no SUAS **continua** com a família.',
+      base: 'Referências Técnicas do CREPOP/CFP (CRAS e CREAS, 2013); Portaria de Consolidação nº 3/2017 (RAPS).',
+      actions: [{ label: 'Ver UBS', search: 'UBS' }, { label: 'Ver CAPS', search: 'CAPS' }], follow: ['O que é a RAPS?', 'Como encaminhar com responsabilidade?'] },
+
+    // ---- Trabalho no PAIF ----
+    { id: 'psi-acompanhamento', cat: 'Trabalho no CRAS',
+      keys: ['o que e acompanhamento familiar', 'acompanhamento familiar', 'acompanhamento familiar no paif', 'plano de acompanhamento familiar', 'como montar o plano de acompanhamento', 'objetivos do plano de acompanhamento', 'como fazer o paf', 'o que e o paf', 'quando iniciar acompanhamento familiar'],
+      text: 'No PAIF, o **acompanhamento familiar** é um conjunto de intervenções **continuadas**, feitas a partir de **compromissos entre a família e os profissionais**, com objetivos definidos.\nSua peça central é o **Plano de Acompanhamento Familiar (PAF)**, construído **junto com a família**, com objetivos e mediações periódicas, para a superação gradual das vulnerabilidades e o fortalecimento de vínculos e da função protetiva da família.\nOs critérios de inclusão e a metodologia detalhada estão nas Orientações Técnicas do PAIF (MDS, 2012) e no protocolo do seu município; confira-os com a coordenação do CRAS.',
+      base: 'Tipificação Nacional (Res. CNAS 109/2009); Orientações Técnicas sobre o PAIF (MDS, 2012).',
+      actions: [{ label: 'Abrir Anotações', cat: 'ferramentas' }], follow: ['O que é o PAIF?', 'Como é a visita domiciliar?'] },
+
+    // ---- Orientação ----
+    { id: 'psi-crp', cat: 'Orientação',
+      keys: ['duvida etica', 'onde tirar duvida etica', 'comissao de orientacao e fiscalizacao', 'cof do crp', 'orientacao do crp', 'falar com o crp', 'crp 20', 'quem orienta o psicologo', 'consultar o crp', 'o crp pode orientar'],
+      text: 'Para dúvida ética ou técnica sobre o seu trabalho, a via oficial é a **Comissão de Orientação e Fiscalização (COF) do seu CRP**: ela orienta os profissionais. Para parâmetros de atuação em políticas públicas, há ainda as **Referências Técnicas do CREPOP/CFP** (CRAS, CREAS, gestores, rede de atenção psicossocial, entre outras) e as notas técnicas do CFP.\nEste app traz respostas de apoio, **não substitui parecer ético, jurídico ou a orientação da sua coordenação**.',
+      base: 'Sistema Conselhos de Psicologia (CFP e CRPs); CREPOP.',
+      actions: [], follow: ['E se o juiz pedir um relatório?'] }
+  ];
+  var psiIndex = null;
+  function psiScore(text) {
+    if (!psiIndex) psiIndex = PSI_BASE.map(function (g) { return { g: g, keys: g.keys.map(function (k) { return k.indexOf('+') > -1 ? { all: k.split('+').map(norm) } : { phrase: norm(k) }; }) }; });
+    var n = norm(text), padded = ' ' + n + ' ', tokens = n ? n.split(' ') : [];
+    for (var i = 0; i < tokens.length; i++) if (APP_WORDS[tokens[i]]) return { score: 0 };
+    var best = null, bestScore = 0;
+    psiIndex.forEach(function (e) {
+      var s = 0;
+      e.keys.forEach(function (k) {
+        if (k.all) { if (k.all.every(function (w) { return tokens.indexOf(w) > -1; })) s += 6; return; }
+        if (padded.indexOf(' ' + k.phrase + ' ') > -1) s += k.phrase.indexOf(' ') > -1 ? 4 : 3;
+      });
+      if (s > bestScore) { best = e.g; bestScore = s; }
+    });
+    return { score: bestScore, entry: best };
+  }
+  function composePsi(entry) {
+    return {
+      reply: entry.text, mood: 'info', badge: 'Base do psicólogo no SUAS · ' + entry.cat,
+      note: 'Base: ' + entry.base + ' Conferido em ' + PSI_REV + '; normas mudam, confirme a versão vigente.',
+      quickActions: entry.actions || [], followups: (entry.follow || []).slice(0, 3), psiId: entry.id
     };
   }
 
@@ -2032,6 +2227,15 @@
     if (enc) return { kind: 'directory', result: enc, dir: { units: enc.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
     var con = glossaryScore(text);
     var out = { kind: 'none', dir: dir, con: con };
+    // Dúvida do psicólogo no SUAS (documentos, sigilo, Sistema de Justiça, violência...): verbete curado com a norma.
+    // Só perde para uma consulta de contato a uma unidade bem identificada ("telefone do CREAS").
+    var psi = psiScore(text);
+    if (psi.score >= 3 && psi.score >= con.score && !(dir.units.length && dir.contact && dir.confidence >= 0.6)) {
+      out.kind = 'psi';
+      out.psi = psi;
+      out.result = composePsi(psi.entry);
+      return out;
+    }
     // pergunta de contato sobre unidade(s) encontradas, ou nome bem identificado: o diretório responde
     if (dir.units.length && ((dir.contact && dir.confidence >= 0.3) || dir.confidence >= 0.85)) {
       if (!(con.score >= 6 && dir.confidence < 0.9)) {
@@ -2075,7 +2279,7 @@
   function init(opts) {
     opts = opts || {};
     data = Array.isArray(opts.data) ? opts.data : [];
-    index = null; vocab = null; expCache = {}; gloIndex = null; phoneIdx = null; terrIdx = null; terrAll = null; munIdx = null; contIdx = null;
+    index = null; vocab = null; expCache = {}; gloIndex = null; psiIndex = null; phoneIdx = null; terrIdx = null; terrAll = null; munIdx = null; contIdx = null;
     if (opts.ia) for (var k in opts.ia) if (Object.prototype.hasOwnProperty.call(CFG, k)) CFG[k] = opts.ia[k];
   }
 
@@ -2083,6 +2287,7 @@
     interpretar: interpretar, init: init, setCid: setCid, cid: cidAsk, norm: norm, piiBlock: piiBlock, crisis: crisis, plan: plan, contagem: contagem,
     directory: function (t, tabCat) { return directory(t, session, tabCat); },
     glossary: glossaryScore, compose: { directory: composeDirectory, glossary: composeGlossary },
+    psi: psiScore, psiLista: PSI_BASE,
     remember: remember, reset: reset, session: session,
     aiOn: aiOn, aiGate: aiGate, buildPayload: buildPayload, streamAI: streamAI,
     verifyPhones: verifyPhones, panorama: panorama, isAmpla: isAmpla, cleanAI: cleanAI, separarSugestoes: separarSugestoes, ocultarSugestoes: ocultarSugestoes, mentionedUnits: mentionedUnits, telHref: telHref, slim: slim,
