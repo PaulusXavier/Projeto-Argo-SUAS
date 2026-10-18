@@ -7469,3 +7469,163 @@ tr.is-closed > td { opacity: 0.6; }
 .login-vita-eyebrow { text-transform: none; letter-spacing: 0; font-size: 0.72rem; font-weight: 600; }
 .login-trust-note { margin-top: 0.9rem; }
 .login-details { margin-top: 1.1rem; }
+
+/* ==========================================================================
+   MAPA DA REDE — barra de ferramentas, busca, legenda, resultados e detalhes
+   (antes, busca/avisos/resultados por bairro estavam sem estilo nenhum)
+   ========================================================================== */
+
+/* O Leaflet pinta uma caixa branca atrás de todo L.divIcon; nossos pinos já
+   desenham o próprio contorno em SVG. */
+.leaflet-div-icon.mapa-rede-crascreas-icon,
+.leaflet-div-icon.mapa-rede-item-icon,
+.leaflet-div-icon.mapa-rede-cluster,
+.leaflet-div-icon.mapa-rede-user-icon,
+.leaflet-div-icon.mapa-rede-pulse-icon { background: transparent; border: none; }
+.mapa-rede-cluster div {
+  width: 38px; height: 38px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 800; font-size: 0.82rem;
+  border: 2px solid #fff; box-shadow: 0 1px 5px rgba(0, 0, 0, 0.35);
+}
+.mapa-rede-pulse-icon span {
+  display: block; width: 46px; height: 46px; border-radius: 50%;
+  border: 3px solid #0091c2; background: rgba(255, 255, 255, 0.25);
+  animation: mapaRedePulse 1.1s ease-out 3;
+}
+@keyframes mapaRedePulse {
+  from { transform: scale(0.35); opacity: 1; }
+  to   { transform: scale(1.15); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .mapa-rede-pulse-icon span { animation: none; } }
+
+.mapa-rede-map {
+  isolation: isolate;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1.5px solid var(--border-ui);
+  background: #e8edf1;
+}
+.mapa-rede-map.is-satellite { background: #1c2733; }
+
+.mapa-rede-help {
+  margin: 0 0 0.8rem;
+  border: 1px solid var(--border-ui);
+  border-radius: 10px;
+  background: var(--bg-main);
+  font-size: 0.84rem;
+  color: var(--text-muted);
+}
+.mapa-rede-help summary {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.55rem 0.8rem; cursor: pointer; font-weight: 700; color: var(--text-main);
+  list-style: none;
+}
+.mapa-rede-help summary::-webkit-details-marker { display: none; }
+.mapa-rede-help summary svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--brand-primary); }
+.mapa-rede-help p { margin: 0; padding: 0 0.9rem 0.8rem; line-height: 1.5; }
+
+.mapa-rede-toolbar {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.7rem 0.8rem;
+  margin: 0 0 0.7rem;
+}
+.mapa-rede-field { display: flex; flex-direction: column; gap: 0.2rem; min-width: 150px; flex: 1 1 170px; }
+.mapa-rede-field > span {
+  font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted);
+}
+.mapa-rede-field select {
+  width: 100%; padding: 0.55rem 0.7rem; font: inherit; font-size: 0.9rem;
+  color: var(--text-main); background: var(--bg-main);
+  border: 1px solid var(--border-ui); border-radius: 10px;
+}
+.mapa-rede-field select:focus { outline: none; border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(0, 145, 194, 0.14); }
+.mapa-rede-field-seg { flex: 0 0 auto; min-width: 0; }
+.mapa-rede-seg { display: inline-flex; border: 1px solid var(--border-ui); border-radius: 10px; overflow: hidden; background: var(--bg-main); }
+.mapa-rede-seg button {
+  font: inherit; font-size: 0.88rem; font-weight: 700; padding: 0.55rem 0.9rem; border: 0; cursor: pointer;
+  background: transparent; color: var(--text-muted); min-height: 40px;
+}
+.mapa-rede-seg button + button { border-left: 1px solid var(--border-ui); }
+.mapa-rede-seg button[aria-pressed="true"] { background: var(--brand-primary); color: #fff; }
+.mapa-rede-toolbar-btns { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+.mapa-rede-check { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; margin: 0 0 0.7rem; color: var(--text-main); }
+
+.mapa-rede-tools { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 0.8rem; align-items: start; margin-bottom: 0.7rem; }
+@media (max-width: 760px) { .mapa-rede-tools { grid-template-columns: 1fr; } }
+.mapa-rede-bairro {
+  border: 1px solid var(--border-ui); border-radius: 10px; background: var(--bg-main); padding: 0.1rem 0.7rem 0.1rem;
+}
+.mapa-rede-bairro summary { cursor: pointer; font-weight: 700; font-size: 0.88rem; padding: 0.6rem 0; color: var(--text-main); }
+.mapa-rede-bairro[open] { padding-bottom: 0.7rem; }
+.mapa-rede-bairro[open] summary { padding-bottom: 0.5rem; }
+
+.mapa-rede-hits { display: flex; flex-direction: column; gap: 0.35rem; margin-top: 0.45rem; }
+.mapa-rede-hit {
+  display: flex; align-items: center; gap: 0.6rem; width: 100%; text-align: left;
+  font: inherit; padding: 0.55rem 0.7rem; border-radius: 10px; cursor: pointer;
+  background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-ui);
+  transition: border-color 0.15s var(--ease), transform 0.15s var(--ease);
+}
+.mapa-rede-hit:hover { border-color: var(--brand-primary); transform: translateY(-1px); }
+.mapa-rede-hit-dot { width: 0.75rem; height: 0.75rem; border-radius: 50%; flex-shrink: 0; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2); }
+.mapa-rede-hit-text { display: flex; flex-direction: column; min-width: 0; }
+.mapa-rede-hit strong { font-size: 0.88rem; line-height: 1.25; }
+.mapa-rede-hit small { font-size: 0.76rem; color: var(--text-muted); line-height: 1.3; }
+.mapa-rede-hint { margin: 0.4rem 0 0; font-size: 0.82rem; color: var(--text-muted); }
+
+.mapa-rede-bairro-hit { padding: 0.55rem 0.2rem 0.2rem; font-size: 0.86rem; }
+.mapa-rede-bairro-hit > div { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
+.mapa-rede-unit-btn {
+  font: inherit; font-size: 0.8rem; font-weight: 700; padding: 0.4rem 0.7rem; border-radius: 999px; cursor: pointer;
+  border: 1.5px solid var(--brand-primary); background: transparent; color: var(--brand-primary);
+}
+.mapa-rede-unit-btn:hover { background: var(--brand-primary); color: #fff; }
+
+.mapa-rede-geo {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem 1rem;
+  padding: 0.65rem 0.85rem; margin-bottom: 0.7rem; font-size: 0.85rem;
+  border: 1px solid rgba(217, 119, 6, 0.4); background: rgba(217, 119, 6, 0.09); border-radius: 10px; color: var(--text-main);
+}
+.mapa-rede-geo[hidden] { display: none; }
+.mapa-rede-progress { display: block; height: 5px; margin-top: 0.4rem; border-radius: 99px; background: rgba(0, 0, 0, 0.12); overflow: hidden; min-width: 180px; }
+.mapa-rede-progress i { display: block; height: 100%; background: var(--brand-primary); transition: width 0.3s var(--ease); }
+
+.mapa-rede-status { font-size: 0.85rem; color: var(--text-muted); }
+.mapa-rede-status:not(:empty) { margin-bottom: 0.5rem; }
+.mapa-rede-summary { font-size: 0.82rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.45rem; }
+
+.mapa-rede-legend { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.75rem; }
+.mapa-rede-leg, .mapa-rede-leg-all {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font: inherit; font-size: 0.78rem; font-weight: 600; padding: 0.35rem 0.65rem; border-radius: 999px; cursor: pointer;
+  color: var(--text-main); background: var(--bg-card); border: 1px solid var(--border-ui);
+}
+.mapa-rede-leg small { color: var(--text-muted); font-weight: 700; }
+.mapa-rede-leg:hover, .mapa-rede-leg-all:hover { border-color: var(--brand-primary); }
+.mapa-rede-leg.is-off { opacity: 0.5; text-decoration: line-through; background: transparent; }
+.mapa-rede-leg-all { border-style: dashed; color: var(--brand-primary); font-weight: 800; }
+.mapa-rede-leg-dot { width: 0.8rem; height: 0.8rem; border-radius: 50%; display: inline-block; border: 1px solid rgba(0, 0, 0, 0.18); flex-shrink: 0; }
+.mapa-rede-leg-multi { display: inline-flex; gap: 1px; width: auto; border: 0; border-radius: 2px; }
+.mapa-rede-leg-multi i { width: 0.45rem; height: 0.8rem; border-radius: 2px; display: block; }
+
+.mapa-rede-nearby { margin-top: 0.85rem; }
+.mapa-rede-nearby-title { margin: 0.5rem 0 0; font-size: 1rem; }
+.mapa-rede-nearby .mapa-rede-hits { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.4rem; }
+
+.mapa-rede-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.35rem; }
+.mapa-rede-chips span {
+  font-size: 0.75rem; padding: 0.2rem 0.55rem; border-radius: 999px; border: 1px solid var(--border-ui);
+  background: var(--bg-main); color: var(--text-main);
+}
+
+.mapa-rede-detail-actions { display: flex; flex-direction: column; gap: 0.45rem; }
+.mapa-rede-detail-actions-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; }
+.mapa-rede-detail-actions-row .btn-tech { width: 100%; justify-content: center; }
+
+/* Fundo escuro: o Leaflet não segue o tema; escurece só a camada de ruas
+   para não "queimar" os olhos, sem mexer em pinos nem no satélite. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .mapa-rede-map:not(.is-satellite) .leaflet-tile-pane { filter: brightness(0.82) contrast(1.05); }
+}
+:root[data-theme="dark"] .mapa-rede-map:not(.is-satellite) .leaflet-tile-pane { filter: brightness(0.82) contrast(1.05); }
