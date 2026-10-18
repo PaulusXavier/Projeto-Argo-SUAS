@@ -31,6 +31,7 @@ const ASSETS = [
   './js/paulus.v1.js',
   './assets/conhecimento.json',
   './assets/cid11.json',
+  './assets/coordenadas.json',
   './manifest.json',
   './favicon.ico',
   './apple-touch-icon.png',
