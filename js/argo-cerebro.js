@@ -410,6 +410,7 @@
       var n = res.total || res.units.length;
       var tema = cut(String(res.raw || '').replace(/[?!.]+$/, '').trim(), 60) || q.strong.join(' ');
       lines.push('Encontrei **' + n + '** ' + (n === 1 ? 'unidade' : 'unidades') + ' para "' + tema + '". Toque numa delas para ver o contato ou refine com o nome ou o bairro.');
+      res.units.slice(0, 5).forEach(function (x) { var b = bairroBruto(x.address); lines.push('- **' + (x.name || '') + '**' + (b ? ' · ' + b : '')); });
       mood = res.confidence >= 0.45 ? 'success' : 'notfound';
       if (res.confidence < 0.45) lines[0] = 'Não achei uma unidade com esse nome, mas estas são as mais próximas do que você pediu. Se não for isso, tente o nome completo ou o bairro.';
     }
@@ -420,6 +421,10 @@
   // Base SUAS (glossário offline)
   // ---------------------------------------------------------------------
   var GLOSSARIO = [
+    { id: 'suas', keys: ['o que e o suas', 'o que e suas', 'o que significa suas', 'sistema unico de assistencia social', 'como funciona o suas'],
+      text: 'O **SUAS** (Sistema Único de Assistência Social) organiza, em todo o país, os serviços, programas, projetos e benefícios da assistência social, com gestão compartilhada entre União, estados, Distrito Federal e municípios.\n- **Proteção Social Básica** (prevenção): **CRAS**, PAIF e SCFV.\n- **Proteção Social Especial**: média complexidade (**CREAS**, PAEFI) e alta complexidade (acolhimento institucional, abrigos).\n- Funções: proteção social, **vigilância socioassistencial** e defesa de direitos; a participação é feita por conselhos e conferências.\nEm Boa Vista, a rede está no diretório do Argo: pergunte "panorama da assistência social".',
+      base: 'LOAS (Lei 8.742/1993, alterada pela Lei 12.435/2011) e Tipificação Nacional (Res. CNAS 109/2009).',
+      actions: [{ label: 'Ver CRAS e CREAS', cat: 'social' }], follow: ['Panorama da assistência social', 'Qual a diferença entre CRAS e CREAS?'] },
     { id: 'cras', keys: ['cras', 'centro de referencia de assistencia social', 'protecao social basica'],
       text: 'O **CRAS** é a porta de entrada da Proteção Social Básica do SUAS e fica no território onde a família mora.\n- Oferta o **PAIF** (acompanhamento de famílias) e o **SCFV** (grupos de convivência).\n- Faz a referência para CadÚnico, BPC e benefícios eventuais.\n- Pode ser procurado direto pela família, sem encaminhamento.',
       base: 'Tipificação Nacional dos Serviços Socioassistenciais (Res. CNAS 109/2009) e PNAS/2004.',
@@ -833,6 +838,13 @@
     data.forEach(function (d) { var g = grupoDe(d); if (!cont[g]) { cont[g] = 0; ordem.push(g); } cont[g]++; });
     var txt = 'O diretório tem ' + data.length + ' equipamentos, em ' + ordem.length + ' grupos: ' +
       ordem.map(function (g) { return g + ' (' + cont[g] + ')'; }).join('; ') + '.';
+    // números já calculados de Boa Vista (capital): a IA repete estes, não conta fichas soltas
+    try {
+      var ix = contIndex(), nb = totalBairros(ix);
+      txt += ' Em Boa Vista (capital, sem o interior), contados nas fichas: ' + CONT_TIPOS.filter(function (t) { return t.key !== 'BOMBEIROS'; }).map(function (t) {
+        var it = contItens(ix, t); return it.length + ' ' + (it.length === 1 ? t.sing : t.plur) + contResumoSub(it, t);
+      }).join('; ') + '; ' + nb + ' bairros aparecem nos endereços. O diretório NÃO tem população, famílias, matrículas, vagas nem atendimentos: nesses casos diga que não consta e cite a fonte oficial (IBGE, Censo Escolar/INEP, CNES/DataSUS, Relatório de Informações Sociais do MDS).';
+    } catch (e) { /* sem índice: segue só com a contagem por grupo */ }
     panoramaCache = { n: data.length, txt: txt };
     return txt;
   }
@@ -2074,6 +2086,12 @@
     var rankSem = /\b(sem|nenhum|nenhuma|nao (?:tem|possui|ha|existe))\b/.test(n);
     var ehRank = !ehLista && /\bbairros?\b/.test(n) && (rankSem || /\b(mais|maior|menos|menor)\b/.test(n)) && tipos.length === 1 && (!ehContagem || rankSem);
     if (ehRank) ehContagem = false;
+    // "creche perto do Pricumã", "escola no Caimbé": lista o que há no bairro (e, se não houver, onde há)
+    var brPre = contBairros(n, contIndex());
+    var ehPerto = !ehContagem && !ehLista && !ehRank && brPre.hits.length > 0 && (!brPre.corrigido || /\bbairro\b/.test(n)) &&
+      tipos.every(function (t) { return t.list; }) && !/\b(telefone|endereco|horario|contato|whatsapp|ligar|chegar)\b/.test(n) &&
+      (/\b(perto|proxim\w*|arredores|redondezas|vizinh\w*)\b/.test(n) || n.split(' ').length <= 7);
+    if (ehPerto) ehLista = true;
     if (!ehContagem && !ehLista && !ehRank) return null;
 
     // "quantos CRAS atendem o bairro X?" / "qual UBS atende quem mora em X?" é cobertura (territory()), não localização
@@ -2113,6 +2131,13 @@
           var nome = t.key === 'ESCOLA' && (soEstadual || soMunicipal || soIndigena) ? rotuloT(t, c !== 1) : (c === 1 ? t.sing : t.plur);
           if (!c) {
             lines.push(onde + ' não consta nenhum' + (t.fem ? 'a' : '') + ' ' + (t.key === 'ESCOLA' && (soEstadual || soMunicipal || soIndigena) ? rotuloT(t, false) : t.sing) + ' no diretório do Argo.');
+            if (ehPerto) {
+              var todosT = contItens(ix, t, filtroDe(t)), contT = {};
+              todosT.forEach(function (u) { if (u.key) contT[u.key] = (contT[u.key] || 0) + 1; });
+              var ordT = Object.keys(contT).sort(function (x, y) { return (contT[y] - contT[x]) || (ix.porKey[x].label < ix.porKey[y].label ? -1 : 1); });
+              if (ordT.length) lines.push('O diretório não tem a distância entre bairros, então não sei dizer qual fica mais perto. Há ' + t.plur + ' em ' + ordT.length + ' bairros: ' +
+                ordT.slice(0, 14).map(function (k) { return ix.porKey[k].label + (contT[k] > 1 ? ' (' + contT[k] + ')' : ''); }).join(', ') + (ordT.length > 14 ? ' e mais ' + (ordT.length - 14) : '') + '. Diga um desses bairros para eu listar.');
+            }
           } else {
             lines.push(onde + ' ' + (c === 1 ? 'consta **1 ' : 'constam **' + c + ' ') + nome + '** no diretório do Argo' + contResumoSub(itens, t) + (t.list || c <= 6 ? ':' : '.'));
             if (t.list || c <= 6) itens.slice(0, 15).forEach(function (u) { lines.push(contLinha(u, t)); });
@@ -2199,6 +2224,226 @@
   }
 
   // ---------------------------------------------------------------------
+  // PAINEL DE BOA VISTA — assistência social, educação e saúde
+  //   1. perfilBairro: "o que tem no bairro X?" (os 3 setores + CRAS/CREAS de referência)
+  //   2. panoramaAreas: "panorama da saúde / da educação / da assistência social / de Boa Vista"
+  //   3. necessidade: "onde faço o CadÚnico", "onde tem maternidade", "vaga em creche", "EJA"...
+  //   4. semNumeros: pergunta de população/beneficiários/alunos, que o diretório NÃO tem (diz onde achar)
+  // Tudo calculado nas fichas de js/data.js: nenhum número ou endereço vem da IA.
+  // ---------------------------------------------------------------------
+  var AREAS = [
+    { key: 'social', rot: 'Assistência social', tipos: ['CRAS', 'CREAS', 'RESTAURANTE'] },
+    { key: 'saude', rot: 'Saúde', tipos: ['UBS', 'CAPS', 'HOSPITAL'] },
+    { key: 'educacao', rot: 'Educação', tipos: ['ESCOLA', 'CRECHE', 'CENTRO', 'SUPERIOR'] }
+  ];
+  function areaDe(d) {
+    var c = Array.isArray(d.cat) ? d.cat : [];
+    function tem(l) { return l.some(function (x) { return c.indexOf(x) > -1; }); }
+    if (tem(['saude', 'hospitalar'])) return 'saude';
+    if (tem(['educacao'])) return 'educacao';
+    if (tem(['social', 'cras', 'cas', 'alimentar', 'idoso', 'mulher', 'conselho'])) return 'social';
+    return '';
+  }
+  var TAG_GRUPO = {
+    'Rede Estadual': 'escola estadual', 'Rede Municipal - Escolas': 'escola municipal',
+    'Rede Municipal - Creches e Proinfância': 'creche', 'Ensino Superior': 'ensino superior',
+    'UBS (Boa Vista)': 'UBS', 'Atenção Básica': 'UBS', 'CAPS (Boa Vista)': 'CAPS', 'Hospitais': 'hospital',
+    'CRAS (Boa Vista)': 'CRAS', 'CREAS (Boa Vista)': 'CREAS'
+  };
+  function nomeCurto(d) { return d.fullName && d.fullName.length < 70 && !/^(CRAS|CREAS|CAPS|UBS)\b/.test(d.name || "") ? d.fullName : d.name; }
+  function telOk(d) { return phonesOf(d).filter(function (p) { return !/9999-0000/.test(p); }); }
+  function linhaFicha(d, comBairro) {
+    var b = comBairro ? bairroBruto(d.address) : '', t = telOk(d)[0];
+    return '- **' + nomeCurto(d) + '**' + (b ? ' · ' + b : '') + (t ? ' · ' + t : '');
+  }
+  function bairrosDistintos(itens) { var o = {}; itens.forEach(function (u) { if (u.key) o[u.key] = 1; }); return Object.keys(o); }
+  function totalBairros(ix) { return Object.keys(ix.porKey).filter(function (k) { return k !== 'zona rural'; }).length; }
+  function unicos(itens) { var v = {}; return itens.filter(function (u) { if (v[u.nome]) return false; v[u.nome] = 1; return true; }); }
+
+  // ---- 1. perfil do bairro ----
+  var RE_PERFIL = /\b(o que (?:tem|ha|existe|fica|funciona|temos)|perfil|panorama|resumo|visao geral|raio x|servicos|equipamentos|unidades|rede(?: de servicos| intersetorial| de apoio)?)\b/;
+  function perfilBairro(text) {
+    var n = norm(text);
+    if (!n || n.length > 160 || !data.length || !RE_PERFIL.test(n)) return null;
+    if (CONT_TIPOS.some(function (t) { return t.det.test(n); })) return null;   // "UBS do bairro X" fica com contagem/território
+    if (/\b(telefone|endereco|horario|contato|whatsapp|ligar|como chegar|quantos|quantas)\b/.test(n)) return null;
+    var ix = contIndex(), br = contBairros(n, ix);
+    if (!br.hits.length || (br.corrigido && !/\bbairro\b/.test(n))) return null;
+    var hk = br.hits[0], lbl = ix.porKey[hk] ? ix.porKey[hk].label : hk;
+    var onde = hk === 'zona rural' ? 'Na **' + lbl + '**' : '**' + lbl + '**';
+    var por = { social: [], saude: [], educacao: [], outros: [] };
+    unicos(ix.unidades.filter(function (u) { return u.key === hk; })).forEach(function (u) { por[areaDe(u.d) || 'outros'].push(u); });
+    var so = AREAS.filter(function (a) { return RE_AREA[a.key].test(n); });   // "unidades de saúde do Cauamé": só a área pedida
+    var lines = [onde + ' — o que consta no diretório do Argo' + (so.length === 1 ? ' (' + so[0].rot.toLowerCase() + ')' : '') + ':'], todas = [];
+    if (br.corrigido) lines.unshift('Entendi o bairro como **' + lbl + '**.');
+    AREAS.concat(so.length === 1 ? [] : [{ key: 'outros', rot: 'Outros serviços e órgãos' }]).forEach(function (a) {
+      if (so.length === 1 && so[0].key !== a.key) return;
+      var it = por[a.key];
+      if (!it.length) { if (a.key !== 'outros') lines.push('**' + a.rot + ':** nenhum equipamento com endereço neste bairro' + (a.key === 'social' ? ' (veja a referência do território abaixo)' : '') + '.'); return; }
+      lines.push('**' + a.rot + '** (' + it.length + '):');
+      it.slice(0, 8).forEach(function (u) {
+        var tg = TAG_GRUPO[u.d.group] || '';
+        lines.push('- **' + nomeCurto(u.d) + '**' + (tg ? ' (' + tg + ')' : ''));
+        todas.push(slim(u.d));
+      });
+      if (it.length > 8) lines.push('…e mais ' + (it.length - 8) + '.');
+    });
+    // referência territorial: CRAS/CREAS/Conselho Tutelar que cobrem o bairro (lista de cobertura das fichas)
+    if (!so.length || so[0].key === 'social') try {
+      var tr = territory('equipamentos do bairro ' + lbl);
+      if (tr && tr.reply) {
+        var ref = tr.reply.split('\n').filter(function (l) { return /^- \*\*(CRAS|CREAS|Conselho Tutelar):/.test(l); });
+        if (ref.length) { lines.push('**Referência do território** (quem atende quem mora aqui):'); ref.forEach(function (l) { lines.push(cut(l, 170)); }); }
+        (tr.units || []).forEach(function (u) { if (!todas.some(function (x) { return x.id === u.id; })) todas.push(u); });
+      }
+    } catch (e) { /* sem território: segue só com as fichas do bairro */ }
+    lines.push('Conta só o que está cadastrado no diretório; a UBS e a escola de referência de uma família seguem a área/zoneamento e podem não ser as do bairro onde ela mora.');
+    var fu = ['Quantas escolas no ' + lbl + '?', 'Quantas UBS no ' + lbl + '?', 'Qual o CRAS do bairro ' + lbl + '?'];
+    return { reply: lines.join('\n'), mood: todas.length ? 'success' : 'notfound', badge: 'Bairro', followups: fu, units: todas.slice(0, 5), unitsAll: todas };
+  }
+
+  // ---- 2. panorama por área ----
+  var RE_PANO_FORTE = /\b(panorama|numeros|dados|indicadores|diagnostico|estatisticas?|retrato|raio x)\b/;
+  var RE_PANO_FRACO = /\b(resumo|resuma|visao geral|como esta|como e a rede|situacao da rede|quanto temos)\b/;
+  var RE_AREA = {
+    social: /\b(assistencia social|suas|socioassistencial|protecao social)\b/,
+    saude: /\b(saude|sus|raps)\b/,
+    educacao: /\b(educacao|ensino|escolar|escolas e creches)\b/
+  };
+  function panoramaAreas(text) {
+    var n = norm(text);
+    if (!n || n.length > 200 || !data.length) return null;
+    var forte = RE_PANO_FORTE.test(n), fraco = RE_PANO_FRACO.test(n);
+    if (!forte && !fraco) return null;
+    var cidade = /\b(boa vista|capital|municipio|cidade|rede|equipamentos?|unidades|diretorio)\b/.test(n);
+    var quer = AREAS.filter(function (a) { return RE_AREA[a.key].test(n); });
+    if (!quer.length && !cidade) return null;
+    // só "resumo"/"visão geral": precisa dizer a cidade/rede ou a área (saúde ou educação; "resumo do SUAS" é conceito)
+    if (!forte && !cidade && !quer.some(function (a) { return a.key !== 'social'; })) return null;
+    if (/\b(bolsa familia|cadunico|bpc|paif|creas|cras|caps)\b/.test(n) && !quer.length) return null;   // é conceito, não panorama
+    var ix = contIndex();
+    if (contBairros(n, ix).hits.length && !/\bboa vista\b/.test(n)) return null;
+    if (!quer.length) quer = AREAS;
+    var lines = ['**Boa Vista no diretório do Argo**' + (quer.length === 1 ? ' — ' + quer[0].rot.toLowerCase() : '') + ':'], todas = [], nb = totalBairros(ix), usados = {};
+    quer.forEach(function (a) {
+      var linhas = [], total = 0;
+      a.tipos.forEach(function (k) {
+        var t = contTipo(k), it = contItens(ix, t);
+        if (!it.length) return;
+        it.forEach(function (u) { usados[u.nome] = 1; });
+        total += it.length;
+        var bs = bairrosDistintos(it).length;
+        linhas.push('- **' + it.length + ' ' + (it.length === 1 ? t.sing : t.plur) + '**' + contResumoSub(it, t) + (bs > 1 ? ' em ' + bs + ' de ' + nb + ' bairros' : ''));
+        if (todas.length < 5) it.slice(0, 1).forEach(function (u) { todas.push(slim(u.d)); });
+      });
+      // demais grupos da área (urgência, abrigos, clínicas-escola, saúde indígena, acolhimento...)
+      var g = {}, ord = [];
+      unicos(ix.unidades.filter(function (u) { return areaDe(u.d) === a.key && !usados[u.nome]; })).forEach(function (u) {
+        var k = grupoDe(u.d); if (!g[k]) { g[k] = 0; ord.push(k); } g[k]++; total++;
+      });
+      ord.sort(function (x, y) { return g[y] - g[x]; }).slice(0, 7).forEach(function (k) { linhas.push('- ' + g[k] + ' · ' + k); });
+      lines.push('**' + a.rot + '** (' + total + ' unidades):');
+      lines = lines.concat(linhas);
+    });
+    lines.push('Conta só o que está cadastrado no diretório do Argo (Boa Vista, sem o interior); confirme com a rede antes de usar o número em relatório. Para indicadores de população, matrículas ou atendimentos, o diretório não tem dados: use IBGE, Censo Escolar (INEP), CNES/DataSUS e o Relatório de Informações Sociais do MDS.');
+    return { reply: lines.join('\n'), mood: 'success', badge: 'Panorama', followups: ['Quais bairros não têm UBS?', 'Quantas escolas por bairro?', 'O que tem no bairro Pintolândia?'], units: todas.slice(0, 5), unitsAll: todas };
+  }
+
+  // ---- 3. necessidades (pergunta de quem precisa de algo, sem dizer o nome da unidade) ----
+  function porIds(ids) { return ids.map(function (i) { return fichaDe(i); }).filter(function (d) { return d && d.id; }); }
+  function bvDe(fn) { return unicos(contIndex().unidades.filter(function (u) { return fn(u.d); })).map(function (u) { return u.d; }); }
+  var NECESS = [
+    { k: 'parto', re: /\b(parto|maternidade|trabalho de parto|dar a luz|ganhar (?:o )?bebe)\b/,
+      fichas: function () { return porIds(['hospital-materno-infantil-hminsn']); },
+      intro: 'Para **parto e maternidade**, a referência cadastrada no diretório é:',
+      nota: 'O pré-natal é acompanhado na UBS do território. Confirme o fluxo de encaminhamento com a UBS ou com a SESAU.',
+      fu: ['Qual a UBS do meu bairro?', 'Quantas UBS por bairro?'] },
+    { k: 'urgencia', re: /\b(pronto atendimento|pronto socorro|urgencia|emergencia|upa)\b/,
+      fichas: function () { return porIds(['samu', 'hospital-cosme-silva', 'hgrr', 'hospital-materno-infantil-hminsn']); },
+      intro: 'Para **urgência e emergência**, constam no diretório:',
+      nota: 'Risco de vida: ligue **192** (SAMU) ou **190** (polícia). O HGRR é referência para urgência psiquiátrica; o HMINSN, para urgência materno-infantil.',
+      fu: ['Quais hospitais tem em Boa Vista?'] },
+    { k: 'vacina', re: /\b(vacinas?|vacinacao|vacinar|caderneta de vacina)\b/,
+      fichas: function () { return []; },
+      intro: 'A **vacinação de rotina** é ofertada, em geral, nas **UBS** (sala de vacina).',
+      nota: 'O diretório não traz o horário da sala de vacina: confirme com a UBS antes de ir. Diga o bairro para eu indicar a UBS.',
+      fu: ['Quantas UBS por bairro?', 'Qual a UBS do bairro Cauamé?'] },
+    { k: 'capsi', re: /\bcaps ?i\b|\bcapsi\b|\bcaps infantil\b|\bcaps infantojuvenil\b|saude mental.*\b(crianca|adolescente|infantil)\b|\b(crianca|adolescente|infantil)\b.*saude mental/,
+      fichas: function () { return porIds(['caps-ii', 'caps-iii']); },
+      intro: 'No diretório **não consta CAPS i (infantojuvenil) em Boa Vista**. Os CAPS cadastrados são o CAPS II, o CAPS III (24h) e o CAPS AD III. Para saúde mental de criança ou adolescente, constam:',
+      nota: 'Confirme com a SEMSA/SESAU qual serviço recebe crianças e adolescentes antes de encaminhar: o diretório não informa faixa etária de cada CAPS.',
+      fu: ['O que é o CAPS?', 'Telefone do CAPS III'] },
+    { k: 'cadunico', re: /\b(cadunico|cad unico|cadastro unico)\b/, extra: /\b(onde|aonde|local|fazer|tirar|atualizar|inscrever|inscricao|cadastrar|posto)\b/,
+      fichas: function () { return bvDe(function (d) { return d.group === 'CRAS (Boa Vista)' || /Cadastro Único/.test(d.group || ''); }); },
+      intro: 'O **CadÚnico** é feito no **CRAS** ou em posto de atendimento. No diretório constam:',
+      nota: 'Cada família é atendida pelo CRAS do seu bairro: diga o bairro e eu indico. Para documentos e regras, pergunte "o que é o CadÚnico?".',
+      fu: ['Qual o CRAS do bairro Pricumã?', 'O que é o CadÚnico?'] },
+    { k: 'matricula', re: /\b(vagas?|matriculas?|matricular|inscricao)\b.*\b(creche|escola|ensino)\b|\b(creche|escola)\b.*\b(vagas?|matriculas?|matricular)\b/,
+      fichas: function () { return []; },
+      intro: 'O diretório **não traz vagas nem regras de matrícula**: isso muda a cada ano.',
+      nota: 'Escola e creche **municipais**: SMEC. Escola **estadual**: SEED. Procure a unidade ou o órgão para vaga e prazo. Diga o bairro e eu mostro as escolas e creches cadastradas nele.',
+      fu: ['Quantas creches por bairro?', 'Quantas escolas por bairro?'] },
+    { k: 'eja', re: /\beja\b|educacao de jovens e adultos/,
+      fichas: function () { return bvDe(function (d) { return areaDe(d) === 'educacao' && /\bEJA\b|jovens e adultos/i.test(cleanText([d.name, d.fullName, d.services].join(' '))); }); },
+      intro: 'Com **EJA (Educação de Jovens e Adultos)** constam no diretório:',
+      nota: 'Confirme turnos e vagas com a escola ou a SEED/SMEC.', fu: ['Quantas escolas por bairro?'] },
+    { k: 'integral', re: /\b(tempo integral|escola integral)\b/,
+      fichas: function () { return bvDe(function (d) { return areaDe(d) === 'educacao' && /tempo integral/i.test(cleanText([d.name, d.fullName, d.services].join(' '))); }); },
+      intro: 'Com **tempo integral** constam no diretório:',
+      nota: 'Confirme com a escola ou a SEED/SMEC.', fu: ['Quantas escolas por bairro?'] },
+    { k: 'especial', re: /\b(educacao especial|atendimento educacional especializado|\baee\b)\b/,
+      fichas: function () { return bvDe(function (d) { return CONT_TIPOS[2].match(d); }); },
+      intro: 'Em **educação especial / atendimento educacional especializado** constam:',
+      nota: 'Confirme público e encaminhamento com a SEED/SMEC.', fu: ['Quantas escolas por bairro?'] },
+    { k: 'indigena', re: /\bescolas? indigenas?\b/,
+      fichas: function () { return bvDe(function (d) { return /^E\.E\.I\./.test(d.name || '') && /Boa Vista/.test(d.address || ''); }); },
+      intro: 'Escolas **estaduais indígenas** em Boa Vista no diretório:',
+      nota: 'Fonte das fichas: Censo Escolar/INEP e SEED. Confirme com a SEED.', fu: ['Quantas escolas estaduais indígenas?'] },
+    { k: 'idoso', re: /\b(idosos?|pessoa idosa|terceira idade)\b/, extra: /\b(onde|servicos?|atendimento|programa|projeto|centro|grupo|convivencia)\b/,
+      fichas: function () { return bvDe(function (d) { return /Idos/.test(d.group || ''); }); },
+      intro: 'Para **pessoas idosas**, constam no diretório:',
+      nota: 'O SCFV para pessoas idosas é ofertado no CRAS ou em unidade referenciada a ele; diga o bairro e eu indico o CRAS.', fu: ['O que é o SCFV?', 'Qual o CRAS do bairro Pricumã?'] }
+  ];
+  function necessidade(text) {
+    var n = norm(text);
+    if (!n || n.length > 200 || !data.length) return null;
+    var nec = null;
+    for (var i = 0; i < NECESS.length; i++) {
+      var e = NECESS[i];
+      if (e.re.test(n) && (!e.extra || e.extra.test(n))) { nec = e; break; }
+    }
+    if (!nec) return null;
+    // nome de unidade bem identificado, bairro citado ou contagem: quem responde é o diretório/contagem
+    if (/\b(telefone|endereco|horario|whatsapp|ligar|quantos|quantas)\b/.test(n)) return null;
+    var ix = contIndex(), br = contBairros(n, ix);
+    if (br.hits.length && !br.corrigido) return null;
+    var fichas = nec.fichas(), lines = [nec.intro];
+    fichas.slice(0, 8).forEach(function (d) { lines.push(linhaFicha(d, true)); });
+    if (fichas.length > 8) lines.push('…e mais ' + (fichas.length - 8) + '.');
+    if (nec.nota) lines.push(nec.nota);
+    return { reply: lines.join('\n'), mood: 'success', badge: 'Diretório', followups: nec.fu.slice(0, 3), units: fichas.slice(0, 5).map(slim), unitsAll: fichas.map(slim) };
+  }
+
+  // ---- 4. dados que o diretório não tem ----
+  function semNumeros(text) {
+    var n = norm(text);
+    if (!n || n.length > 200) return null;
+    if (!/\b(quantas?|quantos?|numero de|total de|taxa de|percentual|porcentagem|qual a populacao|populacao)\b/.test(n)) return null;
+    var what = n.match(/\b(familias|pessoas|habitantes|populacao|beneficiari\w+|alunos|alunas|matriculas?|estudantes|criancas|idosos|casos|atendimentos|leitos|medicos|vagas|desempregados|analfabetos)\b/);
+    if (!what) return null;
+    if (!/\b(boa vista|roraima|bairro|municipio|cidade|rr|capital)\b/.test(n)) return null;
+    var fontes = {
+      familias: 'Relatório de Informações Sociais – RI / VIS Data (MDS) e o Painel do CadÚnico',
+      beneficiari: 'Relatório de Informações Sociais – RI / VIS Data (MDS) e o Painel do CadÚnico',
+      alunos: 'Censo Escolar (INEP), QEdu e a SEED/SMEC', alunas: 'Censo Escolar (INEP), QEdu e a SEED/SMEC', matriculas: 'Censo Escolar (INEP), QEdu e a SEED/SMEC', matricula: 'Censo Escolar (INEP), QEdu e a SEED/SMEC', estudantes: 'Censo Escolar (INEP), QEdu e a SEED/SMEC',
+      leitos: 'CNES/DataSUS e a SESAU/SEMSA', medicos: 'CNES/DataSUS e a SESAU/SEMSA'
+    };
+    var w = what[1], fonte = fontes[w] || fontes[w.replace(/s$/, '')] || (/\b(populacao|habitantes|pessoas|idosos|criancas|desempregados|analfabetos)\b/.test(w) ? 'IBGE (Censo e IBGE Cidades)' : 'IBGE, Relatório de Informações Sociais do MDS, CNES/DataSUS ou Censo Escolar (INEP), conforme o tema');
+    var r = 'O diretório do Argo guarda **equipamentos** (endereço, telefone, horário, serviços), **não** números de população, famílias, matrículas, vagas ou atendimentos. Por isso não vou estimar esse dado.\nOnde achar o número oficial: ' + fonte + '.\nO que eu consigo contar com segurança: unidades por tipo e por bairro (escolas, creches, UBS, CRAS, CREAS, hospitais...).';
+    return { reply: r, mood: 'notfound', badge: 'Sem dado', followups: ['Panorama da assistência social', 'Panorama da saúde', 'Panorama da educação'] };
+  }
+
+  // ---------------------------------------------------------------------
   // Plano: decide quem responde
   //   devolve { kind:'crisis'|'directory'|'concept'|'none', result?, dir?, con? }
   // ---------------------------------------------------------------------
@@ -2218,10 +2463,18 @@
     if (session.pendente === 'violencia-crianca' || session.pendente === 'creas-bairro') session.pendente = '';
     var seg = seguimentoTerr(text);
     if (seg) return { kind: 'directory', result: seg, dir: { units: seg.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
+    // painel de Boa Vista: perfil do bairro, panorama por área, necessidades (parto, CadÚnico, EJA...) e dados que o diretório não tem
+    var pb = perfilBairro(text) || panoramaAreas(text) || necessidade(text) || semNumeros(text);
+    if (pb) return { kind: 'directory', result: pb, dir: { units: pb.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
     var mun = municipio(text);
     if (mun) return { kind: 'directory', result: mun, dir: { units: mun.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
     var terr = territory(text);
     if (terr) return { kind: 'directory', result: terr, dir: { units: terr.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
+    // "o que é o SUAS?" é conceito (o nome "SUAS" também aparece em fichas como "Criança Feliz no SUAS")
+    if (/^(o que (?:e|significa)|como funciona|que e)( o| a)? (suas|sistema unico de assistencia social)$/.test(norm(text))) {
+      var gs = glossaryScore(text);
+      if (gs.entry) return { kind: 'concept', dir: { units: [], confidence: 0 }, con: gs, result: composeGlossary(gs.entry) };
+    }
     var dir = directory(text, session, opts.tabCat);
     var enc = encaminhar(text, dir);
     if (enc) return { kind: 'directory', result: enc, dir: { units: enc.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
