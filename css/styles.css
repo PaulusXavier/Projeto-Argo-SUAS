@@ -7629,3 +7629,17 @@ tr.is-closed > td { opacity: 0.6; }
   :root:not([data-theme="light"]) .mapa-rede-map:not(.is-satellite) .leaflet-tile-pane { filter: brightness(0.82) contrast(1.05); }
 }
 :root[data-theme="dark"] .mapa-rede-map:not(.is-satellite) .leaflet-tile-pane { filter: brightness(0.82) contrast(1.05); }
+
+.mapa-rede-bairro-sub { margin: 0.6rem 0 0.2rem; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+.mapa-rede-bairro-units { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.mapa-rede-bairro-hit .mapa-rede-hits { max-height: 320px; overflow-y: auto; }
+.mapa-rede-detail-notice {
+  margin: 0.5rem 0; padding: 0.5rem 0.65rem; font-size: 0.8rem; line-height: 1.4; border-radius: 8px;
+  border: 1px solid rgba(217, 119, 6, 0.4); background: rgba(217, 119, 6, 0.09); color: var(--text-main);
+}
+.mapa-rede-detail-notice .mapa-rede-unit-btn { margin-top: 0.4rem; }
+
+.mapa-rede-map.is-fixing, .mapa-rede-map.is-fixing .leaflet-grab { cursor: crosshair; }
+.mapa-rede-map.is-fixing { outline: 3px solid #d97706; outline-offset: -3px; }
+.mapa-rede-backup { margin-top: 0.8rem; }
+.mapa-rede-backup-btns { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0 0.9rem 0.9rem; }
