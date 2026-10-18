@@ -1612,7 +1612,7 @@ function recordRecent(id) {
 // cadastrado e do serviço de geocodificação), útil para priorizar rotas
 // da Equipe Volante e visitas domiciliares.
 // ---------------------------------------------------------------------
-const GEOCODE_CACHE_KEY = 'argo_geocode_cache_v1';
+const GEOCODE_CACHE_KEY = 'argo_geocode_cache_v2';
 let proximityState = { active: false, lat: null, lon: null, loading: false };
 
 // Guardado em memória: renderDistanceBadge() chamava isto uma vez POR CARD
@@ -1628,9 +1628,9 @@ function getGeocodeCache() {
   return _geocodeCacheMemo;
 }
 
-function setGeocodeCacheEntry(id, lat, lon) {
+function setGeocodeCacheEntry(id, lat, lon, approx, manual) {
   const cache = getGeocodeCache();
-  cache[id] = { lat, lon };
+  cache[id] = manual ? { lat, lon, manual: true } : (approx ? { lat, lon, approx: true } : { lat, lon });
   try {
     localStorage.setItem(GEOCODE_CACHE_KEY, JSON.stringify(cache));
   } catch (e) {
@@ -1647,14 +1647,61 @@ function haversineKm(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// Caixa em volta de Boa Vista: resultado fora dela, para endereço de Boa Vista,
+// é erro do serviço de mapas (homônimo em outra cidade) e é descartado.
+const BOA_VISTA_BBOX = { south: 2.70, north: 2.95, west: -60.85, east: -60.55 };
+
+// Primeiro endereço de um texto do diretório. Algumas fichas trazem várias
+// unidades separadas por <br> ("Unidade X: Av. ..."); mandar tudo junto para o
+// serviço de mapas fazia ele errar o ponto.
+function mapaRedeFirstAddress(address) {
+  let first = String(address == null ? '' : address).split(/<br\s*\/?>/i)[0].replace(/<[^>]+>/g, ' ');
+  const m = first.match(/^[^:]{1,70}:\s*(.+)$/);
+  if (m && /[A-Za-zÀ-ÿ]/.test(m[1]) && /(\d|,)/.test(m[1])) first = m[1];
+  return first.replace(/\s+/g, ' ').trim();
+}
+
+// Variações do endereço, da mais completa à mais simples.
+function geocodeQueries(address) {
+  let a = mapaRedeFirstAddress(address)
+    .replace(/\(.*?\)/g, ' ')
+    .replace(/,?\s*(CEP[:\s]*)?\d{5}-?\d{3}/gi, '')
+    .replace(/\bn[º°o]\.?\s*(?=\d)/gi, '')
+    .replace(/\bs\/n(?:[º°]|o\b)?\.?/gi, '')
+    .replace(/\b(Qd|Qda|Lote|Lt|Sala|Bloco|Galpão)\.?\s*[\w-]+/gi, '')
+    .replace(/,?\s*(em frente|ao lado|próximo|esquina|anexo)\b.*$/i, '')
+    .replace(/\bR\.\s/g, 'Rua ').replace(/\bAv\.\s/g, 'Avenida ').replace(/\bGen\.\s/g, 'General ').replace(/\bMaj\.\s/g, 'Major ')
+    .replace(/\s+/g, ' ').replace(/\s*,\s*,/g, ',').replace(/[,\s-]+$/, '').trim();
+  const parts = a.split(/\s+-\s+/);
+  const street = parts[0].replace(/,\s*$/, '');
+  const rest = parts.slice(1).join(', ');
+  const city = /-RR\b/i.test(a) ? '' : ', Boa Vista';
+  const withNumber = street + (rest ? ', ' + rest : '') + city;
+  const noNumber = street.replace(/,?\s*\d+[A-Za-z]?\s*$/, '') + (rest ? ', ' + rest : '') + city;
+  const out = [withNumber];
+  if (noNumber !== withNumber) out.push(noNumber);
+  return out.map(q => q.replace(/-RR\b/gi, ', Roraima').replace(/,\s*,/g, ',') + ', Brasil');
+}
+
 async function geocodeAddress(address) {
-  const q = encodeURIComponent(address.replace(/\s+/g, ' ').trim() + ', Roraima, Brasil');
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${q}`;
-  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-  if (!res.ok) throw new Error('Falha ao consultar o serviço de geocodificação.');
-  const data = await res.json();
-  if (!data || !data[0]) return null;
-  return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+  const isBV = /Boa Vista/i.test(String(address));
+  const qs = geocodeQueries(address);
+  for (let i = 0; i < qs.length; i++) {
+    if (i > 0) await new Promise(r => setTimeout(r, 1100)); // limite do Nominatim: ~1 pedido por segundo
+    let url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=' + encodeURIComponent(qs[i]);
+    if (isBV) url += '&viewbox=' + BOA_VISTA_BBOX.west + ',' + BOA_VISTA_BBOX.north + ',' + BOA_VISTA_BBOX.east + ',' + BOA_VISTA_BBOX.south + '&bounded=1';
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!res.ok) throw new Error('Falha ao consultar o serviço de geocodificação.');
+    const data = await res.json();
+    if (!data || !data[0]) continue;
+    const c = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+    if (!isFinite(c.lat) || !isFinite(c.lon)) continue;
+    if (isBV && (c.lat < BOA_VISTA_BBOX.south || c.lat > BOA_VISTA_BBOX.north || c.lon < BOA_VISTA_BBOX.west || c.lon > BOA_VISTA_BBOX.east)) continue;
+    // Só a rua (sem o número) é menos precisa: marca para a ficha avisar.
+    c.approx = i > 0;
+    return c;
+  }
+  return null;
 }
 
 async function ensureGeocodedFor(items, onProgress) {
@@ -1665,7 +1712,7 @@ async function ensureGeocodedFor(items, onProgress) {
     if (onProgress) onProgress(idx + 1, pending.length);
     try {
       const coords = await geocodeAddress(item.address);
-      if (coords) setGeocodeCacheEntry(item.id, coords.lat, coords.lon);
+      if (coords) setGeocodeCacheEntry(item.id, coords.lat, coords.lon, coords.approx);
     } catch (e) {
       // Ignora falha pontual num endereço e segue para o próximo.
     }
@@ -14005,6 +14052,16 @@ function renderMapCard() {
 
         <div id="mapaRedeLegend" class="mapa-rede-legend"></div>
 
+        <details class="mapa-rede-help mapa-rede-backup">
+          <summary>${ICONS.info}<span>Pinos: salvar, carregar e corrigir</span></summary>
+          <p>Os pinos localizados ficam só neste aparelho. Para levar para outro aparelho, ou para todos receberem os pinos prontos, salve o arquivo e coloque-o no projeto como <strong>assets/coordenadas.json</strong>. Para corrigir um pino fora do lugar, abra o equipamento e toque em "Corrigir posição no mapa".</p>
+          <div class="mapa-rede-backup-btns">
+            <button type="button" class="btn-tech btn-secondary" onclick="mapaRedeExportCoords()">Salvar pinos (arquivo)</button>
+            <button type="button" class="btn-tech btn-secondary" onclick="document.getElementById('mapaRedeImportFile').click()">Carregar pinos</button>
+            <input type="file" id="mapaRedeImportFile" accept="application/json,.json" hidden onchange="mapaRedeImportCoords(this)">
+          </div>
+        </details>
+
         <div id="mapaRedeNearbyList" class="mapa-rede-nearby"></div>
       </div>
     </div>
@@ -14071,9 +14128,16 @@ function mapaRedeRenderDetail(d) {
 
   const hasCoords = d.lat != null && d.lon != null;
   const origin = proximityState.active ? `&origin=${proximityState.lat},${proximityState.lon}` : '';
-  const routeHref = hasCoords
-    ? `https://www.google.com/maps/dir/?api=1&destination=${d.lat},${d.lon}${origin}`
+  // Para equipamentos do diretório a rota sai pelo ENDEREÇO (o Google acerta
+  // melhor que o ponto localizado automaticamente); unidades de CRAS/CREAS
+  // têm coordenada conferida e usam ela.
+  const routeDest = d.routeByAddress && d.address ? encodeURIComponent(mapaRedeFirstAddress(d.address) + ', Roraima') : (hasCoords ? d.lat + ',' + d.lon : '');
+  const routeHref = routeDest
+    ? `https://www.google.com/maps/dir/?api=1&destination=${routeDest}${origin}`
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(d.address || d.title || '')}`;
+  const noticeHtml = d.locateId && !hasCoords
+    ? `<div class="mapa-rede-detail-notice">Este endereço ainda não tem pino no mapa. <button type="button" class="mapa-rede-unit-btn" onclick="mapaRedeLocateOne('${escapeHtml(d.locateId)}')">Localizar no mapa</button></div>`
+    : (d.manual ? `<div class="mapa-rede-detail-notice">Posição marcada manualmente neste aparelho.</div>` : d.approx ? `<div class="mapa-rede-detail-notice">Posição aproximada (só a rua foi encontrada). Para chegar, use "Traçar rota", que parte do endereço.</div>` : '');
 
   const blocks = (d.blocks || []).filter(b => b && b.text)
     .map(b => `<div class="mapa-rede-detail-block"><strong>${escapeHtml(b.title)}</strong><p>${escapeHtml(b.text)}</p></div>`)
@@ -14091,6 +14155,7 @@ function mapaRedeRenderDetail(d) {
     </div>
     <h3 class="mapa-rede-detail-title">${escapeHtml(d.title || '')}</h3>
     ${mapaRedeDetailDistanceHtml(d.lat, d.lon)}
+    ${noticeHtml}
     <div class="mapa-rede-detail-row">${ICONS.map}<span>${escapeHtml(d.address || 'Endereço não informado')}</span></div>
     ${d.hours ? `<div class="mapa-rede-detail-row">${ICONS.clock}<span>${escapeHtml(d.hours)}</span></div>` : ''}
     ${phonesHtml ? `<div class="mapa-rede-detail-phones">${phonesHtml}</div>` : ''}
@@ -14102,6 +14167,7 @@ function mapaRedeRenderDetail(d) {
         <button type="button" class="btn-tech btn-secondary" onclick="mapaRedeCopyDetail()">${ICONS.copy} Copiar</button>
         <button type="button" class="btn-tech btn-whatsapp" onclick="mapaRedeShareDetail()">${ICONS.whatsapp} WhatsApp</button>
       </div>
+      ${d.locateId ? `<button type="button" class="btn-tech btn-secondary" onclick="mapaRedeStartFix('${escapeHtml(d.locateId)}')">${hasCoords ? 'Corrigir posição no mapa' : 'Marcar posição no mapa'}</button>` : ''}
     </div>
   `;
   panel.classList.add('has-selection');
@@ -14123,7 +14189,8 @@ function mapaRedeDetailText() {
   if (d.address) lines.push('Endereço: ' + d.address);
   if (d.hours) lines.push('Horário: ' + d.hours);
   if (phones.length) lines.push('Telefone: ' + phones.join(' / '));
-  if (d.lat != null && d.lon != null) lines.push('Mapa: https://www.google.com/maps/search/?api=1&query=' + d.lat + ',' + d.lon);
+  if (d.routeByAddress && d.address) lines.push('Mapa: https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(mapaRedeFirstAddress(d.address) + ', Roraima'));
+  else if (d.lat != null && d.lon != null) lines.push('Mapa: https://www.google.com/maps/search/?api=1&query=' + d.lat + ',' + d.lon);
   return lines.join('\n');
 }
 
@@ -14147,6 +14214,10 @@ function mapaRedeShowItemDetail(item, coords) {
     badges: (item.cat || []).map(c => CATEGORY_LABELS_PRINT[c]).filter(Boolean).map(label => ({ label, color })),
     lat: coords ? coords.lat : null,
     lon: coords ? coords.lon : null,
+    routeByAddress: true,
+    approx: !!(coords && coords.approx),
+    manual: !!(coords && coords.manual),
+    locateId: item.id,
     address: item.address,
     hours: item.hours,
     phones: item.phones || [],
@@ -14234,7 +14305,10 @@ async function initMapPanel() {
     ? [proximityState.lat, proximityState.lon]
     : [MAPA_REDE_DEFAULT_CENTER.lat, MAPA_REDE_DEFAULT_CENTER.lon];
 
+  await mapaRedeLoadBaseCoords();
+  mapaRedeFixId = null;
   mapaRedeMap = L.map(container, { zoomControl: true }).setView(center, proximityState.active ? 13 : 12);
+  mapaRedeMap.on('click', mapaRedeMapClicked);
   L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(mapaRedeMap);
   mapaRedeTileLayer = mapaRedeTileUrlLayer(L, mapaRedeBase).addTo(mapaRedeMap);
   container.classList.toggle('is-satellite', mapaRedeBase === 'satelite');
@@ -14376,6 +14450,136 @@ function mapaRedeRecenter() {
   else mapaRedeMap.setView([MAPA_REDE_DEFAULT_CENTER.lat, MAPA_REDE_DEFAULT_CENTER.lon], 12);
 }
 
+// Coordenada guardada que cai longe de Boa Vista para um endereço de Boa Vista
+// (resultado errado de uma consulta antiga) não vira pino.
+function mapaRedeBadCoords(item, c) {
+  return /Boa Vista/i.test(String(item.address)) &&
+    (c.lat < BOA_VISTA_BBOX.south || c.lat > BOA_VISTA_BBOX.north || c.lon < BOA_VISTA_BBOX.west || c.lon > BOA_VISTA_BBOX.east);
+}
+
+// Localiza só este equipamento (botão na ficha) e já mostra o pino.
+async function mapaRedeLocateOne(id) {
+  const item = DATA.find(i => i.id === id);
+  if (!item) return;
+  if (navigator.onLine === false) { argoAviso('Sem internet agora. Conecte-se para localizar o endereço.', 'error'); return; }
+  mapaRedeSetStatus('Localizando endereço…');
+  try {
+    const c = await geocodeAddress(item.address);
+    mapaRedeSetStatus('');
+    if (!c) { argoAviso('O serviço de mapas não encontrou este endereço. Use "Traçar rota", que abre pelo endereço.', 'info'); return; }
+    setGeocodeCacheEntry(item.id, c.lat, c.lon, c.approx);
+    await renderMapaRedeMarkers({ keepView: true });
+    mapaRedeOpenItem(id);
+  } catch (e) {
+    mapaRedeSetStatus('');
+    argoAviso('Não foi possível consultar o serviço de mapas agora.', 'error');
+  }
+}
+
+// Coordenadas prontas do projeto (assets/coordenadas.json): entram no cache do
+// aparelho só para equipamentos que ainda não têm posição própria.
+let mapaRedeBaseLoaded = false;
+async function mapaRedeLoadBaseCoords() {
+  if (mapaRedeBaseLoaded) return;
+  mapaRedeBaseLoaded = true;
+  try {
+    const res = await fetch('assets/coordenadas.json', { cache: 'no-cache' });
+    if (!res.ok) return;
+    const base = await res.json();
+    const cache = getGeocodeCache();
+    let added = 0;
+    Object.keys(base || {}).forEach(id => {
+      const c = base[id];
+      if (!cache[id] && c && isFinite(c.lat) && isFinite(c.lon)) { cache[id] = c; added++; }
+    });
+    if (added) { try { localStorage.setItem(GEOCODE_CACHE_KEY, JSON.stringify(cache)); } catch (e) { /* segue em memória */ } }
+  } catch (e) { /* sem o arquivo: usa só o que o aparelho já localizou */ }
+}
+
+function mapaRedeExportCoords() {
+  const cache = getGeocodeCache();
+  const ids = Object.keys(cache).sort();
+  if (!ids.length) { argoAviso('Ainda não há pinos para salvar. Use "Localizar agora" primeiro.', 'info'); return; }
+  const out = {};
+  ids.forEach(id => { out[id] = cache[id]; });
+  const blob = new Blob([JSON.stringify(out, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'coordenadas.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  argoAviso(ids.length + ' pinos salvos em coordenadas.json.', 'success');
+}
+
+function mapaRedeImportCoords(input) {
+  const file = input.files && input.files[0];
+  input.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const data = JSON.parse(reader.result);
+      const cache = getGeocodeCache();
+      let n = 0;
+      Object.keys(data || {}).forEach(id => {
+        const c = data[id];
+        if (c && isFinite(c.lat) && isFinite(c.lon)) { cache[id] = c; n++; }
+      });
+      try { localStorage.setItem(GEOCODE_CACHE_KEY, JSON.stringify(cache)); } catch (e) { /* segue em memória */ }
+      await renderMapaRedeMarkers();
+      argoAviso(n + ' pinos carregados.', n ? 'success' : 'info');
+    } catch (e) {
+      argoAviso('Arquivo inválido. Escolha o coordenadas.json salvo pelo próprio mapa.', 'error');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// Corrigir/marcar posição: o próximo toque no mapa vira a posição do
+// equipamento (guardada como manual, sem consulta de rede).
+let mapaRedeFixId = null;
+function mapaRedeStartFix(id) {
+  const item = DATA.find(i => i.id === id);
+  if (!item || !mapaRedeMap) return;
+  mapaRedeFixId = id;
+  const c = document.getElementById('mapaRedeMapContainer');
+  if (c) c.classList.add('is-fixing');
+  mapaRedeSetStatus('Toque no mapa, no local certo de "' + (item.name || '') + '". (Esc cancela)');
+  mapaRedeScrollToMap();
+}
+function mapaRedeCancelFix() {
+  mapaRedeFixId = null;
+  const c = document.getElementById('mapaRedeMapContainer');
+  if (c) c.classList.remove('is-fixing');
+  mapaRedeSetStatus('');
+}
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && mapaRedeFixId) mapaRedeCancelFix(); });
+function mapaRedeMapClicked(ev) {
+  if (!mapaRedeFixId) return;
+  const id = mapaRedeFixId;
+  setGeocodeCacheEntry(id, ev.latlng.lat, ev.latlng.lng, false, true);
+  mapaRedeCancelFix();
+  renderMapaRedeMarkers({ keepView: true }).then(() => mapaRedeOpenItem(id));
+}
+
+// Abre um equipamento pelo id: com pino, leva o mapa até ele; sem pino, só
+// mostra a ficha (com rota pelo endereço e botão para localizar).
+function mapaRedeOpenItem(id) {
+  const i = mapaRedeTargets.findIndex(t => t.id === id);
+  if (i > -1) { mapaRedeFocus(i); return; }
+  const item = DATA.find(x => x.id === id);
+  if (!item) return;
+  const c = getGeocodeCache()[id];
+  if (c && !mapaRedeBadCoords(item, c) && mapaRedeMap) {
+    mapaRedeMap.setView([c.lat, c.lon], 16);
+    mapaRedeShowItemDetail(item, c);
+    mapaRedePulse(c.lat, c.lon, mapaRedeItemColor(item));
+  } else {
+    mapaRedeShowItemDetail(item, null);
+  }
+  mapaRedeScrollToMap();
+}
+
 // Categoria "principal" de um item (a primeira que tem cor), usada na
 // legenda, na ocultação por categoria e na contagem.
 function mapaRedePrimaryCat(item) {
@@ -14417,7 +14621,7 @@ async function renderMapaRedeMarkers(opts) {
 
   items.forEach(item => {
     const coords = cache[item.id];
-    if (!coords) return;
+    if (!coords || mapaRedeBadCoords(item, coords)) return;
     located++;
     const itemCat = mapaRedePrimaryCat(item);
     if (itemCat) legendCounts[itemCat] = (legendCounts[itemCat] || 0) + 1;
@@ -14433,7 +14637,7 @@ async function renderMapaRedeMarkers(opts) {
     marker.on('click', () => mapaRedeShowItemDetail(item, coords));
     marker.addTo(mapaRedeMarkersLayer);
     nearbySource.push({
-      name: item.name, address: mapaRedeCleanText(item.address), lat: coords.lat, lon: coords.lon, color: itemColor,
+      id: item.id, name: item.name, address: mapaRedeCleanText(item.address), lat: coords.lat, lon: coords.lon, color: itemColor,
       tag: itemCat ? (CATEGORY_LABELS_PRINT[itemCat] || '') : '',
       search: argoNorm([item.name, item.fullName, item.address].join(' ')),
       open: () => mapaRedeShowItemDetail(item, coords), marker, layer: mapaRedeMarkersLayer
@@ -14586,7 +14790,7 @@ async function mapaRedeGeocodePending() {
     paint();
     try {
       const c = await geocodeAddress(item.address);
-      if (c) { setGeocodeCacheEntry(item.id, c.lat, c.lon); found++; if (found % 6 === 0) await renderMapaRedeMarkers({ keepView: true }); }
+      if (c) { setGeocodeCacheEntry(item.id, c.lat, c.lon, c.approx); found++; if (found % 6 === 0) await renderMapaRedeMarkers({ keepView: true }); }
     } catch (e) { /* segue para o próximo */ }
     done++;
     await new Promise(r => setTimeout(r, 1100));
@@ -14657,20 +14861,37 @@ function mapaRedeSearchKey(ev) {
 }
 
 // ---- Qual CRAS/CREAS atende o bairro? (usa os "bairros de referência" de UNITS_CRAS_CREAS)
+// Além das unidades, lista os equipamentos do diretório cujo endereço está no
+// bairro (ex.: "... - Caimbé, Boa Vista-RR"), com ou sem pino no mapa.
+function mapaRedeAddressBairros(address) {
+  const out = [];
+  String(address == null ? '' : address).split(/<br\s*\/?>/i).forEach(line => {
+    const m = line.match(/\s-\s+([^,\-]+?)\s*,\s*Boa Vista/i);
+    if (m) out.push(m[1].trim());
+  });
+  return out;
+}
+
 function mapaRedeBairroIndex() {
   const idx = new Map();
+  const add = (label) => { const k = argoNorm(label); if (k && !idx.has(k)) idx.set(k, { label, units: [] }); return idx.get(k); };
   ['cras', 'creas'].forEach(kind => {
     UNITS_CRAS_CREAS[kind].forEach((u, i) => {
       if (/^abrigo/i.test(u.name)) return; // o campo "bairros" do abrigo descreve o público, não bairros
       String(u.bairros || '').split(',').map(x => x.trim()).filter(Boolean).forEach(b => {
-        const k = argoNorm(b);
-        if (!idx.has(k)) idx.set(k, { label: b, units: [] });
-        const e = idx.get(k);
+        const e = add(b);
         if (!e.units.some(x => x.kind === kind && x.i === i)) e.units.push({ kind, i, name: u.name });
       });
     });
   });
+  // Bairros que aparecem nos endereços do diretório.
+  DATA.forEach(item => { if (item.address) mapaRedeAddressBairros(item.address).forEach(add); });
   return idx;
+}
+
+function mapaRedeItemsInBairro(key) {
+  return DATA.filter(item => item.address && !item.cat.includes('cas') && !item.cat.includes('cras') &&
+    mapaRedeAddressBairros(item.address).some(b => argoNorm(b) === key));
 }
 
 function mapaRedeFillBairros() {
@@ -14687,12 +14908,28 @@ function mapaRedeBairroInput(v) {
   const q = argoNorm(v || '');
   if (q.length < 2) { out.innerHTML = ''; return; }
   const idx = mapaRedeBairroIndex();
-  let hits = idx.has(q) ? [idx.get(q)] : Array.from(idx.entries()).filter(([k]) => k.indexOf(q) > -1).map(([, e]) => e).slice(0, 6);
-  out.innerHTML = hits.length
-    ? hits.map(e => '<div class="mapa-rede-bairro-hit"><strong>' + escapeHtml(e.label) + '</strong><div>'
-        + e.units.map(u => '<button type="button" class="mapa-rede-unit-btn" onclick="mapaRedeFocusUnit(\'' + u.kind + '\',' + u.i + ')">' + escapeHtml(u.name) + '</button>').join('')
-        + '</div></div>').join('')
-    : '<p class="mapa-rede-hint">Bairro não encontrado na lista de referência das unidades. Confira a grafia ou consulte a coordenação.</p>';
+  const entries = idx.has(q) ? [[q, idx.get(q)]] : Array.from(idx.entries()).filter(([k]) => k.indexOf(q) > -1).slice(0, 4);
+  const cache = getGeocodeCache();
+  out.innerHTML = entries.length
+    ? entries.map(([k, e]) => {
+        const items = mapaRedeItemsInBairro(k);
+        const unitsHtml = e.units.length
+          ? '<div class="mapa-rede-bairro-sub">Atendido por</div><div class="mapa-rede-bairro-units">'
+            + e.units.map(u => '<button type="button" class="mapa-rede-unit-btn" onclick="mapaRedeFocusUnit(\'' + u.kind + '\',' + u.i + ')">' + escapeHtml(u.name) + '</button>').join('') + '</div>'
+          : '<p class="mapa-rede-hint">Este bairro não consta na lista de referência das unidades de CRAS/CREAS.</p>';
+        const itemsHtml = items.length
+          ? '<div class="mapa-rede-bairro-sub">Equipamentos no bairro (' + items.length + ')</div><div class="mapa-rede-hits">'
+            + items.slice(0, 40).map(item => {
+                const c = cache[item.id];
+                const pin = c && !mapaRedeBadCoords(item, c);
+                return '<button type="button" class="mapa-rede-hit" onclick="mapaRedeOpenItem(\'' + escapeHtml(item.id) + '\')">'
+                  + '<span class="mapa-rede-hit-dot" style="background:' + mapaRedeItemColor(item) + ';"></span>'
+                  + '<span class="mapa-rede-hit-text"><strong>' + escapeHtml(item.name || '') + '</strong><small>' + escapeHtml(mapaRedeCleanText(mapaRedeFirstAddress(item.address))) + (pin ? '' : ' · sem pino ainda') + '</small></span></button>';
+              }).join('') + '</div>'
+          : '<p class="mapa-rede-hint">Nenhum equipamento do diretório tem endereço neste bairro.</p>';
+        return '<div class="mapa-rede-bairro-hit"><strong>' + escapeHtml(e.label) + '</strong>' + unitsHtml + itemsHtml + '</div>';
+      }).join('')
+    : '<p class="mapa-rede-hint">Bairro não encontrado. Confira a grafia ou consulte a coordenação.</p>';
 }
 
 async function mapaRedeFocusUnit(kind, i) {
