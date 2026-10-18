@@ -17208,7 +17208,35 @@ const AGENDA_DATA_BY_YEAR = {
 // "nunca vence". Se AGENDA_DATA_BY_YEAR ainda não tiver o ano atual
 // cadastrado, o calendário mostra os dias normalmente, só sem etiquetas.
 const AGENDA_YEAR = new Date().getFullYear();
-const AGENDA_DATA_INFO = AGENDA_DATA_BY_YEAR[AGENDA_YEAR] || {};
+// Quando o ano ainda não foi cadastrado (ex.: virou o ano e o Diário Oficial
+// ainda não saiu), a agenda calcula sozinha só o que é previsível: feriados
+// fixos (nacionais, de Roraima e de Boa Vista) e os que dependem da Páscoa
+// (Carnaval, Cinzas, Sexta-feira da Paixão, Corpus Christi). Pagamentos, 13º e
+// pontos facultativos de "ponte" NÃO são inventados: a agenda avisa na tela.
+// AGENDA_DATA_BY_YEAR continua sendo a fonte oficial; o cálculo nunca a altera.
+function agendaEasterDate(y) {
+  const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4;
+  const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const mo = Math.floor((h + l - 7 * m + 114) / 31), da = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(y, mo - 1, da);
+}
+function agendaComputeYear(year) {
+  const out = {};
+  const pad = n => String(n).padStart(2, '0');
+  const put = (m, d, label, type) => { out[year + '-' + pad(m) + '-' + pad(d)] = { label: label, type: type }; };
+  const F = 'agenda-badge-feriado', Q = 'agenda-badge-facultativo';
+  [[1, 1, 'CONF.'], [1, 20, 'S. SEB.'], [4, 21, 'TIR.'], [5, 1, 'TRAB.'], [6, 29, 'S. PED.'], [7, 9, 'B. VIST.'],
+   [9, 7, 'IND.'], [10, 5, 'ROR.'], [10, 12, 'APAR.'], [10, 28, 'SERV.'], [11, 2, 'FIN.'], [11, 15, 'REP.'],
+   [11, 20, 'C. NEG.'], [12, 8, 'CONC.'], [12, 25, 'NATAL']].forEach(r => put(r[0], r[1], r[2], F));
+  const easter = agendaEasterDate(year);
+  const rel = (days, label, type) => { const d = new Date(easter); d.setDate(d.getDate() + days); put(d.getMonth() + 1, d.getDate(), label, type); };
+  rel(-48, 'CAR.', Q); rel(-47, 'CAR.', Q); rel(-46, 'CIN.', Q); rel(-2, 'PAIX.', F); rel(60, 'CORP.', F);
+  return out;
+}
+const AGENDA_DATA_ESTIMATED = !AGENDA_DATA_BY_YEAR[AGENDA_YEAR];
+const AGENDA_DATA_INFO = AGENDA_DATA_BY_YEAR[AGENDA_YEAR] || agendaComputeYear(AGENDA_YEAR);
 
 // Config do projeto Firebase "agenda-boa-vista" (Firestore em modo de teste,
 // regra liberando leitura/escrita em agendas/{codigo}/notes/{data} — o
@@ -18833,6 +18861,7 @@ function renderAgendaCard() {
           .agenda-note-preview { font-size: 13px; }
           .agenda-footer { padding: 10px 12px 12px 14px; }
           .agenda-side { padding: 6px 10px 12px 12px; }
+
         }
         @media (max-width: 380px) {
           .agenda-book { padding-left: 18px; --agenda-cell-min: 50px; }
@@ -18849,6 +18878,9 @@ function renderAgendaCard() {
           .agenda-day-cell { transition: none; }
           .agenda-day-cell:hover { transform: none; }
         }
+        .agenda-estimate-note { margin: 0 14px 8px; padding: 8px 12px; border-radius: 10px; font-size: 12.5px; line-height: 1.45; background: var(--amber-bg); border: 1px solid var(--amber-ink); color: #4a3510; }
+        .agenda-estimate-note strong { font-weight: 800; }
+        @media print { .agenda-estimate-note { display: none !important; } }
         .agenda-next-strip { display:none; align-items:center; flex-wrap:wrap; gap:8px; margin:0 14px 8px 14px; padding:7px 12px; border-radius:10px; font-size:13px; background:rgba(184,137,79,0.14); border:1px dashed var(--gold); color:var(--ink); }
         .agenda-next-strip.on { display:flex; }
         .agenda-next-strip strong { font-weight:700; }
@@ -18944,6 +18976,27 @@ function renderAgendaCard() {
         .agenda-ts-add { margin-left: auto; min-height: 32px; padding: 3px 13px; border-radius: 999px; border: 1px solid var(--gold); background: transparent; color: var(--cover); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
         .agenda-ts-add:hover { background: rgba(184, 137, 79, 0.18); }
         @media (max-width: 600px) { .agenda-today-status { margin: 0 10px 8px; } .agenda-ts-add { margin-left: 0; } }
+        @media (max-width: 600px) {
+          /* O calendário é o que a pessoa veio ver: sobe para a primeira tela.
+             Resumos, atalhos do Argo e "próximo marco" descem para depois dele. */
+          .agenda-book { display: flex; flex-direction: column; }
+          .agenda-header { order: 1; }
+          .agenda-year { order: 2; }
+          .agenda-estimate-note { order: 2; margin: 0 10px 8px; }
+          .agenda-today-banner { order: 3; }
+          .agenda-today-status { order: 4; margin: 0 10px 8px; padding: 7px 10px; gap: 2px 10px; }
+          .agenda-ts-date { font-size: 14px; }
+          .agenda-ts-meta { flex: 1 1 100%; font-size: 12px; }
+          .agenda-ts-add { margin-left: auto; min-height: 30px; padding: 2px 11px; font-size: 12.5px; }
+          .agenda-spread { order: 5; }
+          .agenda-next-strip { order: 6; }
+          .agenda-argo-row { order: 7; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+          .agenda-argo-row::-webkit-scrollbar { display: none; }
+          .agenda-argo-lead { display: none; }
+          .agenda-argo-icon, .agenda-argo-chip { flex: 0 0 auto; }
+          .agenda-argo-chip { white-space: nowrap; }
+          .agenda-footer { order: 8; }
+        }
       </style>
       <div class="card-top">
         <div style="display:flex; align-items:center; gap:0.55rem;">
@@ -18963,7 +19016,7 @@ function renderAgendaCard() {
           <div class="agenda-header">
             <div class="agenda-brand">
               <h3>Argo</h3>
-              <p>Agenda oficial ${AGENDA_YEAR}<span class="agenda-sub-extra"> · feriados, facultativos e pagamentos</span></p>
+              <p>${AGENDA_DATA_ESTIMATED ? 'Agenda ' + AGENDA_YEAR + ' · feriados calculados' : 'Agenda oficial ' + AGENDA_YEAR}<span class="agenda-sub-extra">${AGENDA_DATA_ESTIMATED ? '' : ' · feriados, facultativos e pagamentos'}</span></p>
             </div>
             <div class="agenda-monthbar">
               <div class="agenda-nav-controls">
@@ -18984,6 +19037,8 @@ function renderAgendaCard() {
               </button>
             </div>
           </div>
+
+          ${AGENDA_DATA_ESTIMATED ? '<div class="agenda-estimate-note" role="note"><strong>Datas calculadas automaticamente.</strong> Os feriados de ' + AGENDA_YEAR + ' foram calculados; pagamentos, 13º e pontos facultativos de ponte ainda não foram cadastrados. Confira no Diário Oficial.</div>' : ''}
 
           <div id="agendaTodayBanner" class="agenda-today-banner" role="status" aria-live="polite">
             <div class="agenda-sync-card-head">
@@ -19520,7 +19575,7 @@ function agendaExportIcs() {
   const esc = (t) => String(t).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
   const compact = (k) => k.replace(/-/g, '');
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
-  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Argo SUAS//Agenda Argo//PT-BR', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:Agenda Argo ' + AGENDA_YEAR];
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Argo SUAS//Agenda Argo//PT-BR', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:Agenda Argo ' + AGENDA_YEAR + (AGENDA_DATA_ESTIMATED ? ' (feriados calculados)' : '')];
   keys.forEach((k) => {
     const next = agendaDateFromKey(k); next.setDate(next.getDate() + 1);
     lines.push('BEGIN:VEVENT',
@@ -19539,7 +19594,7 @@ function agendaExportIcs() {
   a.href = url; a.download = 'agenda-argo-' + AGENDA_YEAR + '.ics';
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1500);
-  agendaToast('Datas de ' + AGENDA_YEAR + ' baixadas (' + keys.length + ' eventos).', 'ok');
+  agendaToast('Datas de ' + AGENDA_YEAR + ' baixadas (' + keys.length + ' eventos)' + (AGENDA_DATA_ESTIMATED ? '. Atenção: só os feriados calculados; sem pagamentos.' : '.'), 'ok');
 }
 
 function agendaChangeMonth(delta, keepDay) {
