@@ -459,7 +459,7 @@
   // desligado com "reduzir movimento"). Mexe so nos olhos dos mascotes que
   // estao na pagina, em no maximo um quadro por vez — sem custo para a pagina.
   // ---------------------------------------------------------------------
-  var lookBound = false;
+  var lookBound = false, lookApi = null;
   var NS_SVG = 'http://www.w3.org/2000/svg';
   var calmMotion = function () { return !!(typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); };
 
@@ -507,13 +507,49 @@
     }
   }
 
+  // Reação "de fundo" do mascote a algo que aconteceu no app (diferente do poke, que é
+  // resposta a toque e conta para o easter egg). Tipos: 'hop' pulinho, 'cheer' comemora
+  // (pulo + estrelas), 'shake' balança a cabeça (erro), 'tilt' inclina (não achei).
+  var REACT_CLASS = { hop: 'argo-mascot-poked', cheer: 'argo-mascot-cheer', shake: 'argo-mascot-shake', tilt: 'argo-mascot-tilt' };
+  function react(svg, kind) {
+    if (!svg || !svg.classList || calmMotion()) return;
+    var cls = REACT_CLASS[kind] || REACT_CLASS.hop;
+    Object.keys(REACT_CLASS).forEach(function (k) { svg.classList.remove(REACT_CLASS[k]); });
+    void svg.getBoundingClientRect(); svg.classList.add(cls);
+    setTimeout(function () { svg.classList.remove(cls); }, 900);
+    if (kind === 'cheer' && !svg.classList.contains('argo-mascot-lite')) burst(svg, '★', '#F2B84B', 4);
+  }
+  // Mascotes que a pessoa está vendo agora (dentro da janela). `fullOnly` ignora os minis.
+  function visibleMascots(fullOnly) {
+    var out = [], vh = window.innerHeight || 0, vw = window.innerWidth || 0;
+    var all = document.querySelectorAll(fullOnly ? '.argo-mascot-icon:not(.argo-mascot-lite)' : '.argo-mascot-icon');
+    for (var i = 0; i < all.length && out.length < 4; i++) {
+      var r = all[i].getBoundingClientRect();
+      if (r.width >= 20 && r.bottom > 0 && r.top < vh && r.right > 0 && r.left < vw) out.push(all[i]);
+    }
+    return out;
+  }
+  // O app acontece: aviso de sucesso/erro/nada achado → o mascote flutuante reage junto.
+  function reactToApp(type) {
+    var kind = { success: 'cheer', error: 'shake', notfound: 'tilt' }[type];
+    if (!kind) return;
+    var fab = document.querySelector('.argo-assistant-fab svg.argo-mascot-icon');
+    if (fab) setTimeout(function () { react(fab, kind); }, 120);
+  }
+
   // Troca só o desenho (humor) dentro de um elemento que já contém um mascote.
+  // O novo desenho "aparece" com um pop curto, em vez de trocar de repente.
   function swapMood(host, mood, sz) {
     var old = host && host.querySelector('svg.argo-mascot-icon');
     if (!old) return;
     var tmp = document.createElement('span');
     tmp.innerHTML = boatSVG(mood, sz);
-    old.parentNode.replaceChild(tmp.firstChild, old);
+    var fresh = tmp.firstChild;
+    old.parentNode.replaceChild(fresh, old);
+    if (!calmMotion() && fresh.classList) {
+      fresh.classList.add('argo-mascot-swapin');
+      setTimeout(function () { fresh.classList.remove('argo-mascot-swapin'); }, 450);
+    }
   }
 
   // "Vida" do mascote (uma vez por página): cada mascote olha para o cursor a partir
@@ -541,6 +577,9 @@
     }
     function aim(x, y) { mx = x; my = y; if (!raf) raf = window.requestAnimationFrame(apply); }
     function release() { mx = null; my = null; if (!raf) raf = window.requestAnimationFrame(apply); }
+    // Olhar para um ponto por um tempo (ex.: o campo de texto enquanto a pessoa digita).
+    var lookT = 0;
+    lookApi = { at: function (x, y, ms) { aim(x, y); clearTimeout(lookT); lookT = setTimeout(release, ms || 1800); } };
 
     window.addEventListener('pointermove', function (e) {
       if (e.pointerType && e.pointerType !== 'mouse' && e.pointerType !== 'pen') return;
@@ -562,12 +601,65 @@
       var asleep = root.classList.contains('argo-mascot-sleepy');
       if (!asleep && now - lastAct < 700) return;
       lastAct = now;
-      if (asleep) root.classList.remove('argo-mascot-sleepy');
+      if (asleep) {
+        root.classList.remove('argo-mascot-sleepy');
+        // acorda com um pulinho (espreguiça) em vez de só abrir os olhos
+        setTimeout(function () { visibleMascots(false).forEach(function (m) { react(m, 'hop'); }); }, 120);
+      }
       arm();
     }
     ['pointermove', 'pointerdown', 'keydown', 'touchstart', 'wheel'].forEach(function (ev) { window.addEventListener(ev, wake, { passive: true }); });
     window.addEventListener('scroll', wake, { passive: true, capture: true });
     arm();
+
+    // Gestos ocasionais quando o app está parado e o mascote está à vista: olha em volta,
+    // dá uma piscadinha ou um pulinho. Intervalo aleatório (9 a 20 s), nunca com a aba
+    // escondida, com o mascote dormindo ou enquanto a pessoa está mexendo.
+    function glance(svg) {
+      var eyes = svg.querySelector('.argo-mascot-look'); if (!eyes) return;
+      var side = Math.random() < 0.5 ? -1 : 1;
+      eyes.style.transform = 'translate(' + (side * 2.2) + 'px,-.6px)';
+      setTimeout(function () { eyes.style.transform = 'translate(' + (-side * 2.2) + 'px,-.2px)'; }, 650);
+      setTimeout(function () { if (mx === null) eyes.style.transform = ''; }, 1300);
+    }
+    function idleTick() {
+      setTimeout(idleTick, 9000 + Math.random() * 11000);
+      if (document.hidden || root.classList.contains('argo-mascot-sleepy') || mx !== null) return;
+      if (Date.now() - lastAct < 2500) return;
+      var vis = visibleMascots(false); if (!vis.length) return;
+      var svg = vis[Math.floor(Math.random() * vis.length)], roll = Math.random();
+      // Mini (botão flutuante, avisos): sem olhos animados; só um pulinho ou uma inclinada
+      // curiosa, e em metade das vezes nada, para não distrair quem está trabalhando.
+      if (svg.classList.contains('argo-mascot-lite')) {
+        if (Math.random() < 0.5) react(svg, roll < 0.6 ? 'hop' : 'tilt');
+        return;
+      }
+      if (roll < 0.45) glance(svg);
+      else if (roll < 0.75) { svg.classList.add('argo-mascot-winking'); setTimeout(function () { svg.classList.remove('argo-mascot-winking'); }, 700); }
+      else react(svg, 'hop');
+    }
+    setTimeout(idleTick, 6000 + Math.random() * 6000);
+
+    // Voltou à aba depois de um tempo → cumprimenta com um pulinho.
+    var hiddenAt = 0;
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) { hiddenAt = Date.now(); return; }
+      if (hiddenAt && Date.now() - hiddenAt > 45000) setTimeout(function () { visibleMascots(false).forEach(function (m) { react(m, 'cheer'); }); }, 300);
+      hiddenAt = 0;
+    });
+
+    // Rajada de vento: rolar a página depressa enfuna a vela e agita a bandeirinha.
+    var lastY = 0, lastTs = 0, gustT = 0;
+    window.addEventListener('scroll', function (e) {
+      var t = e.target, y = (t && t !== document && typeof t.scrollTop === 'number') ? t.scrollTop : (window.pageYOffset || 0);
+      var ts = (window.performance && performance.now) ? performance.now() : Date.now();
+      var dt = ts - lastTs, dy = Math.abs(y - lastY);
+      lastY = y; lastTs = ts;
+      if (dt < 120 && dy / Math.max(dt, 1) > 1.4) {
+        root.classList.add('argo-mascot-gust');
+        clearTimeout(gustT); gustT = setTimeout(function () { root.classList.remove('argo-mascot-gust'); }, 700);
+      }
+    }, { passive: true, capture: true });
 
     // Clique/toque em qualquer mascote (ou botão que o contém) → reação.
     // Espera um instante porque quem clica pode trocar o desenho (ex.: login).
@@ -654,6 +746,16 @@
       // ---- interatividade: reações a clique, hover, cochilo ----
       '.argo-mascot-poked{animation:argoMascotPoke .6s cubic-bezier(.3,1.4,.5,1)!important}' +
       '@keyframes argoMascotPoke{0%{transform:scale(1,1)}22%{transform:scale(1.1,.88) translateY(2px)}50%{transform:scale(.94,1.12) translateY(-9px)}75%{transform:scale(1.03,.97) translateY(0)}100%{transform:scale(1,1)}}' +
+      '.argo-mascot-cheer{animation:argoMascotCheer .8s cubic-bezier(.3,1.4,.5,1)!important}' +
+      '@keyframes argoMascotCheer{0%{transform:scale(1,1)}18%{transform:scale(1.12,.86) translateY(2px)}42%{transform:scale(.95,1.1) translateY(-12px) rotate(-6deg)}64%{transform:translateY(-6px) rotate(5deg)}82%{transform:translateY(0) rotate(-2deg)}100%{transform:scale(1,1)}}' +
+      '.argo-mascot-shake{animation:argoMascotShake .55s ease-in-out!important}' +
+      '@keyframes argoMascotShake{0%,100%{transform:translateX(0) rotate(0)}15%{transform:translateX(-3px) rotate(-4deg)}35%{transform:translateX(3px) rotate(4deg)}55%{transform:translateX(-2px) rotate(-2.5deg)}75%{transform:translateX(2px) rotate(2deg)}}' +
+      '.argo-mascot-tilt{animation:argoMascotTilt .95s ease-in-out!important}' +
+      '@keyframes argoMascotTilt{0%{transform:rotate(0)}30%,68%{transform:rotate(-9deg) translateY(1px)}100%{transform:rotate(0)}}' +
+      '.argo-mascot-swapin{animation:argoMascotSwapIn .38s cubic-bezier(.3,1.5,.5,1)!important}' +
+      '@keyframes argoMascotSwapIn{0%{transform:scale(.82);opacity:.35}100%{transform:scale(1);opacity:1}}' +
+      '.argo-mascot-gust .argo-mascot-icon:not(.argo-mascot-lite) .argo-mascot-sail{animation-duration:1.5s}' +
+      '.argo-mascot-gust .argo-mascot-icon:not(.argo-mascot-lite) .argo-mascot-flag{animation-duration:.6s}' +
       '.argo-mascot-spun{transform-origin:50% 55%;animation:argoMascotSpin 1s cubic-bezier(.4,.1,.3,1)!important}' +
       '@keyframes argoMascotSpin{0%{transform:rotate(0) scale(1)}40%{transform:rotate(200deg) scale(1.15)}100%{transform:rotate(360deg) scale(1)}}' +
       '.argo-mascot-float{animation:argoMascotFloat 1.1s ease-out both;transform-box:fill-box;transform-origin:center;pointer-events:none}' +
@@ -953,6 +1055,7 @@
     lastMsg = message;
     queue.push({ msg: message, opts: options || {} });
     processQueue();
+    reactToApp(normalizeType(options && options.type));
   }
 
   // ---------------------------------------------------------------------
@@ -1583,6 +1686,7 @@
     input.addEventListener('input', function () {
       autosize();
       mascotBtnEl().classList.toggle('argo-assistant-listening', !busy && input.value.trim().length > 0);
+      if (lookApi && !busy) { var ir = input.getBoundingClientRect(); lookApi.at(ir.left + Math.min(ir.width, 24 + input.value.length * 7) , ir.bottom, 1600); }
     });
     input.addEventListener('blur', function () { mascotBtnEl().classList.remove('argo-assistant-listening'); });
     form.addEventListener('submit', function (e) {
@@ -1631,6 +1735,8 @@
     emptyStateHTML: emptyStateHTML,
     mountAssistant: mountAssistant, // ArgoMascot.mountAssistant({...}) → botão flutuante + painel de conversa
     poke: poke,           // ArgoMascot.poke(svgElement[, 'hop'|'wink'|'love']) → reação manual
+    react: react,         // ArgoMascot.react(svgElement, 'hop'|'cheer'|'shake'|'tilt') → reação a algo do app (não conta para o easter egg)
+    lookAt: function (x, y, ms) { if (lookApi) lookApi.at(x, y, ms); }, // os olhos dos mascotes olham para (x, y) por ms milissegundos
     setMood: swapMood,    // ArgoMascot.setMood(elementoQueContémOMascote, 'success', 48)
     icon: function (mood, size) { ensureStyles(); return boatSVG(mood, size); } // ArgoMascot.icon('success', 48) → string SVG avulso
   };
