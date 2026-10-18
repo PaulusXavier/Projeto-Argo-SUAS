@@ -13875,32 +13875,68 @@ window.addEventListener('online', () => {
   if (!newsState.items.length || Date.now() - newsState.ts > 2 * 60 * 60 * 1000) refreshNews();
 });
 
+/* ------------------------------------------------------------------------
+   Preferências do Mapa da Rede (guardadas só neste aparelho): tipo de mapa
+   (ruas/satélite), categoria, CRAS/CREAS, raio e categorias ocultas na
+   legenda. É conveniência: se o navegador não deixar gravar, o mapa
+   funciona do mesmo jeito, só não lembra da última escolha.
+   ------------------------------------------------------------------------ */
+const MAPA_REDE_PREFS_KEY = 'argo_mapa_prefs_v1';
+function mapaRedePrefs() {
+  try { return JSON.parse(localStorage.getItem(MAPA_REDE_PREFS_KEY)) || {}; } catch (e) { return {}; }
+}
+function mapaRedeSavePref(k, v) {
+  const p = mapaRedePrefs();
+  p[k] = v;
+  try { localStorage.setItem(MAPA_REDE_PREFS_KEY, JSON.stringify(p)); } catch (e) { /* sem armazenamento: segue sem lembrar */ }
+}
+
+// Tipos de mapa. "Ruas" é o OpenStreetMap; "Satélite" usa imagens da Esri
+// (útil para achar a casa/o portão de um serviço na zona rural e nas
+// comunidades, onde o desenho de ruas é pobre). Os dois só funcionam com
+// internet; blocos já vistos ficam no cache do Service Worker.
+const MAPA_REDE_BASES = {
+  ruas: {
+    label: 'Ruas',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    opts: { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">colaboradores do OpenStreetMap</a>' }
+  },
+  satelite: {
+    label: 'Satélite',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    opts: { maxZoom: 19, attribution: 'Imagens &copy; Esri, Maxar, Earthstar Geographics' }
+  }
+};
+const MAPA_REDE_RADII = [0.5, 1, 2, 5, 10];
+
+let mapaRedeBase = 'ruas';
+let mapaRedeTileLayer = null;
+let mapaRedeTileFailed = false;
+let mapaRedeHiddenCats = new Set();
+let mapaRedeRadiusKm = 0;
+let mapaRedeAccCircle = null;
+let mapaRedeRadiusCircle = null;
+let mapaRedePulseMarker = null;
+let mapaRedeResizeObserver = null;
+let mapaRedeUserAccuracy = null;
+
 function renderMapCard() {
-  const categoryOptions = ['<option value="all">Todas as categorias</option>']
-    .concat(Object.entries(CATEGORY_LABELS_PRINT)
-      .filter(([cat]) => cat !== 'cas' && cat !== 'cras' && cat !== 'interior')
-      .map(([cat, label]) => `<option value="${escapeHtml(cat)}">${escapeHtml(label)}</option>`))
+  const prefs = mapaRedePrefs();
+  mapaRedeBase = MAPA_REDE_BASES[prefs.base] ? prefs.base : 'ruas';
+  mapaRedeHiddenCats = new Set(Array.isArray(prefs.hidden) ? prefs.hidden : []);
+  mapaRedeRadiusKm = MAPA_REDE_RADII.includes(prefs.radius) ? prefs.radius : 0;
+
+  const validCats = Object.keys(CATEGORY_LABELS_PRINT).filter(cat => cat !== 'cas' && cat !== 'cras' && cat !== 'interior');
+  const selectedCat = validCats.includes(prefs.cat) ? prefs.cat : 'all';
+  const categoryOptions = ['<option value="all"' + (selectedCat === 'all' ? ' selected' : '') + '>Todas as categorias</option>']
+    .concat(validCats.map(cat => `<option value="${escapeHtml(cat)}"${cat === selectedCat ? ' selected' : ''}>${escapeHtml(CATEGORY_LABELS_PRINT[cat])}</option>`))
     .join('');
+  const radiusOptions = ['<option value="0">Qualquer distância</option>']
+    .concat(MAPA_REDE_RADII.map(r => `<option value="${r}"${r === mapaRedeRadiusKm ? ' selected' : ''}>Até ${r < 1 ? Math.round(r * 1000) + ' m' : r + ' km'}</option>`))
+    .join('');
+  const crasCreasChecked = prefs.crasCreas === false ? '' : ' checked';
 
   return `
-    <style>
-      /* O Leaflet aplica fundo branco + borda cinza por padrão em todo
-         L.divIcon (classe .leaflet-div-icon). Nossos ícones (pino colorido
-         de CRAS/CREAS e o marcador azul de "você está aqui") já desenham o
-         próprio contorno em SVG, então essa caixa padrão só aparece atrás
-         deles como um quadrado branco indesejado — por isso é removida
-         aqui, com seletor mais específico para vencer o CSS do Leaflet. */
-      .leaflet-div-icon.mapa-rede-crascreas-icon,
-      .leaflet-div-icon.mapa-rede-item-icon,
-      .leaflet-div-icon.mapa-rede-cluster,
-      .leaflet-div-icon.mapa-rede-user-icon { background: transparent; border: none; }
-      .mapa-rede-cluster div {
-        width: 38px; height: 38px; border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        color: #fff; font-weight: 800; font-size: 0.82rem;
-        border: 2px solid #fff; box-shadow: 0 1px 5px rgba(0,0,0,0.35);
-      }
-    </style>
     <div class="tech-card mapa-rede-card">
       <div class="card-top">
         <div style="display:flex; align-items:center; gap:0.55rem;">
@@ -13910,28 +13946,40 @@ function renderMapCard() {
         <span class="subtitle">🗺️ Visualize os equipamentos no mapa e encontre os mais próximos de você</span>
       </div>
       <div class="card-body">
-        <div class="tradutor-privacy">
-          ${ICONS.info}
-          <span>O mapa não procura endereços sozinho. Os pinos de equipamentos usam endereços que já foram localizados e ficam guardados neste navegador (o serviço gratuito Nominatim/OpenStreetMap só é consultado quando você usa "Ordenar por proximidade" na lista). As unidades de CRAS e CREAS de Boa Vista aparecem sempre, com coordenadas exatas. Cada categoria tem uma cor própria, e pinos próximos se agrupam em um número — toque no número para abrir o grupo. Toque em um pino para ver os detalhes do equipamento no painel ao lado.</span>
+        <details class="mapa-rede-help">
+          <summary>${ICONS.info}<span>Como o mapa funciona</span></summary>
+          <p>Os pinos de equipamentos usam endereços que já foram localizados e ficam guardados neste aparelho; os que faltam podem ser localizados com o botão "Localizar agora" (serviço gratuito Nominatim/OpenStreetMap, cerca de 1 por segundo). As unidades de CRAS e CREAS de Boa Vista aparecem sempre, com coordenadas exatas. Cada categoria tem uma cor; pinos próximos se agrupam em um número (toque nele para abrir o grupo). Toque em um pino para ver os detalhes. Na legenda, toque em uma categoria para escondê-la ou mostrá-la.</p>
+        </details>
+
+        <div class="mapa-rede-toolbar">
+          <label class="mapa-rede-field">
+            <span>Categoria</span>
+            <select id="mapaRedeCatSelect" onchange="mapaRedeCatChanged(this.value)" aria-label="Filtrar categoria no mapa">${categoryOptions}</select>
+          </label>
+          <label class="mapa-rede-field">
+            <span>Distância</span>
+            <select id="mapaRedeRadius" onchange="mapaRedeSetRadius(this.value)" aria-label="Mostrar só equipamentos dentro de um raio da sua localização">${radiusOptions}</select>
+          </label>
+          <div class="mapa-rede-field mapa-rede-field-seg">
+            <span>Mapa</span>
+            <div class="mapa-rede-seg" role="group" aria-label="Tipo de mapa">
+              ${Object.entries(MAPA_REDE_BASES).map(([k, b]) => `<button type="button" data-base="${k}" aria-pressed="${k === mapaRedeBase}" onclick="mapaRedeSetBase('${k}')">${b.label}</button>`).join('')}
+            </div>
+          </div>
+          <div class="mapa-rede-toolbar-btns">
+            <button type="button" id="mapaRedeLocateBtn" class="tradutor-btn" onclick="mapaRedeLocateMe()">${ICONS.map} Minha localização</button>
+            <button type="button" class="tradutor-btn tradutor-btn-ghost" onclick="mapaRedeRecenter()" title="Enquadrar todos os pontos no mapa">Enquadrar tudo</button>
+          </div>
         </div>
 
-        <div style="display:flex; flex-wrap:wrap; gap:0.6rem; align-items:center; margin:0.75rem 0;">
-          <select id="mapaRedeCatSelect" onchange="renderMapaRedeMarkers()" aria-label="Filtrar categoria no mapa" style="flex:1; min-width:200px; padding:0.5rem 0.7rem; border-radius:8px; border:1px solid #dbe3ea;">
-            ${categoryOptions}
-          </select>
-          <button type="button" id="mapaRedeLocateBtn" class="tradutor-btn" onclick="mapaRedeLocateMe()">
-            ${ICONS.map} Minha localização
-          </button>
-        </div>
-
-        <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.85rem; margin:0 0 0.6rem;">
-          <input type="checkbox" id="mapaRedeShowCrasCreas" checked onchange="renderMapaRedeMarkers()">
+        <label class="mapa-rede-check">
+          <input type="checkbox" id="mapaRedeShowCrasCreas"${crasCreasChecked} onchange="mapaRedeCrasCreasChanged(this.checked)">
           Mostrar unidades de CRAS e CREAS de Boa Vista (${UNITS_CRAS_CREAS.cras.length + UNITS_CRAS_CREAS.creas.length} unidades, coordenadas exatas)
         </label>
 
         <div class="mapa-rede-tools">
           <div class="mapa-rede-search">
-            <input type="search" id="mapaRedeSearch" class="tools-input" placeholder="Buscar no mapa por nome ou endereço…" aria-label="Buscar equipamento no mapa" autocomplete="off" oninput="mapaRedeSearchInput(this.value)">
+            <input type="search" id="mapaRedeSearch" class="tools-input" placeholder="Buscar no mapa por nome ou endereço…" aria-label="Buscar equipamento no mapa" autocomplete="off" oninput="mapaRedeSearchInput(this.value)" onkeydown="mapaRedeSearchKey(event)">
             <div id="mapaRedeSearchResults" class="mapa-rede-hits" aria-live="polite"></div>
           </div>
           <details class="mapa-rede-bairro">
@@ -13944,19 +13992,20 @@ function renderMapCard() {
 
         <div id="mapaRedeGeoBox" class="mapa-rede-geo" hidden></div>
 
-        <div id="mapaRedeStatus" style="font-size:0.85rem; color:var(--text-muted, #64748b); margin-bottom:0.5rem;"></div>
+        <div id="mapaRedeStatus" class="mapa-rede-status" role="status"></div>
+        <div id="mapaRedeSummary" class="mapa-rede-summary" aria-live="polite"></div>
 
         <div class="mapa-rede-layout">
-          <div id="mapaRedeMapContainer" style="border-radius:12px; overflow:hidden; border:1px solid #dbe3ea; background:#eef2f5;"></div>
+          <div id="mapaRedeMapContainer" class="mapa-rede-map"></div>
 
           <aside id="mapaRedeDetailPanel" class="mapa-rede-detail-panel" aria-live="polite">
             ${mapaRedeDetailPlaceholder()}
           </aside>
         </div>
 
-        <div id="mapaRedeLegend" style="display:flex; flex-wrap:wrap; gap:0.5rem 0.9rem; margin-top:0.7rem; font-size:0.78rem; color:#475569;"></div>
+        <div id="mapaRedeLegend" class="mapa-rede-legend"></div>
 
-        <div id="mapaRedeNearbyList" style="margin-top:0.85rem;"></div>
+        <div id="mapaRedeNearbyList" class="mapa-rede-nearby"></div>
       </div>
     </div>
   `;
@@ -13980,93 +14029,184 @@ function mapaRedeDetailPlaceholder() {
 function mapaRedeClearDetail() {
   const panel = document.getElementById('mapaRedeDetailPanel');
   if (!panel) return;
-  panel.classList.remove('has-selection');
   panel.innerHTML = mapaRedeDetailPlaceholder();
+  panel.classList.remove('has-selection');
+  mapaRedeCurrentDetail = null;
 }
 
-// Distância formatada (m/km) a partir da localização atual do usuário, ou
-// string vazia se "Minha localização" ainda não foi usada.
+let mapaRedeCurrentDetail = null;
+
 function mapaRedeDetailDistanceHtml(lat, lon) {
   if (!proximityState.active || lat == null || lon == null) return '';
   const km = haversineKm(proximityState.lat, proximityState.lon, lat, lon);
-  const label = km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(1) + ' km';
-  return `<div class="mapa-rede-detail-distance">${ICONS.map} <strong>${label}</strong> da sua localização atual</div>`;
+  return `<div class="mapa-rede-detail-distance">${ICONS.map} <strong>${mapaRedeFmtKm(km)}</strong> da sua localização atual</div>`;
 }
 
-// Mostra, na caixa lateral, os detalhes de um equipamento do diretório
-// principal (objeto DATA). `coords` são as coordenadas já geocodificadas
-// usadas para colocar o pino no mapa (necessárias para o link de rota e
-// para o cálculo de distância).
-function mapaRedeShowItemDetail(item, coords) {
+// Alguns textos do diretório trazem marcação HTML (ex.: <br>), pensada para
+// os cartões da lista; no mapa eles aparecem como texto simples.
+function mapaRedeCleanText(s) {
+  return String(s == null ? '' : s).replace(/<br\s*\/?>/gi, ' · ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function mapaRedeFmtKm(km) {
+  return km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(1).replace('.', ',') + ' km';
+}
+
+// Desenha a caixa lateral a partir de uma descrição única, usada tanto por
+// equipamentos do diretório quanto por unidades de CRAS/CREAS.
+function mapaRedeRenderDetail(d) {
   const panel = document.getElementById('mapaRedeDetailPanel');
   if (!panel) return;
+  d = Object.assign({}, d, {
+    address: mapaRedeCleanText(d.address),
+    hours: mapaRedeCleanText(d.hours),
+    blocks: (d.blocks || []).map(b => ({ title: b.title, text: mapaRedeCleanText(b.text) }))
+  });
+  mapaRedeCurrentDetail = d;
 
-  const catLabels = (item.cat || [])
-    .map(c => CATEGORY_LABELS_PRINT[c] || null)
-    .filter(Boolean);
-  const catColor = mapaRedeItemColor(item);
-
-  const phonesHtml = (item.phones || [])
-    .filter(p => p && p.trim() && p.trim().toUpperCase() !== 'N/A')
-    .map(p => `<a class="mapa-rede-detail-link" href="tel:${escapeHtml(p.replace(/[^\d+]/g, ''))}">${ICONS.phone}<span>${escapeHtml(p)}</span></a>`)
+  const phones = (d.phones || []).filter(p => p && String(p).trim() && String(p).trim().toUpperCase() !== 'N/A');
+  const phonesHtml = phones
+    .map(p => `<a class="mapa-rede-detail-link" href="tel:${escapeHtml(String(p).replace(/[^\d+]/g, ''))}">${ICONS.phone}<span>${escapeHtml(p)}</span></a>`)
     .join('');
 
-  const routeHref = coords
-    ? `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lon}`
-    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.address || item.name || '')}`;
+  const hasCoords = d.lat != null && d.lon != null;
+  const origin = proximityState.active ? `&origin=${proximityState.lat},${proximityState.lon}` : '';
+  const routeHref = hasCoords
+    ? `https://www.google.com/maps/dir/?api=1&destination=${d.lat},${d.lon}${origin}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(d.address || d.title || '')}`;
+
+  const blocks = (d.blocks || []).filter(b => b && b.text)
+    .map(b => `<div class="mapa-rede-detail-block"><strong>${escapeHtml(b.title)}</strong><p>${escapeHtml(b.text)}</p></div>`)
+    .join('');
+  const chips = (d.chips && d.chips.length)
+    ? `<div class="mapa-rede-detail-block"><strong>${escapeHtml(d.chipsTitle || '')}</strong><div class="mapa-rede-chips">${d.chips.map(c => `<span>${escapeHtml(c)}</span>`).join('')}</div></div>`
+    : '';
 
   panel.innerHTML = `
     <div class="mapa-rede-detail-head">
       <div class="mapa-rede-detail-cats">
-        ${catLabels.map(l => `<span class="mapa-rede-detail-badge" style="background:${catColor}1a; color:${catColor};">${escapeHtml(l)}</span>`).join('')}
+        ${(d.badges || []).map(b => `<span class="mapa-rede-detail-badge" style="background:${b.color}1a; color:${b.color};">${escapeHtml(b.label)}</span>`).join('')}
       </div>
       <button type="button" class="mapa-rede-detail-close" onclick="mapaRedeClearDetail()" aria-label="Fechar detalhes">✕</button>
     </div>
-    <h3 class="mapa-rede-detail-title">${escapeHtml(item.fullName || item.name || '')}</h3>
-    ${mapaRedeDetailDistanceHtml(coords ? coords.lat : null, coords ? coords.lon : null)}
-    <div class="mapa-rede-detail-row">${ICONS.map}<span>${escapeHtml(item.address || 'Endereço não informado')}</span></div>
-    ${item.hours ? `<div class="mapa-rede-detail-row">${ICONS.clock}<span>${escapeHtml(item.hours)}</span></div>` : ''}
+    <h3 class="mapa-rede-detail-title">${escapeHtml(d.title || '')}</h3>
+    ${mapaRedeDetailDistanceHtml(d.lat, d.lon)}
+    <div class="mapa-rede-detail-row">${ICONS.map}<span>${escapeHtml(d.address || 'Endereço não informado')}</span></div>
+    ${d.hours ? `<div class="mapa-rede-detail-row">${ICONS.clock}<span>${escapeHtml(d.hours)}</span></div>` : ''}
     ${phonesHtml ? `<div class="mapa-rede-detail-phones">${phonesHtml}</div>` : ''}
-    ${item.services ? `<div class="mapa-rede-detail-block"><strong>Serviços</strong><p>${escapeHtml(item.services)}</p></div>` : ''}
-    ${item.desc ? `<div class="mapa-rede-detail-block mapa-rede-detail-desc"><p>${escapeHtml(item.desc)}</p></div>` : ''}
+    ${blocks}
+    ${chips}
     <div class="mapa-rede-detail-actions">
-      <a class="btn-tech btn-secondary btn-link" href="${routeHref}" target="_blank" rel="noopener noreferrer">${ICONS.map} Traçar rota</a>
+      <a class="btn-tech btn-primary btn-link" href="${routeHref}" target="_blank" rel="noopener noreferrer">${ICONS.map} Traçar rota</a>
+      <div class="mapa-rede-detail-actions-row">
+        <button type="button" class="btn-tech btn-secondary" onclick="mapaRedeCopyDetail()">${ICONS.copy} Copiar</button>
+        <button type="button" class="btn-tech btn-whatsapp" onclick="mapaRedeShareDetail()">${ICONS.whatsapp} WhatsApp</button>
+      </div>
     </div>
   `;
   panel.classList.add('has-selection');
+  panel.scrollTop = 0;
+  // Em telas estreitas a caixa fica abaixo do mapa: leva a tela até ela para
+  // quem tocou no pino perceber que as informações apareceram.
+  if (window.matchMedia && window.matchMedia('(max-width: 860px)').matches && panel.scrollIntoView) {
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+// Texto simples (nome, endereço, telefone, rota) para copiar ou mandar por
+// WhatsApp — o mesmo que a pessoa digitaria para orientar uma família.
+function mapaRedeDetailText() {
+  const d = mapaRedeCurrentDetail;
+  if (!d) return '';
+  const phones = (d.phones || []).filter(p => p && String(p).trim().toUpperCase() !== 'N/A');
+  const lines = [d.title];
+  if (d.address) lines.push('Endereço: ' + d.address);
+  if (d.hours) lines.push('Horário: ' + d.hours);
+  if (phones.length) lines.push('Telefone: ' + phones.join(' / '));
+  if (d.lat != null && d.lon != null) lines.push('Mapa: https://www.google.com/maps/search/?api=1&query=' + d.lat + ',' + d.lon);
+  return lines.join('\n');
+}
+
+function mapaRedeCopyDetail() {
+  const t = mapaRedeDetailText();
+  if (!t) return;
+  const ok = () => argoAviso('Dados copiados.', 'success');
+  const fail = () => argoAviso('Não foi possível copiar neste navegador.', 'error');
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, fail); else fail();
+}
+
+function mapaRedeShareDetail() {
+  const t = mapaRedeDetailText();
+  if (t) argoWhatsappSend(t);
+}
+
+function mapaRedeShowItemDetail(item, coords) {
+  const color = mapaRedeItemColor(item);
+  mapaRedeRenderDetail({
+    title: item.fullName || item.name || '',
+    badges: (item.cat || []).map(c => CATEGORY_LABELS_PRINT[c]).filter(Boolean).map(label => ({ label, color })),
+    lat: coords ? coords.lat : null,
+    lon: coords ? coords.lon : null,
+    address: item.address,
+    hours: item.hours,
+    phones: item.phones || [],
+    blocks: [{ title: 'Serviços', text: item.services }, { title: 'Sobre', text: item.desc }]
+  });
 }
 
 // Mesma ideia acima, mas para as unidades de CRAS/CREAS (coordenadas
 // exatas, ver UNITS_CRAS_CREAS), que têm campos próprios (tipo, bairros).
 function mapaRedeShowUnitDetail(unit) {
-  const panel = document.getElementById('mapaRedeDetailPanel');
-  if (!panel) return;
-
-  const unitColor = MAPA_REDE_COLOR_HEX[unit.color] || '#0067a3';
-  const routeHref = `https://www.google.com/maps/dir/?api=1&destination=${unit.lat},${unit.lng}`;
-
-  panel.innerHTML = `
-    <div class="mapa-rede-detail-head">
-      <div class="mapa-rede-detail-cats">
-        <span class="mapa-rede-detail-badge" style="background:${unitColor}1a; color:${unitColor};">${escapeHtml(unit.tipo)}</span>
-      </div>
-      <button type="button" class="mapa-rede-detail-close" onclick="mapaRedeClearDetail()" aria-label="Fechar detalhes">✕</button>
-    </div>
-    <h3 class="mapa-rede-detail-title">${escapeHtml(unit.name)}</h3>
-    ${mapaRedeDetailDistanceHtml(unit.lat, unit.lng)}
-    <div class="mapa-rede-detail-row">${ICONS.map}<span>${escapeHtml(unit.address)}</span></div>
-    ${unit.phone && unit.phone.trim().toUpperCase() !== 'N/A' ? `<div class="mapa-rede-detail-phones"><a class="mapa-rede-detail-link" href="tel:${escapeHtml(unit.phone.replace(/[^\d+]/g, ''))}">${ICONS.phone}<span>${escapeHtml(unit.phone)}</span></a></div>` : ''}
-    <div class="mapa-rede-detail-block"><strong>Bairros de referência</strong><p>${escapeHtml(unit.bairros)}</p></div>
-    <div class="mapa-rede-detail-actions">
-      <a class="btn-tech btn-secondary btn-link" href="${routeHref}" target="_blank" rel="noopener noreferrer">${ICONS.map} Traçar rota</a>
-    </div>
-  `;
-  panel.classList.add('has-selection');
+  const isAbrigo = /^abrigo/i.test(unit.name);
+  mapaRedeRenderDetail({
+    title: unit.name,
+    badges: [{ label: unit.tipo, color: MAPA_REDE_COLOR_HEX[unit.color] || '#0067a3' }],
+    lat: unit.lat,
+    lon: unit.lng,
+    address: unit.address,
+    phones: [unit.phone],
+    blocks: isAbrigo ? [{ title: 'Público', text: unit.bairros }] : [],
+    chips: isAbrigo ? [] : String(unit.bairros || '').split(',').map(s => s.trim()).filter(Boolean),
+    chipsTitle: 'Bairros de referência'
+  });
 }
 
 function mapaRedeSetStatus(msg) {
   const el = document.getElementById('mapaRedeStatus');
   if (el) el.textContent = msg || '';
+}
+
+function mapaRedeTileUrlLayer(L, key) {
+  const b = MAPA_REDE_BASES[key] || MAPA_REDE_BASES.ruas;
+  const layer = L.tileLayer(b.url, b.opts);
+  // Sem internet (ou com o serviço de mapas fora do ar) os blocos não
+  // chegam. Os pinos continuam funcionando; só avisamos a pessoa.
+  layer.on('loading', () => { mapaRedeTileFailed = false; });
+  layer.on('tileerror', () => {
+    if (mapaRedeTileFailed) return;
+    mapaRedeTileFailed = true;
+    mapaRedeSetStatus(navigator.onLine === false
+      ? 'Sem internet: o fundo do mapa não carrega, mas os pinos e os detalhes continuam disponíveis.'
+      : 'Alguns blocos do mapa não carregaram. Os pinos continuam disponíveis.');
+  });
+  layer.on('load', () => { if (!mapaRedeTileFailed) mapaRedeSetStatus(''); });
+  return layer;
+}
+
+function mapaRedeSetBase(key) {
+  if (!MAPA_REDE_BASES[key]) return;
+  mapaRedeBase = key;
+  mapaRedeSavePref('base', key);
+  document.querySelectorAll('.mapa-rede-seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.base === key)));
+  if (!mapaRedeMap || !window.L) return;
+  const old = mapaRedeTileLayer;
+  mapaRedeTileFailed = false;
+  mapaRedeSetStatus('');
+  mapaRedeTileLayer = mapaRedeTileUrlLayer(window.L, key).addTo(mapaRedeMap);
+  mapaRedeTileLayer.bringToBack();
+  if (old) mapaRedeMap.removeLayer(old);
+  const c = document.getElementById('mapaRedeMapContainer');
+  if (c) c.classList.toggle('is-satellite', key === 'satelite');
 }
 
 async function initMapPanel() {
@@ -14087,16 +14227,17 @@ async function initMapPanel() {
     mapaRedeMap.remove();
     mapaRedeMap = null;
   }
+  if (mapaRedeResizeObserver) { mapaRedeResizeObserver.disconnect(); mapaRedeResizeObserver = null; }
+  mapaRedeUserMarker = null; mapaRedeAccCircle = null; mapaRedeRadiusCircle = null; mapaRedePulseMarker = null;
 
   const center = proximityState.active
     ? [proximityState.lat, proximityState.lon]
     : [MAPA_REDE_DEFAULT_CENTER.lat, MAPA_REDE_DEFAULT_CENTER.lon];
 
-  mapaRedeMap = L.map(container).setView(center, proximityState.active ? 13 : 12);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">colaboradores do OpenStreetMap</a>'
-  }).addTo(mapaRedeMap);
+  mapaRedeMap = L.map(container, { zoomControl: true }).setView(center, proximityState.active ? 13 : 12);
+  L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(mapaRedeMap);
+  mapaRedeTileLayer = mapaRedeTileUrlLayer(L, mapaRedeBase).addTo(mapaRedeMap);
+  container.classList.toggle('is-satellite', mapaRedeBase === 'satelite');
 
   mapaRedeMarkersLayer = L.markerClusterGroup({
     maxClusterRadius: 55,
@@ -14111,6 +14252,13 @@ async function initMapPanel() {
     iconCreateFunction: mapaRedeClusterIcon
   }).addTo(mapaRedeMap);
 
+  // Ao entrar/sair da tela cheia da aba, ou girar o celular, o contêiner
+  // muda de tamanho; sem isso o Leaflet deixa faixas cinzas no mapa.
+  if (window.ResizeObserver) {
+    mapaRedeResizeObserver = new ResizeObserver(() => { if (mapaRedeMap) mapaRedeMap.invalidateSize(); });
+    mapaRedeResizeObserver.observe(container);
+  }
+
   if (proximityState.active) {
     mapaRedeShowUserMarker(L, proximityState.lat, proximityState.lon);
   }
@@ -14123,14 +14271,19 @@ async function initMapPanel() {
 function mapaRedeShowUserMarker(L, lat, lon) {
   if (!mapaRedeMap) return;
   if (mapaRedeUserMarker) mapaRedeMap.removeLayer(mapaRedeUserMarker);
+  if (mapaRedeAccCircle) { mapaRedeMap.removeLayer(mapaRedeAccCircle); mapaRedeAccCircle = null; }
   const userIcon = L.divIcon({
     className: 'mapa-rede-user-icon',
     html: `<div style="width:16px; height:16px; border-radius:50%; background:#0091c2; border:3px solid #fff; box-shadow:0 0 0 2px #0091c2;"></div>`,
     iconSize: [16, 16],
     iconAnchor: [8, 8]
   });
-  mapaRedeUserMarker = L.marker([lat, lon], { icon: userIcon, zIndexOffset: 1000 })
-    .bindPopup('Você está aqui')
+  if (mapaRedeUserAccuracy && mapaRedeUserAccuracy > 25 && mapaRedeUserAccuracy < 5000) {
+    mapaRedeAccCircle = L.circle([lat, lon], { radius: mapaRedeUserAccuracy, color: '#0091c2', weight: 1, fillColor: '#0091c2', fillOpacity: 0.1, interactive: false }).addTo(mapaRedeMap);
+  }
+  const acc = mapaRedeUserAccuracy ? ' (precisão de cerca de ' + Math.round(mapaRedeUserAccuracy) + ' m)' : '';
+  mapaRedeUserMarker = L.marker([lat, lon], { icon: userIcon, zIndexOffset: 1000, title: 'Você está aqui', keyboard: false })
+    .bindPopup('Você está aqui' + acc)
     .addTo(mapaRedeMap);
 }
 
@@ -14145,6 +14298,7 @@ function mapaRedeLocateMe() {
 
   navigator.geolocation.getCurrentPosition(async (pos) => {
     proximityState = { active: true, lat: pos.coords.latitude, lon: pos.coords.longitude, loading: false };
+    mapaRedeUserAccuracy = pos.coords.accuracy || null;
 
     const proximityBtn = document.getElementById('proximityBtn');
     if (proximityBtn) {
@@ -14160,10 +14314,72 @@ function mapaRedeLocateMe() {
     if (btn) btn.disabled = false;
     mapaRedeSetStatus('');
     await renderMapaRedeMarkers();
-  }, () => {
+  }, (err) => {
     if (btn) btn.disabled = false;
-    mapaRedeSetStatus('Não foi possível obter sua localização. Verifique se a permissão de localização foi concedida ao navegador.');
+    // Recusou a permissão: o seletor de distância volta a "qualquer", senão
+    // ficaria escolhido um raio que não pode ser aplicado.
+    if (mapaRedeRadiusKm) { mapaRedeRadiusKm = 0; mapaRedeSavePref('radius', 0); const s = document.getElementById('mapaRedeRadius'); if (s) s.value = '0'; }
+    const code = err && err.code;
+    mapaRedeSetStatus(code === 1
+      ? 'A localização foi bloqueada. Libere a permissão de localização para este site nas configurações do navegador e tente de novo.'
+      : code === 3
+        ? 'A localização demorou demais. Vá para um lugar aberto ou tente novamente.'
+        : 'Não foi possível obter sua localização agora.');
   }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+}
+
+function mapaRedeCatChanged(v) {
+  mapaRedeSavePref('cat', v);
+  mapaRedeHiddenCats.clear();
+  mapaRedeSavePref('hidden', []);
+  renderMapaRedeMarkers();
+}
+
+function mapaRedeCrasCreasChanged(on) {
+  mapaRedeSavePref('crasCreas', !!on);
+  renderMapaRedeMarkers();
+}
+
+function mapaRedeSetRadius(v) {
+  const km = parseFloat(v) || 0;
+  mapaRedeRadiusKm = km;
+  mapaRedeSavePref('radius', km);
+  // O raio é medido a partir da localização da pessoa; sem ela, pede agora.
+  if (km && !proximityState.active) { mapaRedeLocateMe(); return; }
+  renderMapaRedeMarkers();
+}
+
+function mapaRedeToggleCat(c) {
+  if (mapaRedeHiddenCats.has(c)) mapaRedeHiddenCats.delete(c); else mapaRedeHiddenCats.add(c);
+  mapaRedeSavePref('hidden', [...mapaRedeHiddenCats]);
+  renderMapaRedeMarkers({ keepView: true });
+}
+
+function mapaRedeShowAllCats() {
+  mapaRedeHiddenCats.clear();
+  mapaRedeSavePref('hidden', []);
+  const cb = document.getElementById('mapaRedeShowCrasCreas');
+  if (cb && !cb.checked) { cb.checked = true; mapaRedeSavePref('crasCreas', true); }
+  renderMapaRedeMarkers({ keepView: true });
+}
+
+// Reenquadra o mapa em todos os pontos visíveis (ou no raio escolhido).
+function mapaRedeRecenter() {
+  if (!mapaRedeMap) return;
+  if (mapaRedeRadiusCircle && proximityState.active) {
+    mapaRedeMap.fitBounds(mapaRedeRadiusCircle.getBounds(), { padding: [20, 20] });
+    return;
+  }
+  const pts = mapaRedeTargets.map(t => [t.lat, t.lon]);
+  if (proximityState.active) pts.push([proximityState.lat, proximityState.lon]);
+  if (pts.length) mapaRedeMap.fitBounds(pts, { padding: [30, 30], maxZoom: 15 });
+  else mapaRedeMap.setView([MAPA_REDE_DEFAULT_CENTER.lat, MAPA_REDE_DEFAULT_CENTER.lon], 12);
+}
+
+// Categoria "principal" de um item (a primeira que tem cor), usada na
+// legenda, na ocultação por categoria e na contagem.
+function mapaRedePrimaryCat(item) {
+  return (item.cat || []).find(c => MAP_CATEGORY_COLORS[c]) || null;
 }
 
 async function renderMapaRedeMarkers(opts) {
@@ -14171,7 +14387,7 @@ async function renderMapaRedeMarkers(opts) {
   if (!mapaRedeMap || !mapaRedeMarkersLayer || !window.L) return;
   const L = window.L;
   const catSelect = document.getElementById('mapaRedeCatSelect');
-  const cat = catSelect ? catSelect.value : 'all';
+  const cat = (catSelect && catSelect.value) || 'all';
 
   // Ao trocar a categoria ou mostrar/esconder CRAS/CREAS os pinos são
   // refeitos do zero, então o item que estava selecionado na caixa lateral
@@ -14180,14 +14396,13 @@ async function renderMapaRedeMarkers(opts) {
 
   const items = mapaRedeVisibleItems(cat);
 
-  // O mapa NÃO busca mais endereços sozinho. Antes, ao abrir a aba (e a cada
-  // troca de categoria/checkbox), ele consultava o Nominatim um endereço por
-  // vez (~1,1 s cada, até ~430 endereços), regravando o cache no localStorage
-  // a cada resposta — isso travava o aplicativo e ainda atrasava o desenho do
-  // mapa até o fim da fila. Agora só entram os pinos cujas coordenadas JÁ
-  // estão no cache do aparelho (nenhuma requisição de rede é feita aqui).
+  // O mapa NÃO busca endereços sozinho: consultar o Nominatim um por vez
+  // (~1,1 s cada, até ~430 endereços) travava o aplicativo. Só entram os
+  // pinos cujas coordenadas JÁ estão no cache do aparelho; os demais são
+  // localizados quando a pessoa pede ("Localizar agora").
   mapaRedeMarkersLayer.clearLayers();
   if (mapaRedeCrasCreasLayer) mapaRedeCrasCreasLayer.clearLayers();
+  if (mapaRedeRadiusCircle) { mapaRedeMap.removeLayer(mapaRedeRadiusCircle); mapaRedeRadiusCircle = null; }
   const cache = getGeocodeCache();
   const bounds = [];
   // Lista unificada usada tanto para o cálculo de "mais próximos" quanto
@@ -14195,44 +14410,61 @@ async function renderMapaRedeMarkers(opts) {
   // diretório principal (coordenadas por geocodificação) com as unidades de
   // CRAS/CREAS (coordenadas exatas, sem precisar consultar nada).
   const nearbySource = [];
-  const legendCatsSeen = new Set();
+  const legendCounts = {};
+  const radius = proximityState.active ? mapaRedeRadiusKm : 0;
+  const within = (lat, lon) => !radius || haversineKm(proximityState.lat, proximityState.lon, lat, lon) <= radius;
+  let located = 0;
 
   items.forEach(item => {
     const coords = cache[item.id];
     if (!coords) return;
-    nearbySource.push({ name: item.name, address: item.address, lat: coords.lat, lon: coords.lon, search: argoNorm([item.name, item.fullName, item.address].join(' ')), open: () => mapaRedeShowItemDetail(item, coords) });
-    bounds.push([coords.lat, coords.lon]);
-    const itemCat = (item.cat || []).find(c => MAP_CATEGORY_COLORS[c]);
-    if (itemCat) legendCatsSeen.add(itemCat);
+    located++;
+    const itemCat = mapaRedePrimaryCat(item);
+    if (itemCat) legendCounts[itemCat] = (legendCounts[itemCat] || 0) + 1;
+    if (itemCat && mapaRedeHiddenCats.has(itemCat)) return;
+    if (!within(coords.lat, coords.lon)) return;
     const itemColor = mapaRedeItemColor(item);
-    const marker = L.marker([coords.lat, coords.lon], { icon: mapaRedeCategoryIcon(itemColor), categoryColor: itemColor });
+    const label = item.fullName || item.name || '';
+    const marker = L.marker([coords.lat, coords.lon], { icon: mapaRedeCategoryIcon(itemColor), categoryColor: itemColor, title: label, alt: label });
     // Ao tocar no pino, as informações completas abrem na caixa lateral
     // (#mapaRedeDetailPanel) em vez de um popup — cabe mais informação
     // (telefone, horário, serviços, descrição) e fica mais fácil de ler,
     // principalmente no celular.
     marker.on('click', () => mapaRedeShowItemDetail(item, coords));
     marker.addTo(mapaRedeMarkersLayer);
+    nearbySource.push({
+      name: item.name, address: mapaRedeCleanText(item.address), lat: coords.lat, lon: coords.lon, color: itemColor,
+      tag: itemCat ? (CATEGORY_LABELS_PRINT[itemCat] || '') : '',
+      search: argoNorm([item.name, item.fullName, item.address].join(' ')),
+      open: () => mapaRedeShowItemDetail(item, coords), marker, layer: mapaRedeMarkersLayer
+    });
+    bounds.push([coords.lat, coords.lon]);
   });
 
   // Unidades de CRAS e CREAS de Boa Vista (checkbox "Mostrar unidades de
   // CRAS e CREAS"), com coordenadas exatas — não passam pela geocodificação.
   const showCrasCreas = document.getElementById('mapaRedeShowCrasCreas');
-  if (mapaRedeCrasCreasLayer && (!showCrasCreas || showCrasCreas.checked)) {
+  const crasCreasOn = !!(mapaRedeCrasCreasLayer && (!showCrasCreas || showCrasCreas.checked));
+  const unitsTotal = UNITS_CRAS_CREAS.cras.length + UNITS_CRAS_CREAS.creas.length;
+  if (crasCreasOn) {
     [...UNITS_CRAS_CREAS.cras.map(u => ({ ...u, tipo: 'CRAS' })), ...UNITS_CRAS_CREAS.creas.map(u => ({ ...u, tipo: 'CREAS' }))]
+      .filter(unit => within(unit.lat, unit.lng))
       .forEach(unit => {
-        nearbySource.push({ name: unit.name, address: unit.address, lat: unit.lat, lon: unit.lng, search: argoNorm([unit.name, unit.address].join(' ')), open: () => mapaRedeShowUnitDetail(unit) });
-        bounds.push([unit.lat, unit.lng]);
         const unitColor = MAPA_REDE_COLOR_HEX[unit.color] || '#0067a3';
-        const marker = L.marker([unit.lat, unit.lng], { icon: mapaRedeCrasCreasIcon(unitColor), categoryColor: unitColor });
+        const marker = L.marker([unit.lat, unit.lng], { icon: mapaRedeCrasCreasIcon(unitColor), categoryColor: unitColor, title: unit.name, alt: unit.name });
         // Mesma ideia dos pinos de equipamentos: os detalhes completos
         // (endereço, telefone, bairros de referência) abrem na caixa
         // lateral ao tocar no pino, em vez de um popup.
         marker.on('click', () => mapaRedeShowUnitDetail(unit));
         marker.addTo(mapaRedeCrasCreasLayer);
+        nearbySource.push({
+          name: unit.name, address: unit.address, lat: unit.lat, lon: unit.lng, color: unitColor, tag: unit.tipo,
+          search: argoNorm([unit.name, unit.address].join(' ')),
+          open: () => mapaRedeShowUnitDetail(unit), marker, layer: mapaRedeCrasCreasLayer
+        });
+        bounds.push([unit.lat, unit.lng]);
       });
   }
-
-  mapaRedeSetStatus('');
 
   mapaRedeTargets = nearbySource;
   nearbySource.forEach((t, i) => { t.i = i; });
@@ -14240,53 +14472,69 @@ async function renderMapaRedeMarkers(opts) {
   const searchInput = document.getElementById('mapaRedeSearch');
   if (searchInput && searchInput.value) mapaRedeSearchInput(searchInput.value);
 
+  // Raio: círculo no mapa.
+  if (radius) {
+    mapaRedeRadiusCircle = L.circle([proximityState.lat, proximityState.lon], {
+      radius: radius * 1000, color: '#0091c2', weight: 1.5, dashArray: '6 6', fillColor: '#0091c2', fillOpacity: 0.05, interactive: false
+    }).addTo(mapaRedeMap);
+  }
+
+  // Resumo em uma linha.
+  const sumEl = document.getElementById('mapaRedeSummary');
+  if (sumEl) {
+    const pending = items.length - located;
+    const parts = [nearbySource.length + (nearbySource.length === 1 ? ' ponto' : ' pontos') + ' no mapa'];
+    if (radius) parts.push('em até ' + (radius < 1 ? Math.round(radius * 1000) + ' m' : radius + ' km') + ' de você');
+    if (pending > 0) parts.push(pending + ' sem pino (endereço ainda não localizado)');
+    sumEl.textContent = parts.join(' · ');
+  }
+
+  // Legenda interativa: cada categoria é um botão que mostra/esconde os
+  // pinos dela. As contagens ignoram o que está oculto, para dar para ver
+  // quantos há antes de reativar.
   const legendEl = document.getElementById('mapaRedeLegend');
   if (legendEl) {
-    const swatch = (colorHex, label) => `
-      <span style="display:inline-flex; align-items:center; gap:0.3rem;">
-        <span style="width:0.8rem; height:0.8rem; border-radius:50%; background:${colorHex}; border:1px solid rgba(0,0,0,0.15); display:inline-block;"></span>
-        ${escapeHtml(label)}
-      </span>`;
-    const multiSwatch = (colorsHex, label) => `
-      <span style="display:inline-flex; align-items:center; gap:0.25rem;">
-        <span style="display:inline-flex; gap:1px;">
-          ${colorsHex.map(c => `<span style="width:0.5rem; height:0.8rem; border-radius:2px; background:${c}; border:1px solid rgba(0,0,0,0.15); display:inline-block;"></span>`).join('')}
-        </span>
-        ${escapeHtml(label)}
-      </span>`;
-    const chips = [...legendCatsSeen]
+    const chips = Object.keys(legendCounts)
       .sort((a, b) => (CATEGORY_LABELS_PRINT[a] || a).localeCompare(CATEGORY_LABELS_PRINT[b] || b, 'pt-BR'))
-      .map(c => swatch(MAP_CATEGORY_COLORS[c], CATEGORY_LABELS_PRINT[c] || c));
-    if (mapaRedeCrasCreasLayer && (!showCrasCreas || showCrasCreas.checked) && (UNITS_CRAS_CREAS.cras.length + UNITS_CRAS_CREAS.creas.length)) {
-      chips.push(multiSwatch(['#d63e2a', '#38aadd', '#72b026'], 'CRAS/CREAS (cor varia por unidade)'));
+      .map(c => {
+        const on = !mapaRedeHiddenCats.has(c);
+        return `<button type="button" class="mapa-rede-leg${on ? '' : ' is-off'}" aria-pressed="${on}" onclick="mapaRedeToggleCat('${c}')" title="${on ? 'Esconder' : 'Mostrar'} esta categoria"><span class="mapa-rede-leg-dot" style="background:${MAP_CATEGORY_COLORS[c]};"></span>${escapeHtml(CATEGORY_LABELS_PRINT[c] || c)} <small>${legendCounts[c]}</small></button>`;
+      });
+    if (unitsTotal) {
+      chips.unshift(`<button type="button" class="mapa-rede-leg${crasCreasOn ? '' : ' is-off'}" aria-pressed="${crasCreasOn}" onclick="document.getElementById('mapaRedeShowCrasCreas').click()" title="${crasCreasOn ? 'Esconder' : 'Mostrar'} CRAS/CREAS"><span class="mapa-rede-leg-dot mapa-rede-leg-multi"><i style="background:#d63e2a"></i><i style="background:#38aadd"></i><i style="background:#72b026"></i></span>CRAS/CREAS <small>${unitsTotal}</small></button>`);
+    }
+    if (mapaRedeHiddenCats.size || !crasCreasOn) {
+      chips.push('<button type="button" class="mapa-rede-leg-all" onclick="mapaRedeShowAllCats()">Mostrar tudo</button>');
     }
     legendEl.innerHTML = chips.join('');
   }
 
-  if (proximityState.active) bounds.push([proximityState.lat, proximityState.lon]);
-  if (bounds.length && !keepView) {
-    mapaRedeMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
+  if (proximityState.active && !radius) bounds.push([proximityState.lat, proximityState.lon]);
+  if (!keepView) {
+    if (radius && mapaRedeRadiusCircle) mapaRedeMap.fitBounds(mapaRedeRadiusCircle.getBounds(), { padding: [20, 20] });
+    else if (bounds.length) mapaRedeMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
   }
 
   const nearbyList = document.getElementById('mapaRedeNearbyList');
   if (nearbyList) {
     if (!proximityState.active) {
       nearbyList.innerHTML = nearbySource.length
-        ? `<p style="font-size:0.85rem; color:var(--text-muted, #64748b);">${nearbySource.length} ponto(s) no mapa. Toque em "Minha localização" para ver os mais próximos.</p>`
-        : '';
+        ? `<p class="mapa-rede-hint">Toque em "Minha localização" para ver os mais próximos de você.</p>`
+        : '<p class="mapa-rede-hint">Nenhum ponto localizado para esta seleção ainda. Use "Localizar agora" (acima do mapa) ou escolha outra categoria.</p>';
     } else {
       const sorted = nearbySource
         .map(t => ({ t, km: haversineKm(proximityState.lat, proximityState.lon, t.lat, t.lon) }))
         .sort((x, y) => x.km - y.km)
         .slice(0, 8);
       nearbyList.innerHTML = sorted.length
-        ? `<h3 style="margin:0.5rem 0;">Mais próximos</h3><div class="mapa-rede-hits">${sorted.map(({ t, km }) => `
+        ? `<h3 class="mapa-rede-nearby-title">Mais próximos de você</h3><div class="mapa-rede-hits">${sorted.map(({ t, km }) => `
             <button type="button" class="mapa-rede-hit" onclick="mapaRedeFocus(${t.i})">
-              <strong>${escapeHtml(t.name || '')}</strong>
-              <small>${km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(1) + ' km'} · toque para ver no mapa</small>
+              <span class="mapa-rede-hit-dot" style="background:${t.color};"></span>
+              <span class="mapa-rede-hit-text"><strong>${escapeHtml(t.name || '')}</strong>
+              <small>${mapaRedeFmtKm(km)}${t.tag ? ' · ' + escapeHtml(t.tag) : ''}</small></span>
             </button>
           `).join('')}</div>`
-        : '';
+        : `<p class="mapa-rede-hint">Nenhum ponto${radius ? ' neste raio' : ''}. ${radius ? 'Aumente a distância ou escolha outra categoria.' : ''}</p>`;
     }
   }
 }
@@ -14328,7 +14576,10 @@ async function mapaRedeGeocodePending() {
     const box = document.getElementById('mapaRedeGeoBox');
     if (!box) return;
     box.hidden = false;
-    box.innerHTML = '<span>Localizando endereços… ' + done + ' de ' + todo.length + ' (' + found + ' encontrados)</span><button type="button" class="btn-tech btn-secondary" onclick="mapaRedeGeocodePending()">Parar</button>';
+    const pct = Math.round(done / todo.length * 100);
+    box.innerHTML = '<span>Localizando endereços… ' + done + ' de ' + todo.length + ' (' + found + ' encontrados)'
+      + '<span class="mapa-rede-progress" aria-hidden="true"><i style="width:' + pct + '%"></i></span></span>'
+      + '<button type="button" class="btn-tech btn-secondary" onclick="mapaRedeGeocodePending()">Parar</button>';
   };
   for (const item of todo) {
     if (mapaRedeGeoStop || !document.getElementById('mapaRedeGeoBox')) break;
@@ -14350,11 +14601,35 @@ function mapaRedeScrollToMap() {
   if (c && c.scrollIntoView) c.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-// Centraliza o mapa num pino e abre os detalhes dele.
+// Anel pulsante por alguns segundos, para o olho achar o pino escolhido.
+function mapaRedePulse(lat, lon, color) {
+  if (!mapaRedeMap || !window.L) return;
+  if (mapaRedePulseMarker) { mapaRedeMap.removeLayer(mapaRedePulseMarker); mapaRedePulseMarker = null; }
+  mapaRedePulseMarker = window.L.marker([lat, lon], {
+    interactive: false, keyboard: false, zIndexOffset: -100,
+    icon: window.L.divIcon({
+      className: 'mapa-rede-pulse-icon',
+      html: '<span style="border-color:' + (color || '#0091c2') + ';"></span>',
+      iconSize: [46, 46], iconAnchor: [23, 23]
+    })
+  }).addTo(mapaRedeMap);
+  const mine = mapaRedePulseMarker;
+  setTimeout(() => { if (mapaRedeMap && mapaRedePulseMarker === mine) { mapaRedeMap.removeLayer(mine); mapaRedePulseMarker = null; } }, 3200);
+}
+
+// Centraliza o mapa num pino (abrindo o grupo onde ele estiver agrupado) e
+// abre os detalhes dele.
 function mapaRedeFocus(i) {
   const t = mapaRedeTargets[i];
   if (!t || !mapaRedeMap) return;
-  mapaRedeMap.setView([t.lat, t.lon], 16);
+  const done = () => { mapaRedePulse(t.lat, t.lon, t.color); };
+  if (t.layer && t.marker && typeof t.layer.zoomToShowLayer === 'function' && t.layer.hasLayer(t.marker)) {
+    mapaRedeMap.setView([t.lat, t.lon], Math.max(mapaRedeMap.getZoom(), 15));
+    t.layer.zoomToShowLayer(t.marker, done);
+  } else {
+    mapaRedeMap.setView([t.lat, t.lon], 16);
+    done();
+  }
   t.open();
   mapaRedeScrollToMap();
 }
@@ -14366,8 +14641,19 @@ function mapaRedeSearchInput(v) {
   if (q.length < 2) { out.innerHTML = ''; return; }
   const hits = mapaRedeTargets.filter(t => t.search.indexOf(q) > -1).slice(0, 8);
   out.innerHTML = hits.length
-    ? hits.map(t => '<button type="button" class="mapa-rede-hit" onclick="mapaRedeFocus(' + t.i + ')"><strong>' + escapeHtml(t.name || '') + '</strong><small>' + escapeHtml(t.address || '') + '</small></button>').join('')
+    ? hits.map(t => '<button type="button" class="mapa-rede-hit" onclick="mapaRedeFocus(' + t.i + ')"><span class="mapa-rede-hit-dot" style="background:' + t.color + ';"></span><span class="mapa-rede-hit-text"><strong>' + escapeHtml(t.name || '') + '</strong><small>' + escapeHtml(t.address || '') + '</small></span></button>').join('')
     : '<p class="mapa-rede-hint">Nada encontrado entre os pinos do mapa. Se o equipamento ainda não aparece, use "Localizar agora".</p>';
+}
+
+// Enter vai direto ao primeiro resultado; Esc limpa a busca.
+function mapaRedeSearchKey(ev) {
+  if (ev.key === 'Enter') {
+    const first = document.querySelector('#mapaRedeSearchResults .mapa-rede-hit');
+    if (first) { ev.preventDefault(); first.click(); }
+  } else if (ev.key === 'Escape') {
+    ev.target.value = '';
+    mapaRedeSearchInput('');
+  }
 }
 
 // ---- Qual CRAS/CREAS atende o bairro? (usa os "bairros de referência" de UNITS_CRAS_CREAS)
@@ -14413,9 +14699,13 @@ async function mapaRedeFocusUnit(kind, i) {
   const u = UNITS_CRAS_CREAS[kind] && UNITS_CRAS_CREAS[kind][i];
   if (!u || !mapaRedeMap) return;
   const cb = document.getElementById('mapaRedeShowCrasCreas');
-  if (cb && !cb.checked) { cb.checked = true; await renderMapaRedeMarkers({ keepView: true }); }
+  if (cb && !cb.checked) { cb.checked = true; mapaRedeSavePref('crasCreas', true); await renderMapaRedeMarkers({ keepView: true }); }
+  const idx = mapaRedeTargets.findIndex(t => t.lat === u.lat && t.lon === u.lng && t.name === u.name);
+  if (idx > -1) { mapaRedeFocus(idx); return; }
+  // Fora do raio escolhido: ainda assim leva até a unidade.
   mapaRedeMap.setView([u.lat, u.lng], 16);
   mapaRedeShowUnitDetail({ ...u, tipo: kind === 'cras' ? 'CRAS' : 'CREAS' });
+  mapaRedePulse(u.lat, u.lng, MAPA_REDE_COLOR_HEX[u.color]);
   mapaRedeScrollToMap();
 }
 
