@@ -17565,6 +17565,33 @@ function argoThemeAsk(rawText) {
 }
 
 /* ============================================================
+   ARGO FECHA O APP — "fecha o app", "encerrar o aplicativo", "sair", "trancar o app"
+   Só reage a ordem curta e direta (nunca a "como faço para sair?"). Tranca o app (a chave de
+   cifragem sai da memória e o login volta a ser pedido, como no botão Sair) e tenta fechar a janela.
+   O navegador só deixa uma página se fechar sozinha quando ela é um app instalado; numa aba comum
+   o app fica trancado na tela de login e o Argo avisa isso.
+   ============================================================ */
+const ARGO_CLOSE_RE = /^(por favor )?(pode |poderia |quero |preciso )?(fechar|fecha|feche|encerrar|encerra|encerre|sair|sai|saia|trancar|tranca|tranque|bloquear|bloqueia|bloqueie)( tudo)?( (o|do|desse|deste|esse|este|todo o))?( (app|aplicativo|argo|argo suas|programa|sistema))?( agora| ja| por favor| pra mim)?$/;
+function argoCloseAppAsk(rawText) {
+  if (typeof document === 'undefined') return null;
+  const n = argoNorm(rawText);
+  if (!n || n.length > 60 || !ARGO_CLOSE_RE.test(n)) return null;
+  const go = () => {
+    setTimeout(() => {
+      try { logout(); } catch (e) { /* segue para o fechamento */ }
+      try { window.close(); } catch (e) { /* o navegador não deixou: fica trancado no login */ }
+    }, 1400);
+  };
+  return {
+    reply: argoPick(['Fechando o aplicativo. Até logo!', 'Pode deixar, vou trancar o app e fechar a janela. Bom descanso!']) +
+      '\nSe o navegador não deixar a janela fechar, o app fica trancado na tela de login e você fecha a aba por ele.',
+    mood: 'info',
+    quickActions: [],
+    autoRun: go
+  };
+}
+
+/* ============================================================
    ARGO ↔ SISTEMAS DE TRABALHO — "abra o SIBEC", "abre o Sicon", "abrir o Cidade Social"...
    Atalhos dos sistemas que a equipe do CRAS usa todo dia (mesmos links do painel de Atendimento CRAS).
    O SIBEC usa o endereço de entrada do sistema (o link de login da Caixa traz um "state" de sessão
@@ -17825,6 +17852,8 @@ function argoAssistantAsk(rawText) {
   if (agendaAnswer) return agendaAnswer;
   const themeAnswer = argoThemeAsk(rawText);
   if (themeAnswer) return themeAnswer;
+  const closeAnswer = argoCloseAppAsk(rawText);
+  if (closeAnswer) return closeAnswer;
   const tabOpen = argoOpenTabAsk(rawText);
   if (tabOpen) return tabOpen;
   const ubsPsi = argoUbsPsicoAsk(rawText);
@@ -24354,6 +24383,8 @@ function argoAssistantAskHybridCore(rawText, meta) {
   // Pedido para trocar o tema ("modo escuro"): troca na hora, sem passar pela IA.
   const themeAnswer = argoThemeAsk(rawText);
   if (themeAnswer) return themeAnswer;
+  const closeAnswer = argoCloseAppAsk(rawText);
+  if (closeAnswer) return closeAnswer;
 
   // Pedido claro para abrir uma aba ("abre o mapa"): abre na hora, sem passar pela IA.
   const tabOpen = argoOpenTabAsk(rawText);
