@@ -19731,6 +19731,20 @@ function agendaEnsureModals() {
       .agenda-modal-chip[data-kind="extra"] i { background:#2f5d8a; }
       .agenda-modal-x { background:none; border:none; font-size:26px; line-height:1; cursor:pointer; color:#6f6551; padding:2px 8px; border-radius:6px; }
       .agenda-modal-x:hover { background:#efe4cb; color:#1f3d33; }
+      /* Modal do DIA da agenda em tela cheia: o conteúdo (anotações, avisos,
+         data) ocupa a tela inteira; o modal de sincronização continua pequeno. */
+      #agendaNoteModal { padding:0; align-items:stretch; justify-content:stretch; background:#f8f2e4; }
+      #agendaNoteModal .agenda-modal-box { max-width:none; width:100%; height:100%; max-height:none; border-radius:0; box-shadow:none; display:flex; flex-direction:column; overflow-y:auto; padding:max(18px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); }
+      #agendaNoteModal .agenda-modal-box > * { width:100%; max-width:820px; margin-left:auto; margin-right:auto; box-sizing:border-box; flex-shrink:0; }
+      #agendaNoteModal .agenda-modal-title { font-size:clamp(22px, 5vw, 30px); }
+      #agendaNoteModal .agenda-modal-chip { font-size:15px; }
+      #agendaNoteModal .agenda-modal-x { font-size:34px; padding:2px 12px; }
+      #agendaNoteModal .agenda-entries-list { flex:1 1 auto; min-height:120px; max-height:none; gap:10px; }
+      #agendaNoteModal .agenda-entry-item { padding:10px 12px 11px; }
+      #agendaNoteModal .agenda-entry-text { font-size:23px; }
+      #agendaNoteModal .agenda-entry-time { font-size:12px; }
+      #agendaNoteModal .agenda-textarea { min-height:120px; max-height:38vh; font-size:23px; }
+      #agendaNoteModal .agenda-btn-group button { padding-top:14px; padding-bottom:14px; font-size:16px; }
       .agenda-textarea, .agenda-input { width:100%; border:1px solid #d3c495; background:rgba(255,255,255,0.6); border-radius:8px; padding:10px; box-sizing:border-box; color:#2c2620; }
       .agenda-textarea { font-family:'Caveat', cursive; font-size:21px; line-height:1.15; color:#2f5d8a; resize:vertical; min-height:96px; max-height:220px; margin-bottom:4px; }
       .agenda-input { font-family:'Times New Roman', Times, serif; font-size:15px; margin-bottom:14px; }
