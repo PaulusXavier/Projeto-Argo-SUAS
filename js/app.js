@@ -1001,6 +1001,7 @@ function argoEnsureGreetingUI() {
               <span class="argo-yes-label">Ver agenda e sincronização</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </button>
+            <button type="button" class="argo-greeting-add" onclick="argoOpenAgendaFromGreeting('note')">＋ Anotar para hoje</button>
             <button type="button" class="argo-greeting-no" onclick="argoDismissGreeting()">Agora não</button>
           </div>
 
@@ -1072,6 +1073,14 @@ function argoEnsureGreetingUI() {
       .argo-chip + .argo-note { margin-top:1px; }
       .argo-when { margin-left:8px; font-size:12px; color:var(--text-muted,#475569); }
       .argo-week-empty { margin-top:6px; color:var(--text-muted,#475569); }
+      .argo-todo { display:flex; gap:8px; align-items:baseline; margin-top:3px; font-weight:600; }
+      .argo-todo-time { flex-shrink:0; min-width:40px; font-size:12px; font-weight:800; color:var(--brand-primary,#0091C2); font-variant-numeric:tabular-nums; }
+      .argo-todo-text { min-width:0; overflow-wrap:anywhere; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+      .argo-todo.is-passed { opacity:.55; }
+      .argo-late { margin-top:10px; padding:6px 10px; border-radius:8px; font-size:12.5px; font-weight:700; color:#a3342c; background:rgba(192,70,61,0.1); border:1px solid rgba(192,70,61,0.3); }
+      .argo-greeting-add { touch-action:manipulation; background:transparent; color:var(--brand-primary,#0091C2); border:1px solid var(--brand-primary,#0091C2); padding:10px; border-radius:12px; font-weight:700; cursor:pointer; font-size:14px; }
+      .argo-greeting-add:hover { background:rgba(0,145,194,0.1); }
+      .argo-greeting-add:focus-visible { outline:3px solid var(--brand-primary-light,#29ABE2); outline-offset:2px; }
 
       .argo-sync-row { display:flex; align-items:center; flex-wrap:wrap; gap:9px; margin:12px 2px 0 2px; font-size:12.5px; color:var(--text-muted,#475569); line-height:1.4; }
       .argo-sync-text { flex:1 1 auto; }
@@ -1154,6 +1163,115 @@ function argoChipHtml(info) {
   return `<span class="argo-chip argo-chip-${argoAgendaKind(info)}">${escapeHtml(name)}</span>`;
 }
 
+// Anotações PENDENTES de hoje, uma por linha e em ordem de horário. As que
+// já passaram do horário ficam esmaecidas (continuam pendentes). Mostra até 4.
+function argoTodayNotesHtml(key) {
+  const entries = (typeof agendaNotesCache !== 'undefined' && agendaNotesCache[key]) || [];
+  const order = (typeof agendaDisplayOrder === 'function') ? agendaDisplayOrder(entries) : entries.map((_, i) => i);
+  const open = order.map(i => entries[i]).filter(e => e && !e.done && e.text);
+  const doneN = entries.filter(e => e && e.done).length;
+  if (!open.length) return doneN ? `<div class="argo-note">Tudo concluído hoje (${doneN} ${doneN === 1 ? 'anotação' : 'anotações'}) ✓</div>` : '';
+  const now = new Date();
+  const hhmm = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+  const rows = open.slice(0, 4).map(e => {
+    const t = agendaCleanTime(e.time);
+    return `<div class="argo-todo${t && t < hhmm ? ' is-passed' : ''}"><span class="argo-todo-time">${t ? escapeHtml(t) : '•'}</span><span class="argo-todo-text">${escapeHtml(e.text)}</span></div>`;
+  }).join('');
+  const more = open.length > 4 ? `<div class="argo-note">+ ${open.length - 4} ${open.length - 4 === 1 ? 'anotação' : 'anotações'} na agenda</div>` : '';
+  return rows + more;
+}
+
+// ---- Faixa "seu dia" no cabeçalho do app ----
+// Saudação + data, tipo do dia (útil/feriado/fim de semana), anotações de hoje,
+// atrasadas e o próximo marco. Cada chip leva à aba Agenda. Usa só dados que já
+// estão no aparelho (AGENDA_DATA_INFO e as anotações sincronizadas).
+function argoGoAgenda(mode) {
+  const chip = document.querySelector('.filter-chip[data-cat="agenda"]');
+  if (chip && !chip.classList.contains('active')) chip.click();
+  requestAnimationFrame(() => {
+    const book = document.getElementById('agendaBook') || document.getElementById('agendaCalendarGrid');
+    if (book) {
+      const ctrl = document.querySelector('.controls');
+      const stuck = ctrl && getComputedStyle(ctrl).position === 'sticky';
+      book.style.scrollMarginTop = (stuck ? Math.ceil(ctrl.getBoundingClientRect().height) + 12 : 12) + 'px';
+      book.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    if (mode === 'pend') {
+      setTimeout(() => { const b = document.getElementById('agendaPendBox'); if (b && !b.hidden) b.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 450);
+    }
+  });
+}
+
+function argoRenderHeroToday() {
+  const el = document.getElementById('heroToday');
+  if (!el) return;
+  try {
+    const now = new Date();
+    if (now.getFullYear() !== AGENDA_YEAR) { el.hidden = true; return; }
+    const key = agendaIsoKey(now);
+    const info = AGENDA_DATA_INFO[key];
+    const kind = info ? argoAgendaKind(info) : '';
+    const wd = now.getDay();
+    let kindLabel, kindData;
+    if (kind === 'feriado' || kind === 'facultativo') { kindLabel = agendaDayTitle(key); kindData = kind; }
+    else if (wd === 0 || wd === 6) { kindLabel = 'Fim de semana'; kindData = 'fim'; }
+    else if (kind === 'pagamento') { kindLabel = 'Dia de pagamento'; kindData = 'pagamento'; }
+    else if (kind === 'extra') { kindLabel = agendaDayTitle(key); kindData = 'extra'; }
+    else { kindLabel = 'Dia útil'; kindData = 'util'; }
+    const pend = (agendaNotesCache[key] || []).filter(e => e && e.text && !e.done).length;
+    const late = argoLateCount();
+    const next = argoNextMilestone(now);
+    const dateTxt = now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+    const chip = (cls, inner, mode, label) => '<button type="button" class="ht-chip ' + cls + '" onclick="argoGoAgenda(' + (mode ? "'" + mode + "'" : '') + ')"' + (label ? ' aria-label="' + escapeHtml(label) + '"' : '') + '>' + inner + '</button>';
+    let html = '<span class="ht-date">' + escapeHtml(argoGreetingWord()) + ' · ' + escapeHtml(dateTxt) + '</span>' +
+      chip('ht-kind', '<i data-kind="' + kindData + '"></i>' + escapeHtml(kindLabel), '', 'Hoje: ' + kindLabel + '. Abrir a agenda');
+    html += pend
+      ? chip('ht-notes', '📝 ' + pend + (pend === 1 ? ' anotação hoje' : ' anotações hoje'), '', pend + ' anotações pendentes hoje. Abrir a agenda')
+      : chip('ht-quiet', 'Sem anotações hoje', '', 'Sem anotações hoje. Abrir a agenda');
+    if (late) html += chip('ht-late', '⚠ ' + late + (late === 1 ? ' atrasada' : ' atrasadas'), 'pend', late + ' anotações atrasadas. Ver pendências');
+    if (next && next.date.getFullYear() === AGENDA_YEAR) {
+      const nm = ARGO_AGENDA_LABEL_NAMES[next.info.label] || next.info.label;
+      html += chip('ht-next', 'Próximo: ' + escapeHtml(nm) + ' · ' + (next.days === 1 ? 'amanhã' : 'em ' + next.days + ' dias'), '', 'Próximo marco: ' + nm + ', ' + (next.days === 1 ? 'amanhã' : 'em ' + next.days + ' dias'));
+    }
+    el.innerHTML = html;
+    el.hidden = false;
+    // Versão enxuta (tipo do dia, anotações, atrasadas) no mini-cabeçalho da barra fixa.
+    const mini = document.getElementById('controlsMiniChips');
+    if (mini) mini.innerHTML = Array.from(el.querySelectorAll('.ht-kind, .ht-notes, .ht-quiet, .ht-late')).map(b => b.outerHTML).join('');
+  } catch (e) { el.hidden = true; }
+}
+
+// Mini-cabeçalho: aparece quando o cabeçalho grande sai da tela.
+(function argoHeroWatch() {
+  const set = gone => document.body.classList.toggle('hero-gone', gone);
+  const start = () => {
+    const hero = document.querySelector('header.hero');
+    if (!hero) return;
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(entries => set(!entries[0].isIntersecting), { threshold: 0 }).observe(hero);
+    } else {
+      const f = () => set(hero.getBoundingClientRect().bottom < 0);
+      window.addEventListener('scroll', f, { passive: true }); f();
+    }
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
+// Mantém a faixa em dia: ao voltar para a aba, e a cada minuto (virada do dia).
+document.addEventListener('visibilitychange', () => { if (!document.hidden) argoRenderHeroToday(); });
+setInterval(argoRenderHeroToday, 60000);
+
+// Quantas anotações de dias que já passaram seguem sem ser concluídas.
+function argoLateCount() {
+  if (typeof agendaNotesCache === 'undefined') return 0;
+  const todayKey = agendaIsoKey(new Date());
+  let n = 0;
+  Object.keys(agendaNotesCache).forEach(k => {
+    if (k.slice(0, 4) !== String(AGENDA_YEAR) || k >= todayKey) return;
+    (agendaNotesCache[k] || []).forEach(e => { if (e && e.text && !e.done) n++; });
+  });
+  return n;
+}
+
 function argoEntryHtml(info, note) {
   const chip = argoChipHtml(info);
   const noteHtml = note ? `<div class="argo-note">${escapeHtml(note)}</div>` : '';
@@ -1202,9 +1320,13 @@ function argoGreetingWeekHtml() {
   let html = `<div class="argo-week-head"><span>Resumo da semana</span>${countBadge}</div>`;
 
   const te = summary.todayEntry;
+  const todayNotes = argoTodayNotesHtml(summary.todayKey);
+  const todayInner = (te && te.info ? argoChipHtml(te.info) : '') + todayNotes;
   html += `<div class="argo-week-today"><span class="argo-week-tag">Hoje</span>` +
-    (te ? argoEntryHtml(te.info, te.note) : `<span class="argo-week-empty" style="margin:0;">nada marcado</span>`) +
+    (todayInner ? `<div class="argo-entry">${todayInner}</div>` : `<span class="argo-week-empty" style="margin:0;">nada marcado</span>`) +
     `</div>`;
+  const late = argoLateCount();
+  if (late) html += `<div class="argo-late" role="alert">⚠ ${late} ${late === 1 ? 'anotação atrasada' : 'anotações atrasadas'} — ainda não concluída${late === 1 ? '' : 's'}</div>`;
 
   if (rest.length) {
     const rows = rest.slice(0, 4).map(e => {
@@ -1331,7 +1453,11 @@ function argoGreetingHeadline() {
       const name = ARGO_AGENDA_LABEL_NAMES[te.info.label] || te.info.label;
       return word + '! Hoje: ' + name;
     }
-    if (te && te.note) return word + '! Você tem anotação para hoje';
+    const todayKey = s && s.todayKey;
+    const pend = ((todayKey && agendaNotesCache[todayKey]) || []).filter(x => x && x.text && !x.done).length;
+    if (pend) return word + '! Hoje: ' + pend + (pend === 1 ? ' anotação' : ' anotações');
+    const late = argoLateCount();
+    if (late) return word + '! ' + late + (late === 1 ? ' pendência atrasada' : ' pendências atrasadas');
   } catch (e) { /* cai no título padrão */ }
   return word + '! Eu sou o Argo';
 }
@@ -1395,7 +1521,7 @@ function argoDismissGreeting() {
 
 // Botão principal: leva à aba "Agenda Argo" (onde está o card de
 // sincronização). Sem código de sincronização, já abre a tela para defini-lo.
-function argoOpenAgendaFromGreeting() {
+function argoOpenAgendaFromGreeting(mode) {
   argoDismissGreeting();
   const chip = document.querySelector('.filter-chip[data-cat="agenda"]');
   if (chip && !chip.classList.contains('active')) chip.click();
@@ -1408,6 +1534,12 @@ function argoOpenAgendaFromGreeting() {
       const stuck = ctrl && getComputedStyle(ctrl).position === 'sticky';
       book.style.scrollMarginTop = (stuck ? Math.ceil(ctrl.getBoundingClientRect().height) + 12 : 12) + 'px';
       book.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    if (mode === 'note' && new Date().getFullYear() === AGENDA_YEAR && typeof agendaOpenNoteModal === 'function') {
+      // Já abre o dia de hoje para escrever (sem código de sincronização, o
+      // próprio modal leva à tela de configuração ao tentar guardar).
+      setTimeout(() => agendaOpenNoteModal(agendaIsoKey(new Date())), 350);
+      return;
     }
     if (!agendaSyncCode && typeof agendaOpenSyncModal === 'function') {
       setTimeout(agendaOpenSyncModal, 350);
@@ -16527,7 +16659,7 @@ document.addEventListener('keydown', (e) => {
   if (categorySidebar.classList.contains('is-open')) return;
   const greeting = document.getElementById('argoGreetingModal');
   if (greeting && greeting.classList.contains('visible')) return;
-  const agendaModalOpen = ['agendaNoteModal', 'agendaSyncModal'].some(id => {
+  const agendaModalOpen = ['agendaNoteModal', 'agendaSyncModal', 'agendaStatsModal'].some(id => {
     const m = document.getElementById(id);
     return m && m.style.display === 'flex';
   });
@@ -17029,6 +17161,7 @@ document.addEventListener('keydown', e => {
 });
 
 function updateHeaderFooterStats() {
+  if (typeof argoRenderHeroToday === 'function') argoRenderHeroToday();
   const totalEl = document.getElementById('heroStatTotal');
   const catEl = document.getElementById('heroStatCategories');
   const footerCountEl = document.getElementById('footerItemCount');
@@ -17393,8 +17526,34 @@ function agendaEntriesPreview(entries) {
   // continuam na lista do dia e na busca.
   const open = (entries || []).filter(e => e && !e.done);
   if (!open.length) return '';
-  if (open.length === 1) return open[0].text;
-  return open.length + ' anotações — mais recente: ' + open[open.length - 1].text;
+  if (open.length === 1) return agendaEntryShort(open[0]);
+  // Com horários, a primeira do dia (a mais cedo) é a que importa; sem
+  // horários, a ordem é a de escrita e vale a mais recente, como antes.
+  const ordered = agendaDisplayOrder(open).map(i => open[i]);
+  const hasTime = ordered.some(e => agendaCleanTime(e.time));
+  return open.length + ' anotações — ' + (hasTime ? 'primeira: ' + agendaEntryShort(ordered[0]) : 'mais recente: ' + open[open.length - 1].text);
+}
+
+// Texto da anotação com o horário na frente, quando ela tem um ("09:30 Visita").
+function agendaEntryShort(e) {
+  return (e && e.time ? e.time + ' ' : '') + (e ? e.text : '');
+}
+// Horário válido "HH:MM" (ou '' se vazio/inválido): vem de <input type="time">
+// e de outros aparelhos, então não se confia no formato.
+function agendaCleanTime(t) {
+  return (typeof t === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(t)) ? t : '';
+}
+// Ordem de exibição de um dia: com horário primeiro (do mais cedo ao mais
+// tarde), depois as sem horário na ordem em que foram escritas. Devolve os
+// índices ORIGINAIS, que é o que editar/apagar/concluir usam.
+function agendaDisplayOrder(entries) {
+  return (entries || []).map((e, i) => i).sort((a, b) => {
+    const ta = agendaCleanTime(entries[a].time), tb = agendaCleanTime(entries[b].time);
+    if (ta && tb) return ta < tb ? -1 : (ta > tb ? 1 : a - b);
+    if (ta) return -1;
+    if (tb) return 1;
+    return a - b;
+  });
 }
 
 function agendaEntryTimeLabel(createdAt) {
@@ -18833,7 +18992,10 @@ function renderAgendaCard() {
         .agenda-creator-name { color: var(--cover); font-style: italic; font-size: 12px; }
 
         @container agendabook (min-width: 860px) {
-          .agenda-spread { grid-template-columns: minmax(0, 1fr) 310px; }
+          .agenda-spread { grid-template-columns: minmax(0, 1fr) 310px; align-items: start; }
+          /* A coluna lateral (mês, pendências, próximos marcos) pode ser bem mais alta que o calendário;
+             sem isso as linhas da grade esticavam junto com ela. */
+          .agenda-cal { align-self: start; }
           .agenda-side { border-top: 0; border-left: 1px dashed var(--gold); box-shadow: inset 8px 0 10px -10px rgba(20,20,10,0.35); padding-top: 12px; }
         }
         @media (max-width: 600px) {
@@ -18955,6 +19117,22 @@ function renderAgendaCard() {
         /* Ponto indicando anotação no dia (útil no celular, onde o texto some). */
         .agenda-day-cell { position: relative; }
         .agenda-note-dot { position: absolute; top: 4px; right: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--blue-ink); }
+        .agenda-note-count { position: absolute; top: 3px; right: 3px; min-width: 15px; height: 15px; padding: 0 4px; box-sizing: border-box; border-radius: 999px; background: var(--blue-ink); color: #fff; font: 800 10px/15px 'Times New Roman', Times, serif; text-align: center; font-style: normal; }
+
+        /* Pendências: anotações ainda não concluídas (atrasadas e futuras). */
+        .agenda-pend-box[hidden] { display: none; }
+        .agenda-pend-group { margin: 8px 0 2px; font-size: 12px; font-weight: 800; letter-spacing: 0.3px; text-transform: uppercase; color: var(--ink-muted); }
+        .agenda-pend-group.is-late { color: var(--red-ink); }
+        .agenda-item-nota .agenda-item-dot { background: var(--blue-ink); }
+        .agenda-item-late .agenda-item-when { color: var(--red-ink); font-weight: 700; }
+        .agenda-pend-row { display: flex; align-items: stretch; gap: 2px; }
+        .agenda-pend-row .agenda-item { flex: 1 1 auto; width: auto; min-width: 0; }
+        .agenda-pend-check { flex: 0 0 auto; width: 40px; border: 0; border-bottom: 1px solid var(--rule-line); background: transparent; color: var(--blue-ink); font-size: 20px; line-height: 1; cursor: pointer; border-radius: 4px; }
+        .agenda-pend-check:hover { background: rgba(63, 125, 85, 0.16); color: var(--green-ink); }
+        .agenda-pend-check:focus-visible { outline: 2px solid var(--cover); outline-offset: -2px; }
+        .agenda-pend-check:disabled { cursor: progress; opacity: 0.6; }
+        .agenda-ts-late { color: var(--red-ink); font-weight: 800; }
+        .agenda-pend-more { margin: 6px 0 0; font-size: 12.5px; font-style: italic; color: var(--ink-muted); }
 
         /* Próximos marcos na coluna lateral. */
         .agenda-up-box { margin-top: 16px; padding-top: 6px; border-top: 1px dashed var(--rule-line); }
@@ -19042,6 +19220,7 @@ function renderAgendaCard() {
                 🔔<span id="agendaNotifyDot" class="agenda-sync-dot agenda-sync-off"></span>
               </button>
               <button type="button" class="agenda-sync-btn" title="Baixar as datas de ${AGENDA_YEAR} para o calendário do celular (.ics)" aria-label="Baixar as datas para o calendário do celular (.ics)" onclick="agendaExportIcs()">📥</button>
+              <button type="button" class="agenda-sync-btn" title="Estatísticas das minhas atividades" aria-label="Estatísticas das minhas atividades" onclick="agendaOpenStats()">📊</button>
               <button type="button" class="agenda-sync-btn" title="Imprimir este mês" aria-label="Imprimir este mês" onclick="agendaPrintMonth()">🖨️</button>
               <button type="button" id="agendaSyncBtn" class="agenda-sync-btn" title="Sincronização entre aparelhos" aria-label="Sincronização entre aparelhos" onclick="agendaOpenSyncModal()">
                 🔄<span id="agendaSyncDot" class="agenda-sync-dot agenda-sync-off"></span>
@@ -19094,6 +19273,11 @@ function renderAgendaCard() {
               <p class="agenda-side-sub" id="agendaBusinessDays" title="Segunda a sexta, sem feriados nem pontos facultativos"></p>
               <p class="agenda-longweekend" id="agendaLongWeekend" hidden></p>
               <div class="agenda-list" id="agendaMonthList"></div>
+              <section class="agenda-up-box agenda-pend-box" id="agendaPendBox" hidden aria-labelledby="agendaPendTitle">
+                <h4 class="agenda-side-title" id="agendaPendTitle">Minhas pendências</h4>
+                <p class="agenda-side-sub" id="agendaPendSub"></p>
+                <div class="agenda-list" id="agendaPending"></div>
+              </section>
               <section class="agenda-up-box" id="agendaUpBox" hidden aria-labelledby="agendaUpTitle">
                 <h4 class="agenda-side-title" id="agendaUpTitle">Próximos marcos</h4>
                 <p class="agenda-side-sub">Nos outros meses; toque para ir ao dia.</p>
@@ -19133,6 +19317,7 @@ function agendaDaysInMonth(month) {
 }
 
 function agendaRenderCalendar() {
+  if (typeof argoRenderHeroToday === 'function') argoRenderHeroToday();   // faixa do cabeçalho
   const grid = document.getElementById('agendaCalendarGrid');
   const display = document.getElementById('agendaMonthDisplay');
   if (!grid || !display) return;
@@ -19180,7 +19365,9 @@ function agendaRenderCalendar() {
       else if (inYear && date < new Date(today.getFullYear(), today.getMonth(), today.getDate())) cell.classList.add('agenda-is-past');
 
       let html = '<span class="agenda-day-num">' + d + '</span>';
-      if (note) html += '<i class="agenda-note-dot" aria-hidden="true"></i>';
+      const pendCount = (entries || []).filter(e => e && !e.done).length;
+      if (pendCount > 1) html += '<i class="agenda-note-count" aria-hidden="true">' + pendCount + '</i>';
+      else if (note) html += '<i class="agenda-note-dot" aria-hidden="true"></i>';
       if (note) {
         const tilt = (d % 2 === 0) ? '-1.5deg' : '1deg';
         html += '<div class="agenda-note-preview" style="transform:rotate(' + tilt + ')">' + escapeHtml(note) + '</div>';
@@ -19234,7 +19421,288 @@ function agendaRenderCalendar() {
   agendaRenderNextStrip();
   agendaRenderYearStrip();
   agendaRenderUpcoming();
+  agendaRenderPending();
   agendaUpdateLegend();
+  const sm = document.getElementById('agendaStatsModal');
+  if (sm && sm.style.display === 'flex') agendaRenderStats();
+}
+
+// Conclui uma anotação direto da lista de pendências, sem abrir o dia.
+// Mesma gravação cifrada do modal; se falhar, nada muda na tela.
+async function agendaQuickDone(key, idx, btn) {
+  if (agendaBusy) return;
+  const base = agendaNotesCache[key] || [];
+  if (!base[idx]) return;
+  if (!agendaSyncCode || !agendaDb) { agendaToast('Ainda conectando à nuvem. Tente de novo em alguns segundos.'); return; }
+  agendaBusy = true;
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  const newEntries = base.map((e, i) => i === idx ? Object.assign({}, e, { done: true, doneAt: Date.now() }) : e);
+  try {
+    const outcome = await agendaCommitEntries(key, newEntries);
+    agendaNotesCache[key] = newEntries;
+    agendaRenderCalendar();
+    agendaToast(outcome === 'ok' ? 'Anotação concluída.' : 'Sem resposta do servidor. A mudança será enviada quando a conexão voltar; mantenha o app aberto.', outcome === 'ok' ? '' : 'error');
+  } catch (e) {
+    console.error(e);
+    if (btn) { btn.disabled = false; btn.textContent = '○'; }
+    agendaToast('Não foi possível concluir na nuvem. Verifique a internet e tente de novo.', 'error');
+  } finally {
+    agendaBusy = false;
+  }
+}
+
+// Pendências do ano: anotações ainda não marcadas como feitas, separadas em
+// "atrasadas" (dias que já passaram) e "a fazer" (hoje em diante). Dá para
+// concluir o dia sem caçar mês a mês no calendário. Toque abre o dia.
+
+// ======= Estatísticas das atividades (botão 📊) =======
+// Tudo calculado aqui, no aparelho, a partir das anotações já carregadas
+// (agendaNotesCache) — nada novo é enviado para a nuvem. "Atividade" = uma
+// anotação do dia; ela conta no DIA a que pertence (não no dia em que foi escrita).
+let agendaStatsScope = 'year';   // 'year' | 'month'
+
+function agendaComputeStats(scope) {
+  const todayKey = agendaIsoKey(new Date());
+  const yPrefix = String(AGENDA_YEAR) + '-';
+  const mPrefix = AGENDA_YEAR + '-' + String(agendaCurrentMonth + 1).padStart(2, '0') + '-';
+  const prefix = scope === 'month' ? mPrefix : yPrefix;
+  const st = { total: 0, done: 0, pending: 0, late: 0, daysWithNotes: 0, withTime: 0,
+    byWeekday: [0, 0, 0, 0, 0, 0, 0], byPeriod: { manha: 0, tarde: 0, noite: 0, sem: 0 },
+    series: [], busiest: null };
+  const nBuckets = scope === 'month' ? agendaDaysInMonth(agendaCurrentMonth) : 12;
+  for (let i = 0; i < nBuckets; i++) st.series.push({ done: 0, pending: 0, late: 0 });
+  Object.keys(agendaNotesCache).forEach(key => {
+    if (key.indexOf(prefix) !== 0) return;
+    const entries = (agendaNotesCache[key] || []).filter(e => e && e.text);
+    if (!entries.length) return;
+    st.daysWithNotes++;
+    const wd = agendaDateFromKey(key).getDay();
+    const bucket = st.series[scope === 'month' ? Number(key.slice(8)) - 1 : Number(key.slice(5, 7)) - 1];
+    entries.forEach(e => {
+      st.total++; st.byWeekday[wd]++;
+      const t = agendaCleanTime(e.time);
+      if (t) { st.withTime++; const h = Number(t.slice(0, 2)); st.byPeriod[h < 12 ? 'manha' : (h < 18 ? 'tarde' : 'noite')]++; }
+      else st.byPeriod.sem++;
+      if (e.done) { st.done++; if (bucket) bucket.done++; }
+      else if (key < todayKey) { st.late++; st.pending++; if (bucket) bucket.late++; }
+      else { st.pending++; if (bucket) bucket.pending++; }
+    });
+    if (!st.busiest || entries.length > st.busiest.n) st.busiest = { key, n: entries.length };
+  });
+  st.rate = st.total ? Math.round(st.done / st.total * 100) : 0;
+  return st;
+}
+
+// Barras empilhadas (feitas / a fazer / atrasadas) em SVG; os números ficam
+// também em texto (title + tabela escondida para leitor de tela).
+function agendaStatsBarsSvg(series, labels, titles) {
+  const W = 560, H = 200, padL = 28, padB = 26, padT = 8;
+  const max = Math.max(1, ...series.map(b => b.done + b.pending + b.late));
+  const step = Math.max(1, Math.ceil(max / 4));
+  const top = Math.ceil(max / step) * step;
+  const iw = W - padL - 6, ih = H - padB - padT;
+  const bw = iw / series.length;
+  let g = '';
+  for (let v = 0; v <= top; v += step) {
+    const y = padT + ih - (v / top) * ih;
+    g += '<line x1="' + padL + '" x2="' + (W - 6) + '" y1="' + y + '" y2="' + y + '" class="ast-grid"/><text x="' + (padL - 5) + '" y="' + (y + 3.5) + '" text-anchor="end" class="ast-axis">' + v + '</text>';
+  }
+  series.forEach((b, i) => {
+    const x = padL + i * bw + bw * 0.16, w = bw * 0.68;
+    let y = padT + ih;
+    [['done', b.done], ['pending', b.pending], ['late', b.late]].forEach(([k, n]) => {
+      if (!n) return;
+      const h = (n / top) * ih; y -= h;
+      g += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="2" class="ast-' + k + '"><title>' + escapeHtml((titles || labels)[i]) + ': ' + n + ' ' + ({ done: 'feita(s)', pending: 'a fazer', late: 'atrasada(s)' })[k] + '</title></rect>';
+    });
+    const showLabel = series.length <= 12 || (i + 1) % 5 === 0 || i === 0;
+    if (showLabel) g += '<text x="' + (padL + i * bw + bw / 2).toFixed(1) + '" y="' + (H - 7) + '" text-anchor="middle" class="ast-axis">' + escapeHtml(labels[i]) + '</text>';
+  });
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Gráfico de barras: anotações por ' + (series.length === 12 ? 'mês' : 'dia') + '" class="ast-svg">' + g + '</svg>';
+}
+
+function agendaStatsHBars(rows, max) {
+  return rows.map(r => '<div class="ast-hrow"><span class="ast-hlabel">' + escapeHtml(r.label) + '</span>' +
+    '<span class="ast-htrack"><i style="width:' + (max ? Math.max(r.n ? 3 : 0, Math.round(r.n / max * 100)) : 0) + '%"></i></span>' +
+    '<b class="ast-hval">' + r.n + '</b></div>').join('');
+}
+
+function agendaRenderStats() {
+  const body = document.getElementById('agendaStatsBody');
+  if (!body) return;
+  const st = agendaComputeStats(agendaStatsScope);
+  document.querySelectorAll('#agendaStatsModal .ast-scope button').forEach(b => b.setAttribute('aria-pressed', b.dataset.scope === agendaStatsScope ? 'true' : 'false'));
+  const scopeName = agendaStatsScope === 'month' ? AGENDA_MONTH_NAMES[agendaCurrentMonth].toLowerCase() + ' de ' + AGENDA_YEAR : String(AGENDA_YEAR);
+  if (!st.total) {
+    body.innerHTML = '<p class="ast-empty">Ainda não há anotações em ' + escapeHtml(scopeName) + '. Quando você anotar atividades nos dias do calendário, as estatísticas aparecem aqui.</p>';
+    return;
+  }
+  const tile = (n, l, cls) => '<div class="ast-tile ' + (cls || '') + '"><b>' + n + '</b><span>' + l + '</span></div>';
+  const labels = agendaStatsScope === 'month'
+    ? st.series.map((_, i) => String(i + 1))
+    : AGENDA_MONTH_NAMES.map(m => m.slice(0, 3).toLowerCase());
+  const wdMax = Math.max(...st.byWeekday);
+  const wdOrder = [1, 2, 3, 4, 5, 6, 0];
+  const per = st.byPeriod, perMax = Math.max(per.manha, per.tarde, per.noite, per.sem);
+  let insight = '';
+  if (st.busiest && st.busiest.n > 1) {
+    const d = agendaDateFromKey(st.busiest.key);
+    insight += 'Dia mais cheio: <b>' + d.getDate() + ' de ' + AGENDA_MONTH_NAMES[d.getMonth()].toLowerCase() + '</b> (' + st.busiest.n + ' anotações). ';
+  }
+  const topWd = st.byWeekday.indexOf(wdMax);
+  if (wdMax > 0) insight += 'Dia da semana mais movimentado: <b>' + ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'][topWd] + '</b>.';
+  body.innerHTML =
+    '<div class="ast-tiles">' +
+      tile(st.total, 'anotações') + tile(st.done, 'concluídas', 'is-done') + tile(st.pending, 'a fazer', 'is-pend') + tile(st.late, 'atrasadas', st.late ? 'is-late' : '') +
+    '</div>' +
+    '<div class="ast-rate" role="img" aria-label="Taxa de conclusão: ' + st.rate + '%"><div class="ast-rate-top"><span>Taxa de conclusão</span><b>' + st.rate + '%</b></div><div class="ast-rate-track"><i style="width:' + st.rate + '%"></i></div></div>' +
+    '<h4 class="ast-h">' + (agendaStatsScope === 'month' ? 'Por dia — ' : 'Por mês — ') + escapeHtml(scopeName) + '</h4>' +
+    agendaStatsBarsSvg(st.series, labels, agendaStatsScope === 'month' ? labels.map(l => 'dia ' + l) : AGENDA_MONTH_NAMES) +
+    '<div class="ast-legend"><span><i class="ast-done"></i>Concluídas</span><span><i class="ast-pending"></i>A fazer</span><span><i class="ast-late"></i>Atrasadas</span></div>' +
+    '<div class="ast-two">' +
+      '<div><h4 class="ast-h">Por dia da semana</h4>' + agendaStatsHBars(wdOrder.map(i => ({ label: AGENDA_WEEKDAY_ABBR[i], n: st.byWeekday[i] })), wdMax) + '</div>' +
+      '<div><h4 class="ast-h">Por período do dia</h4>' + agendaStatsHBars([
+        { label: 'Manhã', n: per.manha }, { label: 'Tarde', n: per.tarde }, { label: 'Noite', n: per.noite }, { label: 'Sem horário', n: per.sem }], perMax) + '</div>' +
+    '</div>' +
+    '<p class="ast-note">' + (insight || '') + (insight ? ' ' : '') + 'Em ' + st.daysWithNotes + (st.daysWithNotes === 1 ? ' dia' : ' dias') + ' com anotações. Os números contam as anotações no dia a que pertencem; "atrasadas" são as não concluídas de dias que já passaram. Calculado neste aparelho.</p>';
+}
+
+function agendaSetStatsScope(scope) { agendaStatsScope = scope; agendaRenderStats(); }
+
+let agendaStatsOpener = null;
+function agendaOpenStats() {
+  agendaEnsureModals();   // injeta o CSS compartilhado dos modais da agenda
+  let m = document.getElementById('agendaStatsModal');
+  if (!m) {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `
+    <div id="agendaStatsModal" class="agenda-modal-overlay" onclick="if(event.target==this) agendaCloseStats()">
+      <div class="agenda-modal-box ast-box" role="dialog" aria-modal="true" aria-labelledby="agendaStatsTitle">
+        <div class="agenda-modal-header">
+          <h3 id="agendaStatsTitle" class="agenda-modal-title">Estatísticas das atividades</h3>
+          <button type="button" class="agenda-modal-x" onclick="agendaCloseStats()" aria-label="Fechar">&times;</button>
+        </div>
+        <div class="ast-scope" role="group" aria-label="Período">
+          <button type="button" data-scope="year" aria-pressed="true" onclick="agendaSetStatsScope('year')">Ano todo</button>
+          <button type="button" data-scope="month" aria-pressed="false" onclick="agendaSetStatsScope('month')">Mês aberto</button>
+        </div>
+        <div id="agendaStatsBody"></div>
+      </div>
+    </div>
+    <style>
+      #agendaStatsModal { z-index: 1000; }
+      .ast-box { max-width: 640px !important; }
+      .ast-scope { display:inline-flex; gap:2px; padding:3px; margin-bottom:12px; background:#efe4cb; border:1px solid #d3c495; border-radius:999px; }
+      .ast-scope button { font:inherit; font-size:14px; font-weight:700; padding:6px 14px; border:0; border-radius:999px; background:transparent; color:#6f6551; cursor:pointer; min-height:34px; }
+      .ast-scope button[aria-pressed="true"] { background:#1f3d33; color:#f8f2e4; }
+      .ast-tiles { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px; margin-bottom:10px; }
+      .ast-tile { background:rgba(255,255,255,0.6); border:1px solid #d3c495; border-radius:10px; padding:8px 6px; text-align:center; }
+      .ast-tile b { display:block; font-size:26px; line-height:1.1; color:#2c2620; }
+      .ast-tile span { font-size:12px; font-weight:700; color:#6f6551; }
+      .ast-tile.is-done b { color:#3f7d55; } .ast-tile.is-pend b { color:#2f5d8a; } .ast-tile.is-late b { color:#b3413a; }
+      .ast-rate { margin:4px 0 10px; }
+      .ast-rate-top { display:flex; justify-content:space-between; font-size:14px; font-weight:700; margin-bottom:4px; }
+      .ast-rate-track { height:12px; border-radius:999px; background:#e0d3ac; overflow:hidden; }
+      .ast-rate-track i { display:block; height:100%; background:#3f7d55; border-radius:999px; }
+      .ast-h { margin:14px 0 6px; font-size:15px; font-style:italic; font-weight:800; color:#2c2620; }
+      .ast-svg { width:100%; height:auto; display:block; }
+      .ast-grid { stroke:#d3c495; stroke-width:1; stroke-dasharray:2 3; }
+      .ast-axis { font:600 13px 'Times New Roman', Times, serif; fill:#6f6551; }
+      .ast-done { fill:#3f7d55; background:#3f7d55; } .ast-pending { fill:#2f5d8a; background:#2f5d8a; } .ast-late { fill:#b3413a; background:#b3413a; }
+      .ast-legend { display:flex; flex-wrap:wrap; gap:4px 14px; font-size:12.5px; font-weight:700; color:#6f6551; margin-top:4px; }
+      .ast-legend i { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
+      .ast-two { display:grid; grid-template-columns:1fr 1fr; gap:6px 22px; }
+      .ast-hrow { display:grid; grid-template-columns:78px minmax(0,1fr) 26px; align-items:center; gap:8px; margin:4px 0; font-size:13px; }
+      .ast-hlabel { font-weight:700; color:#2c2620; }
+      .ast-htrack { height:10px; background:#e0d3ac; border-radius:999px; overflow:hidden; }
+      .ast-htrack i { display:block; height:100%; background:#2f5d8a; border-radius:999px; }
+      .ast-hval { text-align:right; color:#2c2620; }
+      .ast-note { margin:14px 0 0; font-size:12.5px; line-height:1.5; color:#6f6551; }
+      .ast-empty { font-style:italic; line-height:1.5; color:#6f6551; margin:8px 0 4px; }
+      @media (max-width:520px) { .ast-two { grid-template-columns:1fr; } .ast-tile b { font-size:22px; } }
+    </style>`;
+    document.body.appendChild(wrap);
+    m = document.getElementById('agendaStatsModal');
+    document.addEventListener('keydown', function (e) {
+      const mm = document.getElementById('agendaStatsModal');
+      if (!mm || mm.style.display !== 'flex') return;
+      if (e.key === 'Escape') { e.preventDefault(); agendaCloseStats(); }
+      else if (e.key === 'Tab') {
+        const items = Array.from(mm.querySelectorAll('button')).filter(el => !el.disabled && el.offsetParent !== null);
+        if (!items.length) return;
+        const first = items[0], last = items[items.length - 1];
+        if (!mm.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+        else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    });
+  }
+  agendaStatsOpener = document.activeElement;
+  agendaRenderStats();
+  m.style.display = 'flex';
+  const b = m.querySelector('.ast-scope button[aria-pressed="true"]');
+  if (b) b.focus();
+}
+function agendaCloseStats() {
+  const m = document.getElementById('agendaStatsModal');
+  if (m) m.style.display = 'none';
+  if (agendaStatsOpener && document.contains(agendaStatsOpener) && agendaStatsOpener.focus) { try { agendaStatsOpener.focus({ preventScroll: true }); } catch (e) { /* ignora */ } }
+}
+
+function agendaRenderPending() {
+  const box = document.getElementById('agendaPendBox');
+  const list = document.getElementById('agendaPending');
+  const sub = document.getElementById('agendaPendSub');
+  if (!box || !list) return;
+  const todayKey = agendaIsoKey(new Date());
+  const late = [], ahead = [];
+  Object.keys(agendaNotesCache).sort().forEach(key => {
+    if (key.slice(0, 4) !== String(AGENDA_YEAR)) return;
+    const entries = agendaNotesCache[key] || [];
+    agendaDisplayOrder(entries).forEach(i => {
+      const e = entries[i];
+      if (!e || e.done) return;
+      (key < todayKey ? late : ahead).push({ key, e, idx: i });
+    });
+  });
+  if (!late.length && !ahead.length) { box.hidden = true; list.innerHTML = ''; return; }
+  const MAX_LATE = 6, MAX_AHEAD = 8;
+  const row = (it, isLate) => {
+    const date = agendaDateFromKey(it.key);
+    const when = agendaCleanTime(it.e.time);
+    const rel = agendaRelativeLabel(it.key) || AGENDA_WEEKDAY_ABBR[date.getDay()].toLowerCase();
+    return '<div class="agenda-pend-row"><button type="button" class="agenda-pend-check" data-key="' + it.key + '" data-idx="' + it.idx + '" title="Marcar como feita" aria-label="' + escapeHtml('Marcar como feita: ' + it.e.text) + '">○</button>' +
+      '<button type="button" class="agenda-item agenda-item-nota' + (isLate ? ' agenda-item-late is-past' : '') + (it.key === todayKey ? ' is-today' : '') + '" data-key="' + it.key + '"' +
+      ' aria-label="' + escapeHtml(agendaLongDate(date) + (when ? ', ' + when : '') + ', anotação ' + (isLate ? 'atrasada' : 'pendente') + ': ' + it.e.text) + '">' +
+      '<span class="agenda-item-date"><b>' + date.getDate() + '</b><small>' + AGENDA_MONTH_NAMES[date.getMonth()].slice(0, 3).toLowerCase() + '</small></span>' +
+      '<span class="agenda-item-main"><span class="agenda-item-note">' + escapeHtml(agendaEntryShort(it.e)) + '</span></span>' +
+      '<span class="agenda-item-when">' + escapeHtml(rel) + '</span></button></div>';
+  };
+  let html = '';
+  if (late.length) {
+    // As atrasadas mais recentes primeiro: são as que ainda dá para resolver.
+    const shown = late.slice(-MAX_LATE).reverse();
+    html += '<p class="agenda-pend-group is-late">Atrasadas · ' + late.length + '</p>' + shown.map(it => row(it, true)).join('');
+    if (late.length > shown.length) html += '<p class="agenda-pend-more">+ ' + (late.length - shown.length) + ' mais antigas (use a busca).</p>';
+  }
+  if (ahead.length) {
+    const shown = ahead.slice(0, MAX_AHEAD);
+    html += '<p class="agenda-pend-group">A fazer · ' + ahead.length + '</p>' + shown.map(it => row(it, false)).join('');
+    if (ahead.length > shown.length) html += '<p class="agenda-pend-more">+ ' + (ahead.length - shown.length) + ' mais adiante.</p>';
+  }
+  list.innerHTML = html;
+  list.onclick = (ev) => {
+    const chk = ev.target.closest ? ev.target.closest('.agenda-pend-check') : null;
+    if (chk) { agendaQuickDone(chk.dataset.key, Number(chk.dataset.idx), chk); return; }
+    const btn = ev.target.closest ? ev.target.closest('.agenda-item') : null;
+    if (!btn || !btn.dataset.key) return;
+    const d = agendaDateFromKey(btn.dataset.key);
+    agendaCurrentMonth = d.getMonth();
+    agendaFocusDay = d.getDate();
+    agendaOpenNoteModal(btn.dataset.key);
+  };
+  if (sub) sub.textContent = 'Toque no círculo para marcar como feita; toque no texto para abrir o dia.';
+  box.hidden = false;
 }
 
 // Painel "Hoje": sempre visível (funciona sem sincronizar). Mostra o tipo do
@@ -19264,10 +19732,11 @@ function agendaRenderTodayStatus() {
   const meta = [];
   if (Object.keys(AGENDA_DATA_INFO).length) meta.push(remaining === 0 ? 'último dia útil do mês' : (remaining === 1 ? 'falta 1 dia útil no mês' : 'faltam ' + remaining + ' dias úteis no mês'));
   meta.push(pending ? pending + (pending === 1 ? ' anotação pendente' : ' anotações pendentes') : 'sem anotações pendentes');
+  const lateN = (typeof argoLateCount === 'function') ? argoLateCount() : 0;
 
   el.innerHTML = '<span class="agenda-ts-date">' + escapeHtml(agendaLongDate(now)) + '</span>' +
     '<span class="agenda-ts-kind" data-kind="' + kindData + '"><i></i>' + escapeHtml(kindLabel) + '</span>' +
-    '<span class="agenda-ts-meta">' + escapeHtml(meta.join(' · ')) + '</span>' +
+    '<span class="agenda-ts-meta">' + escapeHtml(meta.join(' · ')) + (lateN ? ' · <span class="agenda-ts-late">' + lateN + (lateN === 1 ? ' atrasada' : ' atrasadas') + '</span>' : '') + '</span>' +
     '<button type="button" class="agenda-ts-add" onclick="agendaOpenNoteModal(\'' + key + '\')">＋ Anotar hoje</button>';
   el.hidden = false;
 }
@@ -19750,6 +20219,11 @@ function agendaEnsureModals() {
         <div id="agendaEditBanner" class="agenda-edit-banner" hidden><span>Editando uma anotação</span><button type="button" onclick="agendaCancelEdit()">Cancelar edição</button></div>
         <label for="agendaNoteInput" class="agenda-sr-only">Anotação do dia</label>
         <textarea id="agendaNoteInput" spellcheck="true" lang="pt-BR" autocorrect="on" autocapitalize="sentences" rows="3" maxlength="500" placeholder="Escrever nova anotação…" class="agenda-textarea" oninput="agendaUpdateNoteCounter()"></textarea>
+        <div class="agenda-time-row">
+          <label for="agendaNoteTime">Horário <small>(opcional)</small></label>
+          <input type="time" id="agendaNoteTime" class="agenda-time-input">
+          <button type="button" id="agendaNoteTimeClear" class="agenda-time-clear" hidden onclick="agendaClearNoteTime()">Sem horário</button>
+        </div>
         <div class="agenda-note-meta">
           <span id="agendaNoteHint" class="agenda-note-hint"></span>
           <span id="agendaNoteCounter" class="agenda-note-counter">0/500</span>
@@ -19816,6 +20290,13 @@ function agendaEnsureModals() {
       .agenda-note-counter { white-space:nowrap; }
       .agenda-btn-group { display:flex; gap:8px; }
       .agenda-btn-group button { font-family:inherit; font-size:15px; }
+      .agenda-time-row { display:flex; align-items:center; flex-wrap:wrap; gap:6px 10px; margin:2px 0 8px; font-size:14px; font-weight:700; color:#2c2620; }
+      .agenda-time-row small { font-weight:600; color:#6f6551; }
+      .agenda-time-input { font:inherit; font-size:16px; padding:6px 8px; border:1px solid #d3c495; border-radius:8px; background:rgba(255,255,255,0.6); color:#2c2620; min-height:38px; }
+      .agenda-time-input:focus-visible { outline:2px solid #1f3d33; outline-offset:1px; }
+      .agenda-time-clear { background:none; border:none; font:inherit; font-size:13px; font-weight:700; color:#8f2d27; text-decoration:underline; cursor:pointer; padding:4px 6px; }
+      .agenda-time-clear[hidden] { display:none; }
+      .agenda-entry-at { font-size:13px; font-weight:800; color:#1f3d33; background:rgba(31,61,51,0.1); border-radius:999px; padding:1px 8px; }
       .agenda-btn-save { flex:1; background:#1f3d33; color:#f8f2e4; border:none; padding:11px; border-radius:8px; font-weight:700; cursor:pointer; }
       .agenda-btn-save:hover:not(:disabled) { background:#14261f; }
       .agenda-btn-save:disabled { opacity:0.6; cursor:progress; }
@@ -19862,6 +20343,8 @@ function agendaEnsureModals() {
   // Clique num botão "Apagar" da lista de anotações do dia (delegado no
   // contêiner, que persiste entre re-renders — só o innerHTML dele muda a
   // cada agendaRenderEntriesList).
+  const timeInput = document.getElementById('agendaNoteTime');
+  if (timeInput) { timeInput.addEventListener('input', agendaSyncTimeClear); timeInput.addEventListener('change', agendaSyncTimeClear); }
   const entriesList = document.getElementById('agendaEntriesList');
   if (entriesList) {
     entriesList.addEventListener('click', (ev) => {
@@ -19914,6 +20397,15 @@ function agendaNoteIsDirty() {
   return !!input && input.value.trim() !== '';
 }
 
+function agendaClearNoteTime() {
+  const t = document.getElementById('agendaNoteTime');
+  if (t) { t.value = ''; agendaSyncTimeClear(); t.focus(); }
+}
+function agendaSyncTimeClear() {
+  const t = document.getElementById('agendaNoteTime'), b = document.getElementById('agendaNoteTimeClear');
+  if (t && b) b.hidden = !t.value;
+}
+
 function agendaUpdateNoteCounter() {
   const input = document.getElementById('agendaNoteInput');
   const counter = document.getElementById('agendaNoteCounter');
@@ -19937,13 +20429,17 @@ function agendaRenderEntriesList(key) {
   const list = document.getElementById('agendaEntriesList');
   if (!list) return;
   const entries = agendaNotesCache[key] || [];
-  list.innerHTML = entries.map((e, idx) => {
-    const time = agendaEntryTimeLabel(e.createdAt);
+  list.innerHTML = agendaDisplayOrder(entries).map((idx) => {
+    const e = entries[idx];
+    const when = agendaCleanTime(e.time);
+    const written = when ? '' : agendaEntryTimeLabel(e.createdAt);
+    const time = written ? 'escrita ' + written : '';
     const label = (time || '') + (e.editedAt ? (time ? ' · ' : '') + 'editada' : '');
     return '<div class="agenda-entry-item' + (e.done ? ' is-done' : '') + (idx === agendaEditingIdx ? ' is-editing' : '') + '">' +
       '<div class="agenda-entry-meta">' +
         '<label class="agenda-entry-check"><input type="checkbox" class="agenda-entry-done" data-idx="' + idx + '"' + (e.done ? ' checked' : '') + ' aria-label="Marcar como feita">' +
-          '<span class="agenda-entry-time">' + escapeHtml(label || (e.done ? 'feita' : 'pendente')) + '</span></label>' +
+          (when ? '<span class="agenda-entry-at">🕒 ' + when + '</span>' : '') +
+          '<span class="agenda-entry-time">' + escapeHtml(label || (e.done ? 'feita' : (when ? '' : 'pendente'))) + '</span></label>' +
         '<span class="agenda-entry-actions">' +
           '<button type="button" class="agenda-entry-edit" data-idx="' + idx + '" aria-label="Editar esta anotação">Editar</button>' +
           '<button type="button" class="agenda-entry-del" data-idx="' + idx + '" aria-label="Apagar esta anotação">Apagar</button>' +
@@ -19974,6 +20470,8 @@ function agendaStartEdit(idx) {
   agendaEditingIdx = idx;
   const input = document.getElementById('agendaNoteInput');
   input.value = e.text;
+  const ti = document.getElementById('agendaNoteTime');
+  if (ti) { ti.value = agendaCleanTime(e.time); agendaSyncTimeClear(); }
   agendaUpdateNoteCounter();
   agendaRenderEntriesList(key);
   agendaSyncSaveLabel();
@@ -19986,6 +20484,8 @@ function agendaCancelEdit() {
   agendaEditingIdx = -1;
   const input = document.getElementById('agendaNoteInput');
   if (input) { input.value = ''; agendaUpdateNoteCounter(); input.focus(); }
+  const ti = document.getElementById('agendaNoteTime');
+  if (ti) { ti.value = ''; agendaSyncTimeClear(); }
   if (agendaSelectedKey) agendaRenderEntriesList(agendaSelectedKey);
   agendaSyncSaveLabel();
 }
@@ -20004,7 +20504,12 @@ async function agendaToggleDone(idx, box) {
   }
   agendaBusy = true;
   const nowDone = !base[idx].done;
-  const newEntries = base.map((e, i) => i === idx ? Object.assign({}, e, { done: nowDone }) : e);
+  const newEntries = base.map((e, i) => {
+    if (i !== idx) return e;
+    const upd = Object.assign({}, e, { done: nowDone });
+    if (nowDone) upd.doneAt = Date.now(); else delete upd.doneAt;
+    return upd;
+  });
   try {
     const outcome = await agendaCommitEntries(key, newEntries);
     agendaNotesCache[key] = newEntries;
@@ -20049,6 +20554,8 @@ function agendaOpenNoteModal(key) {
   const input = document.getElementById('agendaNoteInput');
   input.value = '';
   agendaNoteOriginal = '';
+  const ti0 = document.getElementById('agendaNoteTime');
+  if (ti0) { ti0.value = ''; agendaSyncTimeClear(); }
   agendaUpdateNoteCounter();
 
   const hint = document.getElementById('agendaNoteHint');
@@ -20146,9 +20653,15 @@ async function agendaSaveNote() {
   const key = agendaSelectedKey;
   const base = agendaNotesCache[key] || [];
   const editing = agendaEditingIdx >= 0 && !!base[agendaEditingIdx];
+  const timeVal = agendaCleanTime((document.getElementById('agendaNoteTime') || {}).value);
   const newEntries = editing
-    ? base.map((e, i) => i === agendaEditingIdx ? Object.assign({}, e, { text: txt, editedAt: Date.now() }) : e)
-    : base.concat([{ text: txt, createdAt: Date.now() }]);
+    ? base.map((e, i) => {
+        if (i !== agendaEditingIdx) return e;
+        const upd = Object.assign({}, e, { text: txt, editedAt: Date.now() });
+        if (timeVal) upd.time = timeVal; else delete upd.time;
+        return upd;
+      })
+    : base.concat([Object.assign({ text: txt, createdAt: Date.now() }, timeVal ? { time: timeVal } : {})]);
   try {
     const outcome = await agendaCommitEntries(key, newEntries);
     // Atualiza a tela na hora (não espera a confirmação em tempo real do
@@ -20156,6 +20669,8 @@ async function agendaSaveNote() {
     agendaNotesCache[key] = newEntries;
     agendaEditingIdx = -1;
     input.value = '';
+    const tiS = document.getElementById('agendaNoteTime');
+    if (tiS) { tiS.value = ''; agendaSyncTimeClear(); }
     agendaUpdateNoteCounter();
     agendaRenderEntriesList(key);
     agendaRenderCalendar();
@@ -20196,7 +20711,7 @@ async function agendaDeleteEntry(idx) {
   try {
     const outcome = await agendaCommitEntries(key, newEntries);
     agendaNotesCache[key] = newEntries;
-    if (agendaEditingIdx >= 0) { agendaEditingIdx = -1; const inp = document.getElementById('agendaNoteInput'); if (inp) { inp.value = ''; agendaUpdateNoteCounter(); } agendaSyncSaveLabel(); }
+    if (agendaEditingIdx >= 0) { agendaEditingIdx = -1; const inp = document.getElementById('agendaNoteInput'); if (inp) { inp.value = ''; agendaUpdateNoteCounter(); } const tiD = document.getElementById('agendaNoteTime'); if (tiD) { tiD.value = ''; agendaSyncTimeClear(); } agendaSyncSaveLabel(); }
     agendaRenderEntriesList(key);
     agendaRenderCalendar();
     if (outcome === 'ok') agendaToast('Anotação apagada.');
