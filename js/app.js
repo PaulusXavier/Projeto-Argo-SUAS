@@ -18773,7 +18773,7 @@ function renderAgendaCard() {
         .agenda-spread { display: grid; grid-template-columns: minmax(0, 1fr); }
         .agenda-cal { display: flex; flex-direction: column; min-width: 0; }
         .agenda-cal #agendaCalendarGrid { flex: 1 1 auto; }
-        .agenda-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); padding: 4px 14px; text-align: center; border-bottom: 2px solid var(--gold); margin: 0 4px; }
+        .agenda-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); column-gap: 1px; padding: 4px 0 0; text-align: center; border-bottom: 2px solid var(--gold); margin: 0 10px; }
         .agenda-weekdays div { font-size: 11px; font-weight: 800; letter-spacing: 0.3px; color: var(--ink-muted); padding-bottom: 6px; }
         .agenda-weekdays .agenda-dom { color: var(--red-ink); }
         #agendaCalendarGrid { container-type: inline-size; display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: minmax(var(--agenda-cell-min, 76px), 1fr); gap: 1px; padding: 6px 10px 8px; }
@@ -18853,7 +18853,7 @@ function renderAgendaCard() {
           .agenda-monthbar { order: 3; flex: 1 1 100%; }
           .agenda-nav-controls { flex: 1; justify-content: space-between; }
           .agenda-month-display { min-width: 0; flex: 1; }
-          .agenda-weekdays { padding: 4px 8px; margin: 0 2px; }
+          .agenda-weekdays { column-gap: 2px; margin: 0 6px; }
           .agenda-weekdays div { font-size: 10px; }
           #agendaCalendarGrid { padding: 4px 6px 6px; gap: 2px; }
           .agenda-day-cell { padding: 3px 3px; }
@@ -18976,6 +18976,17 @@ function renderAgendaCard() {
         .agenda-ts-add { margin-left: auto; min-height: 32px; padding: 3px 13px; border-radius: 999px; border: 1px solid var(--gold); background: transparent; color: var(--cover); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
         .agenda-ts-add:hover { background: rgba(184, 137, 79, 0.18); }
         @media (max-width: 600px) { .agenda-today-status { margin: 0 10px 8px; } .agenda-ts-add { margin-left: 0; } }
+
+        /* Dias que já passaram ficam mais discretos, para o olho ir direto ao que vem pela frente. */
+        .agenda-day-cell.agenda-is-past:not(.agenda-is-today) .agenda-day-num { opacity: 0.55; }
+        .agenda-day-cell.agenda-is-past:not(.agenda-is-today) .agenda-badge-status { opacity: 0.6; }
+        /* Limites do ano: a seta deixa de girar em silêncio de dezembro para janeiro. */
+        .agenda-nav-btn[aria-disabled="true"] { opacity: 0.3; cursor: not-allowed; }
+        .agenda-nav-btn[aria-disabled="true"]:hover { background: none; color: var(--ink-muted); }
+        /* Folgas prolongadas (feriado/facultativo emendado com fim de semana). */
+        .agenda-longweekend { margin: 6px 0 0; padding: 6px 9px; font-size: 12.5px; line-height: 1.45; color: var(--ink); background: rgba(184, 137, 79, 0.14); border-left: 3px solid var(--gold); border-radius: 4px; }
+        .agenda-longweekend[hidden] { display: none; }
+        .agenda-longweekend b { color: var(--cover); }
         @media (max-width: 600px) {
           /* O calendário é o que a pessoa veio ver: sobe para a primeira tela.
              Resumos, atalhos do Argo e "próximo marco" descem para depois dele. */
@@ -19020,9 +19031,9 @@ function renderAgendaCard() {
             </div>
             <div class="agenda-monthbar">
               <div class="agenda-nav-controls">
-                <button type="button" class="agenda-nav-btn" onclick="agendaChangeMonth(-1)" aria-label="Mês anterior">◀</button>
+                <button type="button" class="agenda-nav-btn" id="agendaPrevBtn" onclick="agendaChangeMonth(-1)" aria-label="Mês anterior">◀</button>
                 <span id="agendaMonthDisplay" class="agenda-month-display" aria-live="polite">Janeiro</span>
-                <button type="button" class="agenda-nav-btn" onclick="agendaChangeMonth(1)" aria-label="Próximo mês">▶</button>
+                <button type="button" class="agenda-nav-btn" id="agendaNextBtn" onclick="agendaChangeMonth(1)" aria-label="Próximo mês">▶</button>
               </div>
               <button type="button" id="agendaTodayBtn" class="agenda-today-btn" onclick="agendaGoToday()" hidden>Ir para hoje</button>
             </div>
@@ -19081,6 +19092,7 @@ function renderAgendaCard() {
               </div>
               <p class="agenda-side-sub" id="agendaMonthSummary"></p>
               <p class="agenda-side-sub" id="agendaBusinessDays" title="Segunda a sexta, sem feriados nem pontos facultativos"></p>
+              <p class="agenda-longweekend" id="agendaLongWeekend" hidden></p>
               <div class="agenda-list" id="agendaMonthList"></div>
               <section class="agenda-up-box" id="agendaUpBox" hidden aria-labelledby="agendaUpTitle">
                 <h4 class="agenda-side-title" id="agendaUpTitle">Próximos marcos</h4>
@@ -19165,6 +19177,7 @@ function agendaRenderCalendar() {
 
       const isToday = isThisMonth && today.getDate() === d;
       if (isToday) cell.classList.add('agenda-is-today');
+      else if (inYear && date < new Date(today.getFullYear(), today.getMonth(), today.getDate())) cell.classList.add('agenda-is-past');
 
       let html = '<span class="agenda-day-num">' + d + '</span>';
       if (note) html += '<i class="agenda-note-dot" aria-hidden="true"></i>';
@@ -19196,6 +19209,7 @@ function agendaRenderCalendar() {
         if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); agendaFocusDay = d; agendaOpenNoteModal(key); return; }
         const moves = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
         if (moves[ev.key] !== undefined) { ev.preventDefault(); agendaMoveFocus(d, moves[ev.key]); }
+        else if (ev.key === 't' || ev.key === 'T') { ev.preventDefault(); agendaGoToday(); requestAnimationFrame(() => { const t = grid.querySelector('.agenda-is-today'); if (t) t.focus(); }); }
         else if (ev.key === 'PageUp') { ev.preventDefault(); agendaChangeMonth(-1, d); }
         else if (ev.key === 'PageDown') { ev.preventDefault(); agendaChangeMonth(1, d); }
       });
@@ -19214,6 +19228,7 @@ function agendaRenderCalendar() {
     if (again) again.focus({ preventScroll: true });
   }
 
+  agendaUpdateNavButtons();
   agendaRenderMonthList();
   agendaRenderTodayStatus();
   agendaRenderNextStrip();
@@ -19474,6 +19489,7 @@ function agendaRenderMonthList() {
   const list = document.getElementById('agendaMonthList');
   const summary = document.getElementById('agendaMonthSummary');
   if (!list) return;
+  agendaRenderLongWeekends();
   const title = document.getElementById('agendaSideTitle');
   if (title) title.textContent = agendaSearchQuery ? 'Resultados da busca' : 'Neste mês';
   if (agendaSearchQuery) { agendaRenderSearchResults(list, summary); return; }
@@ -19548,6 +19564,38 @@ function agendaRenderMonthList() {
   }
 }
 
+// Folgas prolongadas do mês: sequências de 3+ dias sem expediente (fim de
+// semana + feriado/facultativo) que tenham pelo menos uma data cadastrada.
+function agendaLongWeekends(m) {
+  const out = [];
+  const count = agendaDaysInMonth(m);
+  let d = 1;
+  while (d <= count) {
+    if (argoAgIsBusiness(m, d)) { d++; continue; }
+    let e = d, marked = false;
+    while (e <= count && !argoAgIsBusiness(m, e)) {
+      const info = AGENDA_DATA_INFO[agendaKeyFor(m, e)];
+      const k = info ? argoAgendaKind(info) : '';
+      if (k === 'feriado' || k === 'facultativo') marked = true;
+      e++;
+    }
+    if (marked && e - d >= 3) out.push({ from: d, to: e - 1, days: e - d });
+    d = e;
+  }
+  return out;
+}
+
+function agendaRenderLongWeekends() {
+  const el = document.getElementById('agendaLongWeekend');
+  if (!el) return;
+  const list = agendaSearchQuery ? [] : agendaLongWeekends(agendaCurrentMonth);
+  if (!list.length) { el.hidden = true; el.textContent = ''; return; }
+  const mm = String(agendaCurrentMonth + 1).padStart(2, '0');
+  const fmt = n => String(n).padStart(2, '0');
+  el.innerHTML = list.map(r => '🏖️ <b>Folga de ' + r.days + ' dias:</b> ' + fmt(r.from) + (r.to !== r.from ? ' a ' + fmt(r.to) : '') + '/' + mm).join('<br>');
+  el.hidden = false;
+}
+
 // Dias úteis do mês: segunda a sexta, sem feriados nem pontos facultativos
 // cadastrados (conta mesmo com o filtro da legenda escondendo esses tipos).
 function agendaBusinessDays(m) {
@@ -19597,8 +19645,22 @@ function agendaExportIcs() {
   agendaToast('Datas de ' + AGENDA_YEAR + ' baixadas (' + keys.length + ' eventos)' + (AGENDA_DATA_ESTIMATED ? '. Atenção: só os feriados calculados; sem pagamentos.' : '.'), 'ok');
 }
 
+// As setas param em janeiro e dezembro (a agenda cobre um ano só), em vez de
+// girar em silêncio de dezembro para janeiro do mesmo ano.
+function agendaUpdateNavButtons() {
+  const prev = document.getElementById('agendaPrevBtn');
+  const next = document.getElementById('agendaNextBtn');
+  if (prev) prev.setAttribute('aria-disabled', agendaCurrentMonth <= 0 ? 'true' : 'false');
+  if (next) next.setAttribute('aria-disabled', agendaCurrentMonth >= 11 ? 'true' : 'false');
+}
+
 function agendaChangeMonth(delta, keepDay) {
-  agendaCurrentMonth = (agendaCurrentMonth + delta + 12) % 12;
+  const target = agendaCurrentMonth + delta;
+  if (target < 0 || target > 11) {
+    agendaToast('A agenda cobre apenas ' + AGENDA_YEAR + (target < 0 ? ': este é o primeiro mês.' : ': este é o último mês.'));
+    return;
+  }
+  agendaCurrentMonth = target;
   agendaFocusDay = keepDay ? Math.min(keepDay, agendaDaysInMonth(agendaCurrentMonth)) : 0;
   agendaRenderCalendar();
   if (keepDay) agendaFocusCell(agendaFocusDay);
