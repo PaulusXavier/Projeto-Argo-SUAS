@@ -16943,44 +16943,6 @@ function appIsUnlocked() {
   return !!root && root.dataset.locked === 'false';
 }
 
-/* ---- 1) filtro do menu lateral ---- */
-(function initSidebarFilter() {
-  const input = document.getElementById('sidebarFilter');
-  const empty = document.getElementById('sidebarFilterEmpty');
-  if (!input) return;
-
-  function apply() {
-    const q = navNorm(input.value);
-    let anyVisible = false;
-    navAllChips().forEach(chip => {
-      if (chip.closest('[data-quick-only]')) return; // não aparecem na grade lateral
-      const group = chip.closest('.filter-group');
-      const groupName = group ? navNorm((group.querySelector('.filter-group-label') || {}).textContent) : '';
-      const hay = navNorm(navChipName(chip)) + ' ' + groupName;
-      const match = !q || q.split(/\s+/).every(t => hay.includes(t));
-      chip.classList.toggle('nav-hidden', !match);
-      if (match) anyVisible = true;
-    });
-    document.querySelectorAll('#filterBar .filter-group').forEach(g => {
-      const has = g.querySelector('.filter-chip:not(.nav-hidden)');
-      g.classList.toggle('nav-hidden', !has);
-    });
-    if (empty) empty.hidden = anyVisible;
-  }
-
-  input.addEventListener('input', apply);
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      const first = Array.from(document.querySelectorAll('#filterBar .filter-chip:not(.nav-hidden)')).find(c => !c.closest('[data-quick-only]'));
-      if (first) { e.preventDefault(); first.click(); input.value = ''; apply(); }
-    } else if (e.key === 'Escape' && input.value) {
-      e.stopPropagation();
-      input.value = '';
-      apply();
-    }
-  });
-})();
-
 function scrollActiveChipIntoView() {
   const a = document.querySelector('#filterBar .filter-chip.active');
   if (a && a.scrollIntoView) { try { a.scrollIntoView({ block: 'center' }); } catch (e) { /* ignora */ } }
@@ -17135,9 +17097,7 @@ document.addEventListener('keydown', e => {
       const sel = document.getElementById('tabFocusJump');
       if (sel) { sel.focus(); try { sel.showPicker && sel.showPicker(); } catch (err) { /* ignora */ } }
     } else {
-      const f = document.getElementById('sidebarFilter');
       if (mobileSidebarQuery.matches) openCategorySidebar();
-      if (f) { f.focus(); f.select(); }
     }
     return;
   }
@@ -17155,7 +17115,6 @@ document.addEventListener('keydown', e => {
       else if (document.getElementById('noticiasFilter')) target = document.getElementById('noticiasFilter');
       else target = document.getElementById('tabFocusJump');
     } else if (main && !main.disabled) target = main;
-    else target = document.getElementById('sidebarFilter');
     if (target) { e.preventDefault(); target.focus(); if (target.select) target.select(); }
   }
 });
@@ -18952,6 +18911,87 @@ function renderAgendaCard() {
         .agenda-badge-pagamento { background-color: var(--green-ink); }
         .agenda-badge-extra { background-color: var(--blue-ink); }
         .agenda-note-preview { font-family: 'Caveat', cursive; font-size: 15px; line-height: 1; font-weight: 700; color: var(--blue-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; transform: rotate(-1.5deg); transform-origin: left center; }
+        /* Anotações do dia por extenso: quebram em várias linhas, sem cortar com "…". */
+        .agenda-cal-notes { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1 1 auto; }
+        .agenda-note-line { display: flex; align-items: flex-start; gap: 5px; font-family: 'Caveat', cursive; font-size: 17px; line-height: 1.12; font-weight: 700; color: var(--blue-ink); white-space: pre-line; overflow-wrap: anywhere; word-break: break-word; }
+        .agenda-note-line + .agenda-note-line { padding-top: 3px; border-top: 1px dotted rgba(47, 93, 138, 0.35); }
+        .agenda-note-line .agenda-note-time { font-family: 'Times New Roman', Times, serif; font-size: 11px; font-weight: 800; color: var(--ink-muted); margin-right: 4px; }
+        /* A grade ocupa a altura da tela (em vez de parar nos 76px por linha) e cresce
+           sozinha quando um dia tem muito texto. --agenda-rows é definido ao montar o mês. */
+        @media (min-width: 601px) {
+          #agendaCalendarGrid { grid-auto-rows: minmax(max(var(--agenda-cell-min, 76px), calc((100dvh - var(--agenda-chrome, 300px)) / var(--agenda-rows, 5))), auto); gap: 2px; }
+          .agenda-day-cell { padding: 6px 8px; gap: 4px; }
+          .agenda-day-num { font-size: calc(15px * var(--agenda-zoom)); }
+          .agenda-weekdays div { font-size: calc(12px * var(--agenda-zoom)); }
+        }
+        /* Zoom (A− / A+) e modo "só calendário": escolhas guardadas neste aparelho. */
+        .agenda-book { --agenda-zoom: 1; --agenda-chrome: 300px; }
+        .agenda-book.agenda-calfocus { --agenda-chrome: 200px; }
+        .agenda-note-line { font-size: calc(17px * var(--agenda-zoom)); }
+        .agenda-note-line .agenda-note-time { font-size: calc(11px * var(--agenda-zoom)); }
+        .agenda-day-num { font-size: calc(13px * var(--agenda-zoom)); }
+        .agenda-weekdays div { font-size: calc(11px * var(--agenda-zoom)); }
+        .agenda-badge-status { font-size: calc(9px * var(--agenda-zoom)); }
+        .agenda-view-btn { min-width: 36px; height: 36px; padding: 0 8px; border-radius: 18px; border: 1px solid var(--rule-line); background: var(--paper-alt); color: var(--cover); font: 800 14px/1 'Times New Roman', Times, serif; cursor: pointer; }
+        .agenda-view-btn:hover { border-color: var(--gold); background: rgba(184, 137, 79, 0.18); }
+        .agenda-view-btn[aria-pressed="true"] { background: var(--cover); color: var(--paper); border-color: var(--cover); }
+        .agenda-view-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+        @media (max-width: 600px) { #agendaCalFocusBtn { display: none; } }
+        .agenda-book.agenda-calfocus .agenda-side,
+        .agenda-book.agenda-calfocus .agenda-next-strip,
+        .agenda-book.agenda-calfocus .agenda-argo-row,
+        .agenda-book.agenda-calfocus .agenda-today-status,
+        .agenda-book.agenda-calfocus .agenda-today-banner,
+        .agenda-book.agenda-calfocus .agenda-estimate-note,
+        .agenda-book.agenda-calfocus .agenda-privacy { display: none !important; }
+        .agenda-book.agenda-calfocus .agenda-spread { grid-template-columns: minmax(0, 1fr); }
+        /* Visão de semana: sete colunas altas, letras maiores, "＋ anotar" ao passar o mouse. */
+        .agenda-book.agenda-week .agenda-note-line { font-size: calc(21px * var(--agenda-zoom)); line-height: 1.15; }
+        .agenda-book.agenda-week .agenda-day-num { font-size: calc(20px * var(--agenda-zoom)); }
+        .agenda-book.agenda-week .agenda-note-line .agenda-note-time { font-size: calc(13px * var(--agenda-zoom)); }
+        .agenda-book.agenda-week .agenda-badge-status { font-size: calc(12px * var(--agenda-zoom)); padding: 4px 6px; }
+        .agenda-book.agenda-week .agenda-day-cell:not(.agenda-day-out)::after { content: '＋ anotar'; font-size: 12px; font-weight: 700; color: var(--ink-muted); opacity: 0; transition: opacity 0.12s; }
+        .agenda-book.agenda-week .agenda-day-cell:not(.agenda-day-out):hover::after,
+        .agenda-book.agenda-week .agenda-day-cell:focus-visible::after { opacity: 0.85; }
+        /* Dia de hoje: moldura grossa, fundo mais forte, selo "HOJE" e o dia da semana marcado no topo. */
+        .agenda-day-cell.agenda-is-today { background-color: rgba(184, 137, 79, 0.34); box-shadow: inset 0 0 0 3px var(--cover), 0 4px 16px rgba(31, 61, 51, 0.32); position: relative; z-index: 1; animation: agendaTodayPulse 2.8s ease-in-out infinite; }
+        .agenda-day-cell.agenda-is-today .agenda-day-num { width: calc(30px * var(--agenda-zoom)); height: calc(30px * var(--agenda-zoom)); font-size: calc(16px * var(--agenda-zoom)); box-shadow: 0 2px 6px rgba(20, 38, 31, 0.4); }
+        .agenda-book.agenda-week .agenda-day-cell.agenda-is-today .agenda-day-num { width: calc(38px * var(--agenda-zoom)); height: calc(38px * var(--agenda-zoom)); font-size: calc(22px * var(--agenda-zoom)); }
+        .agenda-day-cell.agenda-is-today .agenda-note-line { color: #1c4a78; }
+        .agenda-today-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .agenda-today-tag { background: var(--cover); color: var(--paper); font: 800 calc(10px * var(--agenda-zoom))/1 'Times New Roman', Times, serif; letter-spacing: 0.6px; padding: 4px 7px; border-radius: 999px; }
+        .agenda-weekdays .agenda-wd-today { color: var(--cover); background: rgba(184, 137, 79, 0.30); border-radius: 6px 6px 0 0; box-shadow: inset 0 -3px 0 var(--cover); }
+        @keyframes agendaTodayPulse { 0%, 100% { box-shadow: inset 0 0 0 3px var(--cover), 0 4px 16px rgba(31, 61, 51, 0.32); } 50% { box-shadow: inset 0 0 0 3px var(--cover), 0 4px 22px rgba(184, 137, 79, 0.75); } }
+        @media (prefers-reduced-motion: reduce) { .agenda-day-cell.agenda-is-today { animation: none; } }
+        /* Concluir direto na grade (○) e ver as concluídas riscadas (botão ✓ Concluídas). */
+        .agenda-note-text { min-width: 0; flex: 1 1 auto; }
+        .agenda-cell-check { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: calc(18px * var(--agenda-zoom)); height: calc(18px * var(--agenda-zoom)); margin-top: 2px; padding: 0; border-radius: 50%; border: 2px solid currentColor; background: transparent; color: var(--blue-ink); cursor: pointer; font-size: 0; line-height: 1; }
+        .agenda-cell-check:hover, .agenda-cell-check:focus-visible { background: rgba(63, 125, 85, 0.25); border-color: var(--green-ink); color: var(--green-ink); }
+        .agenda-cell-check:hover::after, .agenda-cell-check:focus-visible::after { content: '✓'; font: 800 calc(12px * var(--agenda-zoom))/1 'Times New Roman', Times, serif; }
+        .agenda-cell-check:disabled { opacity: 0.5; cursor: progress; }
+        .agenda-has-late .agenda-cell-check { color: #8f2f29; }
+        .agenda-note-line.is-done { color: var(--ink-muted); opacity: 0.75; }
+        .agenda-note-line.is-done .agenda-note-text { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+        .agenda-note-done-mark { flex: 0 0 auto; width: calc(18px * var(--agenda-zoom)); text-align: center; color: var(--green-ink); font: 800 calc(14px * var(--agenda-zoom))/1.3 'Times New Roman', Times, serif; }
+        @media (max-width: 600px) { .agenda-cell-check { display: none; } }
+        /* Fins de semana mais estreitos: sobra largura para os dias de trabalho. */
+        @media (min-width: 601px) {
+          .agenda-book.agenda-narrowwe #agendaCalendarGrid,
+          .agenda-book.agenda-narrowwe .agenda-weekdays { grid-template-columns: 0.6fr repeat(5, minmax(0, 1fr)) 0.6fr; }
+        }
+        @media (max-width: 600px) { #agendaNarrowBtn { display: none; } }
+        /* Busca ativa: o que combina com o termo se destaca na grade; o resto esmaece. */
+        .agenda-note-line.is-match .agenda-note-text { background: rgba(240, 200, 60, 0.55); border-radius: 3px; box-shadow: 0 0 0 2px rgba(240, 200, 60, 0.55); }
+        .agenda-note-line.is-dim { opacity: 0.3; }
+        .agenda-day-cell.agenda-search-dim { opacity: 0.55; }
+        .agenda-day-cell.agenda-search-hit { box-shadow: inset 0 0 0 2px #c79a1f; }
+        .agenda-late-chip { border: 1px solid var(--red-ink); background: rgba(179, 65, 58, 0.10); color: #8f2f29; border-radius: 20px; padding: 7px 12px; font: 800 13px/1 'Times New Roman', Times, serif; cursor: pointer; }
+        .agenda-late-chip:hover { background: rgba(179, 65, 58, 0.2); }
+        .agenda-late-chip[hidden] { display: none; }
+        @media (max-width: 600px) { #agendaWeekBtn { display: none; } }
+        /* Dia passado com anotação ainda em aberto: faixa vermelha à esquerda. */
+        .agenda-day-cell.agenda-has-late { box-shadow: inset 4px 0 0 var(--red-ink); }
+        .agenda-day-cell.agenda-has-late .agenda-note-line { color: #8f2f29; }
         /* Grade média: sigla um pouco maior. Grade larga: nome por extenso. */
         @container (min-width: 470px) {
           .agenda-badge-status { font-size: 10px; padding: 2px 4px; }
@@ -19214,8 +19254,15 @@ function renderAgendaCard() {
                 <button type="button" class="agenda-nav-btn" id="agendaNextBtn" onclick="agendaChangeMonth(1)" aria-label="Próximo mês">▶</button>
               </div>
               <button type="button" id="agendaTodayBtn" class="agenda-today-btn" onclick="agendaGoToday()" hidden>Ir para hoje</button>
+              <button type="button" id="agendaLateChip" class="agenda-late-chip" onclick="agendaJumpLate()" hidden></button>
             </div>
             <div class="agenda-tools">
+              <button type="button" class="agenda-view-btn" id="agendaZoomOut" title="Diminuir letras do calendário" aria-label="Diminuir letras do calendário" onclick="agendaZoom(-1)">A−</button>
+              <button type="button" class="agenda-view-btn" id="agendaZoomIn" title="Aumentar letras do calendário" aria-label="Aumentar letras do calendário" onclick="agendaZoom(1)">A+</button>
+              <button type="button" class="agenda-view-btn" id="agendaNarrowBtn" aria-pressed="false" title="Deixar sábado e domingo mais estreitos (tecla E)" onclick="agendaToggleNarrow()">⇔ Fins de sem.</button>
+              <button type="button" class="agenda-view-btn" id="agendaDoneBtn" aria-pressed="false" title="Mostrar também as anotações concluídas, riscadas (tecla C)" onclick="agendaToggleShowDone()">✓ Concluídas</button>
+              <button type="button" class="agenda-view-btn" id="agendaWeekBtn" aria-pressed="false" title="Alternar entre mês e semana (tecla W)" onclick="agendaToggleWeek()">📆 Semana</button>
+              <button type="button" class="agenda-view-btn" id="agendaCalFocusBtn" aria-pressed="false" title="Só o calendário: esconde a lista lateral e os avisos (tecla F)" onclick="agendaToggleCalFocus()">⛶ Só calendário</button>
               <button type="button" id="agendaNotifyBtn" class="agenda-sync-btn" title="Notificar sobre a semana" aria-label="Notificar sobre a semana" onclick="agendaToggleNotify()">
                 🔔<span id="agendaNotifyDot" class="agenda-sync-dot agenda-sync-off"></span>
               </button>
@@ -19303,6 +19350,113 @@ function renderAgendaCard() {
   `;
 }
 
+// Visual escolhido neste aparelho: tamanho das letras e modo "só calendário".
+const AGENDA_ZOOM_STEPS = [0.9, 1, 1.15, 1.3, 1.5, 1.75];
+function agendaViewLoad() {
+  try { const v = JSON.parse(localStorage.getItem('argoAgendaView') || '{}'); return { zoom: AGENDA_ZOOM_STEPS.includes(v.zoom) ? v.zoom : 1, calfocus: !!v.calfocus, week: !!v.week, showDone: !!v.showDone, narrowWe: !!v.narrowWe }; }
+  catch (e) { return { zoom: 1, calfocus: false, week: false, showDone: false, narrowWe: false }; }
+}
+function agendaViewSave(v) { try { localStorage.setItem('argoAgendaView', JSON.stringify(v)); } catch (e) { /* sem armazenamento: vale só nesta sessão */ } }
+function agendaApplyView() {
+  const book = document.getElementById('agendaBook');
+  if (!book) return;
+  const v = agendaViewLoad();
+  book.style.setProperty('--agenda-zoom', String(v.zoom));
+  book.classList.toggle('agenda-calfocus', v.calfocus);
+  book.classList.toggle('agenda-week', agendaWeekOn());
+  book.classList.toggle('agenda-narrowwe', v.narrowWe);
+  const i = AGENDA_ZOOM_STEPS.indexOf(v.zoom);
+  const out = document.getElementById('agendaZoomOut'), inn = document.getElementById('agendaZoomIn'), cf = document.getElementById('agendaCalFocusBtn');
+  if (out) out.disabled = i <= 0;
+  if (inn) inn.disabled = i >= AGENDA_ZOOM_STEPS.length - 1;
+  if (cf) cf.setAttribute('aria-pressed', v.calfocus ? 'true' : 'false');
+  const nb = document.getElementById('agendaNarrowBtn');
+  if (nb) nb.setAttribute('aria-pressed', v.narrowWe ? 'true' : 'false');
+  const dn = document.getElementById('agendaDoneBtn');
+  if (dn) dn.setAttribute('aria-pressed', v.showDone ? 'true' : 'false');
+  const wk = document.getElementById('agendaWeekBtn');
+  if (wk) { wk.setAttribute('aria-pressed', agendaWeekOn() ? 'true' : 'false'); wk.textContent = agendaWeekOn() ? '📆 Mês' : '📆 Semana'; }
+}
+// Semana só em tela larga (no celular as 7 colunas ficariam estreitas demais).
+function agendaWeekOn() {
+  return !!agendaViewLoad().week && !(window.matchMedia && window.matchMedia('(max-width: 600px)').matches);
+}
+let agendaWeekAnchor = 1;   // dia do mês que define a semana mostrada
+function agendaToggleNarrow() {
+  const v = agendaViewLoad();
+  v.narrowWe = !v.narrowWe;
+  agendaViewSave(v);
+  agendaApplyView();
+}
+function agendaToggleShowDone() {
+  const v = agendaViewLoad();
+  v.showDone = !v.showDone;
+  agendaViewSave(v);
+  agendaRenderCalendar();
+}
+function agendaToggleWeek() {
+  const v = agendaViewLoad();
+  v.week = !v.week;
+  agendaViewSave(v);
+  if (v.week && agendaFocusDay < 1) agendaFocusDay = agendaWeekAnchor;   // mantém a semana que já se via
+  agendaRenderCalendar();
+}
+function agendaStepWeek(delta) {
+  const d = new Date(AGENDA_YEAR, agendaCurrentMonth, agendaWeekAnchor + 7 * delta);
+  if (d.getFullYear() !== AGENDA_YEAR) {
+    agendaToast('A agenda cobre apenas ' + AGENDA_YEAR + (delta < 0 ? ': esta é a primeira semana.' : ': esta é a última semana.'));
+    return;
+  }
+  agendaCurrentMonth = d.getMonth();
+  agendaFocusDay = d.getDate();
+  agendaRenderCalendar();
+}
+// Anotações em aberto de dias que já passaram.
+function agendaLateList() {
+  const now = new Date();
+  if (now.getFullYear() !== AGENDA_YEAR) return [];
+  const todayKey = agendaKeyFor(now.getMonth(), now.getDate());
+  const out = [];
+  Object.keys(agendaNotesCache || {}).forEach(k => {
+    if (k >= todayKey) return;
+    const n = (agendaNotesCache[k] || []).filter(e => e && !e.done).length;
+    if (n) out.push({ key: k, n });
+  });
+  return out.sort((a, b) => a.key < b.key ? -1 : 1);
+}
+function agendaRenderLateChip() {
+  const chip = document.getElementById('agendaLateChip');
+  if (!chip) return;
+  const list = agendaLateList();
+  const total = list.reduce((t, x) => t + x.n, 0);
+  chip.hidden = !total;
+  if (total) {
+    chip.textContent = '⚠ ' + total + (total === 1 ? ' atrasada' : ' atrasadas');
+    chip.title = 'Ir para a anotação atrasada mais antiga';
+  }
+}
+function agendaJumpLate() {
+  const first = agendaLateList()[0];
+  if (!first) return;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(first.key);
+  if (!m) return;
+  agendaCurrentMonth = Number(m[2]) - 1;
+  agendaFocusDay = Number(m[3]);
+  agendaRenderCalendar();
+  agendaFocusCell(agendaFocusDay);
+}
+function agendaZoom(dir) {
+  const v = agendaViewLoad();
+  const i = Math.max(0, Math.min(AGENDA_ZOOM_STEPS.length - 1, AGENDA_ZOOM_STEPS.indexOf(v.zoom) + dir));
+  v.zoom = AGENDA_ZOOM_STEPS[i];
+  agendaViewSave(v); agendaApplyView();
+}
+function agendaToggleCalFocus() {
+  const v = agendaViewLoad();
+  v.calfocus = !v.calfocus;
+  agendaViewSave(v); agendaApplyView();
+}
+
 function agendaKeyFor(month, day) {
   return AGENDA_YEAR + '-' + String(month + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
 }
@@ -19327,6 +19481,7 @@ function agendaRenderCalendar() {
   const active = document.activeElement;
   const keepFocusDay = (active && grid.contains(active) && active.dataset && active.dataset.day) ? Number(active.dataset.day) : 0;
 
+  agendaApplyView();
   grid.innerHTML = '';
   display.textContent = AGENDA_MONTH_NAMES[agendaCurrentMonth];
 
@@ -19336,13 +19491,27 @@ function agendaRenderCalendar() {
   const first = new Date(AGENDA_YEAR, agendaCurrentMonth, 1).getDay();
   const count = agendaDaysInMonth(agendaCurrentMonth);
   // Só as semanas que o mês realmente usa (5 ou 6 linhas), sem linha vazia.
-  const totalCells = Math.ceil((first + count) / 7) * 7;
+  const monthCells = Math.ceil((first + count) / 7) * 7;
+  const weekMode = agendaWeekOn();
+  const anchor = (agendaFocusDay >= 1 && agendaFocusDay <= count) ? agendaFocusDay : (isThisMonth ? today.getDate() : 1);
+  agendaWeekAnchor = anchor;
+  const weekStart = Math.floor((first + anchor - 1) / 7) * 7;
+  const loopFrom = weekMode ? weekStart : 0;
+  const totalCells = weekMode ? weekStart + 7 : monthCells;
+  grid.style.setProperty('--agenda-rows', String(weekMode ? 1 : monthCells / 7));
+  if (weekMode) {
+    const a = new Date(AGENDA_YEAR, agendaCurrentMonth, weekStart - first + 1), b = new Date(AGENDA_YEAR, agendaCurrentMonth, weekStart - first + 7);
+    const nm = (dt) => AGENDA_MONTH_NAMES[dt.getMonth()].slice(0, 3).toLowerCase();
+    display.textContent = (a.getMonth() === b.getMonth())
+      ? a.getDate() + '–' + b.getDate() + ' ' + nm(b)
+      : a.getDate() + ' ' + nm(a) + ' – ' + b.getDate() + ' ' + nm(b);
+  }
   const tabDay = (agendaFocusDay >= 1 && agendaFocusDay <= count) ? agendaFocusDay : (isThisMonth ? today.getDate() : 1);
 
   const todayBtn = document.getElementById('agendaTodayBtn');
   if (todayBtn) todayBtn.hidden = !(inYear && !isThisMonth);
 
-  for (let i = 0; i < totalCells; i++) {
+  for (let i = loopFrom; i < totalCells; i++) {
     const d = i - first + 1;
     const cell = document.createElement('div');
     cell.className = 'agenda-day-cell';
@@ -19355,6 +19524,7 @@ function agendaRenderCalendar() {
       const wd = date.getDay();
       const entries = agendaNotesCache[key];
       const note = agendaEntriesPreview(entries);
+      const pendCountEarly = (entries || []).filter(e => e && !e.done).length;
 
       if (info) cell.classList.add('agenda-kind-' + argoAgendaKind(info));
       if (wd === 0) cell.classList.add('agenda-bg-sunday');
@@ -19362,15 +19532,43 @@ function agendaRenderCalendar() {
 
       const isToday = isThisMonth && today.getDate() === d;
       if (isToday) cell.classList.add('agenda-is-today');
-      else if (inYear && date < new Date(today.getFullYear(), today.getMonth(), today.getDate())) cell.classList.add('agenda-is-past');
+      else if (inYear && date < new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
+        cell.classList.add('agenda-is-past');
+        if (pendCountEarly > 0) cell.classList.add('agenda-has-late');
+      }
 
-      let html = '<span class="agenda-day-num">' + d + '</span>';
+      let html = isToday
+        ? '<div class="agenda-today-head"><span class="agenda-day-num">' + d + '</span><span class="agenda-today-tag">HOJE</span></div>'
+        : '<span class="agenda-day-num">' + d + '</span>';
       const pendCount = (entries || []).filter(e => e && !e.done).length;
       if (pendCount > 1) html += '<i class="agenda-note-count" aria-hidden="true">' + pendCount + '</i>';
       else if (note) html += '<i class="agenda-note-dot" aria-hidden="true"></i>';
-      if (note) {
-        const tilt = (d % 2 === 0) ? '-1.5deg' : '1deg';
-        html += '<div class="agenda-note-preview" style="transform:rotate(' + tilt + ')">' + escapeHtml(note) + '</div>';
+      {
+        // Anotações do dia completas (horário primeiro). Cada uma em aberto tem um ○ para concluir ali mesmo.
+        const showDone = agendaViewLoad().showDone;
+        const q = argoNorm(agendaSearchQuery);
+        let hits = 0;
+        const all = (entries || []).map((e, i) => ({ e, i })).filter(x => x.e);
+        const openL = all.filter(x => !x.e.done);
+        const doneL = showDone ? all.filter(x => x.e.done) : [];
+        if (openL.length || doneL.length) {
+          const ordO = agendaDisplayOrder(openL.map(x => x.e)).map(k => openL[k]);
+          const ordD = agendaDisplayOrder(doneL.map(x => x.e)).map(k => doneL[k]);
+          const line = (x, isDone) => {
+            const t = agendaCleanTime(x.e.time);
+            const lead = isDone
+              ? '<span class="agenda-note-done-mark" aria-hidden="true">✓</span>'
+              : '<button type="button" class="agenda-cell-check" tabindex="-1" data-key="' + key + '" data-idx="' + x.i + '" title="Marcar como feita" aria-label="' + escapeHtml('Marcar como feita: ' + (x.e.text || '')) + '">○</button>';
+            const m = q ? argoNorm((x.e.text || '') + ' ' + (t || '')).includes(q) : false;
+            if (m) hits++;
+            return '<div class="agenda-note-line' + (isDone ? ' is-done' : '') + (q ? (m ? ' is-match' : ' is-dim') : '') + '">' + lead + '<span class="agenda-note-text">' + (t ? '<span class="agenda-note-time">' + escapeHtml(t) + '</span>' : '') + escapeHtml(x.e.text || '') + '</span></div>';
+          };
+          html += '<div class="agenda-cal-notes">' + ordO.map(x => line(x, false)).join('') + ordD.map(x => line(x, true)).join('') + '</div>';
+        }
+        if (q) {
+          const labelHit = info && argoNorm(agendaDayTitle(key)).includes(q);
+          cell.classList.add((hits || labelHit) ? 'agenda-search-hit' : 'agenda-search-dim');
+        }
       }
       if (info) {
         const full = info.label === 'FAC.' ? 'Facultativo' : agendaFullName(info);
@@ -19384,15 +19582,20 @@ function agendaRenderCalendar() {
       if (isToday) cell.setAttribute('aria-current', 'date');
       let ariaLabel = agendaLongDate(date);
       if (info) ariaLabel += ', ' + agendaDayTitle(key);
-      if (note) ariaLabel += ', com anotação: ' + note;
+      if (note) ariaLabel += (cell.classList.contains('agenda-has-late') ? ', pendência atrasada' : '') + ', com anotação: ' + note;
       cell.setAttribute('aria-label', ariaLabel);
-      cell.addEventListener('click', () => { agendaFocusDay = d; agendaOpenNoteModal(key); });
+      cell.addEventListener('click', (ev) => {
+        const chk = ev.target.closest ? ev.target.closest('.agenda-cell-check') : null;
+        if (chk) { ev.stopPropagation(); agendaQuickDone(chk.dataset.key, Number(chk.dataset.idx), chk); return; }
+        agendaFocusDay = d; agendaOpenNoteModal(key);
+      });
       cell.addEventListener('focus', () => {
         agendaFocusDay = d;
         grid.querySelectorAll('.agenda-day-cell[tabindex="0"]').forEach(c => { if (c !== cell) c.setAttribute('tabindex', '-1'); });
         cell.setAttribute('tabindex', '0');
       });
       cell.addEventListener('keydown', (ev) => {
+        if (ev.target.closest && ev.target.closest('.agenda-cell-check')) return;
         if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); agendaFocusDay = d; agendaOpenNoteModal(key); return; }
         const moves = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
         if (moves[ev.key] !== undefined) { ev.preventDefault(); agendaMoveFocus(d, moves[ev.key]); }
@@ -19415,7 +19618,9 @@ function agendaRenderCalendar() {
     if (again) again.focus({ preventScroll: true });
   }
 
+  document.querySelectorAll('.agenda-weekdays > div').forEach((el, i) => el.classList.toggle('agenda-wd-today', isThisMonth && i === today.getDay()));
   agendaUpdateNavButtons();
+  agendaRenderLateChip();
   agendaRenderMonthList();
   agendaRenderTodayStatus();
   agendaRenderNextStrip();
@@ -19890,13 +20095,19 @@ function agendaRenderNextStrip() {
 }
 function agendaJumpTo(month) { agendaCurrentMonth = month; agendaFocusDay = 0; agendaRenderCalendar(); }
 
-// Atalhos (só com a agenda visível e fora de campos de texto): T = hoje,
+// Atalhos (só com a agenda visível e fora de campos de texto): T = hoje, F = só calendário, +/- = tamanho das letras,
 // PageUp/PageDown = mês anterior/seguinte.
 document.addEventListener('keydown', e => {
   if (e.ctrlKey || e.metaKey || e.altKey || !document.getElementById('agendaBook')) return;
   if (/^(INPUT|TEXTAREA|SELECT)$/.test((e.target.tagName || '')) || e.target.isContentEditable) return;
   if (document.querySelector('.agenda-modal-overlay.visible, .argo-greeting-overlay.visible')) return;
   if (e.key === 't' || e.key === 'T') { agendaGoToday(); }
+  else if (e.key === 'f' || e.key === 'F') { agendaToggleCalFocus(); }
+  else if (e.key === 'w' || e.key === 'W') { agendaToggleWeek(); }
+  else if (e.key === 'c' || e.key === 'C') { agendaToggleShowDone(); }
+  else if (e.key === 'e' || e.key === 'E') { agendaToggleNarrow(); }
+  else if (e.key === '+' || e.key === '=') { agendaZoom(1); }
+  else if (e.key === '-') { agendaZoom(-1); }
   else if (e.key === 'PageUp') { e.preventDefault(); agendaChangeMonth(-1); }
   else if (e.key === 'PageDown') { e.preventDefault(); agendaChangeMonth(1); }
 });
@@ -19908,7 +20119,7 @@ function agendaSetSearch(v) {
   agendaSearchQuery = String(v || '').trim();
   const clr = document.getElementById('agendaSearchClear');
   if (clr) clr.hidden = !agendaSearchQuery;
-  agendaRenderMonthList();
+  agendaRenderCalendar();
 }
 function agendaClearSearch() {
   const el = document.getElementById('agendaSearch');
@@ -20124,6 +20335,7 @@ function agendaUpdateNavButtons() {
 }
 
 function agendaChangeMonth(delta, keepDay) {
+  if (agendaWeekOn() && !keepDay) { agendaStepWeek(delta); return; }
   const target = agendaCurrentMonth + delta;
   if (target < 0 || target > 11) {
     agendaToast('A agenda cobre apenas ' + AGENDA_YEAR + (target < 0 ? ': este é o primeiro mês.' : ': este é o último mês.'));
