@@ -7643,3 +7643,99 @@ tr.is-closed > td { opacity: 0.6; }
 .mapa-rede-map.is-fixing { outline: 3px solid #d97706; outline-offset: -3px; }
 .mapa-rede-backup { margin-top: 0.8rem; }
 .mapa-rede-backup-btns { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0 0.9rem 0.9rem; }
+
+/* =====================================================================
+   Cabeçalho do app — mais compacto + faixa "seu dia" (agenda)
+   ===================================================================== */
+header.hero { padding: 2.1rem 0 1.9rem; min-height: 0; }
+.hero .hero-eyebrow { margin-bottom: 1rem; }
+.hero .hero-lead { margin-top: 1rem; font-size: 1.05rem; }
+.hero-stats { margin-top: 1.4rem; }
+.hero-stat { padding: 0.8rem 1rem 0.75rem; }
+.hero-stat-metric .hero-stat-value { font-size: 2rem; }
+.hero-stat-unit .hero-stat-value { font-size: 1.4rem; }
+.argo-emblem { width: 170px; height: 170px; }
+
+.hero-today { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.55rem; margin-top: 1rem; max-width: 900px; }
+.hero-today[hidden] { display: none; }
+.hero-today .ht-date { flex: 0 0 100%; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--hero-gold-soft, #F2CB7E); }
+.hero-today .ht-date::first-letter { text-transform: uppercase; }
+.ht-chip {
+  display: inline-flex; align-items: center; gap: 0.45rem; min-height: 36px; padding: 0.35rem 0.8rem;
+  border-radius: 999px; font: inherit; font-size: 0.85rem; font-weight: 700; line-height: 1.2; color: #fff; cursor: pointer;
+  background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(232, 172, 61, 0.35);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+.ht-chip:hover { background: rgba(255, 255, 255, 0.18); border-color: rgba(232, 172, 61, 0.7); transform: translateY(-1px); }
+.ht-chip:focus-visible { outline: 3px solid var(--hero-gold-soft, #F2CB7E); outline-offset: 2px; }
+.ht-chip i { flex: 0 0 auto; width: 9px; height: 9px; border-radius: 50%; background: #4fc08a; }
+.ht-chip i[data-kind="feriado"] { background: #ff7b72; }
+.ht-chip i[data-kind="facultativo"] { background: #f0b34a; }
+.ht-chip i[data-kind="fim"] { background: #b8c7c2; }
+.ht-chip i[data-kind="extra"] { background: #6cb4ee; }
+.ht-chip.ht-quiet { color: var(--hero-neutral, #C7DED8); font-weight: 600; }
+.ht-chip.ht-late { background: rgba(237, 28, 36, 0.22); border-color: rgba(255, 123, 114, 0.7); color: #ffd9d5; }
+.ht-chip.ht-late:hover { background: rgba(237, 28, 36, 0.34); }
+.ht-chip.ht-next { color: var(--hero-neutral, #C7DED8); font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .ht-chip { transition: none; } .ht-chip:hover { transform: none; } }
+
+@media (max-width: 640px) {
+  header.hero { padding: 1.4rem 0 1.25rem; }
+  .hero .hero-eyebrow { margin-bottom: 0.7rem; padding: 0.3rem 0.75rem; }
+  .hero .hero-lead { margin-top: 0.85rem; font-size: 0.95rem; line-height: 1.5;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .hero-today { margin-top: 0.8rem; gap: 0.4rem; }
+  .hero-today .ht-date { font-size: 0.72rem; }
+  .ht-chip { min-height: 34px; font-size: 0.8rem; padding: 0.3rem 0.65rem; }
+  .ht-chip.ht-next { display: none; }
+  /* Números: uma faixa rolável em vez de grade 2x2 (economiza ~190px de altura). */
+  .hero-stats { display: flex; flex-wrap: nowrap; grid-template-columns: none; gap: 0.5rem; margin: 1rem -24px 0; padding: 0 24px 0.25rem; scroll-padding-left: 24px; width: auto; max-width: none;
+    overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .hero-stats::-webkit-scrollbar { display: none; }
+  .hero-stat { flex: 0 0 auto; min-width: 128px; max-width: 170px; scroll-snap-align: start; padding: 0.6rem 0.8rem 0.55rem; }
+  .hero-stat-metric .hero-stat-value { font-size: 1.5rem; }
+  .hero-stat-unit .hero-stat-value { font-size: 1.15rem; }
+  .hero-stat-label { font-size: 0.64rem; }
+
+  /* Barra de busca: busca + uma única linha de botões (links só com ícone). */
+  .controls { padding: 0.55rem 0; }
+  .search-wrapper { gap: 0.45rem; }
+  /* Seis botões só com ícone, repartindo a linha por igual (nome fica para leitor de tela e no title). */
+  .btn-proximity { flex: 1 1 0; min-width: 44px; padding-left: 0; padding-right: 0; justify-content: center; }
+  .btn-proximity .proximity-label, .toolbar-links .link-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .toolbar-links { display: contents; }
+  .toolbar-links .btn-tech { flex: 1 1 0; min-width: 44px; padding-left: 0; padding-right: 0; justify-content: center; }
+  .toolbar-links .icon-external { display: none; }
+  .search-wrapper > .btn-tech:not(.btn-proximity) { flex: 1 1 0; min-width: 44px; min-height: 44px; padding-left: 0; padding-right: 0; justify-content: center; }
+}
+
+/* ---- Mini-cabeçalho na barra fixa (aparece ao rolar além do cabeçalho grande) ---- */
+.controls-mini { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem 1rem; max-height: 0; opacity: 0; visibility: hidden; overflow: hidden; margin: 0;
+  transition: max-height 0.22s ease, opacity 0.18s ease, margin 0.22s ease, visibility 0s linear 0.22s; }
+body.hero-gone .controls-mini { max-height: 48px; opacity: 1; visibility: visible; margin: 0 0 0.55rem; transition-delay: 0s; }
+.cm-brand { font-family: var(--font-serif, 'Lora', Georgia, serif); font-size: 1.25rem; font-weight: 600; line-height: 1; text-decoration: none; color: #B07A12; white-space: nowrap; }
+.cm-brand b { font-family: var(--font-sans, inherit); font-size: 0.7rem; font-weight: 800; letter-spacing: 0.12em; padding: 0.2rem 0.45rem; margin-left: 0.2rem; border: 1px solid currentColor; border-radius: 5px; vertical-align: 0.15em; }
+.cm-brand:focus-visible { outline: 2px solid var(--brand-primary, #0091C2); outline-offset: 3px; border-radius: 4px; }
+.cm-chips { display: flex; flex-wrap: nowrap; gap: 0.4rem; min-width: 0; overflow: hidden; }
+.controls-mini .ht-chip { min-height: 30px; padding: 0.2rem 0.65rem; font-size: 0.78rem; white-space: nowrap; flex: 0 0 auto;
+  color: var(--text-main, #1e293b); background: var(--bg-card, #fff); border-color: var(--border-ui, #e2e8f0); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.controls-mini .ht-chip:hover { background: rgba(0, 145, 194, 0.08); border-color: var(--brand-primary, #0091C2); }
+.controls-mini .ht-chip:focus-visible { outline-color: var(--brand-primary, #0091C2); }
+.controls-mini .ht-chip.ht-quiet { color: var(--text-muted, #475569); }
+.controls-mini .ht-chip.ht-late { background: rgba(192, 70, 61, 0.1); border-color: rgba(192, 70, 61, 0.45); color: #a3342c; }
+.controls-mini .ht-chip.ht-late:hover { background: rgba(192, 70, 61, 0.18); }
+.controls-mini .ht-chip i { background: #3f9d6b; }
+.controls-mini .ht-chip i[data-kind="feriado"] { background: #c0463d; }
+.controls-mini .ht-chip i[data-kind="facultativo"] { background: #d99a2b; }
+.controls-mini .ht-chip i[data-kind="fim"] { background: #94a3b8; }
+.controls-mini .ht-chip i[data-kind="extra"] { background: #2f7fb8; }
+@media (max-width: 640px) {
+  .cm-brand { font-size: 1.05rem; }
+  .cm-brand b { display: none; }
+  .cm-chips { flex: 1 1 auto; justify-content: flex-end; }
+  .controls-mini .ht-chip.ht-kind { display: none; }   /* no celular sobra espaço só para anotações/atrasadas */
+  .controls-mini .ht-chip { min-height: 28px; font-size: 0.74rem; padding: 0.15rem 0.5rem; }
+  body.hero-gone .controls-mini { margin-bottom: 0.45rem; }
+}
+@media (prefers-reduced-motion: reduce) { .controls-mini { transition: none; } }
