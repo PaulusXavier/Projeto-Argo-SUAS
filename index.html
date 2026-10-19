@@ -223,6 +223,9 @@
         <span class="brand-sub">Rede de Políticas Públicas de Roraima</span>
       </h1>
     </div>
+    <!-- Seu dia na agenda: saudação, tipo do dia, anotações de hoje/atrasadas e próximo marco.
+         Preenchido por argoRenderHeroToday() (js/app.js); fica escondido até ter dados. -->
+    <div class="hero-today" id="heroToday" role="group" aria-label="Seu dia na agenda" hidden></div>
     <p class="hero-lead">Diretório técnico para encaminhar usuários aos equipamentos e serviços das políticas públicas de Roraima, com a rede reunida em um só lugar para os técnicos de referência de cada área.</p>
 
     <div class="hero-stats" role="group" aria-label="Resumo da rede">
@@ -252,6 +255,12 @@
 
 <div class="controls">
   <div class="container">
+    <!-- Mini-cabeçalho: só aparece depois que o cabeçalho grande sai da tela (body.hero-gone),
+         para a marca e o "seu dia" continuarem à vista ao rolar. Preenchido por argoRenderHeroToday(). -->
+    <div class="controls-mini" id="controlsMini">
+      <a href="#" class="cm-brand" onclick="window.scrollTo({ top: 0, behavior: 'smooth' }); return false;" aria-label="Voltar ao topo — Argo SUAS">Argo <b>SUAS</b></a>
+      <div class="cm-chips" id="controlsMiniChips" role="group" aria-label="Seu dia na agenda"></div>
+    </div>
     <div class="search-wrapper">
       <div class="search-input-wrapper">
         <label for="mainSearch" class="sr-only">Pesquisar unidade, bairro ou serviço</label>
