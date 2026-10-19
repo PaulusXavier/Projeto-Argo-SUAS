@@ -6678,13 +6678,6 @@
   /* ===== Navegação ampliada: filtro do menu, acesso rápido, seletor no modo destaque ===== */
   .nav-hidden { display: none !important; }
 
-  .sidebar-filter { position: sticky; top: 0; z-index: 2; background: var(--bg-card); padding: 0 0 0.6rem; margin-bottom: 0.2rem; }
-  .sidebar-filter-input {
-    width: 100%; box-sizing: border-box; padding: 0.55rem 0.8rem; border-radius: 10px;
-    border: 1px solid var(--border-ui); background: var(--bg-main); color: inherit; font: inherit; font-size: 0.85rem;
-  }
-  .sidebar-filter-input:focus { outline: none; border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(0, 145, 194, 0.12); }
-  .sidebar-filter-empty { margin: 0.5rem 0.2rem 0; font-size: 0.82rem; color: var(--text-muted); }
 
   .quick-nav {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.6rem;
