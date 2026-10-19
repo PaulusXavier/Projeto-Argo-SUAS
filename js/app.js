@@ -19175,6 +19175,281 @@ function renderAgendaCard() {
         .agenda-pend-more { margin: 6px 0 0; font-size: 12.5px; font-style: italic; color: var(--ink-muted); }
 
         /* Próximos marcos na coluna lateral. */
+        /* Aproveitamento de espaço: faixas de resumo lado a lado, moldura mais larga em tela cheia,
+           e, em tela bem larga, três colunas (calendário | mês | pendências) sem buraco embaixo da grade. */
+        @media (min-width: 601px) {
+          .agenda-infobar { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0 10px; margin: 0 14px; }
+          .agenda-infobar > * { margin: 0 0 8px !important; flex: 1 1 auto; }
+          .agenda-infobar > .agenda-argo-row { flex-grow: 2; }
+        }
+        @media (max-width: 600px) { .agenda-infobar { display: contents; } }
+        .agenda-book.agenda-calfocus .agenda-infobar { display: none; }
+        body.tab-focus .content-area > :not(.tab-focus-bar):has(.agenda-card) { max-width: 2600px; }
+        body.tab-focus .agenda-card .card-body { padding-left: 0.5rem; padding-right: 0.5rem; padding-top: 0.6rem; }
+        body.tab-focus .agenda-header { padding-top: 8px; padding-bottom: 4px; }
+        body.tab-focus .agenda-year { padding-bottom: 6px; }
+        .agenda-book.agenda-calfocus .agenda-spread { grid-template-columns: minmax(0, 1fr); }
+        /* Visão de semana: sete colunas altas, letras maiores, "＋ anotar" ao passar o mouse. */
+        .agenda-book.agenda-week .agenda-note-line { font-size: calc(21px * var(--agenda-zoom)); line-height: 1.15; }
+        .agenda-book.agenda-week .agenda-day-num { font-size: calc(20px * var(--agenda-zoom)); }
+        .agenda-book.agenda-week .agenda-note-line .agenda-note-time { font-size: calc(13px * var(--agenda-zoom)); }
+        .agenda-book.agenda-week .agenda-badge-status { font-size: calc(12px * var(--agenda-zoom)); padding: 4px 6px; }
+        .agenda-book.agenda-week .agenda-day-cell:not(.agenda-day-out)::after { content: '＋ anotar'; font-size: 12px; font-weight: 700; color: var(--ink-muted); opacity: 0; transition: opacity 0.12s; }
+        .agenda-book.agenda-week .agenda-day-cell:not(.agenda-day-out):hover::after,
+        .agenda-book.agenda-week .agenda-day-cell:focus-visible::after { opacity: 0.85; }
+        /* Dia de hoje: moldura grossa, fundo mais forte, selo "HOJE" e o dia da semana marcado no topo. */
+        .agenda-day-cell.agenda-is-today { background-color: rgba(184, 137, 79, 0.34); box-shadow: inset 0 0 0 3px var(--cover), 0 4px 16px rgba(31, 61, 51, 0.32); position: relative; z-index: 1; animation: agendaTodayPulse 2.8s ease-in-out infinite; }
+        .agenda-day-cell.agenda-is-today .agenda-day-num { width: calc(30px * var(--agenda-zoom)); height: calc(30px * var(--agenda-zoom)); font-size: calc(16px * var(--agenda-zoom)); box-shadow: 0 2px 6px rgba(20, 38, 31, 0.4); }
+        .agenda-book.agenda-week .agenda-day-cell.agenda-is-today .agenda-day-num { width: calc(38px * var(--agenda-zoom)); height: calc(38px * var(--agenda-zoom)); font-size: calc(22px * var(--agenda-zoom)); }
+        .agenda-day-cell.agenda-is-today .agenda-note-line { color: #1c4a78; }
+        .agenda-today-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .agenda-today-tag { background: var(--cover); color: var(--paper); font: 800 calc(10px * var(--agenda-zoom))/1 'Times New Roman', Times, serif; letter-spacing: 0.6px; padding: 4px 7px; border-radius: 999px; }
+        .agenda-weekdays .agenda-wd-today { color: var(--cover); background: rgba(184, 137, 79, 0.30); border-radius: 6px 6px 0 0; box-shadow: inset 0 -3px 0 var(--cover); }
+        @keyframes agendaTodayPulse { 0%, 100% { box-shadow: inset 0 0 0 3px var(--cover), 0 4px 16px rgba(31, 61, 51, 0.32); } 50% { box-shadow: inset 0 0 0 3px var(--cover), 0 4px 22px rgba(184, 137, 79, 0.75); } }
+        @media (prefers-reduced-motion: reduce) { .agenda-day-cell.agenda-is-today { animation: none; } }
+        /* Concluir direto na grade (○) e ver as concluídas riscadas (botão ✓ Concluídas). */
+        .agenda-note-text { min-width: 0; flex: 1 1 auto; }
+        .agenda-cell-check { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: calc(18px * var(--agenda-zoom)); height: calc(18px * var(--agenda-zoom)); margin-top: 2px; padding: 0; border-radius: 50%; border: 2px solid currentColor; background: transparent; color: var(--blue-ink); cursor: pointer; font-size: 0; line-height: 1; }
+        .agenda-cell-check:hover, .agenda-cell-check:focus-visible { background: rgba(63, 125, 85, 0.25); border-color: var(--green-ink); color: var(--green-ink); }
+        .agenda-cell-check:hover::after, .agenda-cell-check:focus-visible::after { content: '✓'; font: 800 calc(12px * var(--agenda-zoom))/1 'Times New Roman', Times, serif; }
+        .agenda-cell-check:disabled { opacity: 0.5; cursor: progress; }
+        .agenda-has-late .agenda-cell-check { color: #8f2f29; }
+        .agenda-note-line.is-done { color: var(--ink-muted); opacity: 0.75; }
+        .agenda-note-line.is-done .agenda-note-text { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+        .agenda-note-done-mark { flex: 0 0 auto; width: calc(18px * var(--agenda-zoom)); text-align: center; color: var(--green-ink); font: 800 calc(14px * var(--agenda-zoom))/1.3 'Times New Roman', Times, serif; }
+        @media (max-width: 600px) { .agenda-cell-check { display: none; } }
+        /* Fins de semana mais estreitos: sobra largura para os dias de trabalho. */
+        @media (min-width: 601px) {
+          .agenda-book.agenda-narrowwe #agendaCalendarGrid,
+          .agenda-book.agenda-narrowwe .agenda-weekdays { grid-template-columns: 0.6fr repeat(5, minmax(0, 1fr)) 0.6fr; }
+        }
+        @media (max-width: 600px) { #agendaNarrowBtn { display: none; } }
+        /* Busca ativa: o que combina com o termo se destaca na grade; o resto esmaece. */
+        .agenda-note-line.is-match .agenda-note-text { background: rgba(240, 200, 60, 0.55); border-radius: 3px; box-shadow: 0 0 0 2px rgba(240, 200, 60, 0.55); }
+        .agenda-note-line.is-dim { opacity: 0.3; }
+        .agenda-day-cell.agenda-search-dim { opacity: 0.55; }
+        .agenda-day-cell.agenda-search-hit { box-shadow: inset 0 0 0 2px #c79a1f; }
+        .agenda-late-chip { border: 1px solid var(--red-ink); background: rgba(179, 65, 58, 0.10); color: #8f2f29; border-radius: 20px; padding: 7px 12px; font: 800 13px/1 'Times New Roman', Times, serif; cursor: pointer; }
+        .agenda-late-chip:hover { background: rgba(179, 65, 58, 0.2); }
+        .agenda-late-chip[hidden] { display: none; }
+        @media (max-width: 600px) { #agendaWeekBtn { display: none; } }
+        /* Dia passado com anotação ainda em aberto: faixa vermelha à esquerda. */
+        .agenda-day-cell.agenda-has-late { box-shadow: inset 4px 0 0 var(--red-ink); }
+        .agenda-day-cell.agenda-has-late .agenda-note-line { color: #8f2f29; }
+        /* Grade média: sigla um pouco maior. Grade larga: nome por extenso. */
+        @container (min-width: 470px) {
+          .agenda-badge-status { font-size: 10px; padding: 2px 4px; }
+        }
+        @container (min-width: 620px) {
+          .agenda-badge-status { font-size: 10.5px; padding: 3px 5px; text-transform: none; font-weight: 700; letter-spacing: 0; }
+          .agenda-badge-status .lbl-short { display: none; }
+          .agenda-badge-status .lbl-full { display: inline; }
+        }
+
+        .agenda-side { background: var(--paper); padding: 6px 14px 14px 16px; min-width: 0; border-top: 1px dashed var(--rule-line); }
+        .agenda-side-title { margin: 8px 0 0; font-size: 18px; font-style: italic; font-weight: 800; color: var(--ink); }
+        .agenda-side-sub { margin: 2px 0 8px; font-size: 13px; color: var(--ink-muted); line-height: 1.4; }
+        .agenda-list { display: flex; flex-direction: column; }
+        .agenda-item { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px; align-items: start; width: 100%; text-align: left; background: transparent; border: 0; border-bottom: 1px solid var(--rule-line); border-radius: 4px; padding: 9px 6px; cursor: pointer; color: var(--ink); font-size: 15px; }
+        .agenda-item:hover { background: rgba(184, 137, 79, 0.10); }
+        .agenda-item.is-today { background: rgba(184, 137, 79, 0.16); box-shadow: inset 3px 0 0 var(--gold); }
+        .agenda-item-date { text-align: center; line-height: 1; }
+        .agenda-item-date b { display: block; font-size: 22px; font-style: italic; font-weight: 700; }
+        .agenda-item-date small { display: block; margin-top: 3px; font-size: 12px; color: var(--ink-muted); }
+        .agenda-item-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .agenda-item-title { display: flex; align-items: baseline; gap: 7px; font-weight: 700; line-height: 1.25; }
+        .agenda-item-dot { flex-shrink: 0; width: 9px; height: 9px; border-radius: 50%; background: var(--ink-muted); transform: translateY(0.5px); }
+        .agenda-item-feriado .agenda-item-dot { background: var(--red-ink); }
+        .agenda-item-facultativo .agenda-item-dot { background: var(--amber-ink); }
+        .agenda-item-pagamento .agenda-item-dot { background: var(--green-ink); }
+        .agenda-item-extra .agenda-item-dot { background: var(--blue-ink); }
+        .agenda-item-note { font-family: 'Caveat', cursive; font-size: 19px; font-weight: 700; line-height: 1.1; color: var(--blue-ink); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line; }
+        .agenda-item-when { font-size: 12px; color: var(--ink-muted); white-space: nowrap; padding-top: 3px; }
+        .agenda-item.is-past .agenda-item-title { font-weight: 600; color: var(--ink-muted); }
+        .agenda-list-empty { margin: 6px 0 4px; font-style: italic; color: var(--ink-muted); line-height: 1.5; }
+
+        .agenda-footer { padding: 10px 18px 14px 20px; border-top: 1px dashed var(--rule-line); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .agenda-legend { display: flex; gap: 14px; flex-wrap: wrap; }
+        .agenda-legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: var(--ink-muted); }
+        .agenda-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .agenda-creator-info { text-align: right; font-size: 10px; font-weight: 700; color: var(--ink-muted); font-style: italic; }
+        .agenda-creator-name { color: var(--cover); font-style: italic; font-size: 12px; }
+
+        @container agendabook (min-width: 860px) {
+          .agenda-spread { grid-template-columns: minmax(0, 1fr) 310px; align-items: start; }
+          /* A coluna lateral (mês, pendências, próximos marcos) pode ser bem mais alta que o calendário;
+             sem isso as linhas da grade esticavam junto com ela. */
+          .agenda-cal { align-self: start; }
+          .agenda-side { border-top: 0; border-left: 1px dashed var(--gold); box-shadow: inset 8px 0 10px -10px rgba(20,20,10,0.35); padding-top: 12px; }
+        }
+        @media (max-width: 600px) {
+          .agenda-card .card-top, .agenda-card .card-body { padding-left: 14px; padding-right: 14px; }
+          .agenda-book { padding-left: 22px; --agenda-cell-min: 56px; }
+          .agenda-binding { width: 22px; }
+          .agenda-header { padding: 14px 12px 10px 14px; }
+          /* Marca e botões na mesma linha; o subtítulo longo some para não empurrar o calendário. */
+          .agenda-brand { flex: 1 1 0; min-width: 0; }
+          .agenda-tools { flex: 0 0 auto; }
+          .agenda-sub-extra { display: none; }
+          .agenda-privacy { margin-bottom: 0.7rem; }
+          .agenda-next-strip { font-size: 12.5px; padding: 6px 10px; gap: 6px; margin: 0 10px 8px; }
+          .agenda-argo-row { margin: 0 10px 8px; }
+          .agenda-today-banner { margin: 0 10px 8px; }
+          .agenda-year { padding: 2px 10px 8px 12px; }
+          .agenda-monthbar { order: 3; flex: 1 1 100%; }
+          .agenda-nav-controls { flex: 1; justify-content: space-between; }
+          .agenda-month-display { min-width: 0; flex: 1; }
+          .agenda-weekdays { column-gap: 2px; margin: 0 6px; }
+          .agenda-weekdays div { font-size: 10px; }
+          #agendaCalendarGrid { padding: 4px 6px 6px; gap: 2px; }
+          .agenda-day-cell { padding: 3px 3px; }
+          .agenda-badge-status { font-size: 8px; padding: 2px 1px; letter-spacing: 0; }
+          .agenda-note-preview { font-size: 13px; }
+          .agenda-footer { padding: 10px 12px 12px 14px; }
+          .agenda-side { padding: 6px 10px 12px 12px; }
+
+        }
+        @media (max-width: 380px) {
+          .agenda-book { padding-left: 18px; --agenda-cell-min: 50px; }
+          .agenda-binding { width: 18px; }
+          .agenda-day-num { font-size: 12px; }
+          .agenda-day-cell { padding: 3px 2px; }
+          .agenda-badge-status { font-size: 7.5px; }
+          .agenda-footer { flex-direction: column; align-items: flex-start; }
+          .agenda-creator-info { text-align: left; }
+          .agenda-item { grid-template-columns: 34px minmax(0, 1fr); }
+          .agenda-item-when { grid-column: 2; padding-top: 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .agenda-day-cell { transition: none; }
+          .agenda-day-cell:hover { transform: none; }
+        }
+        .agenda-estimate-note { margin: 0 14px 8px; padding: 8px 12px; border-radius: 10px; font-size: 12.5px; line-height: 1.45; background: var(--amber-bg); border: 1px solid var(--amber-ink); color: #4a3510; }
+        .agenda-estimate-note strong { font-weight: 800; }
+        @media print { .agenda-estimate-note { display: none !important; } }
+        .agenda-next-strip { display:none; align-items:center; flex-wrap:wrap; gap:8px; margin:0 14px 8px 14px; padding:7px 12px; border-radius:10px; font-size:13px; background:rgba(184,137,79,0.14); border:1px dashed var(--gold); color:var(--ink); }
+        .agenda-next-strip.on { display:flex; }
+        .agenda-next-strip strong { font-weight:700; }
+        .agenda-next-days { margin-left:auto; padding:1px 9px; border-radius:999px; background:var(--cover); color:#fff; font-size:11px; font-weight:700; }
+        .agenda-next-btn { border:0; background:none; color:var(--blue-ink); font:inherit; font-weight:700; text-decoration:underline; cursor:pointer; padding:0; }
+        .agenda-argo-row { display:flex; align-items:center; flex-wrap:wrap; gap:6px 8px; margin:0 14px 10px 14px; padding:6px 10px; border-radius:12px; background:rgba(15,74,65,0.07); border:1px solid rgba(184,137,79,0.4); }
+        .agenda-argo-icon { display:inline-flex; width:30px; height:30px; flex:0 0 30px; }
+        .agenda-argo-icon svg { width:100%; height:100%; }
+        .agenda-argo-lead { font-size:12.5px; font-weight:700; color:var(--ink); margin-right:2px; }
+        .agenda-argo-chip { min-height:30px; padding:2px 11px; border-radius:999px; border:1px solid var(--gold); background:transparent; color:var(--blue-ink); font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+        .agenda-argo-chip:hover { background:rgba(184,137,79,0.18); }
+        .agenda-argo-chip:focus-visible { outline:2px solid var(--blue-ink); outline-offset:2px; }
+        @media print { .agenda-next-strip, .agenda-argo-row, .agenda-tools, .agenda-today-banner, .agenda-nav-btn, .agenda-today-btn, .agenda-year, .agenda-up-box { display:none !important; } }
+
+        /* Em tela cheia a barra do topo já mostra o nome da aba: o cabeçalho do card sobra. */
+        body.tab-focus .agenda-card .card-top { display: none; }
+        body.tab-focus .agenda-card .card-body { padding-top: 1.1rem; }
+
+        /* Números do dia: domingo e feriado em vermelho, pagamento em verde. */
+        .agenda-day-cell .agenda-day-num { color: var(--ink); }
+        .agenda-day-cell.agenda-bg-sunday .agenda-day-num,
+        .agenda-day-cell.agenda-kind-feriado .agenda-day-num { color: var(--red-ink); }
+        .agenda-day-cell.agenda-kind-pagamento .agenda-day-num { color: var(--green-ink); }
+        .agenda-day-cell.agenda-kind-feriado { background-image: linear-gradient(rgba(179,65,58,0.08), rgba(179,65,58,0.08)); }
+        .agenda-day-cell.agenda-kind-pagamento { background-image: linear-gradient(rgba(63,125,85,0.11), rgba(63,125,85,0.11)); }
+        .agenda-day-cell.agenda-kind-extra { background-image: linear-gradient(rgba(47,93,138,0.09), rgba(47,93,138,0.09)); }
+        /* Dias dos meses vizinhos: aparecem esmaecidos, só para completar a semana. */
+        .agenda-day-cell.agenda-day-out { cursor: default; pointer-events: none; opacity: 0.36; border-bottom-color: transparent; }
+        .agenda-day-cell.agenda-day-out .agenda-day-num { font-weight: 600; color: var(--ink-muted); }
+
+        /* Faixa dos 12 meses: pula direto para qualquer mês. */
+        .agenda-year { display: flex; gap: 6px; overflow-x: auto; padding: 2px 14px 10px 20px; scrollbar-width: thin; scroll-snap-type: x proximity; }
+        .agenda-year-btn {
+          flex: 1 0 auto; min-width: 52px; scroll-snap-align: center;
+          display: flex; flex-direction: column; align-items: center; gap: 3px;
+          padding: 6px 8px 5px; border-radius: 10px; border: 1px solid var(--rule-line);
+          background: var(--paper-alt); color: var(--ink-muted);
+          font-size: 12.5px; font-weight: 800; text-transform: capitalize; cursor: pointer;
+        }
+        .agenda-year-btn:hover { border-color: var(--gold); color: var(--cover); }
+        .agenda-year-btn.is-now:not(.is-current) { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); color: var(--cover); }
+        .agenda-year-btn.is-current { background: var(--cover); border-color: var(--cover); color: var(--paper); }
+        .agenda-year-dots { display: flex; gap: 3px; align-items: center; height: 6px; }
+        .agenda-year-dots i { display: block; width: 6px; height: 6px; border-radius: 50%; }
+        .agenda-year-btn.is-current .agenda-year-dots i { box-shadow: 0 0 0 1px rgba(255,255,255,0.7); }
+        .agenda-year-dots .d-feriado { background: var(--red-ink); }
+        .agenda-year-dots .d-facultativo { background: var(--amber-bg); box-shadow: inset 0 0 0 1px var(--amber-ink); }
+        .agenda-year-dots .d-pagamento { background: var(--green-ink); }
+        .agenda-year-dots .d-extra { background: var(--blue-ink); }
+        .agenda-year-dots .d-nota { background: transparent; box-shadow: inset 0 0 0 1.5px var(--blue-ink); }
+        .agenda-year-btn.is-current .agenda-year-dots .d-nota { box-shadow: inset 0 0 0 1.5px #fff; }
+
+        /* Legenda que também filtra. */
+        .agenda-legend-btn {
+          display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 8px;
+          border-radius: 999px; border: 1px solid var(--rule-line); background: var(--paper-alt);
+          font: inherit; font-size: 12px; font-weight: 700; color: var(--ink-muted); cursor: pointer;
+        }
+        .agenda-legend-btn:hover { border-color: var(--gold); color: var(--cover); }
+        .agenda-legend-btn b { font-weight: 800; color: var(--ink); min-width: 0.6em; }
+        .agenda-legend-btn[aria-pressed="false"] { opacity: 0.55; text-decoration: line-through; }
+        .agenda-legend-btn[aria-pressed="false"] b { display: none; }
+
+        /* Busca nas anotações e datas do ano. */
+        .agenda-search { position: relative; margin: 6px 0 10px; }
+        .agenda-search input { width: 100%; box-sizing: border-box; font: inherit; font-size: 14px; padding: 8px 32px 8px 12px; border-radius: 999px; border: 1px solid var(--rule-line); background: var(--paper-alt); color: var(--ink); }
+        .agenda-search input:focus-visible { outline: 2px solid var(--cover); outline-offset: 1px; }
+        .agenda-search button { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); border: 0; background: none; color: var(--ink-muted); cursor: pointer; font-size: 13px; padding: 6px 8px; border-radius: 50%; }
+        .agenda-search button[hidden] { display: none; }
+        .agenda-item-month { font-size: 12px; color: var(--ink-muted); }
+        .agenda-item mark { background: rgba(184, 137, 79, 0.35); color: inherit; border-radius: 2px; padding: 0 1px; }
+        /* Ponto indicando anotação no dia (útil no celular, onde o texto some). */
+        .agenda-day-cell { position: relative; }
+        .agenda-note-dot { position: absolute; top: 4px; right: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--blue-ink); }
+        .agenda-note-count { position: absolute; top: 3px; right: 3px; min-width: 15px; height: 15px; padding: 0 4px; box-sizing: border-box; border-radius: 999px; background: var(--blue-ink); color: #fff; font: 800 10px/15px 'Times New Roman', Times, serif; text-align: center; font-style: normal; }
+
+        /* Pendências: anotações ainda não concluídas (atrasadas e futuras). */
+        .agenda-pend-box[hidden] { display: none; }
+        .agenda-pend-group { margin: 8px 0 2px; font-size: 12px; font-weight: 800; letter-spacing: 0.3px; text-transform: uppercase; color: var(--ink-muted); }
+        .agenda-pend-group.is-late { color: var(--red-ink); }
+        .agenda-item-nota .agenda-item-dot { background: var(--blue-ink); }
+        .agenda-item-late .agenda-item-when { color: var(--red-ink); font-weight: 700; }
+        .agenda-pend-row { display: flex; align-items: stretch; gap: 2px; }
+        .agenda-pend-row .agenda-item { flex: 1 1 auto; width: auto; min-width: 0; }
+        .agenda-pend-check { flex: 0 0 auto; width: 40px; border: 0; border-bottom: 1px solid var(--rule-line); background: transparent; color: var(--blue-ink); font-size: 20px; line-height: 1; cursor: pointer; border-radius: 4px; }
+        .agenda-pend-check:hover { background: rgba(63, 125, 85, 0.16); color: var(--green-ink); }
+        .agenda-pend-check:focus-visible { outline: 2px solid var(--cover); outline-offset: -2px; }
+        .agenda-pend-check:disabled { cursor: progress; opacity: 0.6; }
+        .agenda-ts-late { color: var(--red-ink); font-weight: 800; }
+        .agenda-pend-more { margin: 6px 0 0; font-size: 12.5px; font-style: italic; color: var(--ink-muted); }
+
+        /* Próximos marcos na coluna lateral. */
+        /* Aproveitamento de espaço: faixas de resumo lado a lado, moldura mais larga em tela cheia,
+           e, em tela bem larga, três colunas (calendário | mês | pendências) sem buraco embaixo da grade. */
+        @media (min-width: 601px) {
+          .agenda-infobar { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0 10px; margin: 0 14px; }
+          .agenda-infobar > * { margin: 0 0 8px !important; flex: 1 1 auto; }
+          .agenda-infobar > .agenda-argo-row { flex-grow: 2; }
+        }
+        @media (max-width: 600px) { .agenda-infobar { display: contents; } }
+        .agenda-book.agenda-calfocus .agenda-infobar { display: none; }
+        body.tab-focus .content-area > :not(.tab-focus-bar):has(.agenda-card) { max-width: 2600px; }
+        body.tab-focus .agenda-card .card-body { padding-left: 0.5rem; padding-right: 0.5rem; padding-top: 0.6rem; }
+        body.tab-focus .agenda-header { padding-top: 8px; padding-bottom: 4px; }
+        body.tab-focus .agenda-year { padding-bottom: 6px; }
+        .agenda-book.agenda-calfocus .agenda-spread { grid-template-columns: minmax(0, 1fr); }
+        /* Pendências e próximos marcos moram embaixo do calendário (antes ficavam na coluna da direita
+           e deixavam um buraco em branco sob a grade). */
+        .agenda-below { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 28px; margin: 4px 10px 0; padding: 4px 6px 12px; border-top: 1px dashed var(--rule-line); align-items: start; }
+        .agenda-below:not(:has(.agenda-up-box:not([hidden]))) { display: none; }
+        .agenda-below .agenda-up-box { margin-top: 8px; border-top: 0; padding-top: 0; min-width: 0; }
+        @container agendabook (min-width: 860px) {
+          .agenda-below { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        @container agendabook (min-width: 1500px) {
+          .agenda-spread { grid-template-columns: minmax(0, 1fr) 320px 340px; grid-template-rows: auto 1fr; align-items: start; }
+          .agenda-cal { display: contents; }
+          .agenda-weekdays { grid-column: 1; grid-row: 1; }
+          #agendaCalendarGrid { grid-column: 1; grid-row: 2; align-self: start; }
+          .agenda-side { grid-column: 2; grid-row: 1 / span 2; }
+          .agenda-below { grid-column: 3; grid-row: 1 / span 2; grid-template-columns: minmax(0, 1fr); margin: 0; padding: 8px 14px 14px 16px; border-top: 0; border-left: 1px dashed var(--gold); box-shadow: inset 8px 0 10px -10px rgba(20, 20, 10, 0.35); }
+        }
+        .agenda-book.agenda-calfocus .agenda-below { display: none !important; }
         .agenda-up-box { margin-top: 16px; padding-top: 6px; border-top: 1px dashed var(--rule-line); }
         .agenda-up-box[hidden] { display: none; }
 
@@ -19287,6 +19562,7 @@ function renderAgendaCard() {
             <div id="agendaTodayText" class="agenda-today-text"></div>
           </div>
 
+          <div class="agenda-infobar" id="agendaInfobar">
           <div id="agendaTodayStatus" class="agenda-today-status" role="status" aria-live="polite" hidden></div>
 
           <div id="agendaNextStrip" class="agenda-next-strip" role="status"></div>
@@ -19300,6 +19576,7 @@ function renderAgendaCard() {
             <button type="button" class="agenda-argo-chip" data-q="dias úteis neste mês">Dias úteis</button>
             <button type="button" class="agenda-argo-chip" data-act="note">Anotar hoje</button>
           </div>
+          </div>
 
           <nav class="agenda-year" id="agendaYear" aria-label="Meses de ${AGENDA_YEAR}"></nav>
 
@@ -19309,6 +19586,18 @@ function renderAgendaCard() {
                 <div class="agenda-dom">Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
               </div>
               <div id="agendaCalendarGrid"></div>
+              <div class="agenda-below" id="agendaBelow">
+                <section class="agenda-up-box agenda-pend-box" id="agendaPendBox" hidden aria-labelledby="agendaPendTitle">
+                  <h4 class="agenda-side-title" id="agendaPendTitle">Minhas pendências</h4>
+                  <p class="agenda-side-sub" id="agendaPendSub"></p>
+                  <div class="agenda-list" id="agendaPending"></div>
+                </section>
+                <section class="agenda-up-box" id="agendaUpBox" hidden aria-labelledby="agendaUpTitle">
+                  <h4 class="agenda-side-title" id="agendaUpTitle">Próximos marcos</h4>
+                  <p class="agenda-side-sub">Nos outros meses; toque para ir ao dia.</p>
+                  <div class="agenda-list" id="agendaUpcoming"></div>
+                </section>
+              </div>
             </div>
             <aside class="agenda-side" aria-labelledby="agendaSideTitle">
               <h4 class="agenda-side-title" id="agendaSideTitle">Neste mês</h4>
@@ -19320,16 +19609,6 @@ function renderAgendaCard() {
               <p class="agenda-side-sub" id="agendaBusinessDays" title="Segunda a sexta, sem feriados nem pontos facultativos"></p>
               <p class="agenda-longweekend" id="agendaLongWeekend" hidden></p>
               <div class="agenda-list" id="agendaMonthList"></div>
-              <section class="agenda-up-box agenda-pend-box" id="agendaPendBox" hidden aria-labelledby="agendaPendTitle">
-                <h4 class="agenda-side-title" id="agendaPendTitle">Minhas pendências</h4>
-                <p class="agenda-side-sub" id="agendaPendSub"></p>
-                <div class="agenda-list" id="agendaPending"></div>
-              </section>
-              <section class="agenda-up-box" id="agendaUpBox" hidden aria-labelledby="agendaUpTitle">
-                <h4 class="agenda-side-title" id="agendaUpTitle">Próximos marcos</h4>
-                <p class="agenda-side-sub">Nos outros meses; toque para ir ao dia.</p>
-                <div class="agenda-list" id="agendaUpcoming"></div>
-              </section>
             </aside>
           </div>
 
