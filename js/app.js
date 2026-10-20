@@ -26092,7 +26092,7 @@ let argoBrainReady = false;
 function argoBrain() {
   if (typeof ArgoCerebro === 'undefined') return null;
   if (!argoBrainReady) {
-    ArgoCerebro.init({ data: typeof DATA !== 'undefined' ? DATA : [], ia: { url: ARGO_IA.url } });
+    ArgoCerebro.init({ data: typeof DATA !== 'undefined' ? DATA : [], ia: { url: ARGO_IA.url }, refs: typeof PC_REF !== 'undefined' ? PC_REF : {} });
     // Paulus (js/paulus.v1.js): faz a ida à IA e traz a base de normas offline (assets/conhecimento.json).
     // Se o arquivo não carregar, o app segue com o transporte antigo do ArgoCerebro.
     if (typeof Paulus !== 'undefined' && ARGO_IA.url) {
@@ -26237,7 +26237,8 @@ function argoAssistantAskHybridCore(rawText, meta) {
     }
     // Dúvida do psicólogo no SUAS: verbete curado, com a norma citada. Responde na hora, mesmo com a IA ligada
     // (a resposta precisa ser a da norma); a IA fica a um toque, em "Aprofundar com a IA".
-    if (plan.kind === 'psi' && !longMsg) {
+    // 'ficha': requisitos/documentos/valor copiados do cartão do diretório (mesmo tratamento do psi: responde na hora, IA a um toque)
+    if ((plan.kind === 'psi' || plan.kind === 'ficha') && !longMsg) {
       return keep(argoAssistantToUi(plan.result, rawText, true), plan.result.units);
     }
     // Dúvida de conteúdo (pergunta de verdade): com a IA ligada, ela responde com a norma e a conversa; o verbete pronto
@@ -26357,6 +26358,7 @@ function argoStreamIA(B, rawText, payload, hooks) {
     // A IA pode PROPOR estas telas como botões (Paulus v0.4.0); nada abre sozinho.
     acoes: ARGO_ACOES_IA.map(a => ({ id: a.id, rotulo: a.rotulo, descricao: a.descricao, executar: () => argoAssistantGoTo(a.cat) })),
     fichas: payload.contexto,
+    baseApp: payload.base,          // verbetes conferidos, valores de referência e calendário PBF do próprio app
     panorama: payload.panorama,     // totais reais do diretório por grupo ("quantos CAPS?"); sem isso a IA contaria fichas soltas
     historico: payload.historico,
     sinal: hooks.signal,
