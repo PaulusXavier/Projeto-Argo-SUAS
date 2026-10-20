@@ -869,12 +869,19 @@
     var corte = r.rows[0].score * (ampla && r.rows[0].score > 100 ? 0.0 : 0.4);
     var todos = r.rows.filter(function (x) { return x.score >= corte; });
     if (ampla && r.rows[0].score > 100) todos = todos.filter(function (x) { return x.score > 100; });
-    var fichas = todos.slice(0, lim).map(function (x) {
+    var gasto = 0;
+    var fichas = todos.slice(0, lim).map(function (x, i) {
       var u = slim(x.u.d);
+      // as primeiras fichas levam os trechos do cartão que combinam com a pergunta; as demais, só o começo
+      var orc = i === 0 ? 1600 : (ampla ? 240 : (i < 3 ? 900 : 240));
+      if (gasto > 6500) orc = 240;
+      var tr = trechosDa(x.u.d, text, orc, 1.2), sobre = textoTrechos(tr);
+      if (!sobre) sobre = cut(cleanText(x.u.d.desc), ampla ? 120 : 220);
+      gasto += sobre.length;
       return {
         nome: u.fullName || u.name, grupo: grupoDe(x.u.d), endereco: u.address, horario: u.hours,
-        telefones: u.phones.join(', '), servicos: cut(u.services, ampla ? 200 : 320),
-        descricao: cut(cleanText(x.u.d.desc), ampla ? 120 : 220)
+        telefones: u.phones.join(', '), servicos: cut(u.services, ampla ? 200 : (i < 3 ? 480 : 320)),
+        descricao: sobre
       };
     });
     return { fichas: fichas, total: todos.length };
@@ -987,6 +994,7 @@
       pergunta: String(text).trim().slice(0, CFG.maxPergunta),
       contexto: ctx.fichas,
       panorama: pan,
+      base: baseApp(text),
       historico: hist,
       pagina: String(opts.tabName || '').slice(0, 80)
     };
@@ -1472,6 +1480,9 @@
         reply: 'Me diga o **nome do bairro** onde a família mora que eu mostro ' + (varios ? 'quais equipamentos são a referência' : 'qual ' + rotulo + ' é a referência') + '.',
         mood: 'info', followups: ['Moro no Caimbé', 'Qual ' + (varios ? 'equipamento' : rotulo) + ' atende o Centro?'], badge: 'Território'
       };
+      // a pergunta cita o NOME de uma unidade ("quem atende no CRAS Cristiana Vicente Nunes?"): não é bairro; segue para o diretório/ficha
+      var citouUnidade = terrIdx.list.some(function (u) { var nu = norm(u.name); return nu.length > 8 && (' ' + n + ' ').indexOf(' ' + nu + ' ') > -1; });
+      if (citouUnidade && !/\bbairro\b/.test(n)) return null;
       // pediu "o CRAS do bairro X" mas X não está na lista: não chuta
       if (podeResponder && (/\bbairro\b/.test(n) || mor || cob)) {
         var msg;
@@ -2444,6 +2455,196 @@
   }
 
   // ---------------------------------------------------------------------
+  // TRECHOS DAS FICHAS, BASE DO APP E RESPOSTA DIRETA DA FICHA
+  // O texto longo de cada ficha (desc em data.js: requisitos, documentos, valores, passo a passo,
+  // lista de medicamentos...) era cortado nos primeiros 120-220 caracteres. Aqui ele vira "trechos"
+  // e só os que combinam com a pergunta seguem para a IA (ou para a resposta direta, sem IA).
+  // ---------------------------------------------------------------------
+  var REFS = {};            // valores de referência do app (ex.: { sm: 1621, bf: 218 }), vindos de init({ refs })
+  var passIdx = null;       // { byId: { id: [trecho] }, df: { palavra: n }, N }
+  var PASS_STOP = asSet(('de da do das dos e a o as os em no na nos nas um uma para por pelo pela com sem ao aos que qual quais quem onde como quando ' +
+    'e ou se ser sao foi tem ter ha mais ja so seu sua seus suas esse essa isso este esta voce preciso precisa quero queria posso pode ' +
+    'quanto quantos quantas qual cras bpc').split(' ').filter(function (w) { return w !== 'cras' && w !== 'bpc'; }));
+  var PASS_SIN = {
+    remedio: ['medicamento', 'medicamentos', 'medicacao'], remedios: ['medicamento', 'medicamentos', 'medicacao'],
+    idade: ['anos'], documento: ['documentos'], documentos: ['documento'], levar: ['apresentar', 'documentos'],
+    requisito: ['requisitos'], requisitos: ['requisito'], direito: ['requisitos'], valor: ['r'], custa: ['valor', 'r'], preco: ['valor', 'r']
+  };
+  var INTENTS = [
+    { id: 'requisitos', re: /\b(requisitos?|criterios?|quem (tem direito|pode)|tenho direito|elegivel|elegibilidade|condicoes?|exigencias?|exige)\b/, boost: /requisit|estar inscrito|possuir|ter renda|tem direito|podem|criteri|idade minima|\d+ anos|per capita/ },
+    { id: 'documentos', re: /\b(documentos?|levar|apresentar|comprovantes?|papeis|o que (preciso )?levar)\b/, boost: /documento|rg|cpf|comprovante|certidao|carteira|apresent|levar|titulo/ },
+    { id: 'valor', re: /\b(valor|valores|quanto (e|custa|paga|recebe|ganha)|preco|custa|teto|salario minimo|desconto)\b/, boost: /r\$|\d+ ?%|salario minimo|valor|teto|desconto/ },
+    { id: 'como', re: /\b(como (solicit|pedir|dar entrada|fazer|tirar|conseguir|acess|requer|agend|funciona|obter|emitir|renovar|cadastr)\w*|passo a passo|processo|etapas?)\b/, boost: /como|passo|solicit|gov\.br|aplicativo|agend|presencial|etapa|1\.|dar entrada|requerimento|site/ },
+    { id: 'lista', re: /\b(remedios|medicamentos|quais (sao )?os|lista)\b/, boost: /medicament|lista|relacao|exemplos?/ },
+    { id: 'prazo', re: /\b(prazo|quanto tempo|demora|validade|vigencia|renov)\w*/, boost: /prazo|dias|meses|anos|validade|vigenc|renov/ }
+  ];
+  function intentsDe(n) { return INTENTS.filter(function (i) { return i.re.test(n); }); }
+  function tokensPass(s) { return uniq(tok(s)).filter(function (t) { return !PASS_STOP[t] && (t.length > 1 || /\d/.test(t)); }); }
+
+  function dividirDesc(d) {
+    var out = [], raw = String(d.desc == null ? '' : d.desc);
+    raw.split(/<br\s*\/?>|\n+/i).forEach(function (par) {
+      var p = cleanText(par).replace(/^[·\s]+|[·\s]+$/g, '');
+      if (!p) return;
+      if (p.length <= 650) { out.push(p); return; }
+      var partes = p.split(/\s*[•▪●]\s*/), rotulo = '';
+      if (partes.length > 1 && partes[0].length <= 90) rotulo = partes.shift().replace(/[\s:]+$/, '');
+      if (partes.length < 2) { // sem marcadores: parte por frases
+        partes = p.split(/(?<=[.;!?])\s+(?=[A-ZÁÉÍÓÚÂÊÔÃÕÇ0-9])/);
+        rotulo = '';
+      }
+      var buf = '';
+      partes.forEach(function (x) {
+        x = x.replace(/^[;\s]+|[;\s]+$/g, '');
+        if (!x) return;
+        if (buf && (buf + ' ' + x).length > 650) { out.push((rotulo ? rotulo + ': ' : '') + buf); buf = ''; }
+        buf = buf ? buf + '; ' + x : x;
+      });
+      if (buf) out.push((rotulo ? rotulo + ': ' : '') + buf);
+    });
+    return out;
+  }
+  function buildPass() {
+    var byId = {}, df = {}, N = 0;
+    data.forEach(function (d) {
+      var lst = dividirDesc(d).map(function (t, i) {
+        var tk = tokensPass(t); N++;
+        tk.forEach(function (w) { df[w] = (df[w] || 0) + 1; });
+        return { t: t, tk: asSet(tk), n: norm(t), ord: i };
+      });
+      if (lst.length) byId[d.id] = lst;
+    });
+    passIdx = { byId: byId, df: df, N: N || 1 };
+  }
+  function passagens() { if (!passIdx) buildPass(); return passIdx; }
+  function pesoPass(w) { var P = passagens(); return Math.log(1 + P.N / (1 + (P.df[w] || 0))); }
+  function casa(set, w) {
+    if (set[w]) return 1;
+    if (w.length >= 5) for (var k in set) if (k.length >= 5 && (k.indexOf(w.slice(0, 5)) === 0)) return 0.8;
+    return 0;
+  }
+  // Pontua os trechos de UMA ficha para a pergunta. Devolve os melhores, na ordem em que aparecem na ficha.
+  function trechosDa(d, text, orcamento, minimo) {
+    var lst = passagens().byId[d.id];
+    if (!lst || !lst.length) return { itens: [], melhor: 0 };
+    var n = norm(text), qt = tokensPass(text), ints = intentsDe(n), extra = [];
+    qt.forEach(function (w) { (PASS_SIN[w] || []).forEach(function (s) { extra.push(s); }); });
+    var pontuados = lst.map(function (p) {
+      var s = 0;
+      qt.forEach(function (w) { var m = casa(p.tk, w); if (m) s += m * pesoPass(w); });
+      extra.forEach(function (w) { if (p.tk[w]) s += 0.6 * pesoPass(w); });
+      var ib = 0;
+      ints.forEach(function (i) { if (i.boost.test(p.n)) ib += 1.6; });
+      // o boost de intenção só vale se o trecho também tem relação com o assunto (ou a ficha é pequena)
+      return { p: p, s: s + (s > 0 || lst.length <= 3 ? ib : 0) };
+    });
+    var melhor = pontuados.reduce(function (m, x) { return x.s > m ? x.s : m; }, 0);
+    var corte = Math.max(minimo || 1.2, melhor * 0.45);
+    var sel = pontuados.filter(function (x) { return x.s >= corte; }).sort(function (a, b) { return b.s - a.s; });
+    var usado = 0, ficou = [];
+    sel.forEach(function (x) {
+      var t = x.p.t;
+      if (usado + t.length > orcamento) { if (ficou.length) return; t = cut(t, orcamento); }
+      usado += t.length; ficou.push({ ord: x.p.ord, t: t, s: x.s });
+    });
+    ficou.sort(function (a, b) { return a.ord - b.ord; });
+    return { itens: ficou, melhor: melhor };
+  }
+  function textoTrechos(r) { return r.itens.map(function (x) { return x.t; }).join(' // '); }
+
+  // Base do app: verbetes conferidos (glossário, base do psicólogo), valores de referência e calendário de pagamento do PBF.
+  var PBF_NIS = { // ferramentas/pagamento-pbf.html (cópia; o teste:territorio confere se continua igual)
+    1: [19, 12, 18, 16, 18, 17, 20, 18, 17, 19, 16, 10], 2: [20, 13, 19, 17, 19, 18, 19, 21, 18, 20, 17, 11],
+    3: [21, 18, 20, 20, 20, 19, 20, 22, 21, 21, 18, 14], 4: [22, 19, 23, 22, 21, 22, 23, 22, 21, 22, 19, 15],
+    5: [23, 20, 24, 23, 22, 23, 24, 24, 23, 23, 23, 16], 6: [26, 23, 25, 24, 25, 24, 27, 25, 24, 26, 24, 17],
+    7: [27, 24, 26, 27, 26, 25, 28, 26, 25, 27, 25, 18], 8: [28, 25, 27, 28, 27, 26, 29, 27, 28, 28, 26, 21],
+    9: [29, 26, 30, 29, 28, 29, 28, 30, 29, 29, 27, 22], 0: [30, 27, 31, 30, 29, 30, 31, 31, 30, 30, 30, 23]
+  };
+  var MESES = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  var MESES_BONITO = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  function dois(n) { return (n < 10 ? '0' : '') + n; }
+  function brl(v) { return 'R$ ' + Number(v).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+,)/g, '.'); }
+  function refsTexto() {
+    if (!REFS.sm) return '';
+    var t = 'Salário mínimo: ' + brl(REFS.sm) + ' (¼ = ' + brl(REFS.sm / 4) + '; ½ = ' + brl(REFS.sm / 2) + ').';
+    if (REFS.bf) t += ' Linha de renda per capita do Bolsa Família: ' + brl(REFS.bf) + ' por pessoa.';
+    return t;
+  }
+  var RE_REFS = /\b(salario minimo|meio salario|1 2 salario|1 4 salario|um quarto|um meio|renda per capita|linha de pobreza|valor do bolsa familia)\b/;
+  var RE_PBF_PAG = /\b(pagamento|pagam|paga|pago|recebe|recebo|cai|data)\b.*\b(bolsa familia|pbf)\b|\b(bolsa familia|pbf)\b.*\b(pagamento|pagam|paga|pago|recebe|recebo|cai|data|calendario)\b|\bfinal (do )?nis\b|\bnis (final|terminad[oa]|termina)\b/;
+  function pbfPagamento(text) {
+    var n = norm(text);
+    if (!RE_PBF_PAG.test(n)) return null;
+    var m = n.match(/\b(?:final|terminad[oa]|termina|termina em|digito)(?: do| de| em| com)?(?: nis)?(?: em| de)? (\d)\b/) || n.match(/\bnis (?:final |terminad[oa] em |termina em )?(\d)\b(?!\d)/);
+    var dig = m ? Number(m[1]) : null, mes = -1;
+    MESES.forEach(function (x, i) { if (n.indexOf(x) > -1) mes = i; });
+    if (mes < 0 && /\b(este mes|esse mes|mes atual|agora|hoje)\b/.test(n)) mes = new Date().getMonth();
+    var cab = 'Calendário de pagamento do Bolsa Família 2026 (ferramenta do Argo, por último dígito do NIS).';
+    if (dig !== null && mes >= 0) return cab + ' Final ' + dig + ' em ' + MESES_BONITO[mes] + ': dia ' + PBF_NIS[dig][mes] + '.';
+    if (mes >= 0) return cab + ' Em ' + MESES_BONITO[mes] + ': ' + [1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map(function (k) { return 'final ' + k + ' dia ' + PBF_NIS[k][mes]; }).join('; ') + '.';
+    if (dig !== null) return cab + ' Final ' + dig + ': ' + MESES_BONITO.map(function (x, i) { return x.slice(0, 3) + ' ' + PBF_NIS[dig][i]; }).join('; ') + '.';
+    return cab + ' Em geral, os últimos 10 dias úteis do mês; em dezembro o calendário é antecipado (termina dia 23). Diga o mês e o final do NIS (0 a 9) para eu dar o dia.';
+  }
+  function limpaMd(s) { return String(s || '').replace(/\*\*/g, '').replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim(); }
+  // Itens (até 3) que acompanham a pergunta à IA: o que o app sabe e a IA não tem como adivinhar.
+  function baseApp(text) {
+    var out = [], n = norm(text);
+    try {
+      var ps = psiScore(text);
+      if (ps.score >= 3 && ps.entry) out.push({ titulo: 'Base do psicólogo no SUAS: ' + ps.entry.cat, texto: limpaMd(ps.entry.text), origem: ps.entry.base });
+      var gs = glossaryScore(text);
+      if (gs.score >= 3 && gs.entry && out.length < 3) out.push({ titulo: 'Base SUAS (glossário do app)', texto: limpaMd(gs.entry.text), origem: gs.entry.base });
+    } catch (e) { /* sem verbete */ }
+    if (RE_REFS.test(n) && refsTexto()) out.push({ titulo: 'Valores de referência do app (2026)', texto: refsTexto(), origem: 'ferramenta de renda per capita do Argo' });
+    var pg = pbfPagamento(text);
+    if (pg && out.length < 4) out.push({ titulo: 'Calendário de pagamento do Bolsa Família', texto: pg, origem: 'ferramentas/pagamento-pbf.html (Argo)' });
+    return out;
+  }
+
+  // Resposta direta da ficha (sem IA) para "requisitos / documentos / valor / como solicitar" de um serviço que o diretório identifica bem.
+  function casaSet(tokens) { var set = asSet(tokens); return function (w) { return casa(set, w) > 0; }; }
+  function fichaAsk(text) {
+    var n = norm(text);
+    if (/^(o que (e|significa)|que e)\b/.test(n)) return null;       // definição: glossário
+    var ints = intentsDe(n).filter(function (i) { return i.id !== 'lista' || /\b(remedios|medicamentos)\b/.test(n); });
+    if (!ints.length) return null;
+    var dir = directory(text, { units: [] }, null);
+    if (!dir.units.length || dir.contact && !ints.length) return null;
+    if (!(dir.mode === 'single' || dir.confidence >= 0.5)) return null;
+    var top = dir.units[0], d = fichaDe(top.id);
+    if (!d || !d.id) return null;
+    // o nome da unidade precisa estar (quase todo) na pergunta: evita responder pela ficha errada ("passe livre do idoso" x "Passe Livre ... Deficiência")
+    var qs = casaSet(tokensPass(text)), cobre = 0;
+    [d.name, d.fullName].forEach(function (nm) {
+      var nt = tokensPass(nm); if (!nt.length) return;
+      var ok = nt.filter(function (w) { return qs(w); }).length / nt.length;
+      if (ok > cobre) cobre = ok;
+    });
+    if (cobre < 0.75) return null;
+    var tr = trechosDa(d, text, 1300, 2.2);
+    if (!tr.itens.length || tr.melhor < 2.6) return null;
+    // várias fichas de mesmo peso (ex.: BPC idoso x BPC pessoa com deficiência): deixa para a IA decidir com as duas
+    if (dir.units.length > 1 && dir.mode === 'list') {
+      var seg = fichaDe(dir.units[1].id), t2 = seg && seg.id ? trechosDa(seg, text, 1300, 2.2) : { melhor: 0 };
+      if (t2.melhor >= tr.melhor * 0.9) return null;
+    }
+    var linhas = ['**' + (d.fullName && d.fullName.length < 70 ? d.fullName : d.name) + '** · do cartão no diretório:'];
+    tr.itens.forEach(function (x) { linhas.push('- ' + cut(x.t, 520)); });
+    return {
+      reply: linhas.join('\n'), mood: 'info', badge: 'Ficha do diretório',
+      note: 'Trechos copiados da ficha do diretório; confira a regra vigente no órgão responsável.',
+      followups: ['Qual o telefone?', 'Qual o endereço?'], units: [top], fichaId: d.id
+    };
+  }
+  function pbfOuRefsAsk(text) {
+    var n = norm(text);
+    var pg = pbfPagamento(text);
+    if (pg) return { reply: pg, mood: 'info', badge: 'Calendário PBF', note: 'Confira o calendário oficial vigente no MDS ou na Caixa (121 / 111).', units: [] };
+    if (RE_REFS.test(n) && refsTexto() && /\b(quanto|valor|qual)\b/.test(n)) return { reply: refsTexto(), mood: 'info', badge: 'Valores de referência', note: 'Valores usados na ferramenta de renda per capita do Argo; confira o decreto vigente.', units: [] };
+    return null;
+  }
+
+  // ---------------------------------------------------------------------
   // Plano: decide quem responde
   //   devolve { kind:'crisis'|'directory'|'concept'|'none', result?, dir?, con? }
   // ---------------------------------------------------------------------
@@ -2466,10 +2667,17 @@
     // painel de Boa Vista: perfil do bairro, panorama por área, necessidades (parto, CadÚnico, EJA...) e dados que o diretório não tem
     var pb = perfilBairro(text) || panoramaAreas(text) || necessidade(text) || semNumeros(text);
     if (pb) return { kind: 'directory', result: pb, dir: { units: pb.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
+    var pr = pbfOuRefsAsk(text);
+    if (pr) return { kind: 'directory', result: pr, dir: { units: [], confidence: 1, mode: 'list' }, con: { score: 0 } };
     var mun = municipio(text);
     if (mun) return { kind: 'directory', result: mun, dir: { units: mun.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
     var terr = territory(text);
     if (terr) return { kind: 'directory', result: terr, dir: { units: terr.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
+    // requisitos / documentos / valor / como solicitar de um serviço bem identificado: o cartão da ficha responde (e a IA fica a um toque)
+    if (psiScore(text).score < 3) {
+      var fi = fichaAsk(text);
+      if (fi) return { kind: 'ficha', result: fi, dir: { units: fi.units || [], confidence: 1, mode: 'single' }, con: { score: 0 } };
+    }
     // "o que é o SUAS?" é conceito (o nome "SUAS" também aparece em fichas como "Criança Feliz no SUAS")
     if (/^(o que (?:e|significa)|como funciona|que e)( o| a)? (suas|sistema unico de assistencia social)$/.test(norm(text))) {
       var gs = glossaryScore(text);
@@ -2532,6 +2740,7 @@
   function init(opts) {
     opts = opts || {};
     data = Array.isArray(opts.data) ? opts.data : [];
+    REFS = (opts.refs && typeof opts.refs === 'object') ? opts.refs : {}; passIdx = null; panoramaCache = null;
     index = null; vocab = null; expCache = {}; gloIndex = null; psiIndex = null; phoneIdx = null; terrIdx = null; terrAll = null; munIdx = null; contIdx = null;
     if (opts.ia) for (var k in opts.ia) if (Object.prototype.hasOwnProperty.call(CFG, k)) CFG[k] = opts.ia[k];
   }
@@ -2540,7 +2749,7 @@
     interpretar: interpretar, init: init, setCid: setCid, cid: cidAsk, norm: norm, piiBlock: piiBlock, crisis: crisis, plan: plan, contagem: contagem,
     directory: function (t, tabCat) { return directory(t, session, tabCat); },
     glossary: glossaryScore, compose: { directory: composeDirectory, glossary: composeGlossary },
-    psi: psiScore, psiLista: PSI_BASE,
+    psi: psiScore, psiLista: PSI_BASE, baseApp: baseApp, fichaAsk: fichaAsk, trechosDa: trechosDa, pbfPagamento: pbfPagamento,
     remember: remember, reset: reset, session: session,
     aiOn: aiOn, aiGate: aiGate, buildPayload: buildPayload, streamAI: streamAI,
     verifyPhones: verifyPhones, panorama: panorama, isAmpla: isAmpla, cleanAI: cleanAI, separarSugestoes: separarSugestoes, ocultarSugestoes: ocultarSugestoes, mentionedUnits: mentionedUnits, telHref: telHref, slim: slim,
