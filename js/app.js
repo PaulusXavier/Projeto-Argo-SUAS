@@ -17519,6 +17519,15 @@ function agendaDisplayOrder(entries) {
   });
 }
 
+// Filtro do painel "Neste mês": só os dias com anotação pendente.
+let agendaOnlyPending = false;
+function agendaTogglePending() {
+  agendaOnlyPending = !agendaOnlyPending;
+  const b = document.getElementById('agendaPendingBtn');
+  if (b) b.setAttribute('aria-pressed', agendaOnlyPending ? 'true' : 'false');
+  agendaRenderMonthList();
+}
+
 function agendaEntryTimeLabel(createdAt) {
   if (!createdAt) return '';
   const d = new Date(createdAt);
@@ -19177,6 +19186,10 @@ function renderAgendaCard() {
         .agenda-ts-late { color: var(--red-ink); font-weight: 800; }
         .agenda-pend-more { margin: 6px 0 0; font-size: 12.5px; font-style: italic; color: var(--ink-muted); }
 
+        .agenda-pending-btn { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 8px; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--rule-line); background: var(--paper-alt); font: inherit; font-size: 12px; font-weight: 700; color: var(--ink-muted); cursor: pointer; }
+        .agenda-pending-btn[hidden] { display: none; }
+        .agenda-pending-btn:hover { border-color: var(--gold); color: var(--cover); }
+        .agenda-pending-btn[aria-pressed="true"] { background: var(--cover); border-color: var(--cover); color: var(--paper); }
         /* Próximos marcos na coluna lateral. */
         /* Aproveitamento de espaço: faixas de resumo lado a lado, moldura mais larga em tela cheia,
            e, em tela bem larga, três colunas (calendário | mês | pendências) sem buraco embaixo da grade. */
@@ -19486,6 +19499,7 @@ function renderAgendaCard() {
               </div>
               <div class="agenda-tabpanel" data-panel="month" role="tabpanel" aria-labelledby="agendaTabMonth">
                 <h4 class="agenda-side-title" id="agendaSideTitle">Neste mês</h4>
+                <button type="button" class="agenda-pending-btn" id="agendaPendingBtn" aria-pressed="false" hidden onclick="agendaTogglePending()">☐ Só anotações pendentes</button>
                 <p class="agenda-side-sub" id="agendaMonthSummary"></p>
                 <p class="agenda-side-sub" id="agendaBusinessDays" title="Segunda a sexta, sem feriados nem pontos facultativos"></p>
                 <p class="agenda-longweekend" id="agendaLongWeekend" hidden></p>
@@ -20611,7 +20625,8 @@ function agendaRenderMonthList() {
     const info = (infoAll && !agendaHiddenKinds.has(argoAgendaKind(infoAll))) ? infoAll : null;
     const entries = agendaNotesCache[key];
     const note = agendaEntriesPreview(entries);
-    if (!info && !note) continue;
+    if (agendaOnlyPending) { if (!note) continue; }
+    else if (!info && !note) continue;
     if (info) counts[argoAgendaKind(info)]++;
     if (entries && entries.length) notes += entries.length;
 
@@ -20637,7 +20652,9 @@ function agendaRenderMonthList() {
 
   if (!html) {
     html = Object.keys(AGENDA_DATA_INFO).length
-      ? '<p class="agenda-list-empty">Nenhuma data marcada em ' + AGENDA_MONTH_NAMES[m].toLowerCase() + '. Toque em um dia do calendário para fazer uma anotação.</p>'
+      ? (agendaOnlyPending
+          ? '<p class="agenda-list-empty">Nenhuma anotação pendente em ' + AGENDA_MONTH_NAMES[m].toLowerCase() + '. 🎉</p>'
+          : '<p class="agenda-list-empty">Nenhuma data marcada em ' + AGENDA_MONTH_NAMES[m].toLowerCase() + '. Toque em um dia do calendário para fazer uma anotação.</p>')
       : '<p class="agenda-list-empty">As datas oficiais de ' + AGENDA_YEAR + ' (feriados, facultativos e pagamentos) ainda não foram cadastradas neste app. As anotações funcionam normalmente: toque em um dia para escrever.</p>';
   }
   list.innerHTML = html;
@@ -20653,7 +20670,11 @@ function agendaRenderMonthList() {
     if (counts.pagamento) parts.push(counts.pagamento + (counts.pagamento === 1 ? ' pagamento' : ' pagamentos'));
     if (counts.extra) parts.push(counts.extra + (counts.extra === 1 ? ' outra data' : ' outras datas'));
     if (notes) parts.push(notes + (notes === 1 ? ' anotação' : ' anotações'));
-    summary.textContent = agendaJoinPt(parts);
+    let pend = 0;
+    for (let d = 1; d <= count; d++) pend += (agendaNotesCache[agendaKeyFor(m, d)] || []).filter(e => e && !e.done).length;
+    summary.textContent = agendaJoinPt(parts) + (notes && pend ? ' (' + pend + (pend === 1 ? ' pendente' : ' pendentes') + ')' : '');
+    const pb = document.getElementById('agendaPendingBtn');
+    if (pb) pb.hidden = !notes;
   }
   const bd = document.getElementById('agendaBusinessDays');
   if (bd) {
