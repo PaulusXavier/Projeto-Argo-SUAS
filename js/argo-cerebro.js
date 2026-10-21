@@ -2912,14 +2912,14 @@
   function setCensoSuas(trechos) {
     censoSuas = Array.isArray(trechos) ? trechos.filter(function (t) {
       return t && t.doc === 'censo-suas-2025-roraima-psicologos' && t.tipo === 'apoio' && typeof t.texto === 'string' && t.texto.trim();
-    }).slice(0, 20).map(function (t) {
+    }).slice(0, 40).map(function (t) {
       return { titulo: cut(cleanText(t.titulo), 160), referencia: cut(cleanText(t.referencia), 180), texto: cut(cleanText(t.texto), 900), origem: cut(cleanText(t.norma), 300) };
     }) : [];
     return censoSuas.length;
   }
   function censoBaseApp(text) {
     var n = norm(text);
-    if (!censoSuas.length || !/\b(censo suas|psicolog\w*|recursos humanos|rh|trabalhador\w*|profission\w*|servidor\w*|carga horaria|vinculo\w*|escolaridade|atendimento coletivo|familias referenciadas|lotacao)\b/.test(n)) return [];
+    if (!censoSuas.length || !/\b(censo suas|psicolog\w*|recursos humanos|rh|trabalhador\w*|profission\w*|servidor\w*|carga horaria|vinculo\w*|escolaridade|atendimento coletivo|familias referenciadas|lotacao|capacidade|computador\w*|veiculo\w*|conselheir\w*|implantacao)\b/.test(n) && !(/\b(assistentes? sociais?|pedagog\w+|trabalham|cadastrador\w*|estatutari\w+|temporari\w+|nutricionist\w+|advogad\w+|equipes?)\b/.test(n) && /\b(boa vista|roraima|creas|convivencia|acolhimento)\b/.test(n))) return [];
     var termos = uniq(tok(text).filter(function (t) { return t.length > 2 && !CENSO_STOP[t]; }));
     var ranqueados = censoSuas.map(function (t) {
       var corpo = norm([t.titulo, t.referencia, t.texto].join(' ')), palavras = asSet(tok(corpo));
@@ -2929,6 +2929,15 @@
         if (radical.length >= 5 && Object.keys(palavras).some(function (p) { return p.indexOf(radical) === 0 || radical.indexOf(p) === 0; })) return soma + 1;
         return soma;
       }, 0);
+      // o lugar e o módulo pedidos pesam: "Roraima" prefere o trecho do estado; "Boa Vista", o da capital; "CREAS" não puxa o de CRAS
+      if (pontos > 0) {
+        var ref = norm((t.referencia || '') + ' ' + (t.titulo || ''));
+        if (/\bboa vista\b/.test(n)) { if (/\bboa vista\b/.test(ref)) pontos += 3; }
+        else if (/\broraima\b/.test(n)) { if (/\broraima\b/.test(ref) && !/\bboa vista\b/.test(ref)) pontos += 3; }
+        [['cras', /\bcras\b/], ['creas', /\bcreas\b/], ['convivencia', /\bconvivencia\b/], ['acolhimento', /\bacolhimento\b/], ['gestao', /\bgestao\b/]].forEach(function (m) {
+          if (m[1].test(n) && m[1].test(ref)) pontos += 2;
+        });
+      }
       return { trecho: t, pontos: pontos };
     }).filter(function (x) { return x.pontos > 0; }).sort(function (a, b) { return b.pontos - a.pontos; });
     return ranqueados.slice(0, 2).map(function (x) {
@@ -3004,6 +3013,261 @@
   }
 
   // ---------------------------------------------------------------------
+  // PSICÓLOGOS NO CENSO SUAS 2025 — Boa Vista em detalhe, Roraima em totais
+  // Resposta direta, SEM IA. Fonte: pacote "Censo SUAS 2025 Roraima" (RH agregado, sem nomes nem CPF).
+  // O número é de REGISTROS de RH por módulo, não de pessoas: um profissional pode aparecer em mais de um módulo.
+  // Cada módulo de CP_MUN: [registros de RH, registros de psicólogos, unidades com RH, unidades com psicólogo]
+  // (null = o módulo não traz identificador de unidade). Módulo ausente = sem linhas de RH no arquivo
+  // (isso NÃO prova que o serviço não exista). Para atualizar: troque os números, confira com os trechos de
+  // knowledge/documentos/censo-suas-2025-roraima-psicologos.md (Paulus) e rode npm run test:territorio.
+  // ---------------------------------------------------------------------
+  var CP_ANO = 2025;
+  var CP_MOD = { cras: 'CRAS', creas: 'CREAS', conv: 'Centro de Convivência', acol: 'Unidade de Acolhimento', fam: 'Família Acolhedora (equipe)', gest: 'Gestão Municipal do SUAS', posto: 'Posto de Cadastramento do CadÚnico', fundo: 'Fundo Municipal de Assistência Social', pop: 'Centro POP' };
+  var CP_ORD = ['cras', 'creas', 'conv', 'acol', 'fam', 'gest', 'posto', 'fundo'];
+  var CP_MUN = {
+      'Alto Alegre': {cras: [24,2,2,1], creas: [9,1,1,1], fundo: [4,0,null,null], gest: [8,0,null,null], posto: [3,0,1,0]},
+      'Amajari': {cras: [5,1,1,1], creas: [5,1,1,1], conv: [3,0,1,0], fundo: [2,0,null,null], gest: [2,0,null,null], posto: [4,0,1,0]},
+      'Boa Vista': {cras: [323,19,8,8], creas: [77,13,2,2], conv: [91,4,5,3], fam: [5,1,1,1], fundo: [15,0,null,null], gest: [126,3,null,null], posto: [4,0,1,0], acol: [133,3,2,2]},
+      'Bonfim': {cras: [19,2,1,1], creas: [6,1,1,1], fundo: [1,0,null,null], gest: [5,0,null,null]},
+      'Cantá': {cras: [18,2,1,1], creas: [5,1,1,1]},
+      'Caracaraí': {cras: [25,0,2,0], creas: [5,1,1,1], fundo: [1,0,null,null], gest: [6,0,null,null], posto: [3,0,1,0], acol: [14,0,1,0]},
+      'Caroebe': {cras: [18,1,1,1], creas: [5,1,1,1], fundo: [1,0,null,null], gest: [3,0,null,null], posto: [4,0,1,0]},
+      'Iracema': {cras: [23,1,1,1], creas: [3,1,1,1], fundo: [2,0,null,null], gest: [7,0,null,null], posto: [5,0,1,0]},
+      'Mucajaí': {cras: [4,0,1,0], creas: [3,1,1,1], fundo: [1,0,null,null], gest: [1,0,null,null], posto: [3,0,1,0]},
+      'Normandia': {cras: [19,1,1,1], creas: [9,1,1,1], fundo: [1,0,null,null], gest: [7,0,null,null]},
+      'Pacaraima': {cras: [41,1,1,1], creas: [9,1,1,1], fundo: [1,0,null,null], gest: [12,0,null,null]},
+      'Rorainópolis': {cras: [13,1,1,1], creas: [9,1,1,1], fundo: [3,0,null,null], gest: [5,0,null,null], posto: [6,0,1,0]},
+      'São João da Baliza': {cras: [1,0,1,0], creas: [2,1,1,1], fundo: [1,0,null,null], gest: [2,0,null,null], posto: [2,0,1,0]},
+      'São Luiz': {cras: [12,1,1,1], fundo: [1,0,null,null], gest: [3,0,null,null], posto: [5,0,1,0]},
+      'Uiramutã': {cras: [2,0,1,0], creas: [2,1,1,1], fundo: [3,0,null,null], gest: [3,0,null,null], posto: [1,0,1,0]}
+  };
+  // Roraima: registros de psicólogos por módulo (município identificado + acolhimento sem município + esfera estadual)
+  var CP_RR = { total: 161, identificados: 69, acolhSemMun: 41, estadual: 51, mod: { cras: 32, creas: 26, conv: 4, acol: 44, fam: 1, gest: 3 }, gestEst: 50, fundoEst: 1 };
+  // Boa Vista: perfil agregado dos psicólogos por módulo e composição da equipe de RH (CRAS e CREAS)
+  var CP_BV_PERFIL = {
+    cras: ['sexo: 16 mulheres e 3 homens', 'escolaridade: 10 com superior completo e 9 com especialização', 'vínculo: 18 estatutários e 1 temporário', 'função: 18 técnicos de nível superior e 1 em apoio administrativo', 'carga horária: 17 de 21 a 30 h semanais e 2 de 31 a 40 h', 'serviço principal: PAIF 14, Serviço de PSB no domicílio 3, Convivência e Fortalecimento de Vínculos 1, Benefícios Eventuais 1', 'segundo serviço: PAIF 6, Bolsa Família e condicionalidades 5, Convivência e Fortalecimento de Vínculos 2, PSB no domicílio 2, CadÚnico 1, Benefícios Eventuais 1, Criança Feliz 1, não informado 1'],
+    creas: ['sexo: 11 mulheres e 2 homens', 'escolaridade: 8 com superior completo e 5 com especialização', 'vínculo: 12 estatutários e 1 comissionado', 'função: 12 técnicos de nível superior e 1 coordenador(a)/dirigente', 'carga horária: todos de 21 a 30 h semanais'],
+    conv: ['sexo: 3 mulheres e 1 homem', 'escolaridade: 4 com superior completo', 'vínculo: 2 estatutários, 1 temporário e 1 celetista (CLT)', 'função: 4 técnicos de nível superior', 'carga horária: todos de 21 a 30 h semanais'],
+    acol: ['sexo: 3 mulheres', 'escolaridade: 2 com especialização e 1 com mestrado', 'vínculo: 3 estatutárias', 'função: 3 técnicas de nível superior', 'carga horária: todas de 21 a 30 h semanais'],
+    fam: ['sexo: 1 mulher', 'escolaridade: especialização', 'vínculo: estatutária', 'função: técnica de nível superior'],
+    gest: ['sexo: 3 mulheres', 'escolaridade: 2 com especialização e 1 com superior completo', 'vínculo: 3 estatutárias', 'função: 3 técnicas de nível superior', 'carga horária: todas de 21 a 30 h semanais']
+  };
+  var CP_BV_EQUIPE = {
+    cras: 'equipe de RH dos CRAS: 209 de nível médio, 35 assistentes sociais, 28 sem formação profissional, **19 psicólogos**, 17 de outra formação de nível superior, 11 pedagogos e 4 de outras profissões (de 323)',
+    creas: 'equipe de RH dos CREAS: 33 de nível médio, 17 assistentes sociais, **13 psicólogos**, 7 de outra formação de nível superior, 5 pedagogos, 1 advogado e 1 sem formação profissional (de 77)'
+  };
+  var CP_PSI = /\b(psicolog\w*|psis)\b/;
+  var CP_INT = /\b(quantos?|quantas|numero|total|dados|censo|registros?|perfil|quadro|distribuic\w+|panorama|carga horaria|vinculos?|estatutari\w+|temporari\w+|escolaridade|especializacao|mestrado|sexo|mulheres|homens|proporcao|percentual|onde (estao|trabalham|atuam)|em quais|quem atua)\b/;
+  var CP_NORMA = /\b(deve|devem|deveria|precisa|precisam|obrigatori\w*|minim\w*|exige|exigid\w*|equipe de referencia|nob|resolucao|tipificacao|lei|portaria)\b/;
+  var CP_PERFIL = /\b(perfil|sexo|genero|mulheres|homens|escolaridade|especializacao|mestrado|vinculos?|estatutari\w+|temporari\w+|comissionad\w+|carga horaria|horas|funcao|servico principal|segundo servico|bolsa familia)\b/;
+  var CP_EQUIPE = /\b(equipe|composicao|assistentes? sociais?|pedagog\w+|profissoes)\b/;
+  var CP_UNIDADE = /\bcras (cauame|cristiana(?: vicente nunes)?|silvio leite|itinerante|nova cidade|pintolandia|sao francisco|uniao)\b/;
+  function cpModulo(n) {
+    var o = [];
+    if (/\bcras\b/.test(n)) o.push('cras');
+    if (/\bcreas\b/.test(n)) o.push('creas');
+    if (/\b(centros? de convivencia|convivencia|scfv)\b/.test(n)) o.push('conv');
+    if (/\bfamilia acolhedora\b/.test(n)) o.push('fam');
+    else if (/\b(acolhimentos?|abrigos?|casa lar)\b/.test(n)) o.push('acol');
+    if (/\b(gestao|secretaria|semads)\b/.test(n)) o.push('gest');
+    if (/\b(posto de cadastramento|cadunico|cad unico)\b/.test(n)) o.push('posto');
+    if (/\bcentro pop\b/.test(n)) o.push('pop');
+    return o;
+  }
+  function cpMunicipio(n) {
+    var padded = ' ' + n + ' ', melhor = null;
+    Object.keys(CP_MUN).forEach(function (nome) {
+      var k = norm(nome);
+      if (padded.indexOf(' ' + k + ' ') > -1 && (!melhor || k.length > norm(melhor).length)) melhor = nome;
+    });
+    return melhor;
+  }
+  function cpPct(a, b) { return b ? (a / b * 100).toFixed(2).replace('.', ',') + '%' : ''; }
+  function cpLinha(k, v) {
+    var t = '**' + CP_MOD[k] + '**: ' + v[1] + (v[1] === 1 ? ' registro' : ' registros') + ' de psicólogo' + (v[1] === 1 ? '' : 's') + ' em ' + v[0] + ' registros de RH';
+    if (v[0] && v[1]) t += ' (' + cpPct(v[1], v[0]) + ')';
+    if (v[2] != null) t += '; ' + v[3] + ' de ' + v[2] + (v[2] === 1 ? ' unidade' : ' unidades') + ' com psicólogo registrado';
+    return t;
+  }
+  function cpSoma(m) { return Object.keys(m).reduce(function (s, k) { return s + m[k][1]; }, 0); }
+  function psiCensoAsk(text) {
+    var n = norm(text);
+    if (!n || n.length > 220 || !CP_PSI.test(n) || !CP_INT.test(n) || CP_NORMA.test(n) || RE_CONTATO.test(n)) return null;
+    var mods = cpModulo(n), mun = cpMunicipio(n), unid = n.match(CP_UNIDADE);
+    var estado = /\b(roraima|estado|interior|municipios|rr)\b/.test(n);
+    if (!mun && !estado && !mods.length && !unid) return null;
+    if (/\bcapital\b/.test(n) && !mun) mun = 'Boa Vista';
+    if (!mun && !estado) mun = 'Boa Vista';   // o app é de Boa Vista: "nos CRAS" sem lugar = Boa Vista (a resposta diz o município)
+    var fonte = 'Censo SUAS ' + CP_ANO, L = [], fu = [];
+    var nota = 'Contagem de registros de RH do ' + fonte + ' (MDS), não de pessoas únicas: um profissional pode aparecer em mais de um módulo. Não mede suficiência de equipe, carga real de trabalho nem cobertura.';
+    var res = function (extra) { var o = { reply: L.join('\n'), mood: 'info', badge: fonte, note: nota, followups: fu.slice(0, 3), units: [] }; for (var k in (extra || {})) o[k] = extra[k]; return o; };
+    var bv = CP_MUN['Boa Vista'];
+    // Roraima (sem município): totais por módulo
+    if (!mun && mods.length && CP_RR.mod[mods[0]] != null) {
+      var mk = mods[0], tk = CP_RR.mod[mk], bk = bv[mk] ? bv[mk][1] : 0;
+      L.push('No **' + fonte + '**, Roraima registra **' + tk + ' registros de psicólogos** em **' + CP_MOD[mk] + '**: **' + bk + '** em Boa Vista' + (mk === 'acol' ? ' e ' + CP_RR.acolhSemMun + ' em unidades com IBGE=14 (sem município indicado), que não são de Boa Vista' : ' e ' + (tk - bk) + ' nos demais municípios') + '.');
+      var sem = Object.keys(CP_MUN).filter(function (m) { return m !== 'Boa Vista' && CP_MUN[m][mk] && CP_MUN[m][mk][1] > 0; });
+      if (mk === 'cras' || mk === 'creas') L.push('- **Demais municípios com psicólogo registrado em ' + CP_MOD[mk] + ' (' + sem.length + '):** ' + sem.map(function (m) { return m + ' ' + CP_MUN[m][mk][1]; }).join(', ') + '.');
+      fu = ['Quantos psicólogos há em Boa Vista?', 'Quantos psicólogos há em Roraima?'];
+      return res();
+    }
+    if (!mun) {
+      L.push('No **' + fonte + '**, Roraima tem **' + CP_RR.total + ' registros de psicólogos** nas bases de RH analisadas: ' + (CP_RR.identificados + CP_RR.acolhSemMun) + ' em módulos municipais (' + CP_RR.identificados + ' em municípios identificados e ' + CP_RR.acolhSemMun + ' em unidades de acolhimento com IBGE=14, sem município indicado) e ' + CP_RR.estadual + ' em módulos estaduais (Gestão Estadual do SUAS, ' + CP_RR.gestEst + '; Fundo Estadual, ' + CP_RR.fundoEst + ').');
+      L.push('- **Por módulo municipal:** CRAS ' + CP_RR.mod.cras + ', CREAS ' + CP_RR.mod.creas + ', Unidade de Acolhimento ' + CP_RR.mod.acol + ' (' + CP_RR.acolhSemMun + ' sem município), Centro de Convivência ' + CP_RR.mod.conv + ', Gestão Municipal ' + CP_RR.mod.gest + ', Família Acolhedora ' + CP_RR.mod.fam + '. Sem psicólogo no arquivo: Centro POP, Fundo Municipal e Posto de Cadastramento.');
+      L.push('- **Boa Vista** concentra ' + cpSoma(bv) + ' dos ' + CP_RR.identificados + ' registros em municípios identificados (CRAS ' + bv.cras[1] + ' de ' + CP_RR.mod.cras + '; CREAS ' + bv.creas[1] + ' de ' + CP_RR.mod.creas + ').');
+      L.push('_Os ' + CP_RR.acolhSemMun + ' registros de acolhimento sem município não são de Boa Vista nem de outro município._');
+      fu = ['Quantos psicólogos há em Boa Vista?', 'Quantos psicólogos há nos CRAS de Roraima?', 'Psicólogos por município de Roraima'];
+      return res();
+    }
+    var d = CP_MUN[mun];
+    // CRAS específico: o arquivo é agregado por município e módulo
+    if (unid && mun === 'Boa Vista') {
+      L.push('O Censo SUAS 2025 que o Argo tem é **agregado por município e módulo**: não informa quantos psicólogos há em cada CRAS. Nos **8 CRAS de Boa Vista** há **' + bv.cras[1] + ' registros de psicólogos** (em ' + bv.cras[2] + ' unidades com RH, e as ' + bv.cras[3] + ' registram ao menos um). Para a lotação de um CRAS, consulte a coordenação ou a SEMADS.');
+      fu = ['Perfil dos psicólogos dos CRAS de Boa Vista', 'Onde estão os psicólogos na equipe dos CRAS de Boa Vista?'];
+      return res();
+    }
+    var tot = cpSoma(d);
+    if (mods.length) {
+      var achou = 0;
+      mods.forEach(function (k) {
+        if (d[k]) { achou++; L.push('Em **' + mun + '**, ' + cpLinha(k, d[k]) + '.'); if (!d[k][1]) L.push('_Zero significa só que a categoria Psicólogo(a) não aparece entre os registros de RH desse módulo._'); }
+        else L.push('Em **' + mun + '**, o arquivo do ' + fonte + ' **não traz registros de RH** do módulo ' + CP_MOD[k] + '. Isso não prova que o serviço não exista.');
+        if (mun === 'Boa Vista' && CP_BV_PERFIL[k] && (CP_PERFIL.test(n) || mods.length === 1)) L.push('- **Perfil dos ' + d[k][1] + ' registros:** ' + CP_BV_PERFIL[k].join('; ') + '.');
+        if (mun === 'Boa Vista' && CP_BV_EQUIPE[k] && CP_EQUIPE.test(n)) L.push('- **Equipe:** ' + CP_BV_EQUIPE[k] + '.');
+      });
+      if (!achou && mods.length === 1 && !d[mods[0]]) { /* só o aviso acima */ }
+    } else if (mun === 'Boa Vista') {
+      L.push('**Boa Vista** tem **' + tot + ' registros de psicólogos** no ' + fonte + ', de ' + CP_RR.identificados + ' em municípios identificados de Roraima:');
+      CP_ORD.forEach(function (k) { if (d[k] && (d[k][1] || k === 'posto' || k === 'fundo')) L.push('- ' + cpLinha(k, d[k])); });
+      L.push('- O Centro POP não tem linhas de RH no arquivo. Os registros de acolhimento com IBGE=14 (' + CP_RR.acolhSemMun + ') não são de Boa Vista.');
+      if (CP_PERFIL.test(n)) {
+        L.push('- **Perfil nos CRAS (' + bv.cras[1] + '):** ' + CP_BV_PERFIL.cras.slice(0, 5).join('; ') + '.');
+        L.push('- **Perfil nos CREAS (' + bv.creas[1] + '):** ' + CP_BV_PERFIL.creas.join('; ') + '.');
+      }
+    } else {
+      L.push('Em **' + mun + '**, o ' + fonte + ' registra **' + tot + (tot === 1 ? ' registro' : ' registros') + ' de psicólogo' + (tot === 1 ? '' : 's') + ' nos módulos municipais:');
+      CP_ORD.forEach(function (k) { if (d[k] && (k === 'cras' || k === 'creas' || d[k][1])) L.push('- ' + cpLinha(k, d[k])); });
+      L.push('_Módulo que não aparece não tem linhas de RH no arquivo, o que não prova que o serviço não exista._');
+    }
+    if (mun === 'Boa Vista') fu = ['Perfil dos psicólogos dos CREAS de Boa Vista', 'Quantos psicólogos há nos Centros de Convivência de Boa Vista?', 'Quantos psicólogos há em Roraima?'];
+    else fu = ['Quantos psicólogos há em Boa Vista?', 'Quantos psicólogos há em Roraima?'];
+    return res();
+  }
+
+  // ---------------------------------------------------------------------
+  // BOA VISTA NO CENSO SUAS 2025 — equipes (todas as profissões), os 8 CRAS e o conselho municipal
+  // Resposta direta, SEM IA. Mesma fonte e mesmos cuidados de CP_MUN: são REGISTROS de RH por módulo, não pessoas.
+  // Conferir sempre com knowledge/documentos/censo-suas-2025-roraima-psicologos.md (Paulus).
+  // ---------------------------------------------------------------------
+  var BV_RH = {
+    cras: { tot: 323, p: { 'profissionais de nível médio': 209, 'assistentes sociais': 35, 'sem formação profissional': 28, 'psicólogos': 19, 'outra formação de nível superior': 17, 'pedagogos': 11, 'outras profissões (administrador, analista de sistema, antropólogo, sociólogo)': 4 } },
+    creas: { tot: 77, p: { 'profissionais de nível médio': 33, 'assistentes sociais': 17, 'psicólogos': 13, 'outra formação de nível superior': 7, 'pedagogos': 5, 'advogados': 1, 'sem formação profissional': 1 } },
+    conv: { tot: 91, p: { 'profissionais de nível médio': 40, 'sem formação profissional': 12, 'outra formação de nível superior': 11, 'administração/gestão pública': 9, 'assistentes sociais': 8, 'pedagogos': 5, 'psicólogos': 4, 'advogados': 1, 'terapeutas ocupacionais': 1 } },
+    acol: { tot: 133, p: { 'profissionais de nível médio': 80, 'sem formação profissional': 31, 'outra formação de nível superior': 10, 'assistentes sociais': 4, 'psicólogos': 3, 'nutricionistas': 2, 'pedagogos': 2, 'enfermeiros': 1 } },
+    gest: { tot: 126, p: { 'profissionais de nível médio': 79, 'outra formação de nível superior': 17, 'assistentes sociais': 11, 'sem formação profissional': 9, 'psicólogos': 3, 'advogados': 2, 'pedagogos': 2, 'antropólogos': 1, 'nutricionistas': 1, 'sociólogos': 1 } },
+    fam: { tot: 5, p: { 'assistentes sociais': 2, 'psicólogos': 1, 'profissionais de nível médio': 1, 'sem formação profissional': 1 } },
+    fundo: { tot: 15, p: { 'outra formação de nível superior': 6, 'administradores': 2, 'contadores': 2, 'profissionais de nível médio': 2, 'sem formação profissional': 2, 'economistas': 1 } },
+    posto: { tot: 4, p: { 'profissionais de nível médio': 3, 'outra formação de nível superior': 1 } }
+  };
+  var BV_PROF = [
+    [/\bassistentes? sociais?\b/, 'assistentes sociais'], [/\bpedagog\w+\b/, 'pedagogos'], [/\badvogad\w+\b/, 'advogados'],
+    [/\bnutricionist\w+\b/, 'nutricionistas'], [/\benfermeir\w+\b/, 'enfermeiros'], [/\bterapeutas? ocupaciona\w+\b/, 'terapeutas ocupacionais'],
+    [/\bcontad\w+\b/, 'contadores'], [/\badministrador\w*\b/, 'administradores'], [/\beconomistas?\b/, 'economistas'],
+    [/\bsociolog\w+\b/, 'sociólogos'], [/\bantropolog\w+\b/, 'antropólogos'], [/\bnivel medio\b/, 'profissionais de nível médio']
+  ];
+  var BV_CRAS_VINC = 'vínculo: 188 estatutários, 65 comissionados, 58 temporários, 6 celetistas (CLT), 4 terceirizados e 2 de outro vínculo não permanente';
+  var BV_CRAS_ESC = 'escolaridade: 133 com superior completo, 103 com ensino médio completo, 42 com especialização, 32 com superior incompleto, 3 com mestrado, 5 com fundamental completo, 3 com médio incompleto, 1 com fundamental incompleto e 1 sem escolaridade';
+  var BV_CRAS_FUNC = 'função: 72 cadastradores (de 89 em Roraima), 65 técnicos de nível superior (de 123), 59 educadores sociais (de 101), 50 técnicos de nível médio, 35 em outras funções, 26 em apoio administrativo, 8 coordenadores, 5 em serviços gerais e 3 estagiários';
+  // [nome, bairro declarado, ano, famílias referenciadas (capacidade), imóvel, pessoas em atendimento coletivo do PAIF, computadores, com internet, veículos exclusivos]
+  var BV_CRAS = [
+    ['CRAS Cauamé', 'Jardim Floresta', 2012, 5000, 'alugado', 852, 24, 22, 0],
+    ['CRAS Cristiana Vicente Nunes', 'Centenário', 2010, 5000, 'próprio', 720, 33, 33, 3],
+    ['CRAS Dr. Sílvio Leite', 'Dr. Sílvio Leite', 2012, 5000, 'próprio', 26, 27, 27, 3],
+    ['CRAS Itinerante', 'São Francisco', 2024, 3500, 'próprio', 991, 21, 21, 4],
+    ['CRAS Nova Cidade', 'Nova Cidade', 2004, 5000, 'próprio', 1078, 23, 23, 3],
+    ['CRAS Pintolândia', 'Pintolândia', 2010, 5000, 'alugado', 674, 26, 26, 2],
+    ['CRAS São Francisco', 'Centro', 2012, 5000, 'alugado', 264, 26, 24, 4],
+    ['CRAS União', 'União', 2010, 5000, 'próprio', 1144, 27, 26, 3]
+  ];
+  var BV_CONSELHO = 'O Conselho Municipal de Assistência Social de Boa Vista registra **20 conselheiros** (9 titulares, 8 suplentes, 1 presidente, 1 vice-presidente e 1 secretário executivo): 15 mulheres e 5 homens; 13 com superior completo, 3 com especialização, 2 com superior incompleto e 2 com ensino médio. Representação: 9 governamentais (Assistência Social 2, Saúde 2, outras áreas 5) e 11 da sociedade civil (entidades 4, usuários 2, organizações de usuários 2, organizações de trabalhadores 3). Conselheiros não são trabalhadores do SUAS e o arquivo não informa a profissão deles.';
+  var BV_RE_RH = /\b(trabalhadores?|profissionais|equipe|equipes|rh|recursos humanos|servidores?|funcionarios?|vinculos?|escolaridade|estatutari\w+|temporari\w+|comissionad\w+|cadastrador\w*|educador\w* sociais?)\b/;
+  var BV_RE_INFRA = /\b(capacidade|familias referenciadas|computador\w*|veiculo\w*|carro\w*|atendimento coletivo|implantacao|imovel|alugad\w+|proprio)\b/;
+  var BV_SING = { 'psicólogos': 'psicólogo', 'assistentes sociais': 'assistente social', 'pedagogos': 'pedagogo', 'advogados': 'advogado', 'nutricionistas': 'nutricionista', 'enfermeiros': 'enfermeiro', 'terapeutas ocupacionais': 'terapeuta ocupacional', 'antropólogos': 'antropólogo', 'sociólogos': 'sociólogo', 'economistas': 'economista', 'contadores': 'contador', 'administradores': 'administrador' };
+  function bvLista(o) { return Object.keys(o).map(function (k) { return o[k] + ' ' + (o[k] === 1 && BV_SING[k] ? BV_SING[k] : k); }).join(', '); }
+  function boaVistaCensoAsk(text) {
+    var n = norm(text);
+    if (!n || n.length > 220 || CP_PSI.test(n) || CP_NORMA.test(n) || RE_CONTATO.test(n)) return null;
+    var temBV = /\bboa vista\b|\bcapital\b/.test(n);
+    var mods = cpModulo(n).filter(function (k) { return BV_RH[k]; });
+    var prof = BV_PROF.filter(function (x) { return x[0].test(n); }).map(function (x) { return x[1]; });
+    var fonte = 'Censo SUAS ' + CP_ANO, L = [], fu = [];
+    var nota = 'Contagem de registros de RH do ' + fonte + ' (MDS) por módulo, não de pessoas únicas. Não mede suficiência de equipe nem cobertura.';
+    var res = function (extra) { var o = { reply: L.join('\n'), mood: 'info', badge: fonte, note: nota, followups: fu.slice(0, 3), units: [] }; for (var k in (extra || {})) o[k] = extra[k]; return o; };
+    // conselho municipal
+    if (/\b(conselho municipal|conselheir\w+|cmas)\b/.test(n) && (temBV || /\bcmas\b/.test(n)) && !/\bconselho tutelar\b/.test(n)) {
+      L.push(BV_CONSELHO); fu = ['Quantos psicólogos há em Boa Vista?', 'Quais os CRAS de Boa Vista e a capacidade de cada um?'];
+      return res({ note: 'Composição do conselho no ' + fonte + ' (MDS). Confira com o CMAS para a composição atual.' });
+    }
+    var cras = /\bcras\b/.test(n) && !/\bcreas\b/.test(n);
+    // os 8 CRAS: capacidade, bairro, ano, imóvel, atendimento coletivo, computadores, veículos
+    if ((temBV || cras) && BV_RE_INFRA.test(n) && cras) {
+      var CH = ['cauame', 'cristiana', 'silvio leite', 'itinerante', 'nova cidade', 'pintolandia', 'sao francisco', 'uniao'], un = [];
+      CH.forEach(function (k, i) { if (n.indexOf(k) > -1 && !(k === 'sao francisco' && /\bitinerante\b/.test(n))) un.push(BV_CRAS[i]); });
+      if (un.length === 1) {
+        var c = un[0];
+        L.push('**' + c[0] + '** (' + fonte + '): bairro declarado **' + c[1] + '**, implantado em **' + c[2] + '**, capacidade para referenciar **' + c[3].toLocaleString('pt-BR') + ' famílias**, imóvel ' + c[4] + '; **' + c[5].toLocaleString('pt-BR') + '** pessoas em atendimento coletivo do PAIF; **' + c[6] + '** computadores (' + c[7] + ' com internet) e ' + c[8] + (c[8] === 1 ? ' veículo' : ' veículos') + ' de uso exclusivo.');
+      } else {
+        L.push('Os **8 CRAS de Boa Vista** no ' + fonte + ' somam capacidade para referenciar **38.500 famílias**, **5.749** pessoas em atendimento coletivo do PAIF, **207** computadores (202 com internet) e **22** veículos de uso exclusivo; 5 imóveis próprios e 3 alugados:');
+        BV_CRAS.forEach(function (c) { L.push('- **' + c[0] + '** (' + c[1] + ', ' + c[2] + '): ' + c[3].toLocaleString('pt-BR') + ' famílias; ' + c[5].toLocaleString('pt-BR') + ' no atendimento coletivo; ' + c[6] + ' computadores; ' + c[8] + ' veículos; imóvel ' + c[4]); });
+      }
+      L.push('_O bairro e os números são os declarados no Censo; o endereço e o contato atuais estão no diretório do Argo._');
+      fu = ['Quantos psicólogos há nos CRAS de Boa Vista?', 'Qual a equipe dos CRAS de Boa Vista?'];
+      return res();
+    }
+    if (!temBV && !mods.length && !cras) return null;
+    var pedeRh = BV_RE_RH.test(n) || prof.length;
+    if (!pedeRh || (!temBV && !mods.length)) return null;
+    if (!temBV && mods.length && !BV_RE_RH.test(n)) return null;
+    // vínculo, escolaridade e função da equipe dos CRAS
+    if (cras && /\b(vinculos?|escolaridade|estatutari\w+|temporari\w+|comissionad\w+|cadastrador\w*|educador\w* sociais?|funcao|funcoes)\b/.test(n) && !prof.length) {
+      var pedi = [];
+      if (/\b(vinculos?|estatutari\w+|temporari\w+|comissionad\w+)\b/.test(n)) pedi.push(BV_CRAS_VINC);
+      if (/\bescolaridade\b/.test(n)) pedi.push(BV_CRAS_ESC);
+      if (/\b(cadastrador\w*|educador\w* sociais?|funcao|funcoes)\b/.test(n)) pedi.push(BV_CRAS_FUNC);
+      L.push('Equipe dos **CRAS de Boa Vista** no ' + fonte + ' (323 registros de RH):');
+      pedi.forEach(function (t) { L.push('- ' + t); });
+      fu = ['Qual a equipe dos CRAS de Boa Vista?', 'Quantos psicólogos há nos CRAS de Boa Vista?'];
+      return res();
+    }
+    // uma profissão: por módulo
+    if (prof.length) {
+      var p0 = prof[0], tot = 0, partes = [];
+      Object.keys(BV_RH).forEach(function (k) {
+        if (mods.length && mods.indexOf(k) < 0) return;
+        var v = BV_RH[k].p[p0]; if (v) { tot += v; partes.push(CP_MOD[k] + ' ' + v); }
+      });
+      if (!tot) { L.push('No ' + fonte + ', o arquivo não traz registros de **' + p0 + '** em Boa Vista' + (mods.length ? ' no módulo ' + CP_MOD[mods[0]] : ' nos módulos municipais') + '. Isso só indica que a categoria não aparece nos registros de RH, não que não existam.'); }
+      else L.push('No **' + fonte + '**, Boa Vista tem **' + tot + ' registros de ' + p0 + '** nos módulos municipais: ' + partes.join('; ') + '.');
+      fu = ['Qual a equipe dos CRAS de Boa Vista?', 'Quantos psicólogos há em Boa Vista?'];
+      return res();
+    }
+    // composição de um módulo ou visão geral
+    if (mods.length) {
+      mods.slice(0, 2).forEach(function (k) {
+        L.push('**' + CP_MOD[k] + ' de Boa Vista** no ' + fonte + ': **' + BV_RH[k].tot + ' registros de RH**. ' + bvLista(BV_RH[k].p).replace(/^/, 'Por profissão: ') + '.');
+      });
+      if (mods[0] === 'cras') L.push('- ' + BV_CRAS_FUNC + '.');
+      fu = ['Vínculo e escolaridade da equipe dos CRAS de Boa Vista', 'Quantos psicólogos há em Boa Vista?'];
+      return res();
+    }
+    L.push('Boa Vista tem **774 registros de RH** nos módulos municipais do ' + fonte + ':');
+    ['cras', 'acol', 'gest', 'conv', 'creas', 'fundo', 'fam', 'posto'].forEach(function (k) { L.push('- **' + CP_MOD[k] + '**: ' + BV_RH[k].tot + ' (psicólogos: ' + (BV_RH[k].p['psicólogos'] || 0) + '; assistentes sociais: ' + (BV_RH[k].p['assistentes sociais'] || 0) + ')'); });
+    L.push('- O Centro POP não tem linhas de RH no arquivo.');
+    fu = ['Qual a equipe dos CRAS de Boa Vista?', 'Quantos assistentes sociais há em Boa Vista?', 'Quantos psicólogos há em Boa Vista?'];
+    return res();
+  }
+
+  // ---------------------------------------------------------------------
   // Plano: decide quem responde
   //   devolve { kind:'crisis'|'directory'|'concept'|'none', result?, dir?, con? }
   // ---------------------------------------------------------------------
@@ -3014,6 +3278,11 @@
     // CID-11: código → transtorno e nome → código (tabela local, sem IA)
     var cd = cidAsk(text);
     if (cd) return { kind: 'directory', result: cd, dir: { units: [], confidence: 1, mode: 'list' }, con: { score: 0 } };
+    // psicólogos no Censo SUAS 2025 (Boa Vista em detalhe, Roraima em totais): número fixo da base, nunca da IA
+    var cp = psiCensoAsk(text);
+    if (cp) return { kind: 'directory', result: cp, dir: { units: [], confidence: 1, mode: 'list' }, con: { score: 0 } };
+    var bvc = boaVistaCensoAsk(text);
+    if (bvc) return { kind: 'directory', result: bvc, dir: { units: [], confidence: 1, mode: 'list' }, con: { score: 0 } };
     // "quantas escolas tem no bairro X?": número calculado nas fichas (nunca pela IA)
     if (rr && /\b(quantas?|quantos?)\b/.test(norm(text))) {
       var mi = rrAchar(norm(text))[0];
@@ -3112,7 +3381,7 @@
   }
 
   return {
-    interpretar: interpretar, init: init, setCid: setCid, setMunicipios: setMunicipios, setCensoSuas: setCensoSuas, municipiosRR: rrAsk, cid: cidAsk, norm: norm, piiBlock: piiBlock, crisis: crisis, plan: plan, contagem: contagem,
+    interpretar: interpretar, init: init, setCid: setCid, setMunicipios: setMunicipios, setCensoSuas: setCensoSuas, psiCenso: psiCensoAsk, bvCenso: boaVistaCensoAsk, municipiosRR: rrAsk, cid: cidAsk, norm: norm, piiBlock: piiBlock, crisis: crisis, plan: plan, contagem: contagem,
     directory: function (t, tabCat) { return directory(t, session, tabCat); },
     glossary: glossaryScore, compose: { directory: composeDirectory, glossary: composeGlossary },
     psi: psiScore, psiLista: PSI_BASE, baseApp: baseApp, fichaAsk: fichaAsk, trechosDa: trechosDa, pbfPagamento: pbfPagamento,
@@ -3122,4 +3391,3 @@
     config: CFG, emergencia: EMERGENCIA, glossarioLista: GLOSSARIO
   };
 });
-
