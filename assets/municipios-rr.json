@@ -1,0 +1,299 @@
+{
+ "v": 1,
+ "fonte": "Censo 2022 (IBGE); SEPLAN-RR, Informativo 013/2023 (indígenas); SESAU-RR (área/distância); MDS, Diagnóstico Socioterritorial por setor censitário (gerado em 13/10/2026)",
+ "aviso": "Dados de apoio, não norma. Estimativas e cadastros mudam: confira no IBGE, no MDS (VIS Data/Relatório de Informações) ou na Secretaria antes de usar em documento oficial.",
+ "estado": {
+  "nome": "Roraima",
+  "capital": "Boa Vista",
+  "municipios": 15,
+  "pop": 636707,
+  "popEstimada2025": 738772,
+  "areaKm2": 223505.058,
+  "densidade": 2.85,
+  "popGeral2010": 450479,
+  "crescimentoPct": 41.3,
+  "indigenas": 97320,
+  "indigenasPct": 15.29,
+  "indigenasEmTerras": 71412,
+  "indigenasForaTerras": 25908,
+  "ateQuatorzeAnosPct": 29.2,
+  "sessentaECincoMaisPct": 5,
+  "fronteiras": "Venezuela (Pacaraima, BR-174) e Guiana (Bonfim, BR-401)"
+ },
+ "municipios": [
+  {
+   "id": "alto-alegre",
+   "nome": "Alto Alegre",
+   "aliases": [],
+   "pop": 21096,
+   "indPct": 60.3,
+   "grupos": [
+    "Alto Alegre"
+   ],
+   "posicao": 3,
+   "diagnostico": {
+    "referencia": "CadÚnico e BPC 12/12/2025; Bolsa Família 01/01/2026; Censo 2022 (malha preliminar)",
+    "setores": 14,
+    "georefPct": 78.94,
+    "cadFamilias": 2292,
+    "cadPessoas": 5504,
+    "cadGpte": 368,
+    "cadAtualizadas": 2061,
+    "cadDesatualizadas": 231,
+    "cadAte218": 1096,
+    "cadIndigenas": 667,
+    "ivcad": 0.289,
+    "ivcadFamilias": 1449,
+    "ivcadTrabalho": 0.582,
+    "pbfFamilias": 1152,
+    "pbfPessoas": 3536,
+    "bpc": 315,
+    "bpcDeficiencia": 167,
+    "bpcIdosos": 148,
+    "censoSetoresPessoas": 7265,
+    "censoSetoresDomicilios": 3046
+   }
+  },
+  {
+   "id": "amajari",
+   "nome": "Amajari",
+   "aliases": [
+    "Amajarí"
+   ],
+   "pop": 13927,
+   "indPct": 69.5,
+   "grupos": [
+    "Amajari",
+    "Amajarí"
+   ],
+   "posicao": 9
+  },
+  {
+   "id": "boa-vista",
+   "nome": "Boa Vista",
+   "aliases": [],
+   "pop": 413486,
+   "areaKm2": 5687.037,
+   "indPessoas": 20410,
+   "indPct": 4.94,
+   "capital": true,
+   "grupos": [],
+   "posicao": 1,
+   "diagnostico": {
+    "referencia": "CadÚnico e BPC 12/12/2025; Bolsa Família 01/01/2026; Censo 2022 (malha preliminar)",
+    "setores": 493,
+    "georefPct": 95.58,
+    "cadFamilias": 73913,
+    "cadPessoas": 194614,
+    "cadGpte": 5803,
+    "cadAtualizadas": 65177,
+    "cadDesatualizadas": 8736,
+    "cadAte218": 25784,
+    "cadIndigenas": 11447,
+    "ivcad": 0.281,
+    "ivcadFamilias": 51108,
+    "ivcadTrabalho": 0.547,
+    "pbfFamilias": 30658,
+    "pbfPessoas": 97728,
+    "bpc": 15102,
+    "bpcDeficiencia": 7838,
+    "bpcIdosos": 7264,
+    "censoSetoresPessoas": 402935,
+    "censoSetoresDomicilios": 129285
+   }
+  },
+  {
+   "id": "bonfim",
+   "nome": "Bonfim",
+   "aliases": [],
+   "pop": 13923,
+   "nota": "Fica na fronteira com a Guiana e é ligado a Boa Vista pela BR-401.",
+   "grupos": [
+    "Bonfim"
+   ],
+   "posicao": 10
+  },
+  {
+   "id": "canta",
+   "nome": "Cantá",
+   "aliases": [
+    "Canta"
+   ],
+   "pop": 18682,
+   "areaKm2": 7664.83,
+   "grupos": [
+    "Cantá"
+   ],
+   "posicao": 6
+  },
+  {
+   "id": "caracarai",
+   "nome": "Caracaraí",
+   "aliases": [],
+   "pop": 20957,
+   "areaKm2": 47379.9,
+   "densidade": 0.5,
+   "grupos": [
+    "Caracaraí"
+   ],
+   "posicao": 4
+  },
+  {
+   "id": "caroebe",
+   "nome": "Caroebe",
+   "aliases": [],
+   "pop": 10656,
+   "grupos": [
+    "Caroebe"
+   ],
+   "posicao": 12
+  },
+  {
+   "id": "iracema",
+   "nome": "Iracema",
+   "aliases": [],
+   "pop": 10023,
+   "areaKm2": 14011.7,
+   "nota": "Fica a cerca de 93 km de Boa Vista (SESAU-RR).",
+   "grupos": [
+    "Iracema"
+   ],
+   "posicao": 13
+  },
+  {
+   "id": "mucajai",
+   "nome": "Mucajaí",
+   "aliases": [
+    "Mucajai"
+   ],
+   "pop": 18095,
+   "grupos": [
+    "Mucajaí"
+   ],
+   "posicao": 7
+  },
+  {
+   "id": "normandia",
+   "nome": "Normandia",
+   "aliases": [],
+   "pop": 13986,
+   "indPessoas": 12144,
+   "indPct": 89,
+   "indAprox": true,
+   "grupos": [
+    "Normandia"
+   ],
+   "posicao": 8
+  },
+  {
+   "id": "pacaraima",
+   "nome": "Pacaraima",
+   "aliases": [],
+   "pop": 19305,
+   "indPct": 59.2,
+   "nota": "Fica na fronteira com a Venezuela e é a principal porta de entrada terrestre de migrantes e refugiados venezuelanos no Brasil.",
+   "grupos": [
+    "Pacaraima"
+   ],
+   "posicao": 5,
+   "diagnostico": {
+    "referencia": "CadÚnico e BPC 12/12/2025; Bolsa Família 01/01/2026; Censo 2022 (malha preliminar)",
+    "setores": 22,
+    "georefPct": 64.28,
+    "cadFamilias": 4067,
+    "cadPessoas": 9424,
+    "cadGpte": 1569,
+    "cadAtualizadas": 3581,
+    "cadDesatualizadas": 486,
+    "cadAte218": 2610,
+    "cadIndigenas": 2562,
+    "ivcad": 0.312,
+    "ivcadFamilias": 2958,
+    "ivcadTrabalho": 0.569,
+    "pbfFamilias": 2069,
+    "pbfPessoas": 5024,
+    "bpc": 610,
+    "bpcDeficiencia": 114,
+    "bpcIdosos": 496,
+    "censoSetoresPessoas": 13510,
+    "censoSetoresDomicilios": 3752
+   }
+  },
+  {
+   "id": "rorainopolis",
+   "nome": "Rorainópolis",
+   "aliases": [
+    "Rorainopolis"
+   ],
+   "pop": 32647,
+   "areaKm2": 33579.74,
+   "densidade": 0.9,
+   "grupos": [
+    "Rorainópolis"
+   ],
+   "posicao": 2
+  },
+  {
+   "id": "sao-joao-da-baliza",
+   "nome": "São João da Baliza",
+   "aliases": [
+    "Sao Joao da Baliza"
+   ],
+   "pop": 8858,
+   "grupos": [
+    "São João da Baliza"
+   ],
+   "posicao": 14
+  },
+  {
+   "id": "sao-luiz",
+   "nome": "São Luiz",
+   "aliases": [
+    "São Luiz do Anauá",
+    "Sao Luiz do Anaua"
+   ],
+   "pop": 7315,
+   "grupos": [
+    "São Luiz do Anauá",
+    "São Luiz"
+   ],
+   "posicao": 15
+  },
+  {
+   "id": "uiramuta",
+   "nome": "Uiramutã",
+   "aliases": [
+    "Uiramuta"
+   ],
+   "pop": 13751,
+   "indPessoas": 13283,
+   "indPct": 96.6,
+   "grupos": [
+    "Uiramutã"
+   ],
+   "posicao": 11,
+   "diagnostico": {
+    "referencia": "CadÚnico e BPC 12/12/2025; Bolsa Família 01/01/2026; Censo 2022 (malha preliminar)",
+    "setores": 23,
+    "georefPct": 81.46,
+    "cadFamilias": 886,
+    "cadPessoas": 3710,
+    "cadGpte": 799,
+    "cadAtualizadas": 853,
+    "cadDesatualizadas": 33,
+    "cadAte218": 627,
+    "cadIndigenas": 3390,
+    "ivcad": 0.402,
+    "ivcadFamilias": 783,
+    "ivcadTrabalho": 0.617,
+    "pbfFamilias": 640,
+    "pbfPessoas": 2873,
+    "bpc": 37,
+    "bpcDeficiencia": 30,
+    "bpcIdosos": "de 1 a 20",
+    "censoSetoresPessoas": 3439,
+    "censoSetoresDomicilios": 956
+   }
+  }
+ ]
+}
