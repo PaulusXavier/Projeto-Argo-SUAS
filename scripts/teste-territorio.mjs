@@ -21,6 +21,9 @@ const B = ctx.ArgoCerebro;
 B.init({ data: ctx.DATA, ia: { url: '' } });
 const MUN_RR = JSON.parse(ler('assets/municipios-rr.json'));
 B.setMunicipios(MUN_RR);
+const BASE_CONHECIMENTO = JSON.parse(ler('assets/conhecimento.json'));
+const TRECHOS_CENSO = BASE_CONHECIMENTO.filter(x => x.doc === 'censo-suas-2025-roraima-psicologos');
+const TRECHOS_CENSO_CARREGADOS = B.setCensoSuas(TRECHOS_CENSO);
 
 let falhas = 0;
 function confere(nome, ok, detalhe) {
@@ -30,6 +33,7 @@ function confere(nome, ok, detalhe) {
 const resp = q => { const p = B.plan(q, { tabCat: '' }); return { kind: p.kind, txt: String((p.result && p.result.reply) || '') }; };
 
 confere('diretório carregado', ctx.DATA.length > 100, String(ctx.DATA.length));
+confere('13 trechos agregados do Censo SUAS foram carregados', TRECHOS_CENSO_CARREGADOS === 13, String(TRECHOS_CENSO_CARREGADOS));
 
 let r = resp('qual CRAS atende o bairro Cauamé');
 confere('bairro Cauamé → CRAS Cauamé', r.kind === 'directory' && /CRAS Cauamé/.test(r.txt), r.txt.slice(0, 80));
@@ -159,6 +163,13 @@ confere('contagem de Boa Vista continua igual', /escolas em Boa Vista/.test(r.tx
   confere('pergunta sobre saúde do interior leva as fichas do município (mesmo sem dizer CRAS)', pl2.contexto.length > 0 && pl2.contexto.every(f => /Uiramutã/.test(f.servicos)), pl2.contexto.map(f => f.nome).join('|'));
   const pl3 = B.buildPayload('como funciona o PAIF', { tabCat: '', tabName: '' });
   confere('pergunta sem município não leva ficha de município', !(pl3.base || []).some(x => /Roraima/.test(x.titulo)));
+  const pl4 = B.buildPayload('quantos psicólogos tem nos CRAS de Boa Vista?', { tabCat: '', tabName: '' });
+  const censoPsi = (pl4.base || []).filter(x => /Censo SUAS 2025/.test(x.origem || ''));
+  confere('pergunta sobre psicólogos em Boa Vista envia dados do Censo ao Paulus', censoPsi.length > 0 && censoPsi.some(x => /19/.test(x.texto) && /Boa Vista/.test(x.texto)), censoPsi.map(x => x.titulo + ': ' + x.texto.slice(0, 100)).join(' | '));
+  const pl5 = B.buildPayload('qual telefone do CRAS Pacaraima?', { tabCat: '', tabName: '' });
+  confere('pergunta de telefone do diretório não recebe contexto Censo irrelevante', !(pl5.base || []).some(x => /Censo SUAS 2025/.test(x.origem || '')));
+  const pl6 = B.buildPayload('quantos profissionais de psicologia há em Roraima?', { tabCat: '', tabName: '' });
+  confere('variação “profissionais de psicologia” recupera o total estadual', (pl6.base || []).some(x => /Censo SUAS 2025/.test(x.origem || '') && /161 registros/.test(x.texto)));
 }
 
 console.log(falhas ? '\n' + falhas + ' falha(s).' : '\nTudo certo.');
