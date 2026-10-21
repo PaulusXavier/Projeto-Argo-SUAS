@@ -49,6 +49,7 @@
   var index = null;
   var vocab = null;         // { palavra: df }
   var bairros = [];
+  var censoSuas = [];
 
   // ---------------------------------------------------------------------
   // Texto
@@ -2907,6 +2908,33 @@
     return cab + ' Em geral, os últimos 10 dias úteis do mês; em dezembro o calendário é antecipado (termina dia 23). Diga o mês e o final do NIS (0 a 9) para eu dar o dia.';
   }
   function limpaMd(s) { return String(s || '').replace(/\*\*/g, '').replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim(); }
+  var CENSO_STOP = asSet(['quantos', 'quantas', 'quanto', 'qual', 'quais', 'tem', 'tenho', 'temos', 'no', 'nos', 'na', 'nas', 'do', 'dos', 'da', 'das', 'de', 'em', 'ao', 'aos', 'e', 'o', 'a', 'os', 'as', 'um', 'uma', 'para', 'por', 'com', 'que', 'me', 'diga', 'informe', 'existe', 'sao', 'sobre']);
+  function setCensoSuas(trechos) {
+    censoSuas = Array.isArray(trechos) ? trechos.filter(function (t) {
+      return t && t.doc === 'censo-suas-2025-roraima-psicologos' && t.tipo === 'apoio' && typeof t.texto === 'string' && t.texto.trim();
+    }).slice(0, 20).map(function (t) {
+      return { titulo: cut(cleanText(t.titulo), 160), referencia: cut(cleanText(t.referencia), 180), texto: cut(cleanText(t.texto), 900), origem: cut(cleanText(t.norma), 300) };
+    }) : [];
+    return censoSuas.length;
+  }
+  function censoBaseApp(text) {
+    var n = norm(text);
+    if (!censoSuas.length || !/\b(censo suas|psicolog\w*|recursos humanos|rh|trabalhador\w*|profission\w*|servidor\w*|carga horaria|vinculo\w*|escolaridade|atendimento coletivo|familias referenciadas|lotacao)\b/.test(n)) return [];
+    var termos = uniq(tok(text).filter(function (t) { return t.length > 2 && !CENSO_STOP[t]; }));
+    var ranqueados = censoSuas.map(function (t) {
+      var corpo = norm([t.titulo, t.referencia, t.texto].join(' ')), palavras = asSet(tok(corpo));
+      var pontos = termos.reduce(function (soma, q) {
+        var radical = /^psicologi/.test(q) ? 'psicolog' : q.replace(/(os|as|es|is|a|o|s)$/, '');
+        if (palavras[q]) return soma + 2;
+        if (radical.length >= 5 && Object.keys(palavras).some(function (p) { return p.indexOf(radical) === 0 || radical.indexOf(p) === 0; })) return soma + 1;
+        return soma;
+      }, 0);
+      return { trecho: t, pontos: pontos };
+    }).filter(function (x) { return x.pontos > 0; }).sort(function (a, b) { return b.pontos - a.pontos; });
+    return ranqueados.slice(0, 2).map(function (x) {
+      return { titulo: 'Censo SUAS 2025 — ' + (x.trecho.referencia || x.trecho.titulo), texto: x.trecho.texto, origem: x.trecho.origem || 'Censo SUAS 2025, dados agregados de Recursos Humanos e Dados Gerais de Roraima' };
+    });
+  }
   // Itens (até 3) que acompanham a pergunta à IA: o que o app sabe e a IA não tem como adivinhar.
   function baseApp(text) {
     var out = [], n = norm(text);
@@ -2927,6 +2955,8 @@
     if (RE_REFS.test(n) && refsTexto()) out.push({ titulo: 'Valores de referência do app (2026)', texto: refsTexto(), origem: 'ferramenta de renda per capita do Argo' });
     var pg = pbfPagamento(text);
     if (pg && out.length < 4) out.push({ titulo: 'Calendário de pagamento do Bolsa Família', texto: pg, origem: 'ferramentas/pagamento-pbf.html (Argo)' });
+    var censo = censoBaseApp(text);
+    if (censo.length) return censo.concat(out).slice(0, 4);
     return out;
   }
 
@@ -3082,7 +3112,7 @@
   }
 
   return {
-    interpretar: interpretar, init: init, setCid: setCid, setMunicipios: setMunicipios, municipiosRR: rrAsk, cid: cidAsk, norm: norm, piiBlock: piiBlock, crisis: crisis, plan: plan, contagem: contagem,
+    interpretar: interpretar, init: init, setCid: setCid, setMunicipios: setMunicipios, setCensoSuas: setCensoSuas, municipiosRR: rrAsk, cid: cidAsk, norm: norm, piiBlock: piiBlock, crisis: crisis, plan: plan, contagem: contagem,
     directory: function (t, tabCat) { return directory(t, session, tabCat); },
     glossary: glossaryScore, compose: { directory: composeDirectory, glossary: composeGlossary },
     psi: psiScore, psiLista: PSI_BASE, baseApp: baseApp, fichaAsk: fichaAsk, trechosDa: trechosDa, pbfPagamento: pbfPagamento,
@@ -3092,3 +3122,4 @@
     config: CFG, emergencia: EMERGENCIA, glossarioLista: GLOSSARIO
   };
 });
+
