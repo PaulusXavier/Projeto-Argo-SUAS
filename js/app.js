@@ -18127,9 +18127,10 @@ function argoAssistantDefaultQuickActions() {
     { label: 'Agenda Argo', run: () => argoAssistantGoTo('agenda'), reply: 'Abri a Agenda Argo.', mood: 'success' },
     { label: 'Mapa', run: () => argoAssistantGoTo('mapa'), reply: 'Abri o Mapa dos Equipamentos.', mood: 'success' },
     { label: 'Central de PDF', run: () => argoAssistantGoTo('pdftools'), reply: 'Abri a Central de PDF.', mood: 'success' },
+    { label: 'Municípios de Roraima', run: () => argoAssistantAskInline('quais são os municípios de Roraima') },
     { label: 'Atalhos do teclado', run: () => argoAssistantAskInline('atalhos') }
   );
-  return list.slice(0, 6);
+  return list.slice(0, cat === 'all' ? 7 : 6);
 }
 
 /* ============================================================
@@ -26105,6 +26106,14 @@ function argoBrain() {
         .then(r => (r.ok ? r.json() : null))
         .then(j => { if (j) ArgoCerebro.setCid(j); })
         .catch(() => { /* sem tabela: o cérebro avisa que ela não carregou */ });
+    }
+    // Municípios de Roraima (população, indígenas, área, CadÚnico/PBF/BPC): gerado por scripts/gerar-municipios-rr.mjs.
+    // Sem o arquivo o mascote só não responde esses números direto (a IA e o diretório seguem como antes).
+    if (typeof fetch === 'function' && typeof ArgoCerebro.setMunicipios === 'function') {
+      fetch('assets/municipios-rr.json', { credentials: 'omit' })
+        .then(r => (r.ok ? r.json() : null))
+        .then(j => { if (j) ArgoCerebro.setMunicipios(j); })
+        .catch(() => { /* sem a base de municípios */ });
     }
     argoBrainReady = true;
   }
