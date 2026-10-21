@@ -26077,8 +26077,8 @@ function initAcomp() {
         acrescenta trechos de norma com citação e, se a IA falhar, usa a base
         de normas offline;
      6) se a IA falhar, vale a resposta pronta.
-   Sai do aparelho (só no passo 5): o texto da pergunta, as últimas mensagens
-   da conversa e fichas do diretório público. Perguntas com documento,
+   Sai do aparelho (só no passo 5): a pergunta e o histórico filtrados, até 10 fichas públicas
+   do diretório e, quando pertinente, trechos agregados do Censo SUAS 2025. Perguntas com documento,
    telefone, e-mail, nome e sobrenome ou endereço residencial são barradas
    antes de qualquer envio. Nada de famílias, planilhas ou bloco de notas.
    A conversa fica só na memória da página e é apagada ao trancar o app.
@@ -26090,6 +26090,7 @@ const ARGO_IA = {
 };
 
 let argoBrainReady = false;
+let argoCensoReady = Promise.resolve(0);
 function argoBrain() {
   if (typeof ArgoCerebro === 'undefined') return null;
   if (!argoBrainReady) {
@@ -26098,6 +26099,14 @@ function argoBrain() {
     // Se o arquivo não carregar, o app segue com o transporte antigo do ArgoCerebro.
     if (typeof Paulus !== 'undefined' && ARGO_IA.url) {
       Paulus.init({ app: 'argo', endpoint: ARGO_IA.url, conhecimentoUrl: 'assets/conhecimento.json' });
+    }
+    // Os trechos agregados do Censo SUAS 2025 vêm do mesmo pacote leve usado pela busca offline do Paulus.
+    // O Argo seleciona apenas os trechos pertinentes a perguntas sobre psicólogos/equipes e os envia como baseApp.
+    if (typeof fetch === 'function' && typeof ArgoCerebro.setCensoSuas === 'function') {
+      argoCensoReady = fetch('assets/conhecimento.json', { credentials: 'omit' })
+        .then(r => r.ok ? r.json() : null)
+        .then(j => ArgoCerebro.setCensoSuas(Array.isArray(j) ? j : []))
+        .catch(() => 0);
     }
     // Tabela da CID-11 (Capítulo 06): carrega do aparelho/cache (sw.js a guarda para uso offline). Sem isso o cérebro
     // responde "a tabela da CID-11 ainda não carregou" para qualquer código ou nome de transtorno.
@@ -26382,7 +26391,7 @@ function argoStreamIA(B, rawText, payload, hooks) {
     }
     // IA indisponível: se nada chegou ainda, a base de normas pode ter o trecho certo
     if (r.tipo === 'norma' && !acc) {
-      return { txt: B.cleanAI(r.texto), fontes: r.fontes || [], offline: true };
+      return { txt: B.cleanAI(r.texto), fontes: r.fontes || [], avisos: r.avisos || [], offline: true };
     }
     if (r.tipo === 'erro' || r.tipo === 'bloqueio') throw falha(r.tipo, r.texto, r.tipo === 'bloqueio');
     if (r.tipo === 'crise') {
@@ -26405,31 +26414,35 @@ function argoAskAI(rawText, tab, fallbackResult) {
     reply: '', mood: 'info', badge: 'IA',
     stream: {
       fallback: fallbackResult || { reply: 'Não consegui consultar a IA agora. Posso procurar o termo direto no diretório, se você quiser.', mood: 'notfound', quickActions: [{ label: 'Buscar "' + rawText.slice(0, 22) + '" nos equipamentos', run: () => argoAssistantSearch(rawText), reply: 'Pronto! Joguei essa busca no diretório.', mood: 'success' }] },
-      run: (onDelta, signal) => argoStreamIA(B, rawText, payload, { onDelta, signal }).then(({ txt, fontes, offline, sugestoes, acoes }) => {
-        const units = B.mentionedUnits(txt, ctxNames);
-        B.remember(rawText, txt, units);
-        const bad = B.verifyPhones(txt);
-        let note = 'Posso errar: confira os dados com a unidade antes de encaminhar.';
-        if (offline) note = 'Estou sem IA agora, mas achei este trecho na minha base de normas. Confira o texto oficial vigente.';
-        if (bad) note = '⚠️ Citei um número que não consta no diretório. Confirme com a unidade antes de usar.';
-        // Perguntas de continuação: as da IA primeiro; se ela citou unidade e não sugeriu nada, as de contato.
-        const seguintes = (sugestoes || []).slice(0, 3);
-        if (!seguintes.length && units.length) seguintes.push('Qual o telefone?', 'Qual o horário?');
-        return {
-          text: txt,
-          note,
-          bad: !!bad,                 // número que não consta no diretório: o mascote fica preocupado
-          badge: offline ? 'Base SUAS' : undefined,
-          sources: fontes || [],      // o mascote mostra como lista que abre e fecha
-          units: argoUnitsForUi(units),
-          followups: seguintes,
-          // Sem IA agora e a base de normas respondeu: dá um jeito de tentar de novo com a IA
-          quickActions: offline
-            ? [{ label: '↻ Tentar com a IA de novo', ask: rawText, force: true }]
-            // Telas propostas pela IA: botão "Abrir ..." (o mascote confirma com uma frase curta)
-            : ((acoes || []).length ? acoes.map(a => ({ label: 'Abrir ' + a.rotulo, run: a.executar, reply: 'Abri: ' + a.rotulo + '.', mood: 'success' })) : undefined)
-        };
-      }, err => { if (err && err.partial) B.remember(rawText, err.partial, []); throw err; })
+      run: (onDelta, signal) => argoCensoReady.then(() => {
+        const payload = B.buildPayload(rawText, { tabCat: tab.cat, tabName: tab.name });
+        const ctxNames = payload.contexto.map(f => B.norm(f.nome));
+        return argoStreamIA(B, rawText, payload, { onDelta, signal }).then(({ txt, fontes, avisos, offline, sugestoes, acoes }) => {
+          const units = B.mentionedUnits(txt, ctxNames);
+          B.remember(rawText, txt, units);
+          const bad = B.verifyPhones(txt);
+          let note = 'Posso errar: confira os dados com a unidade antes de encaminhar.';
+          if (offline) note = (avisos && avisos[0]) || 'Estou sem IA agora, mas achei um trecho na minha base SUAS. Confira a fonte e o ano citados.';
+          if (bad) note = '⚠️ Citei um número que não consta no diretório. Confirme com a unidade antes de usar.';
+          // Perguntas de continuação: as da IA primeiro; se ela citou unidade e não sugeriu nada, as de contato.
+          const seguintes = (sugestoes || []).slice(0, 3);
+          if (!seguintes.length && units.length) seguintes.push('Qual o telefone?', 'Qual o horário?');
+          return {
+            text: txt,
+            note,
+            bad: !!bad,                 // número que não consta no diretório: o mascote fica preocupado
+            badge: offline ? 'Base SUAS' : undefined,
+            sources: fontes || [],      // o mascote mostra como lista que abre e fecha
+            units: argoUnitsForUi(units),
+            followups: seguintes,
+            // Sem IA agora e a base de normas respondeu: dá um jeito de tentar de novo com a IA
+            quickActions: offline
+              ? [{ label: '↻ Tentar com a IA de novo', ask: rawText, force: true }]
+              // Telas propostas pela IA: botão "Abrir ..." (o mascote confirma com uma frase curta)
+              : ((acoes || []).length ? acoes.map(a => ({ label: 'Abrir ' + a.rotulo, run: a.executar, reply: 'Abri: ' + a.rotulo + '.', mood: 'success' })) : undefined)
+          };
+        }, err => { if (err && err.partial) B.remember(rawText, err.partial, []); throw err; });
+      })
     }
   };
 }
