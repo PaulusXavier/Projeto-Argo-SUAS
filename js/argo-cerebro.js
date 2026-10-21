@@ -782,8 +782,8 @@
   // ---------------------------------------------------------------------
   // Memória da conversa
   // ---------------------------------------------------------------------
-  var session = { history: [], units: [], aiTimes: [], lastAi: 0, terrUlt: null, pendente: '' };
-  function reset() { session.history = []; session.units = []; session.terrUlt = null; session.pendente = ''; }
+  var session = { history: [], units: [], aiTimes: [], lastAi: 0, terrUlt: null, munUlt: null, pendente: '' };
+  function reset() { session.history = []; session.units = []; session.terrUlt = null; session.munUlt = null; session.pendente = ''; }
   function remember(userText, botText, units) {
     userText = String(userText || '').trim();
     if (userText && !piiBlock(userText)) session.history.push({ papel: 'usuario', texto: userText.slice(0, CFG.maxPergunta) });
@@ -946,7 +946,10 @@
   // Município do interior citado na pergunta: a IA recebe os CRAS/CREAS dele com a área de abrangência.
   function municipioFichas(text) {
     var n = norm(text);
-    if (!/\b(cras|creas|assistencia social|cadunico|cadastro unico|bolsa familia|paif)\b/.test(n)) return [];
+    if (!/\b(cras|creas|assistencia social|cadunico|cadastro unico|bolsa familia|paif)\b/.test(n)) {
+      var rm = rr ? rrAchar(n)[0] : null;
+      return rm && rm.id !== 'boa-vista' ? rrFichasIA(rm) : [];
+    }
     if (!munIdx) munIdx = buildMunicipios();
     var padded = ' ' + n + ' ', chave = '';
     for (var i = 0; i < munIdx.keys.length; i++) if (padded.indexOf(' ' + munIdx.keys[i] + ' ') > -1) { chave = munIdx.keys[i]; break; }
@@ -1674,6 +1677,324 @@
     session.terrUlt = { kind: quer.length === 1 ? quer[0].toUpperCase() : 'CRAS', ref: loc ? loc.label : m.nome };
     var full = units.slice(0, 5).map(slim);
     return { reply: lines.join('\n'), mood: 'success', followups: full.length ? ['Qual o telefone?', 'Como chegar?'] : [], badge: 'Território', units: full, unitsAll: units.map(slim) };
+  }
+
+  // ---------------------------------------------------------------------
+  // MUNICÍPIOS DE RORAIMA: população, indígenas, área, CadÚnico/Bolsa Família/BPC e rede cadastrada.
+  // Os números vêm de assets/municipios-rr.json (gerado por scripts/gerar-municipios-rr.mjs a partir da base
+  // de normas do Paulus; cada valor é conferido contra o texto das fichas). Responde SEM IA e SEM inventar:
+  // o que a base não tem, o mascote diz que não tem. Para pergunta aberta ("como está X?"), a mesma ficha
+  // segue para a IA como "base do app" (baseApp) e as unidades do município vão como fichas (municipioFichas).
+  // ---------------------------------------------------------------------
+  var rr = null;            // { estado, municipios:[{...}], aviso, fonte, keys:[{key, m}] }
+  function setMunicipios(json) {
+    rr = null;
+    if (!json || !Array.isArray(json.municipios) || !json.municipios.length) return;
+    var keys = [];
+    json.municipios.forEach(function (m) {
+      [m.nome].concat(m.aliases || []).forEach(function (nm) { keys.push({ key: norm(nm), m: m }); });
+    });
+    keys.sort(function (a, b) { return b.key.length - a.key.length; });
+    rr = { estado: json.estado || {}, municipios: json.municipios, aviso: json.aviso || '', fonte: json.fonte || '', keys: keys };
+  }
+  function rrNum(v, casas) {
+    if (v == null || v === '') return '';
+    if (typeof v === 'string') return v;
+    var s = casas != null ? Number(v).toFixed(casas) : String(v);
+    var p = s.split('.');
+    p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return p.join(',');
+  }
+  function rrPct(parte, todo) { return rrNum(parte / todo * 100, 1) + '%'; }
+  function rrOrd(m) { return m.posicao + 'º'; }
+  // Municípios citados na pergunta, na ordem em que aparecem (aceita erro de digitação de 1 ou 2 letras).
+  function rrAchar(n) {
+    if (!rr) return [];
+    var padded = ' ' + n + ' ', achados = [], vistos = {};
+    rr.keys.forEach(function (k) {
+      var i = padded.indexOf(' ' + k.key + ' ');
+      if (i > -1 && !vistos[k.m.id]) {
+        // "São Luiz do Anauá" já cobre "São Luiz": tira o trecho achado para não contar duas vezes
+        vistos[k.m.id] = 1; achados.push({ m: k.m, at: i });
+        padded = padded.slice(0, i) + new Array(k.key.length + 2).join(' ') + padded.slice(i + k.key.length + 1);
+      }
+    });
+    if (!achados.length) {
+      var tk = n.split(' ').filter(function (w) { return w && !STOP[w] && !FUZZ_IGNORA[w]; });
+      var melhor = null, md = 99, emp = false;
+      for (var len = 1; len <= 3; len++) for (var a = 0; a + len <= tk.length; a++) {
+        var fr = tk.slice(a, a + len).join(' ');
+        if (fr.length < 7) continue;
+        var lim = fr.length >= 10 ? 2 : 1;
+        rr.keys.forEach(function (k) {
+          if (Math.abs(k.key.length - fr.length) > lim) return;
+          var d = lev(fr, k.key, lim);
+          if (d > lim) return;
+          if (d < md) { md = d; melhor = k.m; emp = false; } else if (d === md && k.m !== melhor) emp = true;
+        });
+      }
+      if (melhor && !emp) achados.push({ m: melhor, at: 0 });
+    }
+    return achados.sort(function (x, y) { return x.at - y.at; }).map(function (x) { return x.m; });
+  }
+  function rrUnidades(m) {
+    var gs = {}; (m.grupos || []).forEach(function (g) { gs[norm(g)] = 1; });
+    return data.filter(function (d) { return gs[norm(d.group)]; });
+  }
+  function rrTipo(d) {
+    var c = Array.isArray(d.cat) ? d.cat : [];
+    if (/^CRAS\b/i.test(d.name || '')) return 'CRAS';
+    if (/^CREAS\b/i.test(d.name || '')) return 'CREAS';
+    if (c.indexOf('social') > -1) return 'Assistência social';
+    if (c.indexOf('hospitalar') > -1) return /^UBS|Centro de Sa|Posto/i.test(d.name || '') ? 'UBS' : 'Hospital/unidade mista';
+    if (c.indexOf('saude') > -1) return /^CAPS/i.test(d.name || '') ? 'CAPS' : 'Saúde';
+    if (c.indexOf('educacao') > -1) return 'Escola';
+    return 'Outros';
+  }
+  function rrIndigena(m) {
+    if (m.indPessoas != null && m.indPct != null) return rrNum(m.indPessoas) + ' pessoas indígenas (' + (m.indAprox ? 'cerca de ' : '') + rrNum(m.indPct, m.indPct % 1 ? (String(m.indPct).split('.')[1] || '').length : 0) + '% dos moradores)';
+    if (m.indPessoas != null) return rrNum(m.indPessoas) + ' pessoas indígenas';
+    if (m.indPct != null) return 'cerca de ' + rrNum(m.indPct, 1) + '% da população é indígena';
+    return '';
+  }
+  function rrDens(m) { return m.areaKm2 ? rrNum(m.densidade != null ? m.densidade : m.pop / m.areaKm2, 1) + ' hab/km²' : ''; }
+  function rrNotaFonte() { return 'Fonte: Censo 2022 (IBGE), SEPLAN-RR (Informativo 013/2023) e MDS (Diagnóstico Socioterritorial, 13/10/2026). Confira os dados oficiais antes de usar em documento.'; }
+  function rrDiagLinhas(m) {
+    var g = m.diagnostico;
+    if (!g) return null;
+    var L = [];
+    L.push('**CadÚnico (12/12/2025):** ' + rrNum(g.cadFamilias) + ' famílias e ' + rrNum(g.cadPessoas) + ' pessoas; ' + rrNum(g.cadAtualizadas) + ' famílias com cadastro atualizado e ' + rrNum(g.cadDesatualizadas) + ' desatualizadas.');
+    if (g.cadAte218 != null) L.push('Renda por pessoa de até R$ 218: ' + rrNum(g.cadAte218) + ' famílias.');
+    if (g.cadIndigenas != null) L.push('Pessoas indígenas no CadÚnico: ' + rrNum(g.cadIndigenas) + '.');
+    L.push('**Bolsa Família (01/01/2026):** ' + rrNum(g.pbfFamilias) + ' famílias e ' + rrNum(g.pbfPessoas) + ' pessoas.');
+    if (g.pbfFamilias && g.cadFamilias) L.push('Cerca de ' + rrPct(g.pbfFamilias, g.cadFamilias) + ' das famílias do CadÚnico recebem Bolsa Família (conta feita com os números acima, nos mesmos setores).');
+    L.push('**BPC no CadÚnico:** ' + rrNum(g.bpc) + ' beneficiários (' + rrNum(g.bpcDeficiencia) + ' com deficiência e ' + rrNum(g.bpcIdosos) + ' idosos).');
+    L.push('**IVCAD:** ' + String(g.ivcad).replace('.', ',') + ' (quanto mais perto de 1, maior a vulnerabilidade); a dimensão mais alta é Trabalho e Qualificação de Adultos (' + String(g.ivcadTrabalho).replace('.', ',') + ').');
+    L.push('_Atenção: são os ' + g.setores + ' setores censitários do relatório, que localizaram ' + String(g.georefPct).replace('.', ',') + '% das famílias do CadÚnico do município (não entram famílias em situação de rua). Não é o total oficial do município._');
+    return L;
+  }
+  function rrSemDiag(m) {
+    return 'Ainda não tenho o diagnóstico do CadÚnico **só de ' + m.nome + '**: os relatórios que recebi juntam mais de um município e a soma dos setores não dá para dividir. Os números oficiais estão no VIS Data / Relatório de Informações (MDS) e no Painel do CadÚnico.';
+  }
+  function rrLinhaPop(m) {
+    var s = '**' + m.nome + '** tem **' + rrNum(m.pop) + ' habitantes** (Censo 2022, IBGE), o ' + rrOrd(m) + ' município mais populoso de Roraima, com ' + rrPct(m.pop, rr.estado.pop) + ' da população do estado.';
+    return s;
+  }
+  // Texto curto para a IA (a base do app aceita até 1.500 caracteres por item).
+  function rrFichaTexto(m) {
+    var t = ['Município: ' + m.nome + (m.capital ? ' (capital de Roraima)' : '') + '. População (Censo 2022, IBGE): ' + rrNum(m.pop) + ', ' + rrOrd(m) + ' de 15 em Roraima (' + rrPct(m.pop, rr.estado.pop) + ' do estado).'];
+    var ind = rrIndigena(m); if (ind) t.push('Indígenas (SEPLAN-RR, Censo 2022): ' + ind + '.');
+    if (m.areaKm2) t.push('Área: ' + rrNum(m.areaKm2, 2) + ' km² (' + rrDens(m) + ').');
+    if (m.nota) t.push(m.nota);
+    var g = m.diagnostico;
+    if (g) t.push('CadÚnico nos setores do relatório de dez/2025 (cobrem ' + String(g.georefPct).replace('.', ',') + '% das famílias do município): ' + rrNum(g.cadFamilias) + ' famílias, ' + rrNum(g.cadPessoas) + ' pessoas; Bolsa Família (jan/2026): ' + rrNum(g.pbfFamilias) + ' famílias; BPC: ' + rrNum(g.bpc) + '; IVCAD ' + String(g.ivcad).replace('.', ',') + '.');
+    else t.push('Não há diagnóstico de CadÚnico só deste município na base.');
+    var un = rrUnidades(m), cr = un.filter(function (d) { return /^CRE?AS\b/i.test(d.name || ''); }).map(function (d) { return d.name; });
+    if (cr.length) t.push('CRAS/CREAS no diretório: ' + cr.join(', ') + '.');
+    t.push('Use SOMENTE estes números; o que não estiver aqui, diga que não está na base. Não invente.');
+    return t.join(' ').slice(0, 1480);
+  }
+  function rrFichasIA(m) {
+    return rrUnidades(m).slice(0, 10).map(function (d) {
+      var sl = slim(d);
+      return { nome: sl.name, grupo: grupoDe(d), endereco: sl.address, horario: sl.hours, telefones: sl.phones.join(', '), servicos: 'MUNICÍPIO: ' + m.nome + ' | ' + cut(sl.services, 120), descricao: '' };
+    });
+  }
+  function rrEstadoTexto() {
+    var e = rr.estado;
+    return 'Roraima (IBGE, Censo 2022): ' + rrNum(e.pop) + ' habitantes (estimativa 2025: ' + rrNum(e.popEstimada2025) + '), 15 municípios, capital Boa Vista; área ' + rrNum(e.areaKm2, 3) + ' km², densidade ' + String(e.densidade).replace('.', ',') + ' hab/km². Cresceu ' + String(e.crescimentoPct).replace('.', ',') + '% desde 2010. ' + rrNum(e.indigenas) + ' pessoas indígenas (' + String(e.indigenasPct).replace('.', ',') + '%, a maior proporção do Brasil). ' + String(e.ateQuatorzeAnosPct).replace('.', ',') + '% têm até 14 anos. Fronteiras: ' + e.fronteiras + '.';
+  }
+  var RE_CONTATO = /\b(telefone|fone|endereco|horario|whatsapp|ligar|como chegar|onde fica|email)\b/;
+  var RR_POP = /\b(populacao|habitantes?|moradores|quantas pessoas|demografi\w*|censo)\b/;
+  var RR_NEG = /\bpopulacao (de rua|em situacao|carceraria|prisional|idosa|infantil|migrante|refugiad\w+|venezuelan\w+|flutuante|atendida)\b/;
+  var RR_IND = /\b(indigenas?)\b/;
+  var RR_NUM = /\b(quantos?|quantas|percentual|porcentagem|proporcao|numero|total|qual a|qual o|maior|menor|mais|menos|dados|indicadores?)\b/;
+  var RR_AREA = /\b(area|km2|km|extensao|densidade|distancia|tamanho)\b/;
+  var RR_CAD = /\b(cadunico|cad unico|cadastro unico|familias cadastradas|bolsa familia|pbf|bpc|ivcad|vulnerabilidade)\b/;
+  var RR_CADNUM = /\b(quantas?|quantos?|numero|total|dados|indicadores?|percentual|situacao|perfil|indice|beneficiari\w+|familias)\b/;
+  var RR_FICHA = /\b(dados|perfil|ficha|panorama|informacoes?|numeros|indicadores|raio x|caracteristicas|fale sobre|fala sobre|conte sobre|me fale|resumo|sobre)\b/;
+  var RR_REDE = /\b(unidades|equipamentos|rede|servicos|quant[ao]s? (ubs|escolas?|cras|creas|hospitais|caps|unidades))\b/;
+  var RR_COMPARA = /\b(compar\w+|diferenca|versus|vs|x|entre|ou|maior|menor|mais|menos|que)\b/;
+  function rrAsk(text) {
+    if (!rr) return null;
+    var n = norm(text);
+    if (!n || n.length > 200 || RE_CONTATO.test(n)) return null;
+    if (RR_NEG.test(n)) return null;
+    var ms = rrAchar(n), e = rr.estado, seguimento = false;
+    // continuação ("e o Bolsa Família?", "e a área?", "e dele?"): usa o último município da conversa
+    if (!ms.length && session.munUlt && n.split(' ').length <= 7 && !/\broraima\b|\bmunicipios\b/.test(n) &&
+        (/^e (o |a |os |as |de |do |da )?\w+/.test(n) || /\b(dele|dela|la|ai|nesse municipio|desse municipio|neste municipio)\b/.test(n))) ms = [session.munUlt]; seguimento = true;
+    var temEstado = /\broraima\b|\bestado\b|\bmunicipios?\b|\bcidades?\b|\binterior\b/.test(n);
+    var ctxCras = /\b(cras|creas|paif|paefi)\b/.test(n);
+    var res = function (lines, extra) {
+      var o = { reply: lines.join('\n'), mood: 'success', badge: 'Roraima', note: rrNotaFonte(), followups: [], units: [] };
+      for (var k in extra) o[k] = extra[k];
+      return o;
+    };
+    // --- lista dos municípios ---
+    // municípios acima/abaixo de um número de habitantes ("mais de 15 mil habitantes")
+    var lim = n.match(/\b(mais|menos|acima|abaixo) de ([\d ]+?)( mil)?( habitantes| pessoas| moradores)\b/);
+    if (!ms.length && lim && (temEstado || /\bmunicipios?|cidades?\b/.test(n))) {
+      var vl = Number(lim[2].replace(/ /g, '')) * (lim[3] ? 1000 : 1), acima = /mais|acima/.test(lim[1]);
+      var fl = rr.municipios.filter(function (x) { return acima ? x.pop > vl : x.pop < vl; }).sort(function (a, b) { return b.pop - a.pop; });
+      var Lm = [fl.length + (fl.length === 1 ? ' município' : ' municípios') + ' de Roraima ' + (acima ? 'com mais' : 'com menos') + ' de ' + rrNum(vl) + ' habitantes (Censo 2022):'];
+      fl.forEach(function (x) { Lm.push('- **' + x.nome + '** · ' + rrNum(x.pop)); });
+      return res(Lm, { followups: ['Quais são os municípios de Roraima?', 'Qual o maior município de Roraima?'] });
+    }
+    var soInterior = /\binterior\b/.test(n);
+    // "quais municípios têm / não têm CREAS (CRAS, CAPS, hospital, UBS, escola)": cruza o diretório com os 15 municípios
+    var mq = n.match(/\b(?:quais|que|quantos) municipios (?:do interior )?(nao tem|nao tinham|sem|tem|possuem|contam com|tem algum|tem um)\s*(?:um |uma |algum |alguma )?(cras|creas|caps|hospital|hospitais|ubs|escolas?)\b/);
+    if (!ms.length && mq) {
+      var tp = { cras: 'CRAS', creas: 'CREAS', caps: 'CAPS', hospital: 'Hospital/unidade mista', hospitais: 'Hospital/unidade mista', ubs: 'UBS', escola: 'Escola', escolas: 'Escola' }[mq[2]];
+      var sem = /^(nao|sem)/.test(mq[1]);
+      var com = [], sm = [];
+      rr.municipios.filter(function (x) { return !x.capital; }).forEach(function (x) {
+        var k = rrUnidades(x).filter(function (d) { return rrTipo(d) === tp; });
+        (k.length ? com : sm).push({ x: x, k: k });
+      });
+      var alvo = sem ? sm : com;
+      var Lq = [(sem ? 'Municípios do interior **sem ' + tp + '** no diretório do Argo' : 'Municípios do interior **com ' + tp + '** no diretório do Argo') + ' (' + alvo.length + ' de 14):'];
+      alvo.forEach(function (o) { Lq.push('- **' + o.x.nome + '**' + (o.k.length ? ' · ' + o.k.map(function (d) { return d.name; }).join(', ') : '')); });
+      Lq.push('_Conta só o que está cadastrado: o interior tem cobertura parcial no diretório. Confirme com a secretaria antes de afirmar que um município "não tem"._');
+      return res(Lq, { followups: ['Quais municípios ' + (sem ? 'têm ' : 'não têm ') + tp + '?', 'Quais são os municípios de Roraima?'] });
+    }
+    if (!ms.length && /\b(quantos municipios|quais (sao )?os municipios|lista (de|dos) municipios|municipios de roraima|quantas cidades|cidades de roraima|quais (sao )?as cidades|populacao (de|dos|das) (todos |todas )?(os |as )?(municipios|cidades))\b/.test(n)) {
+      var ordenados = rr.municipios.filter(function (x) { return !soInterior || !x.capital; }).sort(function (a, b) { return a.posicao - b.posicao; });
+      var L = [soInterior ? 'Os **14 municípios do interior** de Roraima (população do Censo 2022, do maior ao menor):' : 'Roraima tem **15 municípios** (população do Censo 2022, do maior ao menor):'];
+      ordenados.forEach(function (m) { L.push('- **' + m.nome + '** · ' + rrNum(m.pop) + (m.capital ? ' (capital)' : '')); });
+      L.push(soInterior ? 'Somam **' + rrNum(e.pop - rr.municipios.filter(function (x) { return x.capital; })[0].pop) + '** pessoas (o estado tem ' + rrNum(e.pop) + ').' : 'Total do estado: **' + rrNum(e.pop) + '** pessoas.');
+      return res(L, { followups: ['Qual município tem mais indígenas?', 'Compare Pacaraima e Bonfim', 'Dados de Alto Alegre'] });
+    }
+    // --- ranking: maior, menor, mais populosos, mais indígenas ---
+    var depois = /\b(depois d[eo]|segund[ao]|logo apos)\b/.test(n) && ms.length === 1 && ms[0].capital;
+    if ((!ms.length || depois) && (temEstado || depois || /\b(populos\w*|indigenas)\b/.test(n)) && /\b(maior|menor|mais|menos|ranking|do maior|ordem)\b/.test(n) && (RR_POP.test(n) || /\bpopulos\w*|indigenas|maior municipio|menor municipio|maior cidade|menor cidade\b/.test(n))) {
+      var por = rr.municipios.slice();
+      if (RR_IND.test(n)) {
+        por = por.filter(function (m) { return m.indPct != null; }).sort(function (a, b) { return b.indPct - a.indPct; });
+        var Li = ['Municípios de Roraima com mais indígenas, **em proporção** (SEPLAN-RR, Censo 2022):'];
+        por.forEach(function (m) { Li.push('- **' + m.nome + '** · ' + (m.indAprox ? 'cerca de ' : '') + rrNum(m.indPct, m.indPct % 1 ? 1 : 0) + '%' + (m.indPessoas != null ? ' (' + rrNum(m.indPessoas) + ' pessoas)' : '')); });
+        Li.push('Em **número de pessoas**, Boa Vista tem a maior população indígena do estado (20.410). Só tenho o percentual dos municípios listados acima.');
+        return res(Li, { followups: ['Quantos indígenas vivem em Roraima?', 'Dados de Uiramutã'] });
+      }
+      var menor = /\b(menor|menos)\b/.test(n);
+      var ord = por.sort(function (a, b) { return menor ? a.pop - b.pop : b.pop - a.pop; });
+      if (depois) ord = ord.filter(function (x) { return !x.capital; });
+      var top = ord[0];
+      var Lr = [(menor ? 'O menor' : depois ? 'Depois de Boa Vista, o maior' : 'O maior') + ' município de Roraima em população é **' + top.nome + '**, com **' + rrNum(top.pop) + ' habitantes** (Censo 2022).'];
+      Lr.push((menor ? 'Os cinco menores:' : 'Os cinco maiores:'));
+      ord.slice(0, 5).forEach(function (m, i) { Lr.push((i + 1) + '. **' + m.nome + '** · ' + rrNum(m.pop)); });
+      return res(Lr, { followups: ['Quais são os municípios de Roraima?', 'Dados de ' + top.nome] });
+    }
+    // --- comparação entre dois municípios ---
+    if (ms.length >= 2 && !ctxCras && (RR_COMPARA.test(n) || RR_POP.test(n) || RR_IND.test(n) || RR_CAD.test(n) || RR_FICHA.test(n))) {
+      var dois = ms.slice(0, 2), Lc = ['Comparando **' + dois[0].nome + '** e **' + dois[1].nome + '**:'];
+      var linhas = [
+        ['População (Censo 2022)', function (m) { return rrNum(m.pop) + ' (' + rrOrd(m) + ' do estado)'; }],
+        ['Indígenas', function (m) { return rrIndigena(m) || 'sem dado na base'; }],
+        ['Área', function (m) { return m.areaKm2 ? rrNum(m.areaKm2, 2) + ' km²' : 'sem dado na base'; }],
+        ['CadÚnico (famílias, dez/2025)', function (m) { return m.diagnostico ? rrNum(m.diagnostico.cadFamilias) + ' nos setores do relatório' : 'sem diagnóstico só deste município'; }],
+        ['Bolsa Família (famílias, jan/2026)', function (m) { return m.diagnostico ? rrNum(m.diagnostico.pbfFamilias) + ' nos setores do relatório' : 'sem diagnóstico só deste município'; }]
+      ];
+      linhas.forEach(function (l) { Lc.push('- **' + l[0] + ':** ' + dois[0].nome + ' ' + l[1](dois[0]) + ' · ' + dois[1].nome + ' ' + l[1](dois[1])); });
+      return res(Lc, { followups: ['Dados de ' + dois[0].nome, 'Dados de ' + dois[1].nome] });
+    }
+    if (ms.length) {
+      var m = ms[0], bv = m.id === 'boa-vista';
+      var quer = null;
+      if (RR_CAD.test(n) && (RR_CADNUM.test(n) || seguimento) && !(ctxCras && !/\b(quantas?|quantos?|numero|total)\b/.test(n))) quer = 'cad';
+      else if (RR_IND.test(n) && (RR_NUM.test(n) || seguimento)) quer = 'ind';
+      else if (RR_AREA.test(n) && !/\b(bairro|rua|avenida)\b/.test(n)) quer = 'area';
+      else if (RR_POP.test(n)) quer = 'pop';
+      else if (RR_REDE.test(n) && !bv && (!ctxCras || /\b(quantas?|quantos?)\b/.test(n))) quer = 'rede';
+      else if (RR_FICHA.test(n) && !RR_CAD.test(n) && n.split(' ').length <= 9 && !(bv && /\b(panorama|perfil)\b/.test(n)) && !ctxCras) quer = 'ficha';
+      if (!quer) return null;
+      session.terrUlt = { kind: 'CRAS', ref: m.nome }; session.munUlt = m;
+      var segue = ['Qual CRAS atende ' + m.nome + '?'];
+      var extra = { followups: segue };
+      if (quer === 'pop') {
+        var Lp = [rrLinhaPop(m)];
+        var ip = rrIndigena(m); if (ip) Lp.push('Indígenas: ' + ip + ' (SEPLAN-RR).');
+        if (m.nota) Lp.push(m.nota);
+        extra.followups = ['Dados de ' + m.nome, 'Quantos indígenas em ' + m.nome + '?'].concat(m.diagnostico ? [] : ['Qual o maior município de Roraima?']).slice(0, 3);
+        return res(Lp, extra);
+      }
+      if (quer === 'ind') {
+        var ii = rrIndigena(m), Li2;
+        if (ii) { Li2 = ['Em **' + m.nome + '**: ' + ii + ' (SEPLAN-RR, Informativo 013/2023, sobre o Censo 2022).']; if (m.diagnostico && m.diagnostico.cadIndigenas != null) Li2.push('No CadÚnico, nos setores do relatório de dez/2025, há ' + rrNum(m.diagnostico.cadIndigenas) + ' pessoas indígenas cadastradas.'); }
+        else {
+          var tI = rr.municipios.filter(function (x) { return x.indPct != null && x.id !== 'boa-vista'; }).sort(function (a, b) { return b.indPct - a.indPct; })
+            .map(function (x) { return x.nome + ' (' + (x.indAprox ? 'cerca de ' : '') + rrNum(x.indPct, x.indPct % 1 ? 1 : 0) + '%)'; }).join(', ');
+          Li2 = ['Não tenho o dado de indígenas de **' + m.nome + '** na minha base. Tenho o percentual de ' + tI + ' e o número de pessoas de Boa Vista (20.410). No estado são **' + rrNum(e.indigenas) + '** indígenas (' + String(e.indigenasPct).replace('.', ',') + '%).'];
+        }
+        extra.followups = ['Qual município tem mais indígenas?', 'Dados de ' + m.nome];
+        return res(Li2, extra);
+      }
+      if (quer === 'area') {
+        var La;
+        if (m.areaKm2) { La = ['**' + m.nome + '** tem **' + rrNum(m.areaKm2, 2) + ' km²** e densidade de cerca de ' + rrDens(m) + '.']; if (m.nota) La.push(m.nota); }
+        else {
+          var tem = rr.municipios.filter(function (x) { return x.areaKm2; }).map(function (x) { return x.nome; });
+          La = ['Não tenho a área de **' + m.nome + '** na minha base (tenho de ' + tem.join(', ') + '). Confira no IBGE Cidades.'];
+          if (m.nota) La.push(m.nota);
+        }
+        extra.followups = ['Quantos habitantes tem ' + m.nome + '?', 'Dados de ' + m.nome];
+        return res(La, extra);
+      }
+      if (quer === 'cad') {
+        var Ld = rrDiagLinhas(m);
+        var Lh = Ld ? ['**' + m.nome + '** · CadÚnico, Bolsa Família e BPC:'].concat(Ld) : [rrSemDiag(m)];
+        extra.followups = ['Dados de ' + m.nome, 'Qual CRAS atende ' + m.nome + '?'];
+        return res(Lh, extra);
+      }
+      if (quer === 'rede') {
+        var un = rrUnidades(m);
+        if (!un.length) return res(['Não há unidades de **' + m.nome + '** cadastradas no diretório do Argo.'], { mood: 'notfound', followups: ['Dados de ' + m.nome] });
+        var cont = {}, ordem = [];
+        un.forEach(function (d) { var t = rrTipo(d); if (!cont[t]) { cont[t] = []; ordem.push(t); } cont[t].push(d); });
+        // "quantas UBS / escolas / CRAS em X": conta só o tipo pedido (nunca o número de Boa Vista)
+        var pedido = /\bubs\b/.test(n) ? 'UBS' : /\bescolas?\b/.test(n) ? 'Escola' : /\bcreas\b/.test(n) ? 'CREAS' : /\bcras\b/.test(n) ? 'CRAS' : /\bhospitais\b|\bhospital\b/.test(n) ? 'Hospital/unidade mista' : /\bcaps\b/.test(n) ? 'CAPS' : '';
+        if (pedido) {
+          var lt = cont[pedido] || [], Lq;
+          if (!lt.length) Lq = ['No diretório do Argo **não há ' + pedido + '** cadastrada(o) em **' + m.nome + '**. O interior tem cobertura parcial: confirme com a secretaria do município.'];
+          else Lq = ['No diretório do Argo constam **' + lt.length + ' ' + pedido + '** em **' + m.nome + '**: ' + lt.map(function (d) { return d.name; }).join(', ') + '.', '_O interior tem cobertura parcial no diretório: pode haver unidades ainda não cadastradas._'];
+          return res(Lq, { mood: lt.length ? 'success' : 'notfound', followups: ['Unidades de ' + m.nome, 'Dados de ' + m.nome], units: lt.slice(0, 5).map(slim), unitsAll: lt.map(slim), badge: 'Roraima · Rede' });
+        }
+        var Lu = ['O diretório do Argo tem **' + un.length + ' unidades** cadastradas em **' + m.nome + '**:'];
+        ordem.forEach(function (t) { Lu.push('- **' + t + '** (' + cont[t].length + '): ' + cont[t].map(function (d) { return d.name; }).join(', ')); });
+        Lu.push('_O interior tem cobertura parcial no diretório: pode haver unidades que ainda não foram cadastradas._');
+        return res(Lu, { followups: segue.concat(['Dados de ' + m.nome]), units: un.slice(0, 5).map(slim), unitsAll: un.map(slim), badge: 'Roraima · Rede' });
+      }
+      // ficha completa
+      var Lf = ['**' + m.nome + '**' + (m.capital ? ' (capital)' : '') + ' · ficha do município:'];
+      Lf.push('- **População:** ' + rrNum(m.pop) + ' (Censo 2022) · ' + rrOrd(m) + ' de 15 · ' + rrPct(m.pop, e.pop) + ' do estado');
+      var ifi = rrIndigena(m); if (ifi) Lf.push('- **Indígenas:** ' + ifi);
+      if (m.areaKm2) Lf.push('- **Área:** ' + rrNum(m.areaKm2, 2) + ' km² · ' + rrDens(m));
+      if (m.nota) Lf.push('- ' + m.nota);
+      var Lg = rrDiagLinhas(m);
+      if (Lg) Lg.forEach(function (x) { Lf.push(/^_/.test(x) ? x : '- ' + x); });
+      else Lf.push('- **CadÚnico:** ' + rrSemDiag(m));
+      var un2 = rrUnidades(m), crs = un2.filter(function (d) { return /^CRE?AS\b/i.test(d.name || ''); });
+      if (crs.length) Lf.push('- **CRAS/CREAS no diretório:** ' + crs.map(function (d) { return d.name; }).join(', '));
+      return res(Lf, { followups: ['Unidades de ' + m.nome, 'Qual CRAS atende ' + m.nome + '?', 'Compare ' + m.nome + ' e ' + (m.id === 'boa-vista' ? 'Pacaraima' : 'Boa Vista')], units: crs.slice(0, 5).map(slim), unitsAll: crs.map(slim) });
+    }
+    // --- estado de Roraima (sem município na pergunta) ---
+    if (/\broraima\b/.test(n) || /\b(estado)\b/.test(n)) {
+      if (RR_IND.test(n) && RR_NUM.test(n)) {
+        return res(['Roraima tem **' + rrNum(e.indigenas) + '** pessoas indígenas (Censo 2022), **' + String(e.indigenasPct).replace('.', ',') + '%** da população, a maior proporção do Brasil. Em 2010 eram 55.922.', rrNum(e.indigenasEmTerras) + ' moram em terras indígenas e ' + rrNum(e.indigenasForaTerras) + ' fora delas.'], { followups: ['Qual município tem mais indígenas?', 'Quais são os municípios de Roraima?'] });
+      }
+      if (RR_POP.test(n) || RR_AREA.test(n) || /\b(cresc\w+|jovens?|fronteiras?)\b/.test(n) || (RR_FICHA.test(n) && n.split(' ').length <= 9)) {
+        var Le = ['**Roraima** · números do estado:',
+          '- **População:** ' + rrNum(e.pop) + ' (Censo 2022); estimativa do IBGE para 2025: ' + rrNum(e.popEstimada2025),
+          '- **Municípios:** 15; capital Boa Vista (' + rrPct(rr.municipios.filter(function (x) { return x.id === 'boa-vista'; })[0].pop, e.pop) + ' da população)',
+          '- **Área:** ' + rrNum(e.areaKm2, 3) + ' km² · ' + String(e.densidade).replace('.', ',') + ' hab/km²',
+          '- **Crescimento:** +' + String(e.crescimentoPct).replace('.', ',') + '% entre 2010 e 2022, o maior do país',
+          '- **Jovens:** ' + String(e.ateQuatorzeAnosPct).replace('.', ',') + '% têm até 14 anos',
+          '- **Indígenas:** ' + rrNum(e.indigenas) + ' (' + String(e.indigenasPct).replace('.', ',') + '%)',
+          '- **Fronteiras:** ' + e.fronteiras];
+        return res(Le, { followups: ['Quais são os municípios de Roraima?', 'Qual o maior município de Roraima?', 'Qual município tem mais indígenas?'] });
+      }
+    }
+    return null;
   }
 
   // ---------------------------------------------------------------------
@@ -2595,6 +2916,14 @@
       var gs = glossaryScore(text);
       if (gs.score >= 3 && gs.entry && out.length < 3) out.push({ titulo: 'Base SUAS (glossário do app)', texto: limpaMd(gs.entry.text), origem: gs.entry.base });
     } catch (e) { /* sem verbete */ }
+    try {
+      // município de Roraima citado: a IA recebe a ficha com os números reais (e a ordem de não inventar)
+      if (rr) {
+        var mm = rrAchar(n).slice(0, 2);
+        mm.slice().reverse().forEach(function (x) { out.unshift({ titulo: 'Dados do município de ' + x.nome + ' (Roraima)', texto: rrFichaTexto(x), origem: 'assets/municipios-rr.json: Censo 2022 (IBGE), SEPLAN-RR e MDS' }); });
+        if (!mm.length && /\broraima\b/.test(n) && /\b(populacao|habitantes|indigenas?|municipios?|area|crescimento)\b/.test(n)) out.unshift({ titulo: 'Dados do estado de Roraima', texto: rrEstadoTexto() + ' Use SOMENTE estes números.', origem: 'assets/municipios-rr.json: Censo 2022 (IBGE) e SEPLAN-RR' });
+      }
+    } catch (e2) { /* sem ficha */ }
     if (RE_REFS.test(n) && refsTexto()) out.push({ titulo: 'Valores de referência do app (2026)', texto: refsTexto(), origem: 'ferramenta de renda per capita do Argo' });
     var pg = pbfPagamento(text);
     if (pg && out.length < 4) out.push({ titulo: 'Calendário de pagamento do Bolsa Família', texto: pg, origem: 'ferramentas/pagamento-pbf.html (Argo)' });
@@ -2656,6 +2985,10 @@
     var cd = cidAsk(text);
     if (cd) return { kind: 'directory', result: cd, dir: { units: [], confidence: 1, mode: 'list' }, con: { score: 0 } };
     // "quantas escolas tem no bairro X?": número calculado nas fichas (nunca pela IA)
+    if (rr && /\b(quantas?|quantos?)\b/.test(norm(text))) {
+      var mi = rrAchar(norm(text))[0];
+      if (mi && mi.id !== 'boa-vista') { var rc = rrAsk(text); if (rc) return { kind: 'directory', result: rc, dir: { units: rc.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } }; }
+    }
     var cont = contagem(text);
     if (cont) return { kind: 'directory', result: cont, dir: { units: cont.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
     // "qual CRAS atende o bairro X?": responde pela lista de cobertura das fichas
@@ -2665,6 +2998,9 @@
     var seg = seguimentoTerr(text);
     if (seg) return { kind: 'directory', result: seg, dir: { units: seg.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
     // painel de Boa Vista: perfil do bairro, panorama por área, necessidades (parto, CadÚnico, EJA...) e dados que o diretório não tem
+    // municípios de Roraima: população, indígenas, área, CadÚnico/PBF/BPC, comparação e ficha (assets/municipios-rr.json)
+    var mr = rrAsk(text);
+    if (mr) return { kind: 'directory', result: mr, dir: { units: mr.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
     var pb = perfilBairro(text) || panoramaAreas(text) || necessidade(text) || semNumeros(text);
     if (pb) return { kind: 'directory', result: pb, dir: { units: pb.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
     var pr = pbfOuRefsAsk(text);
@@ -2746,7 +3082,7 @@
   }
 
   return {
-    interpretar: interpretar, init: init, setCid: setCid, cid: cidAsk, norm: norm, piiBlock: piiBlock, crisis: crisis, plan: plan, contagem: contagem,
+    interpretar: interpretar, init: init, setCid: setCid, setMunicipios: setMunicipios, municipiosRR: rrAsk, cid: cidAsk, norm: norm, piiBlock: piiBlock, crisis: crisis, plan: plan, contagem: contagem,
     directory: function (t, tabCat) { return directory(t, session, tabCat); },
     glossary: glossaryScore, compose: { directory: composeDirectory, glossary: composeGlossary },
     psi: psiScore, psiLista: PSI_BASE, baseApp: baseApp, fichaAsk: fichaAsk, trechosDa: trechosDa, pbfPagamento: pbfPagamento,
