@@ -2912,7 +2912,7 @@
   function setCensoSuas(trechos) {
     censoSuas = Array.isArray(trechos) ? trechos.filter(function (t) {
       return t && t.doc === 'censo-suas-2025-roraima-psicologos' && t.tipo === 'apoio' && typeof t.texto === 'string' && t.texto.trim();
-    }).slice(0, 90).map(function (t) {
+    }).slice(0, 160).map(function (t) {
       return { titulo: cut(cleanText(t.titulo), 160), referencia: cut(cleanText(t.referencia), 180), texto: cut(cleanText(t.texto), 900), origem: cut(cleanText(t.norma), 300) };
     }) : [];
     return censoSuas.length;
@@ -3413,6 +3413,37 @@
   // Plano: decide quem responde
   //   devolve { kind:'crisis'|'directory'|'concept'|'none', result?, dir?, con? }
   // ---------------------------------------------------------------------
+  // CRAS e conselhos de assistência social FORA de Boa Vista (Censo SUAS 2025): resposta direta, tirada do trecho da base do Censo.
+  // Sem isto, "quantos computadores tem o CRAS de Iracema?" cairia na resposta de Boa Vista.
+  function censoInteriorAsk(text) {
+    var n = norm(text);
+    if (!censoSuas.length || !n || n.length > 220 || CP_PSI.test(n) || CP_NORMA.test(n) || RE_CONTATO.test(n)) return null;
+    if (/\bboa vista\b|\bcapital\b|\bconselho tutelar\b/.test(n)) return null;
+    var mun = cpMunicipio(n), interior = /\binterior\b/.test(n), estadual = /\b(conselho estadual|ceas)\b/.test(n);
+    if (!(mun && mun !== 'Boa Vista') && !interior && !estadual) return null;
+    var conselho = /\b(conselho municipal|conselho estadual|conselheir\w+|cmas|ceas)\b/.test(n);
+    var cras = /\bcras\b/.test(n) && !/\bcreas\b/.test(n);
+    if (!(conselho || (cras && (BV_RE_INFRA.test(n) || BV_RE_RH.test(n))))) return null;
+    var ref = function (t) { return norm(t.referencia || ''); };
+    var acha = function (re) { return censoSuas.filter(function (t) { return re.test(ref(t)); })[0] || null; };
+    var t = null, munN = mun ? norm(mun) : '';
+    if (conselho) {
+      if (estadual) t = acha(/conselho estadual/);
+      else if (mun && mun !== 'Boa Vista') t = censoSuas.filter(function (x) { return /conselho municipal/.test(ref(x)) && ref(x).indexOf(munN) > -1; })[0] || acha(/totais de conselheiros/);
+      else t = acha(/totais de conselheiros/);
+    } else if (mun && mun !== 'Boa Vista') {
+      t = censoSuas.filter(function (x) { return /\bcras\b.*estrutura e equipe/.test(ref(x)) && ref(x).indexOf(munN) > -1; })[0] || null;
+    } else if (/\b(vinculos?|escolaridade|estatutari\w+|temporari\w+|comissionad\w+)\b/.test(n)) t = acha(/equipe dos cras do interior.*vinculo/);
+    else if (/\b(profissao|profissoes|assistentes? sociais?|pedagog\w+)\b/.test(n)) t = acha(/equipe dos cras do interior.*profissao/);
+    else if (/\b(funcao|funcoes|cadastrador\w*|educador\w* sociais?)\b/.test(n)) t = acha(/equipe dos cras do interior.*funcao/);
+    else if (BV_RE_RH.test(n)) t = acha(/registros de trabalhadores nos cras do interior/);
+    else if (/\b(atendimento coletivo|paif)\b/.test(n)) t = acha(/atendimento coletivo do paif nos cras do interior/);
+    else if (/\b(imovel|alugad\w+|proprio|implantacao|rural|compartilhad\w*)\b/.test(n)) t = acha(/estrutura dos cras do interior/);
+    else t = acha(/cras do interior de roraima: visao geral/);
+    if (!t) return null;
+    var fonte = 'Censo SUAS ' + CP_ANO;
+    return { reply: limpaMd(t.texto), mood: 'info', badge: fonte, note: 'Dados declarados no ' + fonte + ' (MDS), agregados por município; não medem suficiência de equipe nem cobertura. Confira com a gestão municipal para a situação atual.', followups: conselho ? ['Quantos conselheiros tem o conselho estadual?'] : ['Qual a equipe dos CRAS do interior?', 'Quantos psicólogos há no interior de Roraima?'], units: [] };
+  }
   function plan(text, opts) {
     opts = opts || {};
     var c = crisis(text);
@@ -3423,6 +3454,8 @@
     // psicólogos no Censo SUAS 2025 (Boa Vista em detalhe, Roraima em totais): número fixo da base, nunca da IA
     var cp = psiCensoAsk(text);
     if (cp) return { kind: 'directory', result: cp, dir: { units: [], confidence: 1, mode: 'list' }, con: { score: 0 } };
+    var ci = censoInteriorAsk(text);
+    if (ci) return { kind: 'directory', result: ci, dir: { units: [], confidence: 1, mode: 'list' }, con: { score: 0 } };
     var bvc = boaVistaCensoAsk(text);
     if (bvc) return { kind: 'directory', result: bvc, dir: { units: [], confidence: 1, mode: 'list' }, con: { score: 0 } };
     // "quantas escolas tem no bairro X?": número calculado nas fichas (nunca pela IA)
