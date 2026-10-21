@@ -2912,7 +2912,7 @@
   function setCensoSuas(trechos) {
     censoSuas = Array.isArray(trechos) ? trechos.filter(function (t) {
       return t && t.doc === 'censo-suas-2025-roraima-psicologos' && t.tipo === 'apoio' && typeof t.texto === 'string' && t.texto.trim();
-    }).slice(0, 40).map(function (t) {
+    }).slice(0, 90).map(function (t) {
       return { titulo: cut(cleanText(t.titulo), 160), referencia: cut(cleanText(t.referencia), 180), texto: cut(cleanText(t.texto), 900), origem: cut(cleanText(t.norma), 300) };
     }) : [];
     return censoSuas.length;
@@ -2932,8 +2932,14 @@
       // o lugar e o módulo pedidos pesam: "Roraima" prefere o trecho do estado; "Boa Vista", o da capital; "CREAS" não puxa o de CRAS
       if (pontos > 0) {
         var ref = norm((t.referencia || '') + ' ' + (t.titulo || ''));
-        if (/\bboa vista\b/.test(n)) { if (/\bboa vista\b/.test(ref)) pontos += 3; }
-        else if (/\broraima\b/.test(n)) { if (/\broraima\b/.test(ref) && !/\bboa vista\b/.test(ref)) pontos += 3; }
+        // escopo do trecho, pelo título da seção (o título do documento tem "Roraima" em todos): interior, capital, um município ou o estado
+        var refR = norm(t.referencia || ''), munRef = cpMunicipio(refR);
+        var escopo = /\binterior\b/.test(refR) ? 'interior' : /\bboa vista\b/.test(refR) ? 'bv' : munRef ? 'municipio' : 'estado';
+        var munCitado = cpMunicipio(n);
+        if (munCitado && munCitado !== 'Boa Vista') { if (refR.indexOf(norm(munCitado)) > -1) pontos += 4; }
+        else if (/\binterior\b/.test(n)) { if (escopo === 'interior') pontos += 3; }
+        else if (/\bboa vista\b/.test(n)) { if (escopo === 'bv') pontos += 3; }
+        else if (/\b(roraima|estado)\b/.test(n)) { if (escopo === 'estado') pontos += 3; }
         [['cras', /\bcras\b/], ['creas', /\bcreas\b/], ['convivencia', /\bconvivencia\b/], ['acolhimento', /\bacolhimento\b/], ['gestao', /\bgestao\b/]].forEach(function (m) {
           if (m[1].test(n) && m[1].test(ref)) pontos += 2;
         });
@@ -3054,10 +3060,103 @@
   };
   var CP_BV_EQUIPE = {
     cras: 'equipe de RH dos CRAS: 209 de nível médio, 35 assistentes sociais, 28 sem formação profissional, **19 psicólogos**, 17 de outra formação de nível superior, 11 pedagogos e 4 de outras profissões (de 323)',
-    creas: 'equipe de RH dos CREAS: 33 de nível médio, 17 assistentes sociais, **13 psicólogos**, 7 de outra formação de nível superior, 5 pedagogos, 1 advogado e 1 sem formação profissional (de 77)'
+    creas: 'equipe de RH dos CREAS: 33 de nível médio, 17 assistentes sociais, **13 psicólogos**, 7 de outra formação de nível superior, 5 pedagogos, 1 advogado e 1 sem formação profissional (de 77)',
+    conv: 'equipe de RH dos Centros de Convivência: 40 de nível médio, 12 sem formação profissional, 11 de outra formação de nível superior, 9 de administração/gestão pública, 8 assistentes sociais, 5 pedagogos, **4 psicólogos**, 1 advogado e 1 terapeuta ocupacional (de 91)',
+    acol: 'equipe de RH das Unidades de Acolhimento: 80 de nível médio, 31 sem formação profissional, 10 de outra formação de nível superior, 4 assistentes sociais, **3 psicólogos**, 2 nutricionistas, 2 pedagogos e 1 enfermeiro (de 133)',
+    fam: 'equipe de RH da Família Acolhedora: 2 assistentes sociais, **1 psicólogo**, 1 de nível médio e 1 sem formação profissional (de 5)',
+    gest: 'equipe de RH da Gestão Municipal do SUAS: 79 de nível médio, 17 de outra formação de nível superior, 11 assistentes sociais, 9 sem formação profissional, **3 psicólogos**, 2 advogados, 2 pedagogos, 1 antropólogo, 1 nutricionista e 1 sociólogo (de 126)',
+    fundo: 'equipe de RH do Fundo Municipal de Assistência Social: 6 de outra formação de nível superior, 2 administradores, 2 contadores, 2 de nível médio, 2 sem formação profissional e 1 economista (de 15); nenhum psicólogo',
+    posto: 'equipe de RH do Posto de Cadastramento do CadÚnico: 3 de nível médio e 1 de outra formação de nível superior (de 4); nenhum psicólogo'
   };
+  // Psicólogos dos 14 municípios do interior (Censo SUAS 2025): perfil agregado e composição da equipe de RH.
+  // GERADO por scripts/gerar-censo-psi-rr.mjs a partir dos CSVs do pacote do Censo; não edite à mão. Mesmo formato de CP_BV_PERFIL / CP_BV_EQUIPE.
+  var CP_PERFIL_MUN = {
+      "Alto Alegre": {
+      "cras": [ "sexo: 2 mulheres", "escolaridade: 2 com superior completo", "vínculo: 1 comissionado e 1 estatutário", "função: 2 técnicos de nível superior", "carga horária: 1 de 21 a 30 h semanais e 1 de 31 a 40 h semanais", "serviço principal: PAIF 2", "segundo serviço: Serviço de PSB no domicílio 2" ],
+      "creas": [ "sexo: 1 mulher", "escolaridade: 1 com superior completo", "vínculo: 1 estatutário", "função: 1 técnico de nível superior", "carga horária: 1 de 31 a 40 h semanais" ] },
+    "Amajari": {
+      "cras": [ "sexo: 1 homem", "escolaridade: 1 com superior completo", "vínculo: 1 estatutário", "função: 1 técnico de nível superior", "carga horária: 1 de 21 a 30 h semanais", "serviço principal: PAIF 1", "segundo serviço: Convivência e Fortalecimento de Vínculos 1" ],
+      "creas": [ "sexo: 1 homem", "escolaridade: 1 com superior completo", "vínculo: 1 com outro vínculo não permanente", "função: 1 técnico de nível superior", "carga horária: 1 de 21 a 30 h semanais" ] },
+    "Bonfim": {
+      "cras": [ "sexo: 2 homens", "escolaridade: 2 com superior completo", "vínculo: 2 temporários", "função: 2 técnicos de nível superior", "carga horária: todos de 21 a 30 h semanais", "serviço principal: PAIF 2", "segundo serviço: não informado 2" ],
+      "creas": [ "sexo: 1 mulher", "escolaridade: 1 com superior completo", "vínculo: 1 temporário", "função: 1 técnico de nível superior", "carga horária: 1 de 21 a 30 h semanais" ] },
+    "Cantá": {
+      "cras": [ "sexo: 1 mulher e 1 homem", "escolaridade: 2 com superior completo", "vínculo: 2 temporários", "função: 2 técnicos de nível superior", "carga horária: 1 de 21 a 30 h semanais e 1 de 31 a 40 h semanais", "serviço principal: PAIF 2", "segundo serviço: não informado 2" ],
+      "creas": [ "sexo: 1 homem", "escolaridade: 1 com superior completo", "vínculo: 1 temporário", "função: 1 técnico de nível superior", "carga horária: 1 de 31 a 40 h semanais" ] },
+    "Caracaraí": {
+      "creas": [ "sexo: 1 mulher", "escolaridade: 1 com superior completo", "vínculo: 1 temporário", "função: 1 técnico de nível superior", "carga horária: 1 de 21 a 30 h semanais" ] },
+    "Caroebe": {
+      "cras": [ "sexo: 1 homem", "escolaridade: 1 com superior completo", "vínculo: 1 temporário", "função: 1 técnico de nível superior", "carga horária: 1 de 21 a 30 h semanais", "serviço principal: PAIF 1", "segundo serviço: outros serviços 1" ],
+      "creas": [ "sexo: 1 homem", "escolaridade: 1 com superior completo", "vínculo: 1 temporário", "função: 1 técnico de nível superior", "carga horária: 1 de 21 a 30 h semanais" ] },
+    "Iracema": {
+      "cras": [ "sexo: 1 homem", "escolaridade: 1 com superior completo", "vínculo: 1 comissionado", "função: 1 técnico de nível superior", "carga horária: 1 de 21 a 30 h semanais", "serviço principal: Convivência e Fortalecimento de Vínculos 1", "segundo serviço: Convivência e Fortalecimento de Vínculos 1" ],
+      "creas": [ "sexo: 1 homem", "escolaridade: 1 com superior completo", "vínculo: 1 temporário", "função: 1 técnico de nível superior", "carga horária: 1 de 21 a 30 h semanais" ] },
+    "Mucajaí": {
+      "creas": [ "sexo: 1 mulher", "escolaridade: 1 com superior completo", "vínculo: 1 comissionado", "função: 1 técnico de nível superior", "carga horária: 1 de 31 a 40 h semanais" ] },
+    "Normandia": {
+      "cras": [ "sexo: 1 mulher", "escolaridade: 1 com superior completo", "vínculo: 1 temporário", "função: 1 técnico de nível superior", "carga horária: 1 de 21 a 30 h semanais", "serviço principal: PAIF 1", "segundo serviço: PAIF 1" ],
+      "creas": [ "sexo: 1 mulher", "escolaridade: 1 com superior completo", "vínculo: 1 temporário", "função: 1 técnico de nível superior", "carga horária: 1 de 31 a 40 h semanais" ] },
+    "Pacaraima": {
+      "cras": [ "sexo: 1 mulher", "escolaridade: 1 com superior completo", "vínculo: 1 estatutário", "função: 1 técnico de nível superior", "carga horária: 1 de 21 a 30 h semanais", "serviço principal: outros serviços 1", "segundo serviço: outros serviços 1" ],
+      "creas": [ "sexo: 1 mulher", "escolaridade: 1 com superior completo", "vínculo: 1 estatutário", "função: 1 técnico de nível superior", "carga horária: 1 de 21 a 30 h semanais" ] },
+    "Rorainópolis": {
+      "cras": [ "sexo: 1 mulher", "escolaridade: 1 com superior completo", "vínculo: 1 estatutário", "função: 1 técnico de nível superior", "carga horária: 1 de 31 a 40 h semanais", "serviço principal: PAIF 1", "segundo serviço: Bolsa Família e condicionalidades 1" ],
+      "creas": [ "sexo: 1 mulher", "escolaridade: 1 com superior completo", "vínculo: 1 estatutário", "função: 1 técnico de nível superior", "carga horária: 1 de 31 a 40 h semanais" ] },
+    "São João da Baliza": {
+      "creas": [ "sexo: 1 mulher", "escolaridade: 1 com superior completo", "vínculo: 1 temporário", "função: 1 técnico de nível superior", "carga horária: 1 de 21 a 30 h semanais" ] },
+    "São Luiz": {
+      "cras": [ "sexo: 1 mulher", "escolaridade: 1 com superior completo", "vínculo: 1 comissionado", "função: 1 técnico de nível superior", "carga horária: 1 de 21 a 30 h semanais", "serviço principal: PAIF 1", "segundo serviço: Benefícios Eventuais 1" ] },
+    "Uiramutã": {
+      "creas": [ "sexo: 1 homem", "escolaridade: 1 com superior completo", "vínculo: 1 estatutário", "função: 1 técnico de nível superior", "carga horária: 1 de 21 a 30 h semanais" ] } };
+  var CP_EQUIPE_MUN = {
+      "Alto Alegre": {
+      "cras": "equipe de RH dos CRAS: 13 de nível médio, 4 assistentes sociais, 2 **psicólogos**, 2 pedagogos, 2 de outras profissões e 1 sem formação profissional (de 24)",
+      "creas": "equipe de RH dos CREAS: 4 de nível médio, 1 assistente social, 1 sem formação profissional, 1 **psicólogo**, 1 pedagogo e 1 advogado (de 9)" },
+    "Amajari": {
+      "cras": "equipe de RH dos CRAS: 2 de nível médio, 2 assistentes sociais e 1 **psicólogo** (de 5)",
+      "creas": "equipe de RH dos CREAS: 2 de nível médio, 1 assistente social, 1 sem formação profissional e 1 **psicólogo** (de 5)" },
+    "Bonfim": {
+      "cras": "equipe de RH dos CRAS: 7 de nível médio, 4 sem formação profissional, 3 de outras profissões, 2 assistentes sociais, 2 **psicólogos** e 1 pedagogo (de 19)",
+      "creas": "equipe de RH dos CREAS: 2 de nível médio, 2 sem formação profissional, 1 assistente social e 1 **psicólogo** (de 6)" },
+    "Cantá": {
+      "cras": "equipe de RH dos CRAS: 6 de nível médio, 6 sem formação profissional, 2 assistentes sociais, 2 **psicólogos** e 2 de outras profissões (de 18)",
+      "creas": "equipe de RH dos CREAS: 2 assistentes sociais, 1 de nível médio, 1 sem formação profissional e 1 **psicólogo** (de 5)" },
+    "Caracaraí": {
+      "cras": "equipe de RH dos CRAS: 14 de nível médio, 4 assistentes sociais, 4 sem formação profissional e 3 pedagogos (de 25)",
+      "creas": "equipe de RH dos CREAS: 2 de nível médio, 1 assistente social, 1 **psicólogo** e 1 de outras profissões (de 5)" },
+    "Caroebe": {
+      "cras": "equipe de RH dos CRAS: 10 de nível médio, 4 de outras profissões, 1 assistente social, 1 sem formação profissional, 1 **psicólogo** e 1 pedagogo (de 18)",
+      "creas": "equipe de RH dos CREAS: 1 de nível médio, 1 assistente social, 1 sem formação profissional, 1 **psicólogo** e 1 pedagogo (de 5)" },
+    "Iracema": {
+      "cras": "equipe de RH dos CRAS: 11 de nível médio, 3 assistentes sociais, 3 sem formação profissional, 3 pedagogos, 2 de outras profissões e 1 **psicólogo** (de 23)",
+      "creas": "equipe de RH dos CREAS: 1 assistente social, 1 **psicólogo** e 1 de outras profissões (de 3)" },
+    "Mucajaí": {
+      "cras": "equipe de RH dos CRAS: 3 assistentes sociais e 1 pedagogo (de 4)",
+      "creas": "equipe de RH dos CREAS: 1 assistente social, 1 **psicólogo** e 1 de outras profissões (de 3)" },
+    "Normandia": {
+      "cras": "equipe de RH dos CRAS: 8 de nível médio, 6 sem formação profissional, 3 de outras profissões, 1 assistente social e 1 **psicólogo** (de 19)",
+      "creas": "equipe de RH dos CREAS: 3 de nível médio, 2 sem formação profissional, 1 assistente social, 1 **psicólogo**, 1 advogado e 1 de outras profissões (de 9)" },
+    "Pacaraima": {
+      "cras": "equipe de RH dos CRAS: 23 de nível médio, 7 sem formação profissional, 6 de outras profissões, 4 assistentes sociais e 1 **psicólogo** (de 41)",
+      "creas": "equipe de RH dos CREAS: 6 de nível médio, 2 sem formação profissional e 1 **psicólogo** (de 9)" },
+    "Rorainópolis": {
+      "cras": "equipe de RH dos CRAS: 5 de nível médio, 4 assistentes sociais, 1 sem formação profissional, 1 **psicólogo**, 1 pedagogo e 1 de outras profissões (de 13)",
+      "creas": "equipe de RH dos CREAS: 2 assistentes sociais, 2 sem formação profissional, 2 de outras profissões, 1 de nível médio, 1 **psicólogo** e 1 advogado (de 9)" },
+    "São João da Baliza": {
+      "cras": "equipe de RH dos CRAS: 1 assistente social (de 1)",
+      "creas": "equipe de RH dos CREAS: 1 assistente social e 1 **psicólogo** (de 2)" },
+    "São Luiz": {
+      "cras": "equipe de RH dos CRAS: 5 sem formação profissional, 3 de nível médio, 2 de outras profissões, 1 assistente social e 1 **psicólogo** (de 12)" },
+    "Uiramutã": {
+      "cras": "equipe de RH dos CRAS: 1 assistente social e 1 de outras profissões (de 2)",
+      "creas": "equipe de RH dos CREAS: 1 **psicólogo** e 1 de outras profissões (de 2)" } };
+  // Interior (14 municípios, sem Boa Vista): [registros de RH, registros de psicólogos] por módulo; perfil; equipe; quem tem e quem não tem psicólogo.
+  var CP_INTERIOR = {"total":26,"mod":{"cras":[224,13],"creas":[72,13]},"perfil":{"cras":["sexo: 7 mulheres e 6 homens","escolaridade: 13 com superior completo","vínculo: 6 temporários, 4 estatutários e 3 comissionados","função: 13 técnicos de nível superior","carga horária: 10 de 21 a 30 h semanais e 3 de 31 a 40 h semanais","serviço principal: PAIF 11, Convivência e Fortalecimento de Vínculos 1, outros serviços 1","segundo serviço: não informado 4, Serviço de PSB no domicílio 2, Convivência e Fortalecimento de Vínculos 2, outros serviços 2, PAIF 1, Bolsa Família e condicionalidades 1, Benefícios Eventuais 1"],"creas":["sexo: 8 mulheres e 5 homens","escolaridade: 13 com superior completo","vínculo: 7 temporários, 4 estatutários, 1 com outro vínculo não permanente e 1 comissionado","função: 13 técnicos de nível superior","carga horária: 8 de 21 a 30 h semanais e 5 de 31 a 40 h semanais"]},"equipe":{"cras":"equipe de RH dos CRAS dos 14 municípios do interior: 102 de nível médio, 38 sem formação profissional, 33 assistentes sociais, 26 de outras profissões, 13 **psicólogos** e 12 pedagogos (de 224)","creas":"equipe de RH dos CREAS dos 14 municípios do interior: 22 de nível médio, 13 assistentes sociais, 13 **psicólogos**, 12 sem formação profissional, 7 de outras profissões, 3 advogados e 2 pedagogos (de 72)"},"comPsi":{"cras":[["Alto Alegre",2],["Amajari",1],["Bonfim",2],["Cantá",2],["Caroebe",1],["Iracema",1],["Normandia",1],["Pacaraima",1],["Rorainópolis",1],["São Luiz",1]],"creas":[["Alto Alegre",1],["Amajari",1],["Bonfim",1],["Cantá",1],["Caracaraí",1],["Caroebe",1],["Iracema",1],["Mucajaí",1],["Normandia",1],["Pacaraima",1],["Rorainópolis",1],["São João da Baliza",1],["Uiramutã",1]]},"semPsi":{"cras":["Caracaraí","Mucajaí","São João da Baliza","Uiramutã"],"creas":[]},"semRH":{"cras":[],"creas":["São Luiz"]},"rank":[["Alto Alegre",3],["Bonfim",3],["Cantá",3],["Amajari",2],["Caroebe",2],["Iracema",2],["Normandia",2],["Pacaraima",2],["Rorainópolis",2],["Caracaraí",1],["Mucajaí",1],["São João da Baliza",1],["São Luiz",1],["Uiramutã",1]]};
+
+  function cpPerfil(mun, k) { return mun === 'Boa Vista' ? CP_BV_PERFIL[k] : (CP_PERFIL_MUN[mun] && CP_PERFIL_MUN[mun][k]) || null; }
+  function cpEquipe(mun, k) { return mun === 'Boa Vista' ? CP_BV_EQUIPE[k] : (CP_EQUIPE_MUN[mun] && CP_EQUIPE_MUN[mun][k]) || null; }
   var CP_PSI = /\b(psicolog\w*|psis)\b/;
-  var CP_INT = /\b(quantos?|quantas|numero|total|dados|censo|registros?|perfil|quadro|distribuic\w+|panorama|carga horaria|vinculos?|estatutari\w+|temporari\w+|escolaridade|especializacao|mestrado|sexo|mulheres|homens|proporcao|percentual|onde (estao|trabalham|atuam)|em quais|quem atua)\b/;
+  var CP_INT = /\b(quantos?|quantas|numero|total|dados|censo|registros?|perfil|quadro|distribuic\w+|panorama|ranking|por municipio|quais municipios|que municipios|municipios (com|sem)|no interior|do interior|carga horaria|vinculos?|estatutari\w+|temporari\w+|escolaridade|especializacao|mestrado|sexo|mulheres|homens|proporcao|percentual|onde (estao|trabalham|atuam)|em quais|quem atua)\b/;
   var CP_NORMA = /\b(deve|devem|deveria|precisa|precisam|obrigatori\w*|minim\w*|exige|exigid\w*|equipe de referencia|nob|resolucao|tipificacao|lei|portaria)\b/;
   var CP_PERFIL = /\b(perfil|sexo|genero|mulheres|homens|escolaridade|especializacao|mestrado|vinculos?|estatutari\w+|temporari\w+|comissionad\w+|carga horaria|horas|funcao|servico principal|segundo servico|bolsa familia)\b/;
   var CP_EQUIPE = /\b(equipe|composicao|assistentes? sociais?|pedagog\w+|profissoes)\b/;
@@ -3095,13 +3194,50 @@
     if (!n || n.length > 220 || !CP_PSI.test(n) || !CP_INT.test(n) || CP_NORMA.test(n) || RE_CONTATO.test(n)) return null;
     var mods = cpModulo(n), mun = cpMunicipio(n), unid = n.match(CP_UNIDADE);
     var estado = /\b(roraima|estado|interior|municipios|rr)\b/.test(n);
-    if (!mun && !estado && !mods.length && !unid) return null;
-    if (/\bcapital\b/.test(n) && !mun) mun = 'Boa Vista';
+    var interiorQ = !mun && /\b(interior|demais municipios|outros municipios|fora de boa vista|cidades do interior)\b/.test(n);
+    var rankQ = !mun && !interiorQ && /\b(ranking|por municipio|cada municipio|todos os municipios|quais municipios|que municipios|municipios (com|sem)|mais psicologos|menos psicologos|maior numero|menor numero|sem psicologos?|nenhum psicologo|nao (tem|possui|ha) psicologos?)\b/.test(n);
+    if (!mun && !estado && !mods.length && !unid && !interiorQ && !rankQ) return null;
+    if (/\bcapital\b/.test(n) && !mun && !rankQ) mun = 'Boa Vista';
     if (!mun && !estado) mun = 'Boa Vista';   // o app é de Boa Vista: "nos CRAS" sem lugar = Boa Vista (a resposta diz o município)
     var fonte = 'Censo SUAS ' + CP_ANO, L = [], fu = [];
     var nota = 'Contagem de registros de RH do ' + fonte + ' (MDS), não de pessoas únicas: um profissional pode aparecer em mais de um módulo. Não mede suficiência de equipe, carga real de trabalho nem cobertura.';
     var res = function (extra) { var o = { reply: L.join('\n'), mood: 'info', badge: fonte, note: nota, followups: fu.slice(0, 3), units: [] }; for (var k in (extra || {})) o[k] = extra[k]; return o; };
     var bv = CP_MUN['Boa Vista'];
+    var kModMun = mods.filter(function (k) { return k === 'cras' || k === 'creas'; });
+    // Ranking dos 15 municípios (todos os módulos municipais, ou só CRAS/CREAS quando o módulo é citado)
+    if (rankQ) {
+      var nomes = Object.keys(CP_MUN), k0 = kModMun[0];
+      var ord = nomes.map(function (m) { return [m, k0 ? (CP_MUN[m][k0] ? CP_MUN[m][k0][1] : 0) : cpSoma(CP_MUN[m])]; })
+        .sort(function (a, b) { return b[1] - a[1] || a[0].localeCompare(b[0], 'pt'); });
+      var totRk = ord.reduce(function (t, x) { return t + x[1]; }, 0);
+      L.push('No **' + fonte + '**, os **' + totRk + ' registros de psicólogos** em municípios identificados de Roraima' + (k0 ? ' nos **' + CP_MOD[k0] + '**' : ' (módulos municipais)') + ' se distribuem assim: ' + ord.filter(function (x) { return x[1] > 0; }).map(function (x) { return x[0] + ' ' + x[1]; }).join('; ') + '.');
+      if (k0) {
+        var zero = nomes.filter(function (m) { return CP_MUN[m][k0] && CP_MUN[m][k0][1] === 0; });
+        var semRh = nomes.filter(function (m) { return !CP_MUN[m][k0]; });
+        L.push(zero.length ? '- **Sem psicólogo registrado nos ' + CP_MOD[k0] + ' (' + zero.length + '):** ' + zero.join(', ') + '. _Zero significa só que a categoria Psicólogo(a) não aparece entre os registros de RH do módulo._' : '- Todos os municípios com RH de ' + CP_MOD[k0] + ' no arquivo têm ao menos um registro de psicólogo.');
+        if (semRh.length) L.push('- **Sem linhas de RH de ' + CP_MOD[k0] + ' no arquivo (' + semRh.length + '):** ' + semRh.join(', ') + '. Isso não prova que o serviço não exista.');
+      } else {
+        var semAlgum = nomes.filter(function (m) { return cpSoma(CP_MUN[m]) === 0; });
+        L.push('- **Boa Vista** tem ' + cpSoma(bv) + ' e os **14 municípios do interior** somam ' + CP_INTERIOR.total + ', todos em CRAS e CREAS.' + (semAlgum.length ? ' Sem nenhum registro: ' + semAlgum.join(', ') + '.' : ' Todos os municípios têm ao menos um registro.'));
+      }
+      L.push('_Os ' + CP_RR.acolhSemMun + ' registros de acolhimento com IBGE=14 não são de município algum e ficam fora desta lista._');
+      fu = ['Quantos psicólogos há no interior de Roraima?', 'Perfil dos psicólogos do interior de Roraima', k0 === 'creas' ? 'Quais municípios não têm psicólogo nos CRAS?' : 'Quais municípios não têm psicólogo nos CREAS?'];
+      return res();
+    }
+    // Interior (14 municípios, sem Boa Vista): total, quem tem, perfil e equipe
+    if (interiorQ) {
+      var ks = kModMun.length ? kModMun : ['cras', 'creas'], I = CP_INTERIOR;
+      L.push('Fora de Boa Vista, os **14 municípios do interior** somam **' + I.total + ' registros de psicólogos** no **' + fonte + '**: **' + I.mod.cras[1] + ' nos CRAS** (de ' + I.mod.cras[0] + ' registros de RH) e **' + I.mod.creas[1] + ' nos CREAS** (de ' + I.mod.creas[0] + '). Boa Vista tem ' + cpSoma(bv) + ' dos ' + CP_RR.identificados + ' registros em municípios identificados.');
+      ks.forEach(function (k) {
+        L.push('- **' + CP_MOD[k] + ' (' + I.mod[k][1] + '):** com psicólogo registrado: ' + I.comPsi[k].map(function (x) { return x[0] + ' ' + x[1]; }).join(', ') + '.' + (I.semPsi[k].length ? ' Sem psicólogo registrado: ' + I.semPsi[k].join(', ') + '.' : '') + (I.semRH[k].length ? ' Sem linhas de RH do módulo no arquivo: ' + I.semRH[k].join(', ') + '.' : ''));
+        if (CP_PERFIL.test(n) || kModMun.length === 1) L.push('- **Perfil dos ' + I.mod[k][1] + ' registros nos ' + CP_MOD[k] + ':** ' + I.perfil[k].join('; ') + '.');
+        if (CP_EQUIPE.test(n)) L.push('- **Equipe:** ' + I.equipe[k] + '.');
+      });
+      L.push('- **Outros módulos:** nenhum município do interior tem psicólogo registrado em Gestão Municipal, Fundo Municipal, Posto de Cadastramento, Centro de Convivência, Acolhimento ou Família Acolhedora.');
+      L.push('- **Por município:** ' + I.rank.map(function (x) { return x[0] + ' ' + x[1]; }).join('; ') + '.');
+      fu = ['Perfil dos psicólogos do interior de Roraima', 'Quais municípios não têm psicólogo nos CRAS?', 'Quantos psicólogos há em Pacaraima?'];
+      return res();
+    }
     // Roraima (sem município): totais por módulo
     if (!mun && mods.length && CP_RR.mod[mods[0]] != null) {
       var mk = mods[0], tk = CP_RR.mod[mk], bk = bv[mk] ? bv[mk][1] : 0;
@@ -3116,7 +3252,7 @@
       L.push('- **Por módulo municipal:** CRAS ' + CP_RR.mod.cras + ', CREAS ' + CP_RR.mod.creas + ', Unidade de Acolhimento ' + CP_RR.mod.acol + ' (' + CP_RR.acolhSemMun + ' sem município), Centro de Convivência ' + CP_RR.mod.conv + ', Gestão Municipal ' + CP_RR.mod.gest + ', Família Acolhedora ' + CP_RR.mod.fam + '. Sem psicólogo no arquivo: Centro POP, Fundo Municipal e Posto de Cadastramento.');
       L.push('- **Boa Vista** concentra ' + cpSoma(bv) + ' dos ' + CP_RR.identificados + ' registros em municípios identificados (CRAS ' + bv.cras[1] + ' de ' + CP_RR.mod.cras + '; CREAS ' + bv.creas[1] + ' de ' + CP_RR.mod.creas + ').');
       L.push('_Os ' + CP_RR.acolhSemMun + ' registros de acolhimento sem município não são de Boa Vista nem de outro município._');
-      fu = ['Quantos psicólogos há em Boa Vista?', 'Quantos psicólogos há nos CRAS de Roraima?', 'Psicólogos por município de Roraima'];
+      fu = ['Quantos psicólogos há em Boa Vista?', 'Quantos psicólogos há nos CRAS de Roraima?', 'Quantos psicólogos há por município de Roraima?'];
       return res();
     }
     var d = CP_MUN[mun];
@@ -3132,8 +3268,8 @@
       mods.forEach(function (k) {
         if (d[k]) { achou++; L.push('Em **' + mun + '**, ' + cpLinha(k, d[k]) + '.'); if (!d[k][1]) L.push('_Zero significa só que a categoria Psicólogo(a) não aparece entre os registros de RH desse módulo._'); }
         else L.push('Em **' + mun + '**, o arquivo do ' + fonte + ' **não traz registros de RH** do módulo ' + CP_MOD[k] + '. Isso não prova que o serviço não exista.');
-        if (mun === 'Boa Vista' && CP_BV_PERFIL[k] && (CP_PERFIL.test(n) || mods.length === 1)) L.push('- **Perfil dos ' + d[k][1] + ' registros:** ' + CP_BV_PERFIL[k].join('; ') + '.');
-        if (mun === 'Boa Vista' && CP_BV_EQUIPE[k] && CP_EQUIPE.test(n)) L.push('- **Equipe:** ' + CP_BV_EQUIPE[k] + '.');
+        if (d[k] && d[k][1] > 0 && cpPerfil(mun, k) && (CP_PERFIL.test(n) || mods.length === 1)) L.push('- **' + (d[k][1] === 1 ? 'Perfil do registro' : 'Perfil dos ' + d[k][1] + ' registros') + ':** ' + cpPerfil(mun, k).join('; ') + '.');
+        if (cpEquipe(mun, k) && CP_EQUIPE.test(n)) L.push('- **Equipe:** ' + cpEquipe(mun, k) + '.');
       });
       if (!achou && mods.length === 1 && !d[mods[0]]) { /* só o aviso acima */ }
     } else if (mun === 'Boa Vista') {
@@ -3143,14 +3279,20 @@
       if (CP_PERFIL.test(n)) {
         L.push('- **Perfil nos CRAS (' + bv.cras[1] + '):** ' + CP_BV_PERFIL.cras.slice(0, 5).join('; ') + '.');
         L.push('- **Perfil nos CREAS (' + bv.creas[1] + '):** ' + CP_BV_PERFIL.creas.join('; ') + '.');
+        ['conv', 'acol', 'fam', 'gest'].forEach(function (k) { if (CP_BV_PERFIL[k]) L.push('- **Perfil em ' + CP_MOD[k] + ' (' + bv[k][1] + '):** ' + CP_BV_PERFIL[k].join('; ') + '.'); });
       }
+      if (CP_EQUIPE.test(n)) CP_ORD.forEach(function (k) { if (CP_BV_EQUIPE[k]) L.push('- **Equipe:** ' + CP_BV_EQUIPE[k] + '.'); });
     } else {
-      L.push('Em **' + mun + '**, o ' + fonte + ' registra **' + tot + (tot === 1 ? ' registro' : ' registros') + ' de psicólogo' + (tot === 1 ? '' : 's') + ' nos módulos municipais:');
+      L.push('Em **' + mun + '**, o ' + fonte + ' registra **' + tot + (tot === 1 ? ' registro' : ' registros') + ' de psicólogo' + (tot === 1 ? '' : 's') + '** nos módulos municipais:');
       CP_ORD.forEach(function (k) { if (d[k] && (k === 'cras' || k === 'creas' || d[k][1])) L.push('- ' + cpLinha(k, d[k])); });
+      ['cras', 'creas'].forEach(function (k) {
+        if (CP_PERFIL.test(n) && d[k] && d[k][1] > 0 && cpPerfil(mun, k)) L.push('- **Perfil nos ' + CP_MOD[k] + ' (' + d[k][1] + '):** ' + cpPerfil(mun, k).join('; ') + '.');
+        if (CP_EQUIPE.test(n) && cpEquipe(mun, k)) L.push('- **Equipe:** ' + cpEquipe(mun, k) + '.');
+      });
       L.push('_Módulo que não aparece não tem linhas de RH no arquivo, o que não prova que o serviço não exista._');
     }
     if (mun === 'Boa Vista') fu = ['Perfil dos psicólogos dos CREAS de Boa Vista', 'Quantos psicólogos há nos Centros de Convivência de Boa Vista?', 'Quantos psicólogos há em Roraima?'];
-    else fu = ['Quantos psicólogos há em Boa Vista?', 'Quantos psicólogos há em Roraima?'];
+    else fu = ['Perfil dos psicólogos de ' + mun, 'Onde estão os psicólogos na equipe dos CRAS de ' + mun + '?', 'Quantos psicólogos há por município de Roraima?'];
     return res();
   }
 
@@ -3381,7 +3523,7 @@
   }
 
   return {
-    interpretar: interpretar, init: init, setCid: setCid, setMunicipios: setMunicipios, setCensoSuas: setCensoSuas, psiCenso: psiCensoAsk, bvCenso: boaVistaCensoAsk, municipiosRR: rrAsk, cid: cidAsk, norm: norm, piiBlock: piiBlock, crisis: crisis, plan: plan, contagem: contagem,
+    interpretar: interpretar, init: init, setCid: setCid, setMunicipios: setMunicipios, setCensoSuas: setCensoSuas, psiCenso: psiCensoAsk, psiCensoDados: function () { return { mun: CP_MUN, perfil: CP_PERFIL_MUN, equipe: CP_EQUIPE_MUN, interior: CP_INTERIOR, bvEquipe: CP_BV_EQUIPE }; }, bvCenso: boaVistaCensoAsk, municipiosRR: rrAsk, cid: cidAsk, norm: norm, piiBlock: piiBlock, crisis: crisis, plan: plan, contagem: contagem,
     directory: function (t, tabCat) { return directory(t, session, tabCat); },
     glossary: glossaryScore, compose: { directory: composeDirectory, glossary: composeGlossary },
     psi: psiScore, psiLista: PSI_BASE, baseApp: baseApp, fichaAsk: fichaAsk, trechosDa: trechosDa, pbfPagamento: pbfPagamento,
