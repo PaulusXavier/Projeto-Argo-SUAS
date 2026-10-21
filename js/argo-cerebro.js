@@ -3415,34 +3415,80 @@
   // ---------------------------------------------------------------------
   // CRAS e conselhos de assistência social FORA de Boa Vista (Censo SUAS 2025): resposta direta, tirada do trecho da base do Censo.
   // Sem isto, "quantos computadores tem o CRAS de Iracema?" cairia na resposta de Boa Vista.
+  // Resposta curta e direta ao que foi perguntado (horas, salas, computadores...), tirada do texto do município; o trecho completo vem logo depois.
+  function censoLead(n, textos, conselho) {
+    var out = [];
+    textos.forEach(function (tx) {
+      if (conselho) {
+        var m = /(?:Conselho Municipal de Assistência Social de|Conselho Estadual de Assistência Social de) ([^ ]+(?: [^ ]+)*?) registra (\d+) conselheiros/.exec(tx);
+        var sx = /; (\d+ (?:mulher(?:es)?|homem|homens)(?: e \d+ (?:mulher(?:es)?|homem|homens))?);/.exec(tx);
+        if (m && /\b(mulher\w*|homem|homens|feminin\w*|masculin\w*|sexo)\b/.test(n) && sx) out.push('**' + m[1] + '**: ' + sx[1] + ' entre ' + m[2] + ' conselheiros.');
+        return;
+      }
+      var pos = [], re = /(?:^|\. |; )([^.;]*?) \(bairro /g, mm;
+      while ((mm = re.exec(tx))) pos.push({ nome: mm[1].replace(/^.*?\) tem [^.]*\. /, ''), i: mm.index + mm[0].length - mm[1].length - 9 });
+      var cab = /^([^ ]+(?: [^ ]+)*?) \(população/.exec(tx), mun = cab ? cab[1] : '';
+      pos.forEach(function (p, k) {
+        var seg = tx.slice(p.i, k + 1 < pos.length ? pos[k + 1].i : tx.length), r, f = [];
+        if (/\b(horas?|funciona\w*|dias|horario)\b/.test(n) && (r = /(\d+) dias por semana e (\d+) horas por dia/.exec(seg))) f.push('funciona ' + r[1] + ' dias por semana, ' + r[2] + ' horas por dia');
+        if (/\bsalas?\b/.test(n) && (r = /, ((?:de \d+ a \d+|8 ou mais) salas)/.exec(seg))) f.push('tem ' + r[1]);
+        if (/\bbanheir\w*\b/.test(n) && (r = /(\d+ banheiros?)/.exec(seg))) f.push('tem ' + r[1]);
+        if (/\b(computador\w*|internet)\b/.test(n) && (r = /(\d+ computadores?) \((\d+) com internet\)/.exec(seg))) f.push('tem ' + r[1] + ' (' + r[2] + ' com internet)');
+        if (/\b(veiculo\w*|carro\w*)\b/.test(n) && (r = /(nenhum veículo exclusivo|\d+ veículos? exclusivos?) e (nenhum compartilhado|\d+ compartilhados?)/.exec(seg))) f.push('tem ' + r[1] + ' e ' + r[2]);
+        if (/\b(capacidade|familias referenciadas|referenciar)\b/.test(n) && (r = /capacidade de ([\d.]+) famílias/.exec(seg))) f.push('tem capacidade para referenciar ' + r[1] + ' famílias');
+        if (/\b(paif|atendimento coletivo)\b/.test(n) && (r = /PAIF coletivo ([^,.;]+)/.exec(seg))) f.push(r[1] === 'não informado' ? 'não informou o atendimento coletivo do PAIF' : 'teve ' + r[1] + ' pessoas no atendimento coletivo do PAIF');
+        if (/\b(imovel|proprio|cedid\w+|alugad\w+|compartilhad\w*)\b/.test(n) && (r = /imóvel (próprio|cedido|alugado)(, compartilhado com outro equipamento)?/.exec(seg))) f.push('tem imóvel ' + r[1] + (r[2] ? ', compartilhado com outro equipamento' : ''));
+        if (/\b(implantacao|implantado)\b/.test(n) && (r = /implantado em (\d{4})/.exec(seg))) f.push('foi implantado em ' + r[1]);
+        if (/\b(rural|rurais|urbana?)\b/.test(n) && (r = /área (rural|urbana central)/.exec(seg))) f.push('fica em área ' + r[1]);
+        if (f.length) out.push('**' + (pos.length > 1 ? p.nome.replace(/^CRAS -? ?/, 'CRAS ') : 'CRAS de ' + mun) + '** ' + f.join('; ') + '.');
+      });
+    });
+    return out.join('\n');
+  }
   function censoInteriorAsk(text) {
-    var n = norm(text);
+    var n = norm(text), padded = ' ' + n + ' ';
     if (!censoSuas.length || !n || n.length > 220 || CP_PSI.test(n) || CP_NORMA.test(n) || RE_CONTATO.test(n)) return null;
     if (/\bboa vista\b|\bcapital\b|\bconselho tutelar\b/.test(n)) return null;
-    var mun = cpMunicipio(n), interior = /\binterior\b/.test(n), estadual = /\b(conselho estadual|ceas)\b/.test(n);
-    if (!(mun && mun !== 'Boa Vista') && !interior && !estadual) return null;
+    var muns = Object.keys(CP_MUN).filter(function (nome) { return nome !== 'Boa Vista' && padded.indexOf(' ' + norm(nome) + ' ') > -1; });
+    var mun = muns.length ? cpMunicipio(n) : null;
+    var interior = /\binterior\b/.test(n), estadual = /\b(conselho estadual|ceas)\b/.test(n);
+    if (!muns.length && !interior && !estadual) return null;
     var conselho = /\b(conselho municipal|conselho estadual|conselheir\w+|cmas|ceas)\b/.test(n);
     var cras = /\bcras\b/.test(n) && !/\bcreas\b/.test(n);
-    if (!(conselho || (cras && (BV_RE_INFRA.test(n) || BV_RE_RH.test(n))))) return null;
+    var EXTRA = /\b(rural|rurais|urbana?|compartilhad\w*|cedid\w+|salas?|banheir\w*|horas|dias|internet|estrutura|infraestrutura|funcionamento|funciona|paif)\b/;
+    if (!(conselho || (cras && (BV_RE_INFRA.test(n) || BV_RE_RH.test(n) || EXTRA.test(n) || interior || muns.length > 1)))) return null;
     var ref = function (t) { return norm(t.referencia || ''); };
     var acha = function (re) { return censoSuas.filter(function (t) { return re.test(ref(t)); })[0] || null; };
-    var t = null, munN = mun ? norm(mun) : '';
-    if (conselho) {
+    var doMun = function (m) {
+      return conselho ? (censoSuas.filter(function (x) { return /conselho municipal/.test(ref(x)) && ref(x).indexOf(norm(m)) > -1; })[0] || null)
+        : (censoSuas.filter(function (x) { return /\bcras\b.*estrutura e equipe/.test(ref(x)) && ref(x).indexOf(norm(m)) > -1; })[0] || null);
+    };
+    var textos = [], t = null;
+    if (muns.length > 1) {
+      // comparação entre municípios: junta o trecho de cada um (até 3)
+      muns.slice(0, 3).forEach(function (m) { var x = doMun(m); if (x) textos.push(limpaMd(x.texto)); else if (conselho) textos.push(m + ': sem conselheiros registrados no arquivo do Censo SUAS 2025 (isso não prova que o conselho não exista).'); });
+      if (!textos.length) return null;
+    } else if (conselho) {
       if (estadual) t = acha(/conselho estadual/);
-      else if (mun && mun !== 'Boa Vista') t = censoSuas.filter(function (x) { return /conselho municipal/.test(ref(x)) && ref(x).indexOf(munN) > -1; })[0] || acha(/totais de conselheiros/);
+      else if (mun) t = doMun(mun) || acha(/totais de conselheiros/);
       else t = acha(/totais de conselheiros/);
-    } else if (mun && mun !== 'Boa Vista') {
-      t = censoSuas.filter(function (x) { return /\bcras\b.*estrutura e equipe/.test(ref(x)) && ref(x).indexOf(munN) > -1; })[0] || null;
+    } else if (mun) {
+      t = doMun(mun);
     } else if (/\b(vinculos?|escolaridade|estatutari\w+|temporari\w+|comissionad\w+)\b/.test(n)) t = acha(/equipe dos cras do interior.*vinculo/);
     else if (/\b(profissao|profissoes|assistentes? sociais?|pedagog\w+)\b/.test(n)) t = acha(/equipe dos cras do interior.*profissao/);
     else if (/\b(funcao|funcoes|cadastrador\w*|educador\w* sociais?)\b/.test(n)) t = acha(/equipe dos cras do interior.*funcao/);
+    else if (/\b(veiculo\w*|carro\w*)\b/.test(n)) t = acha(/veiculos dos cras do interior/);
+    else if (/\b(computador\w*|internet)\b/.test(n)) t = acha(/computadores dos cras do interior/);
+    else if (/\b(capacidade|familias referenciadas|referenciar)\b/.test(n)) t = acha(/capacidade de familias referenciadas dos cras do interior/);
     else if (BV_RE_RH.test(n)) t = acha(/registros de trabalhadores nos cras do interior/);
     else if (/\b(atendimento coletivo|paif)\b/.test(n)) t = acha(/atendimento coletivo do paif nos cras do interior/);
-    else if (/\b(imovel|alugad\w+|proprio|implantacao|rural|compartilhad\w*)\b/.test(n)) t = acha(/estrutura dos cras do interior/);
-    else t = acha(/cras do interior de roraima: visao geral/);
-    if (!t) return null;
+    else if (/\b(imovel|alugad\w+|proprio|implantacao|rural|rurais|compartilhad\w*|cedid\w+|urbana?)\b/.test(n)) t = acha(/estrutura dos cras do interior/);
+    else t = acha(/cras do interior de roraima.*visao geral/);
+    if (t) textos.push(limpaMd(t.texto));
+    if (!textos.length) return null;
     var fonte = 'Censo SUAS ' + CP_ANO;
-    return { reply: limpaMd(t.texto), mood: 'info', badge: fonte, note: 'Dados declarados no ' + fonte + ' (MDS), agregados por município; não medem suficiência de equipe nem cobertura. Confira com a gestão municipal para a situação atual.', followups: conselho ? ['Quantos conselheiros tem o conselho estadual?'] : ['Qual a equipe dos CRAS do interior?', 'Quantos psicólogos há no interior de Roraima?'], units: [] };
+    var lead = censoLead(n, textos, conselho);
+    return { reply: (lead ? lead + '\n\n' : '') + textos.join('\n\n'), mood: 'info', badge: fonte, note: 'Dados declarados no ' + fonte + ' (MDS), agregados por município; não medem suficiência de equipe nem cobertura. Confira com a gestão municipal para a situação atual.', followups: conselho ? ['Quantos conselheiros tem o conselho estadual?'] : ['Qual a equipe dos CRAS do interior?', 'Quantos psicólogos há no interior de Roraima?'], units: [] };
   }
   function plan(text, opts) {
     opts = opts || {};
