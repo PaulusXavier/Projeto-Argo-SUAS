@@ -17587,16 +17587,21 @@ function argoAssistantFocusSearch() {
 // resposta, o texto da resposta (string ou função, para casos com hora do
 // dia) e, opcionalmente, um botão de ação rápida que já resolve o pedido
 // (navega até a aba certa e confirma com uma segunda mensagem).
+var argoGreetCount = 0;   // quantas vezes a pessoa já me cumprimentou nesta sessão (a 2ª saudação é mais curta)
 const ARGO_ASSISTANT_INTENTS = [
   {
     keys: ['bom dia', 'boa tarde', 'boa noite', 'oi', 'ola', 'opa', 'eae', 'e ai'],
     mood: 'success',
-    reply: () => argoGreetingWord() + '! Que bom ter você a bordo, eu estava justamente de olho no horizonte. ' + argoPick(['Me diga o que procura: um serviço, um bairro, uma ferramenta.', 'Para onde vamos hoje? Um serviço, um bairro, uma ferramenta…', 'No que posso te ajudar? Se preferir, escolha um atalho abaixo.'])
+    reply: () => {
+      argoGreetCount = (argoGreetCount || 0) + 1;
+      if (argoGreetCount > 1) return argoPick(['Oi de novo! Pode falar, estou ouvindo.', 'Estou por aqui. O que vamos resolver agora?', 'Pois não? Me diga o que precisa.']);
+      return argoGreetingWord() + '! Que bom ter você a bordo. ' + argoPick(['Me diga o que procura: um serviço, um bairro, uma ferramenta.', 'Para onde vamos hoje? Um serviço, um bairro, uma ferramenta…', 'No que posso te ajudar? Se preferir, escolha um atalho abaixo.', 'Tem um caso para organizar ou uma unidade para achar? Eu começo por onde você quiser.']);
+    }
   },
   {
     keys: ['obrigado', 'obrigada', 'valeu', 'brigado', 'agradeco'],
     mood: 'success',
-    reply: () => argoPick(['Por nada! Fico contente de ter ajudado. Qualquer coisa, é só chamar.', 'Disponha! Eu gosto quando a rota dá certo. Bom atendimento!', 'Foi um prazer. Se a próxima dúvida aparecer, eu estou por aqui.'])
+    reply: () => argoPick(['Por nada! Fico contente de ter ajudado. Qualquer coisa, é só chamar.', 'Disponha! Eu gosto quando a rota dá certo. Bom atendimento!', 'Foi um prazer. Se a próxima dúvida aparecer, eu estou por aqui.', 'Imagina. Antes de encaminhar, vale só confirmar o contato por telefone. Bom trabalho!', 'Que bom que ajudou. Se o caso mudar de rumo, me chame que a gente reorganiza.'])
   },
   {
     keys: ['tchau', 'ate logo', 'ate mais'],
@@ -17611,7 +17616,7 @@ const ARGO_ASSISTANT_INTENTS = [
   {
     keys: ['tudo bem', 'td bem', 'como vai', 'como voce esta', 'como vc esta', 'como voce ta', 'como vc ta', 'tudo certo'],
     mood: 'success',
-    reply: () => argoPick(['Tudo bem por aqui, mar calmo! E com você? Se o dia estiver corrido, me diga o que precisa que eu ajudo a encurtar o caminho.', 'Estou ótimo, obrigado por perguntar! Pronto para o que vier. Como posso ajudar?'])
+    reply: () => argoPick(['Tudo certo por aqui, obrigado por perguntar! E com você? Se o dia estiver corrido, me diga o que precisa que eu ajudo a encurtar o caminho.', 'Por aqui está tudo em ordem e pronto para ajudar. E você, como está? Se quiser, já me conta o que precisa.'])
   },
   {
     keys: ['quem te criou', 'quem criou', 'quem fez', 'quem desenvolveu', 'quem e o autor', 'quem e paulus', 'quem e o paulus', 'seu nome', 'como voce se chama', 'como vc se chama', 'qual seu nome'],
@@ -17626,12 +17631,38 @@ const ARGO_ASSISTANT_INTENTS = [
   {
     keys: ['piada', 'conta uma piada', 'me faz rir', 'algo engracado', 'me alegra'],
     mood: 'success',
-    reply: () => argoPick(['Uma rápida: por que o barquinho nunca se perde no diretório? Porque eu sempre confiro o território antes de zarpar. 😄', 'Minha especialidade de humor é fraca, admito. Mas planilha sem duplicado já me arranca um sorriso.'])
+    reply: () => argoPick(['Uma rápida: por que o barquinho nunca se perde no diretório? Porque eu sempre confiro o território antes de zarpar.', 'Minha especialidade de humor é fraca, admito. Mas planilha sem duplicado já me arranca um sorriso.', 'Piada de técnico do SUAS: o relatório mensal é a única coisa que chega sempre no prazo, só que na véspera. Prometo que a minha é melhor quando eu treino mais.'])
   },
   {
     keys: ['estou cansado', 'estou cansada', 'dia dificil', 'dia puxado', 'estressado', 'estressada', 'sobrecarregado', 'sobrecarregada', 'esgotado', 'esgotada', 'exausto', 'exausta'],
     mood: 'info',
     reply: 'Imagino que o dia esteja pesado. Trabalhar com a rede cobra muito da gente. Posso tirar da sua frente o que for burocrático: achar telefone, montar a ficha, conferir prazo. E se estiver pesando de verdade, vale respirar um pouco e conversar com a supervisão ou com alguém de confiança.'
+  },
+  {
+    keys: ['estou preocupado com um caso', 'estou preocupada com um caso', 'caso dificil', 'caso pesado', 'caso complicado', 'nao sei o que fazer com um caso', 'nao sei o que fazer neste caso', 'nao sei o que fazer nesse caso', 'esse caso me deixou mal', 'estou angustiado', 'estou angustiada', 'estou ansioso', 'estou ansiosa', 'estou triste'],
+    mood: 'info',
+    reply: 'Sinto que isso esteja pesando, e é natural: caso difícil mexe com a gente. Se quiser, me conta a situação sem nomes nem dados que identifiquem a pessoa, e eu ajudo a organizar o raciocínio: o que é urgente, que direito precisa ser garantido, qual serviço da rede entra e o que registrar. A decisão continua com você e com a sua equipe, e levar o caso para a supervisão faz diferença. Se for você que está em sofrimento forte, o CVV atende pelo 188, a qualquer hora.'
+  },
+  {
+    keys: ['voce errou', 'vc errou', 'resposta errada', 'nao e isso', 'nao era isso', 'isso esta errado', 'isso ta errado', 'voce se enganou'],
+    mood: 'info',
+    reply: 'Obrigado por avisar, eu posso errar mesmo. Me diga o que estava errado, ou refaça a pergunta de outro jeito (com o bairro ou o nome da unidade, se tiver), que eu corrijo. Enquanto isso, confira telefone, endereço e norma na fonte antes de encaminhar.'
+  },
+  {
+    keys: ['mandou bem', 'parabens', 'voce e otimo', 'voce e otima', 'voce e demais', 'voce ajuda muito', 'gostei muito', 'adorei'],
+    mood: 'success',
+    reply: () => argoPick(['Que bom ouvir isso, obrigado! O mérito também é de quem cuida do diretório e atende na ponta. Em que mais posso ajudar?', 'Fico contente de ser útil. Se algo aqui poderia ser melhor, me conta, que eu aprendo com isso.', 'Obrigado! Quando a rota dá certo, o dia rende mais. O que vem agora?'])
+  },
+  {
+    keys: ['o que voce nao faz', 'o que voce nao sabe', 'quais seus limites', 'quais sao seus limites', 'voce sabe tudo', 'como voce pensa', 'como voce funciona', 'como voce responde'],
+    mood: 'info',
+    reply: 'Eu penso assim: primeiro vejo se é socorro, depois procuro no diretório (telefone, endereço, horário e bairros atendidos vêm só das fichas, eu não invento), depois consulto a minha base de SUAS e saúde mental. Só o que sobra vai para a IA, e ela traz o aviso para conferir. Eu não decido caso individual, não dou parecer técnico, jurídico ou clínico e não substituo a sua equipe nem a supervisão. O que eu não souber, eu digo que não sei.'
+  },
+  {
+    keys: ['preciso de ajuda', 'preciso de uma ajuda', 'me ajuda', 'pode me ajudar', 'nao sei por onde comecar', 'por onde comeco'],
+    mood: 'info',
+    reply: 'Claro, vamos por partes. O que você precisa agora: achar uma unidade ou um telefone, entender uma regra do SUAS ou organizar o encaminhamento de um caso? Se for um caso, conte sem nomes (idade aproximada, o que aconteceu, bairro) que eu monto o passo a passo com a rede de Boa Vista.',
+    action: { label: 'Ir para a busca', run: () => argoAssistantFocusSearch(), reply: 'Pronto! O cursor já está na busca.', mood: 'success' }
   },
   {
     keys: ['dica', 'dicas', 'o que posso fazer aqui', 'o que da pra fazer', 'nesta aba', 'nessa aba', 'esta tela', 'essa tela'],
@@ -19441,7 +19472,7 @@ function renderAgendaCard() {
                   <button type="button" class="agenda-view-btn" id="agendaZoomOut" title="Diminuir letras do calendário" aria-label="Diminuir letras do calendário" onclick="agendaZoom(-1)">A−</button>
                   <button type="button" class="agenda-view-btn" id="agendaZoomIn" title="Aumentar letras do calendário" aria-label="Aumentar letras do calendário" onclick="agendaZoom(1)">A+</button>
                 </div>
-                <button type="button" class="agenda-menu-item" id="agendaDoneBtn" aria-pressed="false" onclick="agendaToggleShowDone()"><span>✓ Mostrar concluídas<small>Riscadas, no próprio dia (tecla C)</small></span></button>
+                <button type="button" class="agenda-menu-item" id="agendaDoneBtn" aria-pressed="false" onclick="agendaToggleShowDone()"><span>✓ Mostrar concluídas<small>Ficam riscadas no próprio dia (tecla C)</small></span></button>
                 <button type="button" class="agenda-menu-item" id="agendaNarrowBtn" aria-pressed="false" onclick="agendaToggleNarrow()"><span>⇔ Fins de semana estreitos<small>Sobra mais largura para os dias úteis (tecla E)</small></span></button>
                 <button type="button" class="agenda-menu-item" id="agendaCalFocusBtn" aria-pressed="false" onclick="agendaToggleCalFocus()"><span>⛶ Só o calendário<small>Esconde a lateral e os avisos (tecla F)</small></span></button>
                 <div class="agenda-menu-title">Ferramentas</div>
@@ -19554,8 +19585,8 @@ function renderAgendaCard() {
 // Visual escolhido neste aparelho: tamanho das letras e modo "só calendário".
 const AGENDA_ZOOM_STEPS = [0.9, 1, 1.15, 1.3, 1.5, 1.75];
 function agendaViewLoad() {
-  try { const v = JSON.parse(localStorage.getItem('argoAgendaView') || '{}'); return { zoom: AGENDA_ZOOM_STEPS.includes(v.zoom) ? v.zoom : 1, calfocus: !!v.calfocus, week: !!v.week, showDone: !!v.showDone, narrowWe: !!v.narrowWe, sideTab: ['month', 'pend', 'up'].includes(v.sideTab) ? v.sideTab : 'month' }; }
-  catch (e) { return { zoom: 1, calfocus: false, week: false, showDone: false, narrowWe: false, sideTab: 'month' }; }
+  try { const v = JSON.parse(localStorage.getItem('argoAgendaView') || '{}'); return { zoom: AGENDA_ZOOM_STEPS.includes(v.zoom) ? v.zoom : 1, calfocus: !!v.calfocus, week: !!v.week, showDone: v.doneHidden !== true, narrowWe: !!v.narrowWe, sideTab: ['month', 'pend', 'up'].includes(v.sideTab) ? v.sideTab : 'month' }; }
+  catch (e) { return { zoom: 1, calfocus: false, week: false, showDone: true, narrowWe: false, sideTab: 'month' }; }
 }
 function agendaViewSave(v) { try { localStorage.setItem('argoAgendaView', JSON.stringify(v)); } catch (e) { /* sem armazenamento: vale só nesta sessão */ } }
 function agendaApplyView() {
@@ -19598,6 +19629,7 @@ function agendaToggleNarrow() {
 function agendaToggleShowDone() {
   const v = agendaViewLoad();
   v.showDone = !v.showDone;
+  v.doneHidden = !v.showDone;   // por padrão as concluídas continuam visíveis (riscadas); só some se a pessoa escolher
   agendaViewSave(v);
   agendaRenderCalendar();
 }
@@ -26197,7 +26229,8 @@ function argoAssistantAskHybrid(rawText, meta) {
   if (B && B.session) B.session.aguardando = false;
   const pular = !B || typeof B.interpretar !== 'function' || !B.aiOn() || meta.forceAI || meta.regen || meta.semInterpretar ||
     (texto.length < 4 && !aguardando) || texto.length > 300 || _ubsPsiAguarda || B.crisis(texto) || B.piiBlock(texto) || argoAgendaAsk(texto) || argoThemeAsk(texto) || argoOpenTabAsk(texto) ||
-    (typeof B.psi === 'function' && B.psi(texto).score >= 3);
+    (typeof B.psi === 'function' && B.psi(texto).score >= 3) ||
+    (typeof B.planMulti === 'function' && !!B.planMulti(texto, {}));   // duas partes de contato: o diretório responde as duas, sem a IA reescrever a pergunta
   if (pular) return argoAssistantAskHybridCore(rawText, meta);
   const tab = argoActiveTabInfo();
   return B.interpretar(texto, { tabName: tab.name }).then(i => {
@@ -26264,6 +26297,17 @@ function argoAssistantAskHybridCore(rawText, meta) {
   const longMsg = rawText.trim().length > 300 && B.aiOn();
   const ubsPsi = longMsg ? null : argoUbsPsicoAsk(rawText);
   if (ubsPsi) return keep(ubsPsi, ubsPsi.units);
+
+  // Pergunta com duas partes de contato ("telefone do CRAS e do CREAS"): cada parte é respondida pelo diretório.
+  if (!meta.forceAI && !meta.regen && !longMsg && typeof B.planMulti === 'function') {
+    const multi = B.planMulti(rawText, { tabCat: tab.cat });
+    if (multi) return keep(argoAssistantToUi(multi.result, rawText, false), multi.result.units);
+  }
+  // "e do Conselho Tutelar?" depois de um pedido de contato: mantém o que se pedia (telefone, endereço, horário).
+  if (!meta.forceAI && !meta.regen && !longMsg && typeof B.planSeguimento === 'function') {
+    const seg = B.planSeguimento(rawText, { tabCat: tab.cat });
+    if (seg) return keep(argoAssistantToUi(seg.result, rawText, false), seg.result.units);
+  }
 
   let plan = { kind: 'none' };
   let local = null;
