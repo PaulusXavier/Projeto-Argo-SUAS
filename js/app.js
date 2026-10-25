@@ -17510,6 +17510,26 @@ function agendaEntriesPreview(entries) {
 function agendaEntryShort(e) {
   return (e && e.time ? e.time + ' ' : '') + (e ? e.text : '');
 }
+// Categorias de anotação (#visita, #grupo...): cor própria no calendário e nas listas.
+// Guardada em entry.cat (chave simples, sem texto sensível).
+const AGENDA_CATS = {
+  atendimento: { label: 'Atendimento', color: '#1b7fa8' },
+  visita:      { label: 'Visita',      color: '#c9730f' },
+  grupo:       { label: 'Grupo',       color: '#7a4fb5' },
+  reuniao:     { label: 'Reunião',     color: '#2f8a6b' },
+  prazo:       { label: 'Prazo',       color: '#c13b3b' }
+};
+function agendaCleanCat(c) { return (typeof c === 'string' && Object.prototype.hasOwnProperty.call(AGENDA_CATS, c)) ? c : ''; }
+// Aceita "#vis", "#reuniao", "#reunião"... (prefixo, sem acento). Devolve a chave ou ''.
+function agendaCatFromTag(tag) {
+  const t = String(tag || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (t.length < 2) return '';
+  return Object.keys(AGENDA_CATS).find(k => k.startsWith(t)) || '';
+}
+function agendaCatBadge(c) {
+  c = agendaCleanCat(c);
+  return c ? '<span class="agenda-cat-tag" style="--cat:' + AGENDA_CATS[c].color + '">' + AGENDA_CATS[c].label + '</span>' : '';
+}
 // Horário válido "HH:MM" (ou '' se vazio/inválido): vem de <input type="time">
 // e de outros aparelhos, então não se confia no formato.
 function agendaCleanTime(t) {
@@ -19431,6 +19451,18 @@ function renderAgendaCard() {
         .agenda-pend-bulk { display: block; width: 100%; margin: 2px 0 6px; padding: 7px 10px; border: 1px solid var(--red-ink); border-radius: 8px; background: rgba(179, 65, 58, 0.08); color: #8f2f29; font: 800 13px/1.2 'Times New Roman', Times, serif; cursor: pointer; }
         .agenda-pend-bulk:hover { background: rgba(179, 65, 58, 0.18); }
         @media print { .agenda-seg, .agenda-side, .agenda-menu, .agenda-toolbar { display: none !important; } }
+
+        /* Tipos de anotação (#visita, #grupo...): faixa colorida na grade, selo nas listas, chips no modal. */
+        .agenda-note-line.has-cat { border-left: 4px solid var(--cat); padding-left: 5px; border-radius: 2px; }
+        .agenda-cat-tag { display: inline-block; align-self: flex-start; font: 800 10px/1 'Times New Roman', Times, serif; letter-spacing: 0.3px; text-transform: uppercase; color: #fff; background: var(--cat); padding: 3px 6px; border-radius: 999px; margin-right: 6px; }
+        .agenda-cat-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0 8px; }
+        .agenda-cat-lead { font-size: 13px; font-weight: 800; color: #6f6551; margin-right: 2px; }
+        .agenda-cat-chip { font: 700 13px/1 'Times New Roman', Times, serif; padding: 8px 12px; min-height: 34px; border-radius: 999px; border: 1.5px solid var(--cat); background: transparent; color: #2c2620; cursor: pointer; }
+        .agenda-cat-chip:hover { background: color-mix(in srgb, var(--cat) 16%, transparent); }
+        .agenda-cat-chip[aria-pressed="true"] { background: var(--cat); color: #fff; }
+        .agenda-cat-chip:focus-visible { outline: 2px solid #1f3d33; outline-offset: 2px; }
+        .agenda-item-main .agenda-cat-tag { margin-bottom: 2px; }
+        @media print { .agenda-note-line.has-cat { border-left-color: #555; } .agenda-cat-tag { color: #000; background: none; border: 1px solid #555; } }
       </style>
       <div class="card-top">
         <div style="display:flex; align-items:center; gap:0.55rem;">
@@ -19773,6 +19805,13 @@ function agendaFocusQuick() {
 const AGENDA_QUICK_WD = { dom: 0, domingo: 0, seg: 1, segunda: 1, ter: 2, terca: 2, terça: 2, qua: 3, quarta: 3, qui: 4, quinta: 4, sex: 5, sexta: 5, sab: 6, sabado: 6, sábado: 6, 'sáb': 6 };
 function agendaQuickParse(raw) {
   let text = String(raw || '').replace(/\s+/g, ' ').trim();
+  let cat = '';
+  text = text.replace(/(^|\s)#([\p{L}]+)(?=\s|$)/gu, (all, sp, tag) => {
+    const k = agendaCatFromTag(tag);
+    if (!k) return all;
+    if (!cat) cat = k;
+    return sp;
+  }).replace(/\s+/g, ' ').trim();
   const now = new Date();
   const inYear = now.getFullYear() === AGENDA_YEAR;
   let date = inYear ? new Date(now.getFullYear(), now.getMonth(), now.getDate()) : null;
@@ -19808,7 +19847,7 @@ function agendaQuickParse(raw) {
   }
   if (!date && !bad) date = new Date(AGENDA_YEAR, agendaCurrentMonth, agendaFocusDay >= 1 ? agendaFocusDay : 1);
   const key = (date && date.getFullYear() === AGENDA_YEAR) ? agendaIsoKey(date) : null;
-  return { text, time: agendaCleanTime(time), key, date: key ? date : null, dateWord, bad: bad || !key };
+  return { text, cat, time: agendaCleanTime(time), key, date: key ? date : null, dateWord, bad: bad || !key };
 }
 function agendaQuickDateLabel(d) {
   return AGENDA_WEEKDAY_ABBR[d.getDay()].toLowerCase() + ', ' + d.getDate() + ' ' + AGENDA_MONTH_NAMES[d.getMonth()].slice(0, 3).toLowerCase();
@@ -19821,8 +19860,8 @@ function agendaQuickHintUpdate() {
   const when = agendaQuickDateLabel(p.date);
   const now = new Date();
   const isToday = now.getFullYear() === AGENDA_YEAR && agendaIsoKey(now) === p.key;
-  hint.innerHTML = 'Vai para <b>' + (isToday ? 'hoje' : escapeHtml(when)) + '</b>' + (isToday ? ' (' + escapeHtml(when) + ')' : '') + (p.time ? ' · <b>' + p.time + '</b>' : '') +
-    (input.value.trim() ? '' : ' · tente <i>amanhã 9h visita</i> ou <i>sex 14:30 reunião</i>');
+  hint.innerHTML = 'Vai para <b>' + (isToday ? 'hoje' : escapeHtml(when)) + '</b>' + (isToday ? ' (' + escapeHtml(when) + ')' : '') + (p.time ? ' · <b>' + p.time + '</b>' : '') + (p.cat ? ' · ' + agendaCatBadge(p.cat) : '') +
+    (input.value.trim() ? '' : ' · tente <i>amanhã 9h visita #visita</i> ou <i>sex 14:30 reunião #reuniao</i>');
 }
 async function agendaQuickSubmit(ev) {
   if (ev && ev.preventDefault) ev.preventDefault();
@@ -19841,7 +19880,7 @@ async function agendaQuickSubmit(ev) {
   agendaBusy = true;
   if (btn) btn.disabled = true;
   const base = agendaNotesCache[p.key] || [];
-  const entry = Object.assign({ text: p.text.slice(0, 500), createdAt: Date.now() }, p.time ? { time: p.time } : {});
+  const entry = Object.assign({ text: p.text.slice(0, 500), createdAt: Date.now() }, p.time ? { time: p.time } : {}, p.cat ? { cat: p.cat } : {});
   const newEntries = base.concat([entry]);
   try {
     const outcome = await agendaCommitEntries(p.key, newEntries);
@@ -19965,9 +20004,9 @@ function agendaRenderCalendar() {
             const lead = isDone
               ? '<span class="agenda-note-done-mark" aria-hidden="true">✓</span>'
               : '<button type="button" class="agenda-cell-check" tabindex="-1" data-key="' + key + '" data-idx="' + x.i + '" title="Marcar como feita" aria-label="' + escapeHtml('Marcar como feita: ' + (x.e.text || '')) + '">○</button>';
-            const m = q ? argoNorm((x.e.text || '') + ' ' + (t || '')).includes(q) : false;
+            const m = q ? argoNorm((x.e.text || '') + ' ' + (t || '') + ' ' + (AGENDA_CATS[agendaCleanCat(x.e.cat)] ? AGENDA_CATS[agendaCleanCat(x.e.cat)].label : '')).includes(q) : false;
             if (m) hits++;
-            return '<div class="agenda-note-line' + (isDone ? ' is-done' : '') + (q ? (m ? ' is-match' : ' is-dim') : '') + '">' + lead + '<span class="agenda-note-text">' + (t ? '<span class="agenda-note-time">' + escapeHtml(t) + '</span>' : '') + escapeHtml(x.e.text || '') + '</span></div>';
+            return '<div class="agenda-note-line' + (agendaCleanCat(x.e.cat) ? ' has-cat' : '') + (isDone ? ' is-done' : '') + (q ? (m ? ' is-match' : ' is-dim') : '') + '"' + (agendaCleanCat(x.e.cat) ? ' style="--cat:' + AGENDA_CATS[agendaCleanCat(x.e.cat)].color + '" title="' + AGENDA_CATS[agendaCleanCat(x.e.cat)].label + '"' : '') + '>' + lead + '<span class="agenda-note-text">' + (t ? '<span class="agenda-note-time">' + escapeHtml(t) + '</span>' : '') + escapeHtml(x.e.text || '') + '</span></div>';
           };
           html += '<div class="agenda-cal-notes">' + ordO.map(x => line(x, false)).join('') + ordD.map(x => line(x, true)).join('') + '</div>';
         }
@@ -20347,7 +20386,7 @@ function agendaRenderPending() {
       '<button type="button" class="agenda-item agenda-item-nota' + (isLate ? ' agenda-item-late is-past' : '') + (it.key === todayKey ? ' is-today' : '') + '" data-key="' + it.key + '"' +
       ' aria-label="' + escapeHtml(agendaLongDate(date) + (when ? ', ' + when : '') + ', anotação ' + (isLate ? 'atrasada' : 'pendente') + ': ' + it.e.text) + '">' +
       '<span class="agenda-item-date"><b>' + date.getDate() + '</b><small>' + AGENDA_MONTH_NAMES[date.getMonth()].slice(0, 3).toLowerCase() + '</small></span>' +
-      '<span class="agenda-item-main"><span class="agenda-item-note">' + escapeHtml(agendaEntryShort(it.e)) + '</span></span>' +
+      '<span class="agenda-item-main">' + agendaCatBadge(it.e.cat) + '<span class="agenda-item-note">' + escapeHtml(agendaEntryShort(it.e)) + '</span></span>' +
       '<span class="agenda-item-when">' + escapeHtml(rel) + '</span></button>' +
       '<button type="button" class="agenda-pend-snooze" data-key="' + it.key + '" data-idx="' + it.idx + '" title="' + (isLate ? 'Trazer para hoje' : 'Adiar para o dia seguinte') + '" aria-label="' + escapeHtml((isLate ? 'Trazer para hoje: ' : 'Adiar para o dia seguinte: ') + it.e.text) + '">' + (isLate ? '⤵' : '⏭') + '</button></div>';
   };
@@ -20922,6 +20961,10 @@ function agendaEnsureModals() {
           <input type="time" id="agendaNoteTime" class="agenda-time-input">
           <button type="button" id="agendaNoteTimeClear" class="agenda-time-clear" hidden onclick="agendaClearNoteTime()">Sem horário</button>
         </div>
+        <div class="agenda-cat-row" id="agendaCatRow" role="group" aria-label="Tipo da anotação (opcional)">
+          <span class="agenda-cat-lead">Tipo</span>
+          ${Object.keys(AGENDA_CATS).map(k => '<button type="button" class="agenda-cat-chip" data-cat="' + k + '" aria-pressed="false" style="--cat:' + AGENDA_CATS[k].color + '" onclick="agendaPickCat(\'' + k + '\')">' + AGENDA_CATS[k].label + '</button>').join('')}
+        </div>
         <div class="agenda-note-meta">
           <span id="agendaNoteHint" class="agenda-note-hint"></span>
           <span id="agendaNoteCounter" class="agenda-note-counter">0/500</span>
@@ -21136,7 +21179,7 @@ function agendaRenderEntriesList(key) {
     return '<div class="agenda-entry-item' + (e.done ? ' is-done' : '') + (idx === agendaEditingIdx ? ' is-editing' : '') + '">' +
       '<div class="agenda-entry-meta">' +
         '<label class="agenda-entry-check"><input type="checkbox" class="agenda-entry-done" data-idx="' + idx + '"' + (e.done ? ' checked' : '') + ' aria-label="Marcar como feita">' +
-          (when ? '<span class="agenda-entry-at">🕒 ' + when + '</span>' : '') +
+          (when ? '<span class="agenda-entry-at">🕒 ' + when + '</span>' : '') + agendaCatBadge(e.cat) +
           '<span class="agenda-entry-time">' + escapeHtml(label || (e.done ? 'feita' : (when ? '' : 'pendente'))) + '</span></label>' +
         '<span class="agenda-entry-actions">' +
           '<button type="button" class="agenda-entry-edit" data-idx="' + idx + '" aria-label="Editar esta anotação">Editar</button>' +
@@ -21150,6 +21193,12 @@ function agendaRenderEntriesList(key) {
 
 // ---- Editar e concluir anotações ----
 let agendaEditingIdx = -1;   // índice da anotação em edição (-1 = escrevendo uma nova)
+let agendaNoteCat = '';      // tipo escolhido no modal ('' = sem tipo)
+function agendaSetCat(c) {
+  agendaNoteCat = agendaCleanCat(c);
+  document.querySelectorAll('#agendaCatRow .agenda-cat-chip').forEach(b => b.setAttribute('aria-pressed', b.dataset.cat === agendaNoteCat ? 'true' : 'false'));
+}
+function agendaPickCat(c) { agendaSetCat(agendaNoteCat === c ? '' : c); }
 
 function agendaSyncSaveLabel() {
   const save = document.getElementById('agendaSaveBtn');
@@ -21170,6 +21219,7 @@ function agendaStartEdit(idx) {
   input.value = e.text;
   const ti = document.getElementById('agendaNoteTime');
   if (ti) { ti.value = agendaCleanTime(e.time); agendaSyncTimeClear(); }
+  agendaSetCat(e.cat);
   agendaUpdateNoteCounter();
   agendaRenderEntriesList(key);
   agendaSyncSaveLabel();
@@ -21184,6 +21234,7 @@ function agendaCancelEdit() {
   if (input) { input.value = ''; agendaUpdateNoteCounter(); input.focus(); }
   const ti = document.getElementById('agendaNoteTime');
   if (ti) { ti.value = ''; agendaSyncTimeClear(); }
+  agendaSetCat('');
   if (agendaSelectedKey) agendaRenderEntriesList(agendaSelectedKey);
   agendaSyncSaveLabel();
 }
@@ -21254,6 +21305,7 @@ function agendaOpenNoteModal(key) {
   agendaNoteOriginal = '';
   const ti0 = document.getElementById('agendaNoteTime');
   if (ti0) { ti0.value = ''; agendaSyncTimeClear(); }
+  agendaSetCat('');
   agendaUpdateNoteCounter();
 
   const hint = document.getElementById('agendaNoteHint');
@@ -21357,9 +21409,10 @@ async function agendaSaveNote() {
         if (i !== agendaEditingIdx) return e;
         const upd = Object.assign({}, e, { text: txt, editedAt: Date.now() });
         if (timeVal) upd.time = timeVal; else delete upd.time;
+        if (agendaNoteCat) upd.cat = agendaNoteCat; else delete upd.cat;
         return upd;
       })
-    : base.concat([Object.assign({ text: txt, createdAt: Date.now() }, timeVal ? { time: timeVal } : {})]);
+    : base.concat([Object.assign({ text: txt, createdAt: Date.now() }, timeVal ? { time: timeVal } : {}, agendaNoteCat ? { cat: agendaNoteCat } : {})]);
   try {
     const outcome = await agendaCommitEntries(key, newEntries);
     // Atualiza a tela na hora (não espera a confirmação em tempo real do
@@ -21369,6 +21422,7 @@ async function agendaSaveNote() {
     input.value = '';
     const tiS = document.getElementById('agendaNoteTime');
     if (tiS) { tiS.value = ''; agendaSyncTimeClear(); }
+    agendaSetCat('');
     agendaUpdateNoteCounter();
     agendaRenderEntriesList(key);
     agendaRenderCalendar();
