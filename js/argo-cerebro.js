@@ -785,12 +785,12 @@
   // ---------------------------------------------------------------------
   // ctx = o que a conversa já firmou (unidade, bairro, município, assunto, intenção). Vai junto à IA e à interpretação,
   // para "e o horário?", "e lá?", "esse bairro" valerem mesmo quando o dado foi dito há muitas mensagens.
-  var session = { history: [], units: [], aiTimes: [], lastAi: 0, terrUlt: null, munUlt: null, pendente: '', ctx: novoCtx(), aguardando: false, turno: 0 };
+  var session = { history: [], units: [], aiTimes: [], lastAi: 0, terrUlt: null, munUlt: null, pendente: '', ctx: novoCtx(), aguardando: false, turno: 0, ultContato: null };
   function novoCtx() { return { unidade: '', bairro: '', municipio: '', assunto: '', intencao: '', t: {} }; }
   // O que a conversa firmou envelhece: depois de alguns turnos sem ser reafirmado, deixa de ir à IA (a pessoa pode ter mudado de caso).
   var VALIDADE = { unidade: 12, bairro: 12, municipio: 12, assunto: 8, intencao: 4 };
   function firmar(campo, valor) { if (valor) { session.ctx[campo] = valor; session.ctx.t[campo] = session.turno; } }
-  function reset() { session.history = []; session.units = []; session.terrUlt = null; session.munUlt = null; session.pendente = ''; session.ctx = novoCtx(); session.aguardando = false; session.turno = 0; }
+  function reset() { session.history = []; session.units = []; session.terrUlt = null; session.munUlt = null; session.pendente = ''; session.ctx = novoCtx(); session.aguardando = false; session.turno = 0; session.ultContato = null; }
   var MAX_HIST_LOCAL = 40;    // mensagens guardadas na página (só na memória; apagadas ao trancar o app)
   function campoCtx(v, max) {
     v = String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
@@ -858,6 +858,9 @@
     if (botText) session.history.push({ papel: 'argo', texto: botText.slice(0, 1200) });
     while (session.history.length > MAX_HIST_LOCAL) session.history.shift();
     session.turno++;
+    // lembra o último pedido de contato ("telefone", "onde fica"...) para o seguimento "e do Conselho Tutelar?"
+    var mc = norm(userText).match(RE_CONTATO_MULTI);
+    if (mc) session.ultContato = { palavra: mc[1], t: session.turno };
     if (units && units.length) session.units = units.slice(0, 5);
     atualizarCtx(userText, units);
   }
@@ -3651,6 +3654,75 @@
     }
     return out;
   }
+  // Pergunta com mais de uma parte de contato ("telefone do CRAS e do CREAS", "telefone do CAPS e horário do Conselho
+  // Tutelar"): responde CADA parte com o diretório, em vez de acertar só uma (ou nenhuma). Só vale quando todas as partes
+  // viram consulta ao diretório com unidades; se alguma não resolver, devolve null e o fluxo normal segue como antes.
+  var RE_CONTATO_MULTI = /\b(telefone|fone|contato|endereco|horario|onde fica|localizacao)\b/;
+  var RE_PREP_INICIO = /^(d[aeo]s?|n[aeo]s?|em|o|a|os|as)\b/;
+  var RE_SIGLAS = /\b(cras|creas|caps|ubs|upa|pop|bpc|paif|paefi|scfv|sus|suas|ad|iii|ii|cadunico|cad[uú]nico)\b/gi;
+  function tituloPedido(t) {
+    t = String(t || '').replace(RE_SIGLAS, function (m) { return /^cad/i.test(m) ? 'CadÚnico' : m.toUpperCase(); });
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
+  // "e do Conselho Tutelar?" logo depois de um pedido de contato: herda o "telefone" / "onde fica" / "horário" da pergunta
+  // anterior (sem IA, a conversa já entende o subentendido). Só vale se virar consulta ao diretório com unidades.
+  var RE_SEGUE_ENTIDADE = /^(e|mas)\s+(d[aeo]s?|n[aeo]s?|o|a|os|as|para)\s+\S/;
+  function planSeguimento(text, opts) {
+    text = String(text == null ? '' : text).trim();
+    if (!text || text.length > 80 || !session.ultContato || session.turno - session.ultContato.t > 2) return null;
+    var n = norm(text);
+    if (RE_CONTATO_MULTI.test(n) || !RE_SEGUE_ENTIDADE.test(n) || crisis(text) || piiBlock(text)) return null;
+    var resto = text.replace(/^\s*(e|mas)\s+/i, '').replace(/[?!.]+\s*$/, '');
+    var pendente = session.pendente, p;
+    try { p = plan(session.ultContato.palavra + ' ' + resto, opts || {}); } finally { session.pendente = pendente; }
+    if (!p || p.kind !== 'directory' || !p.result || !p.result.units || !p.result.units.length) return null;
+    p.seguimento = true;
+    return p;
+  }
+  function planMulti(text, opts) {
+    text = String(text == null ? '' : text).trim();
+    if (!text || text.length > 200) return null;
+    var n = norm(text);
+    if (!RE_CONTATO_MULTI.test(n) || /\b(quantos|quantas|diferenca|compar\w*|total)\b/.test(n)) return null;
+    if (crisis(text) || piiBlock(text)) return null;
+    var partes = text.replace(/[?!.]+\s*$/, '').split(/\s*[,;]\s+|\s+(?:e tamb[eé]m|al[eé]m disso|tamb[eé]m)\s+|\s+e\s+/i)
+      .map(function (x) { return x.trim(); }).filter(Boolean);
+    if (partes.length < 2 || partes.length > 3) return null;
+    var pendente = session.pendente, intencao = '', pedidos = [], i;
+    for (i = 0; i < partes.length; i++) {
+      var pn = norm(partes[i]), m = pn.match(RE_CONTATO_MULTI);
+      if (m) { intencao = m[1]; pedidos.push(partes[i]); continue; }
+      // "do CREAS" herda o "telefone" da parte anterior
+      if (!intencao || tok(partes[i]).length < 1) return null;
+      pedidos.push(intencao + (RE_PREP_INICIO.test(pn) ? ' ' : ' de ') + partes[i]);
+    }
+    var resultados = [];
+    try {
+      for (i = 0; i < pedidos.length; i++) {
+        var p = plan(pedidos[i], opts || {});
+        if (p.kind !== 'directory' || !p.result || !p.result.units || !p.result.units.length) return null;
+        resultados.push({ pedido: pedidos[i], r: p.result });
+      }
+    } finally { session.pendente = pendente; }
+    // partes que acham as MESMAS unidades são um nome só cortado no \"e\" (\"Álcool e Drogas\"): não é pergunta dupla
+    var topo = {};
+    for (i = 0; i < resultados.length; i++) {
+      var ids = resultados[i].r.units.slice(0, 3).map(function (u) { return u.id; });
+      for (var j = 0; j < ids.length; j++) { if (topo[ids[j]]) return null; }
+      ids.forEach(function (id) { topo[id] = 1; });
+    }
+    var vistos = {}, units = [], todas = [], blocos = [], seguimentos = [];
+    resultados.forEach(function (x) {
+      var titulo = tituloPedido(x.pedido);
+      blocos.push('**' + titulo + '**\n' + x.r.reply);
+      (x.r.units || []).slice(0, 3).forEach(function (u) { if (!vistos[u.id]) { vistos[u.id] = 1; units.push(u); } });
+      (x.r.unitsAll || x.r.units || []).forEach(function (u) { todas.push(u); });
+      if (Array.isArray(x.r.followups)) x.r.followups.forEach(function (f) { if (seguimentos.length < 4 && seguimentos.map(function (y) { return JSON.stringify(y); }).indexOf(JSON.stringify(f)) < 0) seguimentos.push(f); });
+    });
+    var first = resultados[0].r;
+    var result = { reply: 'Você fez ' + resultados.length + ' perguntas numa só. Respondo cada uma:\n\n' + blocos.join('\n\n'), mood: first.mood || 'info', followups: seguimentos, badge: first.badge, units: units.slice(0, 6), unitsAll: todas, multi: true };
+    return { kind: 'directory', result: result, dir: { units: units.slice(0, 6), confidence: 1, mode: 'list' }, con: { score: 0 }, multi: true };
+  }
   function withUnits(result, dir) { result.units = dir.units.slice(0, 5); result.unitsAll = dir.units; return result; }
   function withCrisisUnits(r) {
     try {
@@ -3674,7 +3746,7 @@
   }
 
   return {
-    interpretar: interpretar, init: init, setCid: setCid, setMunicipios: setMunicipios, setCensoSuas: setCensoSuas, psiCenso: psiCensoAsk, psiCensoDados: function () { return { mun: CP_MUN, perfil: CP_PERFIL_MUN, equipe: CP_EQUIPE_MUN, interior: CP_INTERIOR, bvEquipe: CP_BV_EQUIPE }; }, bvCenso: boaVistaCensoAsk, municipiosRR: rrAsk, cid: cidAsk, norm: norm, piiBlock: piiBlock, crisis: crisis, plan: plan, contagem: contagem,
+    interpretar: interpretar, init: init, setCid: setCid, setMunicipios: setMunicipios, setCensoSuas: setCensoSuas, psiCenso: psiCensoAsk, psiCensoDados: function () { return { mun: CP_MUN, perfil: CP_PERFIL_MUN, equipe: CP_EQUIPE_MUN, interior: CP_INTERIOR, bvEquipe: CP_BV_EQUIPE }; }, bvCenso: boaVistaCensoAsk, municipiosRR: rrAsk, cid: cidAsk, norm: norm, piiBlock: piiBlock, crisis: crisis, plan: plan, planMulti: planMulti, planSeguimento: planSeguimento, contagem: contagem,
     directory: function (t, tabCat) { return directory(t, session, tabCat); },
     glossary: glossaryScore, compose: { directory: composeDirectory, glossary: composeGlossary },
     psi: psiScore, psiLista: PSI_BASE, baseApp: baseApp, fichaAsk: fichaAsk, trechosDa: trechosDa, pbfPagamento: pbfPagamento,
