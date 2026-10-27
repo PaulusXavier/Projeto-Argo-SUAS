@@ -24425,32 +24425,96 @@ function pdftoolsMatMul(m, n) {
   ];
 }
 
-/* Agrupa os itens de texto do pdf.js em linhas físicas (por posição vertical).
-   Cada linha guarda também a posição horizontal e "segmentos" — trechos
-   separados por um vão grande (ex.: texto à esquerda + nº da página à direita),
-   que são usados para reconstruir cabeçalho/rodapé com alinhamento. */
-function pdftoolsExtractLines(items, oxPt, oyPt) {
+/* Nome real da fonte (o pdf.js só entrega ids como "g_d0_f1") → família do Word + negrito/itálico. */
+const PDFTOOLS_FONT_MAP = [
+  [/arial|helvet|liberation ?sans|nimbus ?sans|arimo/i, 'Arial'],
+  [/times|liberation ?serif|nimbus ?roman|tinos/i, 'Times New Roman'],
+  [/courier|liberation ?mono|cousine|nimbus ?mono/i, 'Courier New'],
+  [/calibri|carlito/i, 'Calibri'],
+  [/cambria|caladea/i, 'Cambria'],
+  [/verdana|dejavu ?sans/i, 'Verdana'],
+  [/tahoma/i, 'Tahoma'],
+  [/georgia/i, 'Georgia'],
+  [/trebuchet/i, 'Trebuchet MS'],
+  [/comic/i, 'Comic Sans MS'],
+  [/segoe/i, 'Segoe UI'],
+  [/garamond/i, 'Garamond'],
+  [/palatino|book ?antiqua/i, 'Palatino Linotype'],
+  [/century/i, 'Century Gothic'],
+  [/impact/i, 'Impact']
+];
+
+function pdftoolsFontInfo(page, fontId) {
+  let name = '', bold = false, italic = false, mono = false, serif = false;
+  try {
+    if (page.commonObjs.has(fontId)) {
+      const f = page.commonObjs.get(fontId);
+      if (f) { name = f.name || ''; bold = !!f.bold; italic = !!f.italic; mono = !!f.isMonospace; serif = !!f.isSerifFont; }
+    }
+  } catch (e) { /* sem dados da fonte: vale só o nome */ }
+  const raw = String(name || fontId || '').replace(/^[A-Z]{6}\+/, '');
+  if (/bold|black|heavy|semibold|demi/i.test(raw)) bold = true;
+  if (/italic|oblique|-it$|ital$/i.test(raw)) italic = true;
+  let base = raw.replace(/[-,_ ]?(Regular|Normal|Roman|Book|Bold|Black|Heavy|Semibold|Demi|Light|Medium|Italic|Oblique|It)+.*$/i, '')
+    .replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\s*(MT|PS)$/, '').trim();
+  let family = null;
+  for (const [re, fam] of PDFTOOLS_FONT_MAP) { if (re.test(base)) { family = fam; break; } }
+  if (!family) {
+    if (mono) family = 'Courier New';
+    else if (base && !/^g_d\d/i.test(base) && /^[\p{L}][\p{L}\p{N} ]{1,38}$/u.test(base)) family = base;
+    else if (serif) family = 'Times New Roman';
+  }
+  return { family, bold, italic };
+}
+
+/* Trechos de texto (parts) → "runs": pedaços contíguos com o mesmo estilo (fonte, tamanho, cor, negrito, itálico). */
+function pdftoolsRunsOfParts(parts) {
+  const runs = [];
+  let prev = null, last = null;
+  parts.forEach(p => {
+    let t = p.text.replace(/[ \t\u00a0]+/g, ' ');
+    if (prev) {
+      const gap = p.x0 - prev.x1;
+      const glued = /\s$/.test(prev.text) || /^\s/.test(t) || (prev.hasW && gap <= Math.min(p.size, prev.size) * 0.12);
+      if (!glued && last) last.text += ' ';
+    }
+    const key = [p.bold ? 1 : 0, p.italic ? 1 : 0, p.under ? 1 : 0, p.font || '', Math.round(p.size * 2), p.color || '', p.bg || ''].join('|');
+    if (last && last.key === key) last.text += t;
+    else { last = { key, text: t, bold: p.bold, italic: p.italic, under: p.under, font: p.font, size: Math.round(p.size * 2) / 2, color: p.color, bg: p.bg }; runs.push(last); }
+    prev = p;
+  });
+  if (runs.length) {
+    runs[0].text = runs[0].text.replace(/^\s+/, '');
+    runs[runs.length - 1].text = runs[runs.length - 1].text.replace(/\s+$/, '');
+  }
+  return runs.filter(r => r.text !== '');
+}
+
+/* Agrupa os itens de texto do pdf.js em linhas físicas (por posição vertical), guardando fonte, itálico e posição
+   de cada trecho. Itens fora de ordem (colunas de tabela) caem na mesma linha porque as linhas são fundidas pela altura. */
+function pdftoolsExtractLines(items, oxPt, oyPt, fontOf) {
   const raw = [];
-  let cur = null;
   items.forEach(item => {
     if (!item.str) return;
-    const y = item.transform[5] - oyPt;
-    const x0 = item.transform[4] - oxPt;
+    const tr = item.transform;
+    const y = tr[5] - oyPt;
+    const x0 = tr[4] - oxPt;
     const x1 = x0 + (item.width || 0);
-    const fontHeight = Math.abs(item.transform[3]) || Math.abs(item.transform[0]) || 10;
-    const part = { text: item.str, bold: /bold/i.test(item.fontName || ''), size: fontHeight, x0, x1, hasW: !!item.width };
-    if (cur && Math.abs(y - cur.y) <= fontHeight * 0.4) {
-      cur.parts.push(part);
-      cur.y = (cur.y + y) / 2;
-    } else {
-      if (cur) raw.push(cur);
-      cur = { y, parts: [part] };
-    }
+    const fh = Math.hypot(tr[2], tr[3]) || Math.abs(tr[3]) || Math.abs(tr[0]) || 10;
+    const fi = fontOf ? fontOf(item.fontName) : {};
+    raw.push({ y, maxSize: fh, parts: [{ text: item.str, bold: !!fi.bold, italic: !!fi.italic, font: fi.family || null, size: fh, x0, x1, y, hasW: !!item.width, color: null, bg: null }] });
   });
-  if (cur) raw.push(cur);
+  raw.sort((a, b) => b.y - a.y);
+  const lines = [];
+  raw.forEach(l => {
+    const last = lines[lines.length - 1];
+    if (last && Math.abs(last.y - l.y) <= Math.max(last.maxSize, l.maxSize) * 0.4) {
+      last.parts.push(...l.parts);
+      if (l.maxSize > last.maxSize) { last.maxSize = l.maxSize; last.y = l.y; }
+    } else lines.push({ y: l.y, maxSize: l.maxSize, parts: l.parts.slice() });
+  });
 
-  raw.forEach(line => {
-    // itens só de espaço (o pdf.js os emite com larguras enormes) atrapalham a medição dos vãos
+  lines.forEach(line => {
     const solid = line.parts.filter(p => p.text.trim());
     if (solid.length) line.parts = solid;
     line.parts.sort((a, b) => a.x0 - b.x0);
@@ -24460,7 +24524,7 @@ function pdftoolsExtractLines(items, oxPt, oyPt) {
       const gap = prev ? p.x0 - prev.x1 : 0;
       const bigGap = prev && prev.hasW && gap > Math.max(p.size, prev.size) * 2.5;
       if (!seg || bigGap) {
-        seg = { text: p.text, x0: p.x0, x1: p.x1, size: p.size, bold: p.bold, n: 1 };
+        seg = { text: p.text, x0: p.x0, x1: p.x1, size: p.size, bold: p.bold, italic: p.italic, font: p.font, n: 1 };
         segs.push(seg);
       } else {
         const sep = (prev.hasW && gap <= Math.min(p.size, prev.size) * 0.12) ? '' : ' ';
@@ -24477,18 +24541,769 @@ function pdftoolsExtractLines(items, oxPt, oyPt) {
     line.x0 = line.segs.length ? line.segs[0].x0 : 0;
     line.x1 = line.segs.length ? line.segs[line.segs.length - 1].x1 : 0;
     line.text = line.segs.map(s => s.text).join(' ');
-    line.size = line.parts.reduce((s, p) => s + p.size, 0) / line.parts.length;
+    // tamanho dominante = o da maior quantidade de caracteres
+    const bySize = {};
+    line.parts.forEach(p => { const k = Math.round(p.size * 2) / 2; bySize[k] = (bySize[k] || 0) + p.text.length; });
+    line.size = Number(Object.keys(bySize).sort((a, b) => bySize[b] - bySize[a])[0]) || 10;
     line.bold = line.parts.every(p => p.bold);
   });
-  return raw;
+  return lines;
+}
+
+/* Divide a linha em "células" (vão maior que thr × tamanho da fonte), cada uma com seus runs. */
+function pdftoolsCellsOfLine(line, thr) {
+  const cells = [];
+  let c = null, prev = null;
+  line.parts.forEach(p => {
+    const gap = prev ? p.x0 - prev.x1 : 0;
+    const big = prev && prev.hasW && gap > Math.max(p.size, prev.size) * thr;
+    if (!c || big) { c = { parts: [p], x0: p.x0, x1: p.x1 }; cells.push(c); }
+    else { c.parts.push(p); c.x1 = Math.max(c.x1, p.x1); }
+    prev = p;
+  });
+  cells.forEach(cl => { cl.runs = pdftoolsRunsOfParts(cl.parts); cl.text = cl.runs.map(r => r.text).join(''); cl.size = line.size; });
+  return cells.filter(cl => cl.text.trim());
+}
+
+/* Cor do texto e do fundo de cada trecho, lida da página já desenhada (o pdf.js não informa a cor no texto). */
+function pdftoolsSampleColors(cv, S, H, lines) {
+  let ctx;
+  try { ctx = cv.getContext('2d', { willReadFrequently: true }); } catch (e) { return; }
+  const hex = (r, g, b) => [r, g, b].map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('').toUpperCase();
+  lines.forEach(line => line.parts.forEach(p => {
+    if (!p.text.trim() || !p.hasW) return;
+    const x = Math.max(0, Math.floor(p.x0 * S));
+    const w = Math.min(cv.width - x, Math.ceil((p.x1 - p.x0) * S));
+    const yTop = Math.max(0, Math.floor((H - (p.y + p.size * 0.8)) * S));
+    const h = Math.min(cv.height - yTop, Math.ceil(p.size * 1.0 * S));
+    if (w < 2 || h < 2) return;
+    let d;
+    try { d = ctx.getImageData(x, yTop, w, h).data; } catch (e) { return; }
+    const cnt = new Map();
+    for (let i = 0; i < d.length; i += 4) {
+      const k = ((d[i] >> 4) << 8) | ((d[i + 1] >> 4) << 4) | (d[i + 2] >> 4);
+      cnt.set(k, (cnt.get(k) || 0) + 1);
+    }
+    let bk = 0, bc = 0;
+    cnt.forEach((c, k) => { if (c > bc) { bc = c; bk = k; } });
+    const br = ((bk >> 8) & 15) * 17, bg = ((bk >> 4) & 15) * 17, bb = (bk & 15) * 17;
+    const bgLum = 0.299 * br + 0.587 * bg + 0.114 * bb;
+    let best = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const dist = Math.abs(d[i] - br) + Math.abs(d[i + 1] - bg) + Math.abs(d[i + 2] - bb);
+      if (dist > best) best = dist;
+    }
+    if (bgLum < 235 && bc > (d.length / 4) * 0.35) p.bg = hex(br, bg, bb); // fundo colorido atrás do texto
+    // sublinhado: uma linha contínua logo abaixo da base do texto
+    const yb = (H - p.y) * S;
+    const uy0 = Math.max(0, Math.floor(yb + p.size * 0.03 * S)), uy1 = Math.min(cv.height - 1, Math.ceil(yb + p.size * 0.28 * S));
+    if (uy1 > uy0 && !/^\s*$/.test(p.text)) {
+      let ud = null;
+      try { ud = ctx.getImageData(x, uy0, w, uy1 - uy0 + 1).data; } catch (e) { ud = null; }
+      if (ud) {
+        const rowsN = uy1 - uy0 + 1;
+        for (let rr = 0; rr < rowsN && !p.under; rr++) {
+          let ink = 0;
+          for (let cc = 0; cc < w; cc++) {
+            const i = (rr * w + cc) * 4;
+            if (Math.abs(ud[i] - br) + Math.abs(ud[i + 1] - bg) + Math.abs(ud[i + 2] - bb) > 150) ink++;
+          }
+          if (ink >= w * 0.9) p.under = true;
+        }
+      }
+    }
+    if (best < 120) return;
+    let sr = 0, sg = 0, sb = 0, n = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const dist = Math.abs(d[i] - br) + Math.abs(d[i + 1] - bg) + Math.abs(d[i + 2] - bb);
+      if (dist >= best * 0.9) { sr += d[i]; sg += d[i + 1]; sb += d[i + 2]; n++; }
+    }
+    if (!n) return;
+    const r = sr / n, g = sg / n, b = sb / n;
+    if (bgLum >= 140 && r < 70 && g < 70 && b < 70) return; // preto comum: não precisa de cor
+    p.color = hex(r, g, b);
+  }));
+}
+
+/* Bordas verticais da página (linhas escuras compridas), em pontos — dão as colunas exatas das tabelas com grade. */
+function pdftoolsFindVLines(cv, S, H) {
+  let d;
+  try { d = cv.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, cv.width, cv.height).data; } catch (e) { return []; }
+  const w = cv.width, h = cv.height, minRun = Math.round(12 * S);
+  const runs = [];
+  for (let x = 0; x < w; x++) {
+    let run = 0, start = 0;
+    for (let y = 0; y <= h; y++) {
+      let dark = false;
+      if (y < h) { const i = (y * w + x) * 4; dark = d[i] < 185 && d[i + 1] < 185 && d[i + 2] < 185; }
+      if (dark) { if (!run) start = y; run++; }
+      else { if (run >= minRun) runs.push({ x, y0: start, y1: start + run }); run = 0; }
+    }
+  }
+  const groups = [];
+  runs.forEach(r => {
+    const g = groups.find(q => Math.abs(r.y0 - q.y0) <= 3 && Math.abs(r.y1 - q.y1) <= 3 && r.x - q.xmax <= 2);
+    if (g) g.xmax = r.x; else groups.push({ xmin: r.x, xmax: r.x, y0: r.y0, y1: r.y1 });
+  });
+  return groups.map(g => ({ x: ((g.xmin + g.xmax) / 2 + 0.5) / S, yTop: H - g.y0 / S, yBot: H - g.y1 / S }));
+}
+
+/* Todas as imagens da página (caixa em pontos) e quantos desenhos vetoriais ela tem (bordas de tabela, linhas…). */
+function pdftoolsPageImageBoxes(list, pdfjsLib, oxPt, oyPt) {
+  const OPS = pdfjsLib.OPS;
+  const boxes = [];
+  let paths = 0;
+  let ctm = [1, 0, 0, 1, 0, 0];
+  const stack = [];
+  const imgOps = [OPS.paintImageXObject, OPS.paintInlineImageXObject, OPS.paintImageMaskXObject, OPS.paintJpegXObject].filter(v => v != null);
+  const seen = new Set();
+  for (let k = 0; k < list.fnArray.length; k++) {
+    const fn = list.fnArray[k];
+    if (fn === OPS.save) stack.push(ctm.slice());
+    else if (fn === OPS.restore) { if (stack.length) ctm = stack.pop(); }
+    else if (fn === OPS.transform) ctm = pdftoolsMatMul(ctm, list.argsArray[k]);
+    else if (fn === OPS.constructPath) paths++;
+    else if (imgOps.indexOf(fn) >= 0) {
+      const xs = [ctm[4], ctm[4] + ctm[0], ctm[4] + ctm[2], ctm[4] + ctm[0] + ctm[2]];
+      const ys = [ctm[5], ctm[5] + ctm[1], ctm[5] + ctm[3], ctm[5] + ctm[1] + ctm[3]];
+      const b = { x0: Math.min.apply(null, xs) - oxPt, x1: Math.max.apply(null, xs) - oxPt, y0: Math.min.apply(null, ys) - oyPt, y1: Math.max.apply(null, ys) - oyPt };
+      const sig = [b.x0, b.y0, b.x1, b.y1].map(v => Math.round(v / 3)).join(',');
+      if (seen.has(sig)) continue;
+      seen.add(sig);
+      boxes.push(b);
+    }
+  }
+  return { boxes, paths };
+}
+
+async function pdftoolsRenderPage(page, S) {
+  const vp = page.getViewport({ scale: S });
+  const cv = document.createElement('canvas');
+  cv.width = Math.ceil(vp.width); cv.height = Math.ceil(vp.height);
+  const ctx = cv.getContext('2d', { willReadFrequently: true });
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+  await page.render({ canvasContext: ctx, viewport: vp }).promise;
+  return cv;
+}
+
+/* Recorta uma região (em pontos) da página desenhada. PNG para figuras pequenas, JPEG para fotos grandes. */
+async function pdftoolsCropBox(cv, S, H, b) {
+  const cx = Math.max(0, Math.floor(b.x0 * S)), cy = Math.max(0, Math.floor((H - b.y1) * S));
+  const cw = Math.min(cv.width - cx, Math.ceil((b.x1 - b.x0) * S)), ch = Math.min(cv.height - cy, Math.ceil((b.y1 - b.y0) * S));
+  if (cw < 2 || ch < 2) return null;
+  const out = document.createElement('canvas');
+  out.width = cw; out.height = ch;
+  out.getContext('2d').drawImage(cv, cx, cy, cw, ch, 0, 0, cw, ch);
+  const jpeg = cw * ch > 250000;
+  const blob = await new Promise(r => out.toBlob(r, jpeg ? 'image/jpeg' : 'image/png', 0.88));
+  out.width = 0;
+  if (!blob) return null;
+  return { bytes: new Uint8Array(await blob.arrayBuffer()), ext: jpeg ? 'jpg' : 'png' };
+}
+
+/* ---------- Estrutura do corpo: tabelas, parágrafos, listas ---------- */
+function pdftoolsLineAlign(l, geo) {
+  const TW = geo.R - geo.L, tol = Math.max(4, geo.W * 0.008);
+  const c = (l.x0 + l.x1) / 2, pc = (geo.L + geo.R) / 2;
+  if (Math.abs(c - pc) <= tol && l.x0 - geo.L > tol * 1.5 && geo.R - l.x1 > tol * 1.5) return 'center';
+  if (Math.abs(l.x1 - geo.R) <= tol && l.x0 - geo.L > 0.15 * TW) return 'right';
+  return 'left';
+}
+
+const PDFTOOLS_BULLET_RE = /^[\u2022\u2023\u25E6\u2043\u2219\u25CF\u25CB\u25AA\u25A0\u25A1\u25AB\u2013\u2014\u00B7*\-\uF000-\uF8FF]$/;
+function pdftoolsListMarker(line) {
+  const first = line.parts[0];
+  if (!first) return null;
+  const t = first.text.trim();
+  if (PDFTOOLS_BULLET_RE.test(t) && line.parts.length > 1) return { marker: /[\uF000-\uF8FF]/.test(t) ? '\u2022' : t, textX: line.parts[1].x0, part: true };
+  if (/^(\(?\d{1,3}[.)]|\(?[a-z][.)]|\(?[A-Z]\)|\(?[ivxlc]{1,5}[.)])$/.test(t) && line.parts.length > 1 && line.parts[1].x0 - first.x1 > first.size * 0.2)
+    return { marker: t, textX: line.parts[1].x0, part: true };
+  const m = t.match(/^((?:\(?\d{1,3}[.)]|\(?[a-z][.)]|[\u2022\u25CF\u25CB\u25AA\u25A0\u2013\u2014\u00B7\-]))\s+\S/);
+  if (m && first.hasW) {
+    const frac = m[1].length / Math.max(1, t.length);
+    return { marker: m[1], textX: first.x0 + (first.x1 - first.x0) * Math.min(0.6, frac + 0.02) + first.size * 0.25, part: false };
+  }
+  return null;
+}
+
+/* Procura trechos do corpo que são tabelas: linhas com ≥ 2 células cujos vãos em branco se repetem. */
+function pdftoolsTryTable(rowLines, rowCells, vlines, bordered) {
+  const multi = rowCells.filter(c => c.length >= 2);
+  if (multi.length < 2) return null;
+  const iv = [];
+  multi.forEach(cs => cs.forEach(c => iv.push([c.x0, c.x1])));
+  iv.sort((a, b) => a[0] - b[0]);
+  const comps = [];
+  iv.forEach(v => {
+    const last = comps[comps.length - 1];
+    if (last && v[0] - last.x1 < 5) last.x1 = Math.max(last.x1, v[1]);
+    else comps.push({ x0: v[0], x1: v[1] });
+  });
+  if (comps.length < 2) return null;
+  const support = comps.map(cp => multi.filter(cs => cs.some(c => c.x0 < cp.x1 && c.x1 > cp.x0)).length);
+  if (support.some(s => s < 2)) return null;
+
+  const rows = rowLines.map((ln, i) => {
+    const cells = [];
+    rowCells[i].forEach(c => {
+      let a = -1, b = -1;
+      comps.forEach((cp, k) => { if (c.x0 < cp.x1 + 2 && c.x1 > cp.x0 - 2) { if (a < 0) a = k; b = k; } });
+      if (a < 0) { let bd = 1e9; comps.forEach((cp, k) => { const d = Math.abs((c.x0 + c.x1) / 2 - (cp.x0 + cp.x1) / 2); if (d < bd) { bd = d; a = k; } }); b = a; }
+      const prevCell = cells[cells.length - 1];
+      if (prevCell && prevCell.col + prevCell.span > a) { // dois trechos na mesma coluna: junta no mesmo texto
+        prevCell.paras[0] = prevCell.paras[0].concat([{ text: ' ', size: c.size, font: null }], c.runs);
+        prevCell.x1 = Math.max(prevCell.x1, c.x1);
+        return;
+      }
+      cells.push({ col: a, span: b - a + 1, paras: [c.runs], x0: c.x0, x1: c.x1 });
+    });
+    return { y: ln.y, size: ln.size, cells };
+  });
+
+  // linhas coladas (menos da metade do espaço normal entre linhas da tabela) são a continuação do texto da célula acima
+  const gaps = [];
+  for (let i = 1; i < rows.length; i++) gaps.push(rows[i - 1].y - rows[i].y);
+  const sorted = gaps.slice().sort((a, b) => a - b);
+  const med = sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0;
+  const merged = [];
+  rows.forEach((r, i) => {
+    const prev = merged[merged.length - 1];
+    const gap = i ? rows[i - 1].y - r.y : 0;
+    if (prev && gap > 0 && gap <= med * 0.75 && gap <= r.size * 1.35 && r.cells.every(c => prev.cells.some(pc => pc.col === c.col))) {
+      r.cells.forEach(c => { const pc = prev.cells.find(x => x.col === c.col); pc.paras.push(c.paras[0]); });
+      prev.y = r.y;
+    } else merged.push(r);
+  });
+
+  let x0 = comps[0].x0 - 3;
+  let grid = false;
+  let colW = comps.map((cp, k) => (k < comps.length - 1 ? comps[k + 1].x0 - 3 : cp.x1 + 3) - (cp.x0 - 3));
+  // com grade desenhada: colunas e largura vêm das bordas verticais que cobrem a tabela
+  if (vlines && vlines.length) {
+    const bounds = [];
+    let okB = true;
+    const xsAll = vlines.filter(v => v.yTop >= rowLines[0].y && v.yBot <= rowLines[rowLines.length - 1].y).map(v => v.x).sort((a, b) => a - b);
+    for (let k = 0; okB && k < comps.length; k++) {
+      const lefts = xsAll.filter(x => x <= comps[k].x0 + 1), rights = xsAll.filter(x => x >= comps[k].x1 - 1);
+      if (!lefts.length || !rights.length) { okB = false; break; }
+      const lb = lefts[lefts.length - 1], rb = rights[0];
+      if (k === 0) bounds.push(lb);
+      else if (Math.abs(bounds[k] - lb) > 2.5) { okB = false; break; }
+      bounds.push(rb);
+    }
+    if (okB && bounds.length === comps.length + 1) {
+      const nw = []; for (let k = 0; k < comps.length; k++) nw.push(bounds[k + 1] - bounds[k]);
+      if (nw.every(v => v > 6)) { x0 = bounds[0]; colW = nw; grid = true; }
+    }
+  }
+  // alinhamento de cada coluna: esquerda, direita (números) ou centro
+  const colAlign = comps.map((cp, k) => {
+    const cs = [];
+    merged.forEach(r => r.cells.forEach(c => { if (c.col === k && c.span === 1) cs.push(c); }));
+    if (cs.length < 2) return 'left';
+    const sp = f => Math.max.apply(null, cs.map(f)) - Math.min.apply(null, cs.map(f));
+    if (sp(c => c.x0) <= 4) return 'left';
+    if (sp(c => c.x1) <= 4) return 'right';
+    if (sp(c => (c.x0 + c.x1) / 2) <= 4) return 'center';
+    return 'left';
+  });
+  // em tabela com grade, a borda logo abaixo do texto não é sublinhado
+  if (grid) merged.forEach(r => r.cells.forEach(c => c.paras.forEach(runs => runs.forEach(rn => { rn.under = false; }))));
+  const size = merged[0].size;
+  return { kind: 'table', grid, rows: merged, colW, colAlign, x0, size, topBase: merged[0].y, botBase: merged[merged.length - 1].y, top: merged[0].y + size * 0.8 };
+}
+
+function pdftoolsFindTables(lines, vlines, bordered) {
+  const items = [];
+  const cellsOf = lines.map(l => pdftoolsCellsOfLine(l, 1.5));
+  let i = 0;
+  while (i < lines.length) {
+    if (cellsOf[i].length < 2) { items.push({ kind: 'line', line: lines[i] }); i++; continue; }
+    let j = i;
+    while (j + 1 < lines.length) {
+      const near = (a, b) => lines[a].y - lines[b].y <= Math.max(lines[a].size, lines[b].size) * 3.2;
+      if (!near(j, j + 1)) break;
+      if (cellsOf[j + 1].length >= 2) { j++; continue; }
+      if (j + 2 < lines.length && cellsOf[j + 2].length >= 2 && near(j + 1, j + 2)) { j++; continue; }
+      break;
+    }
+    const idx = [];
+    for (let k = i; k <= j; k++) idx.push(k);
+    const tbl = pdftoolsTryTable(idx.map(k => lines[k]), idx.map(k => cellsOf[k]), vlines, bordered);
+    if (tbl) { items.push(tbl); i = j + 1; }
+    else { items.push({ kind: 'line', line: lines[i] }); i++; }
+  }
+  return items;
+}
+
+/* Linhas físicas → parágrafos com alinhamento, recuos, lista, espaçamento entrelinhas. */
+function pdftoolsMakeParagraphs(lineItems, geo) {
+  const L = geo.L, R = geo.R, TW = R - L;
+  const med = arr => { const s = arr.slice().sort((a, b) => a - b); return s[Math.floor(s.length / 2)]; };
+  const gapsBy = {}, allGaps = [];
+  for (let k = 1; k < lineItems.length; k++) {
+    const a = lineItems[k - 1], b = lineItems[k];
+    if (!a || !b) continue;
+    const g = a.y - b.y, key = Math.round(a.size * 2) / 2;
+    if (Math.abs(a.size - b.size) < 0.6 && g > a.size * 0.6 && g < a.size * 2) { (gapsBy[key] = gapsBy[key] || []).push(g); allGaps.push(g); }
+  }
+  const pitchOf = size => {
+    const key = Math.round(size * 2) / 2;
+    if (gapsBy[key] && gapsBy[key].length) return med(gapsBy[key]);
+    return size * 1.2;
+  };
+  const alignCache = new Map();
+  const alignOf = l => { if (!alignCache.has(l)) alignCache.set(l, pdftoolsLineAlign(l, geo)); return alignCache.get(l); };
+  const isNew = (para, line) => {
+    const prev = para.lines[para.lines.length - 1];
+    const gap = prev.y - line.y;
+    if (gap > pitchOf(prev.size) * 1.4 + 1) return true;
+    if (Math.abs(prev.size - line.size) > 1.2) return true;
+    if (!!prev.bold !== !!line.bold) return true;
+    if (alignOf(prev) !== alignOf(line)) return true;
+    if (alignOf(prev) !== 'left') return true;
+    if (pdftoolsListMarker(line)) return true;
+    if (prev.x1 < R - 0.3 * TW) return true;
+    if (!para.list && line.x0 > prev.x0 + Math.max(prev.size, line.size) * 0.8 && /[.!?:;»”")]$/.test(prev.text)) return true;
+    return false;
+  };
+
+  const paras = [];
+  let cur = null;
+  lineItems.forEach(line => {
+    if (cur && !isNew(cur, line)) { cur.lines.push(line); return; }
+    cur = { lines: [line], list: pdftoolsListMarker(line) };
+    paras.push(cur);
+  });
+
+  return paras.map(p => {
+    const ls = p.lines;
+    const size = ls[0].size;
+    // runs do parágrafo, com um espaço entre as linhas (sem espaço depois de hífen no fim da linha)
+    let runs = [];
+    ls.forEach((l, i) => {
+      let lr = pdftoolsRunsOfParts(l.parts);
+      if (i === 0 && p.list) {
+        // troca o marcador por: marcador + tabulação (recuo deslocado)
+        const mk = p.list;
+        const firstPartText = l.parts[0].text.trim();
+        if (mk.part) { lr = pdftoolsRunsOfParts(l.parts.slice(1)); }
+        else if (lr.length) lr[0].text = lr[0].text.replace(/^\s*\S+\s+/, '');
+        const style = { font: l.parts[0].font, size: Math.round(l.parts[0].size * 2) / 2, bold: l.parts[0].bold, italic: l.parts[0].italic, color: l.parts[0].color, bg: l.parts[0].bg };
+        lr.unshift(Object.assign({ text: mk.marker + '\t' }, style));
+      }
+      if (i > 0 && runs.length) {
+        const lastRun = runs[runs.length - 1];
+        if (!/[\s-]$/.test(lastRun.text) || /\s-$/.test(lastRun.text)) lastRun.text += ' ';
+      }
+      runs = runs.concat(lr);
+    });
+    // alinhamento
+    const aligns = ls.map(alignOf);
+    let align = aligns.every(a => a === aligns[0]) ? aligns[0] : 'left';
+    if (align === 'left' && ls.length >= 3) {
+      const body = ls.slice(0, -1);
+      const mx = Math.max.apply(null, body.map(l => l.x1));
+      const rest = ls.slice(1);
+      const x0s = rest.map(l => l.x0);
+      if (body.filter(l => l.x1 >= mx - 2.5).length >= Math.max(2, body.length - 1) && Math.max.apply(null, x0s) - Math.min.apply(null, x0s) <= 3 && mx >= R - 0.06 * TW) align = 'both';
+    }
+    // recuos
+    let left = 0, first = 0, right = 0;
+    if (align === 'left' || align === 'both') {
+      if (p.list) {
+        const textX = ls.length > 1 && ls[1].x0 > ls[0].x0 + 3 ? ls[1].x0 : p.list.textX;
+        left = Math.max(0, textX - L);
+        first = -Math.min(left, Math.max(10, left - Math.max(0, ls[0].x0 - L)));
+      } else if (ls.length === 1) {
+        left = Math.max(0, ls[0].x0 - L);
+      } else {
+        const rest = Math.min.apply(null, ls.slice(1).map(l => l.x0));
+        left = Math.max(0, rest - L);
+        first = (ls[0].x0 - L) - left;
+        if (Math.abs(first) < 1.5) first = 0;
+      }
+      if (left < 1.5 && !p.list) left = 0;
+      if (left > TW * 0.7) left = TW * 0.7;
+      if (ls.length >= 3) {
+        const mx = Math.max.apply(null, ls.map(l => l.x1));
+        if (mx < R - 0.08 * TW) right = R - mx - 2;
+      }
+    }
+    // entrelinha
+    let pitch = ls.length > 1 ? med(ls.slice(1).map((l, i) => ls[i].y - l.y)) : pitchOf(size);
+    pitch = Math.max(size * 0.9, Math.min(size * 3, pitch));
+    const lastLine = ls[ls.length - 1];
+    return { kind: 'para', lines: ls, runs, size, align, left, first, right, list: p.list, pitch,
+      topBase: ls[0].y, botBase: lastLine.y, top: ls[0].y + size * 0.8, lastSize: lastLine.size };
+  });
+}
+
+/* ---------- XML do Word ---------- */
+const pdftoolsTw = pt => Math.round(pt * 20);
+
+function pdftoolsRunPr(r) {
+  const hp = Math.max(8, Math.min(144, Math.round((r.size || 10) * 2)));
+  const f = r.font ? pdftoolsEscapeXml(r.font).replace(/"/g, '') : '';
+  let x = '';
+  if (f) x += `<w:rFonts w:ascii="${f}" w:hAnsi="${f}" w:cs="${f}"/>`;
+  if (r.bold) x += '<w:b/><w:bCs/>';
+  if (r.italic) x += '<w:i/><w:iCs/>';
+  if (r.color) x += `<w:color w:val="${r.color}"/>`;
+  x += `<w:sz w:val="${hp}"/><w:szCs w:val="${hp}"/>`;
+  if (r.under) x += '<w:u w:val="single"/>';
+  if (r.bg) x += `<w:shd w:val="clear" w:color="auto" w:fill="${r.bg}"/>`;
+  return `<w:rPr>${x}</w:rPr>`;
+}
+
+function pdftoolsRunsToXml(runs) {
+  let xml = '';
+  runs.forEach(r => {
+    const rPr = pdftoolsRunPr(r);
+    r.text.split('\t').forEach((piece, i) => {
+      if (i > 0) xml += `<w:r>${rPr}<w:tab/></w:r>`;
+      if (piece) xml += `<w:r>${rPr}<w:t xml:space="preserve">${pdftoolsEscapeXml(piece)}</w:t></w:r>`;
+    });
+  });
+  return xml;
+}
+
+function pdftoolsParaXml(p, before, pageBreak) {
+  const jc = { left: 'left', center: 'center', right: 'right', both: 'both' }[p.align] || 'left';
+  const ratio = Math.max(0.85, Math.min(3, p.pitch / (p.size * 1.17)));
+  let ppr = pageBreak ? '<w:pageBreakBefore/>' : '';
+  if (p.list) ppr += `<w:tabs><w:tab w:val="left" w:pos="${pdftoolsTw(p.left)}"/></w:tabs>`;
+  ppr += `<w:spacing w:before="${pdftoolsTw(Math.max(0, before))}" w:after="0" w:line="${Math.round(ratio * 240)}" w:lineRule="auto"/>`;
+  if (p.left > 0.5 || p.right > 0.5 || p.first) {
+    ppr += `<w:ind w:left="${pdftoolsTw(p.left)}"${p.right > 0.5 ? ` w:right="${pdftoolsTw(p.right)}"` : ''}${p.first < 0 ? ` w:hanging="${pdftoolsTw(-p.first)}"` : (p.first > 0 ? ` w:firstLine="${pdftoolsTw(p.first)}"` : '')}/>`;
+  }
+  ppr += `<w:jc w:val="${jc}"/>`;
+  return `<w:p><w:pPr>${ppr}</w:pPr>${pdftoolsRunsToXml(p.runs)}</w:p>`;
+}
+
+function pdftoolsSpacerXml(heightPt, pageBreak) {
+  return `<w:p><w:pPr>${pageBreak ? '<w:pageBreakBefore/>' : ''}<w:spacing w:before="0" w:after="0" w:line="${Math.max(20, pdftoolsTw(heightPt))}" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/></w:rPr></w:pPr></w:p>`;
+}
+
+function pdftoolsTableXml(t, geo, bordered) {
+  const totalW = t.colW.reduce((a, b) => a + b, 0);
+  const ind = Math.max(-200, pdftoolsTw(t.x0 - geo.L));
+  const bd = bordered ? ['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map(s => `<w:${s} w:val="single" w:sz="4" w:space="0" w:color="000000"/>`).join('') : '';
+  let xml = `<w:tbl><w:tblPr><w:tblW w:w="${pdftoolsTw(totalW)}" w:type="dxa"/><w:tblInd w:w="${ind}" w:type="dxa"/>${bordered ? `<w:tblBorders>${bd}</w:tblBorders>` : ''}<w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="20" w:type="dxa"/><w:left w:w="60" w:type="dxa"/><w:bottom w:w="20" w:type="dxa"/><w:right w:w="60" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${t.colW.map(w => `<w:gridCol w:w="${pdftoolsTw(w)}"/>`).join('')}</w:tblGrid>`;
+  t.rows.forEach(r => {
+    xml += '<w:tr><w:trPr><w:cantSplit/></w:trPr>';
+    let col = 0;
+    const cells = r.cells.slice().sort((a, b) => a.col - b.col);
+    const emptyCell = n => { let w = 0; for (let k = 0; k < n.len; k++) w += t.colW[n.from + k]; return `<w:tc><w:tcPr><w:tcW w:w="${pdftoolsTw(w)}" w:type="dxa"/>${n.len > 1 ? `<w:gridSpan w:val="${n.len}"/>` : ''}</w:tcPr><w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr></w:p></w:tc>`; };
+    cells.forEach(c => {
+      if (c.col > col) { xml += emptyCell({ from: col, len: c.col - col }); col = c.col; }
+      let w = 0;
+      for (let k = 0; k < c.span; k++) w += t.colW[c.col + k];
+      const al = c.span > 1 ? 'left' : t.colAlign[c.col];
+      const jc = { left: 'left', right: 'right', center: 'center' }[al];
+      const ps = c.paras.map(runs => `<w:p><w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="${jc}"/></w:pPr>${pdftoolsRunsToXml(runs)}</w:p>`).join('');
+      xml += `<w:tc><w:tcPr><w:tcW w:w="${pdftoolsTw(w)}" w:type="dxa"/>${c.span > 1 ? `<w:gridSpan w:val="${c.span}"/>` : ''}</w:tcPr>${ps}</w:tc>`;
+      col = c.col + c.span;
+    });
+    if (col < t.colW.length) xml += emptyCell({ from: col, len: t.colW.length - col });
+    xml += '</w:tr>';
+  });
+  return xml + '</w:tbl>';
+}
+
+function pdftoolsBodyImageXml(im, geo, before, pageBreak, ctx, maxHpt) {
+  const id = ctx.idState.next++;
+  const rid = 'rIdBody' + id;
+  const name = 'img' + id + '.' + im.ext;
+  ctx.media.push({ rid, name, bytes: im.bytes, ext: im.ext });
+  const TW = geo.R - geo.L;
+  let wpt = im.x1 - im.x0, hpt = im.y1 - im.y0;
+  const sc = Math.min(1, TW / wpt, maxHpt ? maxHpt / hpt : 1);
+  wpt *= sc; hpt *= sc;
+  const cx = Math.round(wpt * 12700), cy = Math.round(hpt * 12700);
+  const c = (im.x0 + im.x1) / 2;
+  let jc = 'left', ind = '';
+  if (Math.abs(c - (geo.L + geo.R) / 2) < Math.max(6, geo.W * 0.015)) jc = 'center';
+  else if (Math.abs(im.x1 - geo.R) < 8 && im.x0 - geo.L > 0.3 * TW) jc = 'right';
+  else if (im.x0 - geo.L > 2) ind = `<w:ind w:left="${pdftoolsTw(im.x0 - geo.L)}"/>`;
+  const drawing = `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${id}" name="Imagem ${id}"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${id}" name="${name}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
+  return `<w:p><w:pPr>${pageBreak ? '<w:pageBreakBefore/>' : ''}<w:spacing w:before="${pdftoolsTw(Math.max(0, before))}" w:after="0" w:line="240" w:lineRule="auto"/>${ind}<w:jc w:val="${jc}"/></w:pPr>${drawing}</w:p>`;
+}
+
+/* Monta o XML do corpo de UMA página: parágrafos, tabelas e imagens na mesma ordem vertical do PDF,
+   com o espaço entre eles medido a partir das posições do PDF. */
+function pdftoolsPageBodyXml(info, geo, ctx, pageIdx) {
+  const pb = pageIdx > 0;
+  const stats = ctx.stats;
+  if (info.scan) {
+    stats.scanPages++;
+    const im = { x0: 0, y0: 0, x1: info.W, y1: info.H, bytes: info.scan.bytes, ext: info.scan.ext };
+    return pdftoolsBodyImageXml(im, { L: geo.L, R: geo.R, W: geo.W }, 0, pb, ctx, geo.H - geo.topPt - geo.botPt - 4);
+  }
+  const lines = info.lines.filter(l => !l.hf && l.text);
+  const items = pdftoolsFindTables(lines, info.vlines, info.bordered);
+  const lineItems = items.filter(i => i.kind === 'line').map(i => i.line);
+  const paraOf = new Map();
+  pdftoolsMakeParagraphs(lineItems, geo).forEach(p => p.lines.forEach(l => paraOf.set(l, p)));
+  const blocks = [];
+  const seenPara = new Set();
+  items.forEach(it => {
+    if (it.kind === 'table') { blocks.push(it); stats.tables++; return; }
+    const p = paraOf.get(it.line);
+    if (p && !seenPara.has(p)) { seenPara.add(p); blocks.push(p); if (p.list) stats.lists++; }
+  });
+  (info.bodyImages || []).forEach(im => { blocks.push({ kind: 'image', im, top: im.y1, botEdge: im.y0 }); stats.images++; });
+  blocks.sort((a, b) => b.top - a.top);
+
+  if (!blocks.length) return pdftoolsSpacerXml(2, pb);
+  let xml = '';
+  let prev = null;
+  blocks.forEach((b, idx) => {
+    const first = idx === 0;
+    const textLike = b.kind === 'para';
+    let before;
+    if (first) {
+      before = textLike ? (geo.H - b.topBase) - geo.topPt - 0.85 * b.pitch
+        : b.kind === 'table' ? (geo.H - b.top) - geo.topPt : (geo.H - b.top) - geo.topPt;
+    } else if (b.kind === 'para') {
+      if (prev.kind === 'para') before = prev.botBase - b.topBase - b.pitch;
+      else if (prev.kind === 'table') before = (prev.botBase - prev.size * 0.3) - b.topBase - 0.8 * b.pitch;
+      else before = prev.botEdge - b.topBase - 0.8 * b.pitch;
+    } else {
+      const prevBot = prev.kind === 'para' ? prev.botBase - 0.25 * prev.lastSize : prev.kind === 'table' ? prev.botBase - 0.3 * prev.size : prev.botEdge;
+      before = prevBot - b.top;
+    }
+    before = Math.max(0, Math.min(600, before));
+    const pageBreak = first && pb;
+    if (b.kind === 'para') xml += pdftoolsParaXml(b, before, pageBreak);
+    else if (b.kind === 'table') {
+      if (before > 2 || pageBreak) xml += pdftoolsSpacerXml(before > 2 ? before : 1, pageBreak);
+      xml += pdftoolsTableXml(b, geo, b.grid);
+    } else xml += pdftoolsBodyImageXml(b.im, geo, before, pageBreak, ctx, 0);
+    prev = b;
+  });
+  if (prev.kind === 'table') xml += '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr></w:p>';
+  return xml;
+}
+
+const PDFTOOLS_DOCX_MARGIN_TW = 1417;
+
+async function pdftoolsBuildDocx(pageXmls, hf, geo, media) {
+  const JSZipLib = await ensureJSZip();
+  const zip = new JSZipLib();
+  zip.file('[Content_Types].xml', '');
+  zip.file('_rels/.rels', '');
+  hf = hf || { header: { lines: [], images: [] }, footer: { lines: [], images: [] }, firstEmpty: { h: false, f: false } };
+
+  const pgWtw = Math.round(geo.W * 20), pgHtw = Math.round(geo.H * 20);
+  const textWidthTw = Math.max(2000, pgWtw - pdftoolsTw(geo.L) - pdftoolsTw(geo.W - geo.R));
+  const idState = geo.idState;
+  const hasH = hf.header.lines.length || hf.header.images.some(i => i.bytes);
+  const hasF = hf.footer.lines.length || hf.footer.images.some(i => i.bytes);
+  const titlePg = !!((hasH && hf.firstEmpty.h) || (hasF && hf.firstEmpty.f));
+
+  const wordFolder = zip.folder('word');
+  const docRels = [];
+  const ctOverrides = [];
+  let hasPng = false;
+  const addPart = (kind, tag, zone, relId, type, emptyIt) => {
+    const root = tag === 'header' ? 'hdr' : 'ftr';
+    const built = emptyIt ? { xml: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:${root} xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p/></w:${root}>`, rels: [] }
+      : pdftoolsBuildHeaderFooterXml(tag, zone, geo.W, textWidthTw, idState);
+    const file = kind + relId + '.xml';
+    wordFolder.file(file, built.xml);
+    if (built.rels.length) {
+      hasPng = true;
+      wordFolder.folder('_rels').file(file + '.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${built.rels.map(r => `<Relationship Id="${r.id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${r.name}"/>`).join('')}</Relationships>`);
+      built.rels.forEach(r => wordFolder.folder('media').file(r.name, r.bytes));
+    }
+    ctOverrides.push(`<Override PartName="/word/${file}" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.${tag}+xml"/>`);
+    docRels.push(`<Relationship Id="rId${kind}${relId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/${tag}" Target="${file}"/>`);
+    return `<w:${tag}Reference w:type="${type}" r:id="rId${kind}${relId}"/>`;
+  };
+
+  let refs = '';
+  if (hasH) {
+    refs += addPart('header', 'header', hf.header, 1, 'default', false);
+    if (titlePg) refs += addPart('header', 'header', hf.header, 2, 'first', hf.firstEmpty.h);
+  }
+  if (hasF) {
+    refs += addPart('footer', 'footer', hf.footer, 1, 'default', false);
+    if (titlePg) refs += addPart('footer', 'footer', hf.footer, 2, 'first', hf.firstEmpty.f);
+  }
+
+  // imagens do corpo
+  const exts = new Map(hasPng ? [['png', 'image/png']] : []);
+  media.forEach(m => {
+    wordFolder.folder('media').file(m.name, m.bytes);
+    docRels.push(`<Relationship Id="${m.rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${m.name}"/>`);
+    exts.set(m.ext, m.ext === 'jpg' ? 'image/jpeg' : 'image/' + m.ext);
+  });
+  const extCt = Array.from(exts).map(([e, ct]) => `\n<Default Extension="${e}" ContentType="${ct}"/>`).join('');
+
+  wordFolder.file('styles.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial" w:eastAsia="Arial"/><w:sz w:val="20"/><w:szCs w:val="20"/><w:lang w:val="pt-BR"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style><w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:uiPriority w:val="99"/><w:semiHidden/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style></w:styles>`);
+  ctOverrides.push('<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>');
+  docRels.push('<Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>');
+
+  zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>${extCt}
+<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
+<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
+${ctOverrides.join('\n')}
+</Types>`);
+
+  zip.folder('_rels').file('.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
+<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>
+</Relationships>`);
+
+  zip.folder('docProps').file('core.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:creator>Argo SUAS</dc:creator><cp:lastModifiedBy>Argo SUAS</cp:lastModifiedBy></cp:coreProperties>`);
+  zip.folder('docProps').file('app.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Argo SUAS</Application></Properties>`);
+
+  wordFolder.folder('_rels').file('document.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${docRels.join('')}</Relationships>`);
+
+  const orient = pgWtw > pgHtw ? ' w:orient="landscape"' : '';
+  const mTop = pdftoolsTw(geo.topPt), mBot = pdftoolsTw(geo.botPt), mL = pdftoolsTw(geo.L), mR = pdftoolsTw(geo.W - geo.R);
+  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><w:body>${pageXmls.join('')}<w:sectPr>${refs}<w:pgSz w:w="${pgWtw}" w:h="${pgHtw}"${orient}/><w:pgMar w:top="${mTop}" w:right="${mR}" w:bottom="${mBot}" w:left="${mL}" w:header="567" w:footer="567" w:gutter="0"/>${titlePg ? '<w:titlePg/>' : ''}</w:sectPr></w:body></w:document>`;
+  wordFolder.file('document.xml', documentXml);
+
+  return zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+}
+
+/* Converte os bytes de um PDF em um Blob .docx. Separado da tela para poder ser reutilizado/testado. */
+async function pdftoolsPdfToDocxBlob(bytes, onProgress) {
+  const pdfjsLib = await ensurePdfJs();
+  await ensureJSZip();
+  const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+  const N = pdf.numPages;
+  const pageInfos = [];
+  const S = N <= 40 ? 2 : 1.5;
+  let mediaBytes = 0;
+  const stats = { tables: 0, images: 0, lists: 0, scanPages: 0, colors: 0, skippedImages: 0 };
+
+  for (let i = 1; i <= N; i++) {
+    const page = await pdf.getPage(i);
+    const view = page.view;
+    const W = view[2] - view[0], H = view[3] - view[1];
+    const info = { W, H, skip: false, lines: [], images: [], bodyImages: [], bordered: false, scan: null, vlines: [] };
+    const list = await page.getOperatorList();
+    const content = await page.getTextContent();
+    const fontCache = {};
+    const fontOf = id => fontCache[id] || (fontCache[id] = pdftoolsFontInfo(page, id));
+    const rot = content.items.filter(it => it.str && it.str.trim() && Math.abs(it.transform[1]) > Math.abs(it.transform[0]) * 0.5).length;
+    const textItems = content.items.filter(it => it.str && it.str.trim()).length;
+    const rotated = !!page.rotate || (textItems > 0 && rot / textItems > 0.3);
+    const { boxes, paths } = pdftoolsPageImageBoxes(list, pdfjsLib, view[0], view[1]);
+    info.bordered = paths >= 4;
+    if (!rotated) info.lines = pdftoolsExtractLines(content.items, view[0], view[1], fontOf);
+    const band = N === 1 ? 0.08 : 0.12;
+    const hasText = info.lines.some(l => l.text.replace(/\s/g, '').length >= 3);
+    const bigBox = boxes.some(b => (b.x1 - b.x0) * (b.y1 - b.y0) > W * H * 0.45);
+    info.skip = rotated;
+
+    if (rotated || (!hasText && (bigBox || boxes.length || true))) {
+      // página escaneada, girada ou só com figuras: vira uma imagem da página inteira (o texto não é selecionável, mas nada se perde)
+      const hasAnything = rotated || bigBox || boxes.length || paths > 0 || !hasText;
+      if (hasAnything) {
+        const cv = await pdftoolsRenderPage(page, 1.6);
+        const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.82));
+        cv.width = 0;
+        if (blob && mediaBytes < 120e6) { const b = new Uint8Array(await blob.arrayBuffer()); mediaBytes += b.length; info.scan = { bytes: b, ext: 'jpg' }; info.lines = []; }
+      }
+    } else {
+      // imagens de faixa (logos de cabeçalho/rodapé) para a detecção de cabeçalho e rodapé
+      try { info.images = await pdftoolsBandImages(page, pdfjsLib, W, H, view[0], view[1], band, list); } catch (e) { info.images = []; }
+      const needRender = N <= 120 || boxes.length > 0;
+      if (needRender) {
+        let cv = null;
+        try { cv = await pdftoolsRenderPage(page, S); } catch (e) { cv = null; }
+        if (cv) {
+          pdftoolsSampleColors(cv, S, H, info.lines);
+          if (info.bordered) info.vlines = pdftoolsFindVLines(cv, S, H);
+          for (const b of boxes) {
+            const w = b.x1 - b.x0, h = b.y1 - b.y0;
+            if (w < 8 || h < 8) continue;
+            if (w * h > W * H * 0.8) continue; // imagem de fundo/marca-d'água da página inteira
+            if (mediaBytes > 120e6) { stats.skippedImages++; continue; }
+            const cy = (b.y0 + b.y1) / 2;
+            const zone = (h <= H * 0.2 && w <= W * 0.95) ? (cy > H * (1 - band) ? 'h' : cy < H * band ? 'f' : null) : null;
+            const crop = await pdftoolsCropBox(cv, S, H, b).catch(() => null);
+            if (!crop) continue;
+            mediaBytes += crop.bytes.length;
+            info.bodyImages.push({ x0: b.x0, y0: b.y0, x1: b.x1, y1: b.y1, bytes: crop.bytes, ext: crop.ext, sig: zone ? zone + '|' + [b.x0, b.y0, b.x1, b.y1].map(v => Math.round(v / 3)).join(',') : null });
+          }
+          cv.width = 0;
+        }
+      }
+      info.lines.forEach(l => l.parts.forEach(p => { if (p.color) stats.colors++; }));
+    }
+    pageInfos.push(info);
+    if (onProgress) onProgress(i, N);
+  }
+
+  // Cabeçalho e rodapé: o que se repete no topo/rodapé das páginas sai do corpo e vai para o Word como cabeçalho/rodapé reais.
+  const hf = pdftoolsDetectHeaderFooter(pageInfos);
+  if (hf.found) await pdftoolsCropBandImages(pdf, [hf.header, hf.footer], pageInfos);
+  pageInfos.forEach(info => { info.bodyImages = info.bodyImages.filter(im => !(im.sig && hf.imgSigs && hf.imgSigs.has(im.sig))); });
+
+  // Geometria do documento: margens medidas no próprio PDF
+  const W0 = pageInfos[0] ? pageInfos[0].W : 595.3, H0 = pageInfos[0] ? pageInfos[0].H : 841.9;
+  const bodyLines = [];
+  pageInfos.forEach(info => { if (!info.scan) info.lines.forEach(l => { if (!l.hf && l.text) bodyLines.push(l); }); });
+  const scanShare = pageInfos.length ? pageInfos.filter(i => i.scan).length / pageInfos.length : 0;
+  let L = 50, R = W0 - 50, topPt = 70, botPt = 70;
+  if (bodyLines.length) {
+    const cnt = {};
+    bodyLines.forEach(l => { if (l.text.length >= 25) { const k = Math.round(l.x0 / 2) * 2; cnt[k] = (cnt[k] || 0) + 1; } });
+    const ks = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]);
+    L = ks.length ? Number(ks[0]) : Math.min.apply(null, bodyLines.map(l => l.x0));
+    const xs = bodyLines.filter(l => l.text.length >= 40).map(l => l.x1).sort((a, b) => a - b);
+    R = xs.length ? xs[Math.floor(xs.length * 0.9)] : Math.max.apply(null, bodyLines.map(l => l.x1));
+    L = Math.max(18, Math.min(L, W0 * 0.4)); R = Math.min(W0 - 18, Math.max(R, L + W0 * 0.3));
+    let topMin = 1e9, botMin = 1e9;
+    pageInfos.forEach(info => {
+      if (info.scan) return;
+      const ls = info.lines.filter(l => !l.hf && l.text);
+      if (!ls.length) return;
+      topMin = Math.min(topMin, info.H - (ls[0].y + ls[0].size * 0.9));
+      botMin = Math.min(botMin, ls[ls.length - 1].y - ls[ls.length - 1].size * 0.25);
+    });
+    topPt = Math.max(28, Math.min(150, topMin)); botPt = Math.max(28, Math.min(150, botMin));
+    // com cabeçalho/rodapé, o Word precisa de espaço para eles
+    if (hf.header.lines.length || hf.header.images.some(i => i.bytes)) topPt = Math.max(topPt, 56);
+    if (hf.footer.lines.length || hf.footer.images.some(i => i.bytes)) botPt = Math.max(botPt, 56);
+  } else if (scanShare > 0) { L = 14; R = W0 - 14; topPt = 14; botPt = 14; }
+  if (scanShare > 0.5) { L = Math.min(L, 14); R = Math.max(R, W0 - 14); topPt = 14; botPt = 14; }
+  const geo = { L, R, W: W0, H: H0, topPt, botPt, idState: { next: 1 } };
+
+  const media = [];
+  const ctx = { media, idState: geo.idState, stats };
+  const pageXmls = pageInfos.map((info, idx) => pdftoolsPageBodyXml(info, geo, ctx, idx));
+  const blob = await pdftoolsBuildDocx(pageXmls, hf, geo, media);
+  return {
+    blob,
+    hasHeader: !!(hf.header.lines.length || hf.header.images.some(i => i.bytes)),
+    hasFooter: !!(hf.footer.lines.length || hf.footer.images.some(i => i.bytes)),
+    stats
+  };
 }
 
 /* Imagens (logos, brasões…) que ficam nas faixas de topo/rodapé da página.
    Percorre a lista de operações do pdf.js acompanhando a matriz de transformação. */
-async function pdftoolsBandImages(page, pdfjsLib, W, H, oxPt, oyPt, band) {
+async function pdftoolsBandImages(page, pdfjsLib, W, H, oxPt, oyPt, band, preList) {
   const out = [];
   const OPS = pdfjsLib.OPS;
-  const list = await page.getOperatorList();
+  const list = preList || await page.getOperatorList();
   let ctm = [1, 0, 0, 1, 0, 0];
   const stack = [];
   const imgOps = [OPS.paintImageXObject, OPS.paintInlineImageXObject, OPS.paintImageMaskXObject, OPS.paintJpegXObject].filter(v => v != null);
@@ -24529,7 +25344,7 @@ function pdftoolsPagePlaceholders(text, pageNum, total) {
    cabeçalho/rodapé; elas são marcadas (line.hf = true) para saírem do corpo. */
 function pdftoolsDetectHeaderFooter(pages) {
   const n = pages.length;
-  const res = { header: { lines: [], images: [] }, footer: { lines: [], images: [] }, firstEmpty: { h: false, f: false }, found: false };
+  const res = { header: { lines: [], images: [] }, footer: { lines: [], images: [] }, firstEmpty: { h: false, f: false }, found: false, imgSigs: new Set() };
   if (!n) return res;
   const band = n === 1 ? 0.08 : 0.12;
   const need = n === 1 ? 1 : Math.max(2, Math.ceil(n * 0.5));
@@ -24562,7 +25377,7 @@ function pdftoolsDetectHeaderFooter(pages) {
     g.occ.forEach(o => { o.line.hf = true; });
     const first = g.occ[0];
     const allApplied = g.occ.every(o => o.ph.join('\u0001') !== o.line.segs.map(s => s.text).join('\u0001'));
-    const segs = first.line.segs.map((s, i) => ({ text: allApplied ? first.ph[i] : s.text, x0: s.x0, x1: s.x1, size: s.size, bold: s.bold }));
+    const segs = first.line.segs.map((s, i) => ({ text: allApplied ? first.ph[i] : s.text, x0: s.x0, x1: s.x1, size: s.size, bold: s.bold, italic: s.italic, font: s.font }));
     res[g.zone === 'h' ? 'header' : 'footer'].lines.push({ y: first.line.y, size: first.line.size, segs });
     (g.pages.has(0) ? onFirst : onOthers)[g.zone] = true;
     if (g.pages.has(0) && g.pages.size > 1) onOthers[g.zone] = true;
@@ -24570,6 +25385,7 @@ function pdftoolsDetectHeaderFooter(pages) {
   Object.keys(imgGroups).forEach(sig => {
     const g = imgGroups[sig];
     if (g.pages.size < need) return;
+    res.imgSigs.add(sig);
     const first = g.occ[0];
     res[g.zone === 'h' ? 'header' : 'footer'].images.push({ pageIdx: first.pi, x0: first.im.x0, y0: first.im.y0, x1: first.im.x1, y1: first.im.y1 });
     (g.pages.has(0) ? onFirst : onOthers)[g.zone] = true;
@@ -24615,8 +25431,6 @@ async function pdftoolsCropBandImages(pdf, zones, pageInfos) {
   Object.keys(cache).forEach(k => { cache[k].cv.width = 0; });
 }
 
-const PDFTOOLS_DOCX_MARGIN_TW = 1417;
-
 /* Texto com {PAGE}/{NUMPAGES} → runs do Word (campos de número de página automáticos). */
 function pdftoolsRunsXml(text, rPr) {
   let xml = '';
@@ -24661,10 +25475,7 @@ function pdftoolsBuildHeaderFooterXml(tag, zone, pageW, textWidthTw, idState) {
       return;
     }
     const l = it.v;
-    const mk = s => {
-      const hp = Math.max(12, Math.min(72, Math.round((s.size || 10) * 2)));
-      return `<w:rPr>${s.bold ? '<w:b/><w:bCs/>' : ''}<w:sz w:val="${hp}"/><w:szCs w:val="${hp}"/></w:rPr>`;
-    };
+    const mk = s => pdftoolsRunPr(s);
     const segs = l.segs.map(s => ({ s, slot: slot(s.x0, s.x1) }));
     let pPr = '<w:spacing w:before="0" w:after="0"/>';
     let runs = '';
@@ -24694,166 +25505,6 @@ function pdftoolsBuildHeaderFooterXml(tag, zone, pageW, textWidthTw, idState) {
   return { xml: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:${root} ${ns}>${body}</w:${root}>`, rels };
 }
 
-async function pdftoolsBuildDocx(paragraphsPerPage, hf) {
-  const JSZipLib = await ensureJSZip();
-  const zip = new JSZipLib();
-  // [Content_Types].xml e _rels/.rels precisam ser os primeiros do arquivo (ordem de inserção do zip);
-  // os conteúdos reais são gravados mais abaixo, sobre estes marcadores.
-  zip.file('[Content_Types].xml', '');
-  zip.file('_rels/.rels', '');
-  hf = hf || { header: { lines: [], images: [] }, footer: { lines: [], images: [] }, firstEmpty: { h: false, f: false }, pageW: 595.3, pageH: 841.9 };
-
-  const pgWtw = Math.round((hf.pageW || 595.3) * 20), pgHtw = Math.round((hf.pageH || 841.9) * 20);
-  const textWidthTw = Math.max(2000, pgWtw - 2 * PDFTOOLS_DOCX_MARGIN_TW);
-  const idState = { next: 1 };
-  const hasH = hf.header.lines.length || hf.header.images.some(i => i.bytes);
-  const hasF = hf.footer.lines.length || hf.footer.images.some(i => i.bytes);
-  const titlePg = !!((hasH && hf.firstEmpty.h) || (hasF && hf.firstEmpty.f));
-
-  const wordFolder = zip.folder('word');
-  const docRels = [];
-  const ctOverrides = [];
-  let hasPng = false;
-  const addPart = (kind, tag, zone, relId, type, emptyIt) => {
-    const root = tag === 'header' ? 'hdr' : 'ftr';
-    const built = emptyIt ? { xml: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:${root} xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p/></w:${root}>`, rels: [] }
-      : pdftoolsBuildHeaderFooterXml(tag, zone, hf.pageW || 595.3, textWidthTw, idState);
-    const file = kind + relId + '.xml';
-    wordFolder.file(file, built.xml);
-    if (built.rels.length) {
-      hasPng = true;
-      wordFolder.folder('_rels').file(file + '.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${built.rels.map(r => `<Relationship Id="${r.id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${r.name}"/>`).join('')}</Relationships>`);
-      built.rels.forEach(r => wordFolder.folder('media').file(r.name, r.bytes));
-    }
-    ctOverrides.push(`<Override PartName="/word/${file}" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.${tag}+xml"/>`);
-    docRels.push(`<Relationship Id="rId${kind}${relId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/${tag}" Target="${file}"/>`);
-    return `<w:${tag}Reference w:type="${type}" r:id="rId${kind}${relId}"/>`;
-  };
-
-  let refs = '';
-  if (hasH) {
-    refs += addPart('header', 'header', hf.header, 1, 'default', false);
-    if (titlePg) refs += addPart('header', 'header', hf.header, 2, 'first', hf.firstEmpty.h);
-  }
-  if (hasF) {
-    refs += addPart('footer', 'footer', hf.footer, 1, 'default', false);
-    if (titlePg) refs += addPart('footer', 'footer', hf.footer, 2, 'first', hf.firstEmpty.f);
-  }
-
-  zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-<Default Extension="xml" ContentType="application/xml"/>${hasPng ? '\n<Default Extension="png" ContentType="image/png"/>' : ''}
-<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
-<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
-${ctOverrides.join('\n')}
-</Types>`);
-
-  zip.folder('_rels').file('.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
-<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>
-</Relationships>`);
-
-  zip.folder('docProps').file('core.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:creator>Argo SUAS</dc:creator><cp:lastModifiedBy>Argo SUAS</cp:lastModifiedBy></cp:coreProperties>`);
-
-  zip.folder('docProps').file('app.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Argo SUAS</Application></Properties>`);
-
-  wordFolder.folder('_rels').file('document.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${docRels.join('')}</Relationships>`);
-
-  /* Cada página é uma lista de parágrafos { text, bold, size } — size em
-     pontos (aprox. extraído do próprio PDF), convertido aqui para
-     meios-pontos (unidade w:sz do OOXML). */
-  let bodyXml = '';
-  paragraphsPerPage.forEach((pageParagraphs, pageIdx) => {
-    if (!pageParagraphs.length) {
-      bodyXml += '<w:p/>';
-    } else {
-      pageParagraphs.forEach(para => {
-        const halfPoints = Math.max(16, Math.min(72, Math.round((para.size || 11) * 2)));
-        const rPr = `<w:rPr>${para.bold ? '<w:b/><w:bCs/>' : ''}<w:sz w:val="${halfPoints}"/><w:szCs w:val="${halfPoints}"/></w:rPr>`;
-        bodyXml += `<w:p><w:pPr><w:spacing w:after="160" w:line="276" w:lineRule="auto"/>${para.bold ? '<w:rPr><w:b/></w:rPr>' : ''}</w:pPr><w:r>${rPr}<w:t xml:space="preserve">${pdftoolsEscapeXml(para.text)}</w:t></w:r></w:p>`;
-      });
-    }
-    if (pageIdx < paragraphsPerPage.length - 1) {
-      bodyXml += `<w:p><w:r><w:br w:type="page"/></w:r></w:p>`;
-    }
-  });
-
-  const orient = pgWtw > pgHtw ? ' w:orient="landscape"' : '';
-  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${bodyXml}<w:sectPr>${refs}<w:pgSz w:w="${pgWtw}" w:h="${pgHtw}"${orient}/><w:pgMar w:top="${PDFTOOLS_DOCX_MARGIN_TW}" w:right="${PDFTOOLS_DOCX_MARGIN_TW}" w:bottom="${PDFTOOLS_DOCX_MARGIN_TW}" w:left="${PDFTOOLS_DOCX_MARGIN_TW}" w:header="567" w:footer="567" w:gutter="0"/>${titlePg ? '<w:titlePg/>' : ''}</w:sectPr></w:body></w:document>`;
-
-  wordFolder.file('document.xml', documentXml);
-
-  return zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-}
-
-/* Converte os bytes de um PDF em um Blob .docx. Separado da tela para poder ser reutilizado/testado. */
-async function pdftoolsPdfToDocxBlob(bytes, onProgress) {
-  const pdfjsLib = await ensurePdfJs();
-  await ensureJSZip();
-  const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
-  const pageInfos = [];
-
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    const view = page.view; // [x0, y0, x1, y1] em pontos
-    const W = view[2] - view[0], H = view[3] - view[1];
-    const info = { W, H, skip: !!page.rotate, lines: [], images: [] };
-    info.lines = pdftoolsExtractLines(content.items, view[0], view[1]);
-    if (!info.skip) {
-      try { info.images = await pdftoolsBandImages(page, pdfjsLib, W, H, view[0], view[1], pdf.numPages === 1 ? 0.08 : 0.12); } catch (e) { info.images = []; }
-    }
-    pageInfos.push(info);
-    if (onProgress) onProgress(i, pdf.numPages);
-  }
-
-  // Cabeçalho e rodapé: o que se repete no topo/rodapé das páginas sai do corpo e vai para o Word como cabeçalho/rodapé reais.
-  const hf = pdftoolsDetectHeaderFooter(pageInfos);
-  if (hf.found) await pdftoolsCropBandImages(pdf, [hf.header, hf.footer], pageInfos);
-  hf.pageW = pageInfos[0] ? pageInfos[0].W : 595.3;
-  hf.pageH = pageInfos[0] ? pageInfos[0].H : 841.9;
-
-  const pagesParagraphs = pageInfos.map(info => {
-    const lines = info.lines.filter(l => !l.hf && l.text);
-    // Descobre o espaçamento típico entre linhas desta página, para
-    // diferenciar "quebra de linha por largura" de "novo parágrafo".
-    const gaps = [];
-    for (let k = 1; k < lines.length; k++) gaps.push(lines[k - 1].y - lines[k].y);
-    const sortedGaps = gaps.filter(g => g > 0).sort((a, b) => a - b);
-    const typicalGap = sortedGaps.length ? sortedGaps[Math.floor(sortedGaps.length / 2)] : 14;
-
-    // Funde linhas com espaçamento normal no mesmo parágrafo; um
-    // espaçamento bem maior vira um parágrafo novo.
-    const paragraphs = [];
-    let currentPara = null;
-    lines.forEach((line, idx) => {
-      const gap = idx > 0 ? lines[idx - 1].y - line.y : 0;
-      const isNewParagraph = !currentPara || gap > typicalGap * 1.6;
-      if (isNewParagraph) {
-        if (currentPara) paragraphs.push(currentPara);
-        currentPara = { text: line.text, bold: line.bold, size: line.size };
-      } else {
-        currentPara.text += ' ' + line.text;
-        currentPara.bold = currentPara.bold && line.bold;
-        currentPara.size = Math.max(currentPara.size, line.size);
-      }
-    });
-    if (currentPara) paragraphs.push(currentPara);
-    return paragraphs;
-  });
-
-  const blob = await pdftoolsBuildDocx(pagesParagraphs, hf);
-  return { blob, hasHeader: !!(hf.header.lines.length || hf.header.images.some(i => i.bytes)), hasFooter: !!(hf.footer.lines.length || hf.footer.images.some(i => i.bytes)) };
-}
-
 /* Em vez de criar um parágrafo por linha física do PDF (o que deixava o
    Word cheio de quebras artificiais), agrupamos as linhas em parágrafos
    de verdade: uma nova linha só vira um novo parágrafo quando o espaço
@@ -24875,9 +25526,16 @@ async function pdftoolsRunPdfToWord(file, inputEl) {
       pdftoolsSetStatus('pdftoolsPdfWordStatus', `Extraindo texto (${i}/${n})...`, 'info');
     });
     pdftoolsDownloadBlob(res.blob, (file.name.replace(/\.pdf$/i, '') || 'documento') + '.docx');
-    const hfMsg = res.hasHeader && res.hasFooter ? 'cabeçalho, rodapé, '
-      : res.hasHeader ? 'cabeçalho, ' : res.hasFooter ? 'rodapé, ' : '';
-    pdftoolsSetStatus('pdftoolsPdfWordStatus', `Documento Word gerado, com ${hfMsg}parágrafos, títulos e negrito preservados! (baseado no texto — layouts muito complexos podem mudar)`, 'success');
+    const st = res.stats || {};
+    const kept = ['fontes, cores, negrito, itálico e sublinhado', 'alinhamento e recuos'];
+    if (res.hasHeader || res.hasFooter) kept.push(res.hasHeader && res.hasFooter ? 'cabeçalho e rodapé' : res.hasHeader ? 'cabeçalho' : 'rodapé');
+    if (st.lists) kept.push('listas');
+    if (st.tables) kept.push(st.tables + (st.tables === 1 ? ' tabela' : ' tabelas'));
+    if (st.images) kept.push(st.images + (st.images === 1 ? ' imagem' : ' imagens'));
+    let msg = 'Documento Word gerado, com ' + kept.join(', ') + ' preservados!';
+    if (st.scanPages) msg += ' ' + st.scanPages + (st.scanPages === 1 ? ' página escaneada entrou como imagem' : ' páginas escaneadas entraram como imagem') + ' (o texto delas não é editável).';
+    if (st.skippedImages) msg += ' ' + st.skippedImages + ' imagem(ns) ficaram de fora por causa do tamanho do arquivo.';
+    pdftoolsSetStatus('pdftoolsPdfWordStatus', msg, 'success');
   } catch (e) {
     pdftoolsSetStatus('pdftoolsPdfWordStatus', 'Não foi possível converter este PDF.', 'error');
   } finally {
