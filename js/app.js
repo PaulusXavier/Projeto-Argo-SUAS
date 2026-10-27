@@ -24410,22 +24410,344 @@ async function pdftoolsEditExport() {
   }
 }
 
-/* ---------- PDF → Word (texto) ---------- */
+/* ---------- PDF → Word ---------- */
 function pdftoolsEscapeXml(s) {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-async function pdftoolsBuildDocx(paragraphsPerPage) {
+/* Multiplica duas matrizes de transformação do PDF (mesma convenção do pdf.js). */
+function pdftoolsMatMul(m, n) {
+  return [
+    m[0] * n[0] + m[2] * n[1], m[1] * n[0] + m[3] * n[1],
+    m[0] * n[2] + m[2] * n[3], m[1] * n[2] + m[3] * n[3],
+    m[0] * n[4] + m[2] * n[5] + m[4], m[1] * n[4] + m[3] * n[5] + m[5]
+  ];
+}
+
+/* Agrupa os itens de texto do pdf.js em linhas físicas (por posição vertical).
+   Cada linha guarda também a posição horizontal e "segmentos" — trechos
+   separados por um vão grande (ex.: texto à esquerda + nº da página à direita),
+   que são usados para reconstruir cabeçalho/rodapé com alinhamento. */
+function pdftoolsExtractLines(items, oxPt, oyPt) {
+  const raw = [];
+  let cur = null;
+  items.forEach(item => {
+    if (!item.str) return;
+    const y = item.transform[5] - oyPt;
+    const x0 = item.transform[4] - oxPt;
+    const x1 = x0 + (item.width || 0);
+    const fontHeight = Math.abs(item.transform[3]) || Math.abs(item.transform[0]) || 10;
+    const part = { text: item.str, bold: /bold/i.test(item.fontName || ''), size: fontHeight, x0, x1, hasW: !!item.width };
+    if (cur && Math.abs(y - cur.y) <= fontHeight * 0.4) {
+      cur.parts.push(part);
+      cur.y = (cur.y + y) / 2;
+    } else {
+      if (cur) raw.push(cur);
+      cur = { y, parts: [part] };
+    }
+  });
+  if (cur) raw.push(cur);
+
+  raw.forEach(line => {
+    // itens só de espaço (o pdf.js os emite com larguras enormes) atrapalham a medição dos vãos
+    const solid = line.parts.filter(p => p.text.trim());
+    if (solid.length) line.parts = solid;
+    line.parts.sort((a, b) => a.x0 - b.x0);
+    const segs = [];
+    let seg = null, prev = null;
+    line.parts.forEach(p => {
+      const gap = prev ? p.x0 - prev.x1 : 0;
+      const bigGap = prev && prev.hasW && gap > Math.max(p.size, prev.size) * 2.5;
+      if (!seg || bigGap) {
+        seg = { text: p.text, x0: p.x0, x1: p.x1, size: p.size, bold: p.bold, n: 1 };
+        segs.push(seg);
+      } else {
+        const sep = (prev.hasW && gap <= Math.min(p.size, prev.size) * 0.12) ? '' : ' ';
+        seg.text += sep + p.text;
+        seg.x1 = Math.max(seg.x1, p.x1);
+        seg.size = Math.max(seg.size, p.size);
+        seg.bold = seg.bold && p.bold;
+        seg.n++;
+      }
+      prev = p;
+    });
+    segs.forEach(s => { s.text = s.text.replace(/\s+/g, ' ').trim(); });
+    line.segs = segs.filter(s => s.text);
+    line.x0 = line.segs.length ? line.segs[0].x0 : 0;
+    line.x1 = line.segs.length ? line.segs[line.segs.length - 1].x1 : 0;
+    line.text = line.segs.map(s => s.text).join(' ');
+    line.size = line.parts.reduce((s, p) => s + p.size, 0) / line.parts.length;
+    line.bold = line.parts.every(p => p.bold);
+  });
+  return raw;
+}
+
+/* Imagens (logos, brasões…) que ficam nas faixas de topo/rodapé da página.
+   Percorre a lista de operações do pdf.js acompanhando a matriz de transformação. */
+async function pdftoolsBandImages(page, pdfjsLib, W, H, oxPt, oyPt, band) {
+  const out = [];
+  const OPS = pdfjsLib.OPS;
+  const list = await page.getOperatorList();
+  let ctm = [1, 0, 0, 1, 0, 0];
+  const stack = [];
+  const imgOps = [OPS.paintImageXObject, OPS.paintInlineImageXObject, OPS.paintImageMaskXObject, OPS.paintJpegXObject].filter(v => v != null);
+  for (let k = 0; k < list.fnArray.length; k++) {
+    const fn = list.fnArray[k];
+    if (fn === OPS.save) stack.push(ctm.slice());
+    else if (fn === OPS.restore) { if (stack.length) ctm = stack.pop(); }
+    else if (fn === OPS.transform) ctm = pdftoolsMatMul(ctm, list.argsArray[k]);
+    else if (imgOps.indexOf(fn) >= 0) {
+      const xs = [ctm[4], ctm[4] + ctm[0], ctm[4] + ctm[2], ctm[4] + ctm[0] + ctm[2]];
+      const ys = [ctm[5], ctm[5] + ctm[1], ctm[5] + ctm[3], ctm[5] + ctm[1] + ctm[3]];
+      const x0 = Math.min.apply(null, xs) - oxPt, x1 = Math.max.apply(null, xs) - oxPt;
+      const y0 = Math.min.apply(null, ys) - oyPt, y1 = Math.max.apply(null, ys) - oyPt;
+      const w = x1 - x0, h = y1 - y0;
+      if (w < 6 || h < 6 || h > H * 0.2 || w > W * 0.95) continue; // ignora ícones minúsculos e imagens de fundo/página inteira
+      const cy = (y0 + y1) / 2;
+      const zone = cy > H * (1 - band) ? 'h' : cy < H * band ? 'f' : null;
+      if (!zone) continue;
+      const sig = zone + '|' + [x0, y0, x1, y1].map(v => Math.round(v / 3)).join(',');
+      out.push({ zone, sig, x0, y0, x1, y1 });
+    }
+  }
+  return out;
+}
+
+/* Texto da página → "{PAGE}" / "{NUMPAGES}" quando o número é o da própria página
+   (ex.: "Página 3 de 8"), para virar campo automático no Word. */
+function pdftoolsPagePlaceholders(text, pageNum, total) {
+  let t = text.replace(/(\b(?:de|of)\s+|\/\s*)(\d+)\b/gi, (m, p, n) => Number(n) === total ? p + '{NUMPAGES}' : m);
+  let done = false;
+  t = t.replace(/\b\d+\b/g, m => (!done && Number(m) === pageNum) ? (done = true, '{PAGE}') : m);
+  return t;
+}
+
+/* Descobre o que se repete no topo e no rodapé das páginas. Funcionamento: linhas
+   (e imagens) dentro da faixa de ~12% superior/inferior da página que aparecem em
+   pelo menos metade das páginas (comparando com números trocados por "#") são
+   cabeçalho/rodapé; elas são marcadas (line.hf = true) para saírem do corpo. */
+function pdftoolsDetectHeaderFooter(pages) {
+  const n = pages.length;
+  const res = { header: { lines: [], images: [] }, footer: { lines: [], images: [] }, firstEmpty: { h: false, f: false }, found: false };
+  if (!n) return res;
+  const band = n === 1 ? 0.08 : 0.12;
+  const need = n === 1 ? 1 : Math.max(2, Math.ceil(n * 0.5));
+  const lineGroups = {}, imgGroups = {};
+
+  pages.forEach((pg, pi) => {
+    if (pg.skip) return;
+    pg.band = band;
+    pg.lines.forEach(line => {
+      if (!line.segs.length) return;
+      const zone = line.y > pg.H * (1 - band) ? 'h' : line.y < pg.H * band ? 'f' : null;
+      if (!zone) return;
+      const ph = line.segs.map(s => pdftoolsPagePlaceholders(s.text, pi + 1, n));
+      const key = zone + '|' + ph.join(' ').replace(/\{(?:PAGE|NUMPAGES)\}/g, '#').toLowerCase().replace(/\d+/g, '#');
+      const g = lineGroups[key] || (lineGroups[key] = { zone, pages: new Set(), occ: [] });
+      g.pages.add(pi);
+      g.occ.push({ pi, line, ph });
+    });
+    (pg.images || []).forEach(im => {
+      const g = imgGroups[im.sig] || (imgGroups[im.sig] = { zone: im.zone, pages: new Set(), occ: [] });
+      g.pages.add(pi);
+      g.occ.push({ pi, im });
+    });
+  });
+
+  const onFirst = { h: false, f: false }, onOthers = { h: false, f: false };
+  Object.keys(lineGroups).forEach(key => {
+    const g = lineGroups[key];
+    if (g.pages.size < need) return;
+    g.occ.forEach(o => { o.line.hf = true; });
+    const first = g.occ[0];
+    const allApplied = g.occ.every(o => o.ph.join('\u0001') !== o.line.segs.map(s => s.text).join('\u0001'));
+    const segs = first.line.segs.map((s, i) => ({ text: allApplied ? first.ph[i] : s.text, x0: s.x0, x1: s.x1, size: s.size, bold: s.bold }));
+    res[g.zone === 'h' ? 'header' : 'footer'].lines.push({ y: first.line.y, size: first.line.size, segs });
+    (g.pages.has(0) ? onFirst : onOthers)[g.zone] = true;
+    if (g.pages.has(0) && g.pages.size > 1) onOthers[g.zone] = true;
+  });
+  Object.keys(imgGroups).forEach(sig => {
+    const g = imgGroups[sig];
+    if (g.pages.size < need) return;
+    const first = g.occ[0];
+    res[g.zone === 'h' ? 'header' : 'footer'].images.push({ pageIdx: first.pi, x0: first.im.x0, y0: first.im.y0, x1: first.im.x1, y1: first.im.y1 });
+    (g.pages.has(0) ? onFirst : onOthers)[g.zone] = true;
+    if (g.pages.has(0) && g.pages.size > 1) onOthers[g.zone] = true;
+  });
+  ['h', 'f'].forEach(z => { if (n > 2 && onOthers[z] && !onFirst[z]) res.firstEmpty[z] = true; });
+  res.header.lines.sort((a, b) => b.y - a.y);
+  res.footer.lines.sort((a, b) => b.y - a.y);
+  res.found = !!(res.header.lines.length || res.header.images.length || res.footer.lines.length || res.footer.images.length);
+  return res;
+}
+
+/* Recorta as imagens do cabeçalho/rodapé renderizando a página (só as páginas necessárias). */
+async function pdftoolsCropBandImages(pdf, zones, pageInfos) {
+  const cache = {};
+  for (const z of zones) {
+    for (const im of z.images) {
+      const pg = pageInfos[im.pageIdx];
+      try {
+        if (!cache[im.pageIdx]) {
+          const page = await pdf.getPage(im.pageIdx + 1);
+          const S = 2.5;
+          const vp = page.getViewport({ scale: S });
+          const cv = document.createElement('canvas');
+          cv.width = Math.ceil(vp.width); cv.height = Math.ceil(vp.height);
+          const ctx = cv.getContext('2d');
+          ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+          await page.render({ canvasContext: ctx, viewport: vp }).promise;
+          cache[im.pageIdx] = { cv, S };
+        }
+        const { cv, S } = cache[im.pageIdx];
+        const cx = Math.max(0, Math.floor(im.x0 * S)), cy = Math.max(0, Math.floor((pg.H - im.y1) * S));
+        const cw = Math.min(cv.width - cx, Math.ceil((im.x1 - im.x0) * S)), ch = Math.min(cv.height - cy, Math.ceil((im.y1 - im.y0) * S));
+        if (cw < 2 || ch < 2) continue;
+        const out = document.createElement('canvas');
+        out.width = cw; out.height = ch;
+        out.getContext('2d').drawImage(cv, cx, cy, cw, ch, 0, 0, cw, ch);
+        const blob = await new Promise(r => out.toBlob(r, 'image/png'));
+        im.bytes = new Uint8Array(await blob.arrayBuffer());
+      } catch (e) { /* sem a imagem: o texto do cabeçalho/rodapé continua valendo */ }
+    }
+  }
+  Object.keys(cache).forEach(k => { cache[k].cv.width = 0; });
+}
+
+const PDFTOOLS_DOCX_MARGIN_TW = 1417;
+
+/* Texto com {PAGE}/{NUMPAGES} → runs do Word (campos de número de página automáticos). */
+function pdftoolsRunsXml(text, rPr) {
+  let xml = '';
+  text.split(/(\{PAGE\}|\{NUMPAGES\})/).forEach(piece => {
+    if (!piece) return;
+    if (piece === '{PAGE}' || piece === '{NUMPAGES}') {
+      const instr = piece === '{PAGE}' ? 'PAGE' : 'NUMPAGES';
+      xml += `<w:r>${rPr}<w:fldChar w:fldCharType="begin"/></w:r><w:r>${rPr}<w:instrText xml:space="preserve"> ${instr} </w:instrText></w:r><w:r>${rPr}<w:fldChar w:fldCharType="separate"/></w:r><w:r>${rPr}<w:t>1</w:t></w:r><w:r>${rPr}<w:fldChar w:fldCharType="end"/></w:r>`;
+    } else {
+      xml += `<w:r>${rPr}<w:t xml:space="preserve">${pdftoolsEscapeXml(piece)}</w:t></w:r>`;
+    }
+  });
+  return xml;
+}
+
+/* Monta o XML de um cabeçalho ou rodapé: linhas de texto (com alinhamento esquerda/
+   centro/direita ou tabulações) e imagens, na mesma ordem vertical do PDF. */
+function pdftoolsBuildHeaderFooterXml(tag, zone, pageW, textWidthTw, idState) {
+  const rels = [];
+  const items = [];
+  zone.lines.forEach(l => items.push({ top: l.y + l.size, kind: 'line', v: l }));
+  // imagem na mesma faixa vertical de uma linha de texto (logo ao lado do título) vem antes dela
+  zone.images.forEach(im => {
+    if (!im.bytes) return;
+    const beside = zone.lines.some(l => l.y >= im.y0 && l.y <= im.y1);
+    items.push({ top: beside ? im.y1 + 10000 : im.y1, kind: 'img', v: im });
+  });
+  items.sort((a, b) => b.top - a.top);
+  const slot = (x0, x1) => { const c = (x0 + x1) / 2 / pageW; return c < 0.4 ? 'l' : c > 0.6 ? 'r' : 'c'; };
+  let body = '';
+  items.forEach(it => {
+    if (it.kind === 'img') {
+      const im = it.v;
+      const id = idState.next++;
+      const rid = 'rIdImg' + id;
+      rels.push({ id: rid, name: 'hf' + id + '.png', bytes: im.bytes });
+      let cx = Math.round((im.x1 - im.x0) * 12700), cy = Math.round((im.y1 - im.y0) * 12700);
+      const maxCx = textWidthTw * 635; // 1 twip = 635 EMU
+      if (cx > maxCx) { cy = Math.round(cy * maxCx / cx); cx = maxCx; }
+      const jc = { l: 'left', c: 'center', r: 'right' }[slot(im.x0, im.x1)];
+      body += `<w:p><w:pPr><w:spacing w:before="0" w:after="0"/><w:jc w:val="${jc}"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${id}" name="Imagem ${id}"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${id}" name="hf${id}.png"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
+      return;
+    }
+    const l = it.v;
+    const mk = s => {
+      const hp = Math.max(12, Math.min(72, Math.round((s.size || 10) * 2)));
+      return `<w:rPr>${s.bold ? '<w:b/><w:bCs/>' : ''}<w:sz w:val="${hp}"/><w:szCs w:val="${hp}"/></w:rPr>`;
+    };
+    const segs = l.segs.map(s => ({ s, slot: slot(s.x0, s.x1) }));
+    let pPr = '<w:spacing w:before="0" w:after="0"/>';
+    let runs = '';
+    if (segs.length === 1) {
+      const jc = { l: 'left', c: 'center', r: 'right' }[segs[0].slot];
+      pPr += `<w:jc w:val="${jc}"/>`;
+      runs = pdftoolsRunsXml(segs[0].s.text, mk(segs[0].s));
+    } else {
+      const slots = new Set(segs.map(x => x.slot));
+      let tabs = '';
+      if (slots.has('c')) tabs += `<w:tab w:val="center" w:pos="${Math.round(textWidthTw / 2)}"/>`;
+      if (slots.has('r')) tabs += `<w:tab w:val="right" w:pos="${textWidthTw}"/>`;
+      pPr = `<w:tabs>${tabs}</w:tabs>` + pPr;
+      segs.forEach((x, i) => {
+        if (i > 0) {
+          const prevSlot = segs[i - 1].slot;
+          runs += (prevSlot === x.slot) ? '<w:r><w:t xml:space="preserve"> </w:t></w:r>' : '<w:r><w:tab/></w:r>';
+        } else if (x.slot !== 'l') runs += '<w:r><w:tab/></w:r>';
+        runs += pdftoolsRunsXml(x.s.text, mk(x.s));
+      });
+    }
+    body += `<w:p><w:pPr>${pPr}</w:pPr>${runs}</w:p>`;
+  });
+  if (!body) body = '<w:p/>';
+  const ns = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"';
+  const root = tag === 'header' ? 'hdr' : 'ftr'; // elemento raiz do OOXML: <w:hdr> / <w:ftr>
+  return { xml: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:${root} ${ns}>${body}</w:${root}>`, rels };
+}
+
+async function pdftoolsBuildDocx(paragraphsPerPage, hf) {
   const JSZipLib = await ensureJSZip();
   const zip = new JSZipLib();
+  // [Content_Types].xml e _rels/.rels precisam ser os primeiros do arquivo (ordem de inserção do zip);
+  // os conteúdos reais são gravados mais abaixo, sobre estes marcadores.
+  zip.file('[Content_Types].xml', '');
+  zip.file('_rels/.rels', '');
+  hf = hf || { header: { lines: [], images: [] }, footer: { lines: [], images: [] }, firstEmpty: { h: false, f: false }, pageW: 595.3, pageH: 841.9 };
+
+  const pgWtw = Math.round((hf.pageW || 595.3) * 20), pgHtw = Math.round((hf.pageH || 841.9) * 20);
+  const textWidthTw = Math.max(2000, pgWtw - 2 * PDFTOOLS_DOCX_MARGIN_TW);
+  const idState = { next: 1 };
+  const hasH = hf.header.lines.length || hf.header.images.some(i => i.bytes);
+  const hasF = hf.footer.lines.length || hf.footer.images.some(i => i.bytes);
+  const titlePg = !!((hasH && hf.firstEmpty.h) || (hasF && hf.firstEmpty.f));
+
+  const wordFolder = zip.folder('word');
+  const docRels = [];
+  const ctOverrides = [];
+  let hasPng = false;
+  const addPart = (kind, tag, zone, relId, type, emptyIt) => {
+    const root = tag === 'header' ? 'hdr' : 'ftr';
+    const built = emptyIt ? { xml: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:${root} xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p/></w:${root}>`, rels: [] }
+      : pdftoolsBuildHeaderFooterXml(tag, zone, hf.pageW || 595.3, textWidthTw, idState);
+    const file = kind + relId + '.xml';
+    wordFolder.file(file, built.xml);
+    if (built.rels.length) {
+      hasPng = true;
+      wordFolder.folder('_rels').file(file + '.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${built.rels.map(r => `<Relationship Id="${r.id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${r.name}"/>`).join('')}</Relationships>`);
+      built.rels.forEach(r => wordFolder.folder('media').file(r.name, r.bytes));
+    }
+    ctOverrides.push(`<Override PartName="/word/${file}" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.${tag}+xml"/>`);
+    docRels.push(`<Relationship Id="rId${kind}${relId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/${tag}" Target="${file}"/>`);
+    return `<w:${tag}Reference w:type="${type}" r:id="rId${kind}${relId}"/>`;
+  };
+
+  let refs = '';
+  if (hasH) {
+    refs += addPart('header', 'header', hf.header, 1, 'default', false);
+    if (titlePg) refs += addPart('header', 'header', hf.header, 2, 'first', hf.firstEmpty.h);
+  }
+  if (hasF) {
+    refs += addPart('footer', 'footer', hf.footer, 1, 'default', false);
+    if (titlePg) refs += addPart('footer', 'footer', hf.footer, 2, 'first', hf.firstEmpty.f);
+  }
 
   zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
 <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-<Default Extension="xml" ContentType="application/xml"/>
+<Default Extension="xml" ContentType="application/xml"/>${hasPng ? '\n<Default Extension="png" ContentType="image/png"/>' : ''}
 <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
 <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
 <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
+${ctOverrides.join('\n')}
 </Types>`);
 
   zip.folder('_rels').file('.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -24441,9 +24763,8 @@ async function pdftoolsBuildDocx(paragraphsPerPage) {
   zip.folder('docProps').file('app.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Argo SUAS</Application></Properties>`);
 
-  const wordFolder = zip.folder('word');
   wordFolder.folder('_rels').file('document.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`);
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${docRels.join('')}</Relationships>`);
 
   /* Cada página é uma lista de parágrafos { text, bold, size } — size em
      pontos (aprox. extraído do próprio PDF), convertido aqui para
@@ -24464,21 +24785,83 @@ async function pdftoolsBuildDocx(paragraphsPerPage) {
     }
   });
 
+  const orient = pgWtw > pgHtw ? ' w:orient="landscape"' : '';
   const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${bodyXml}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1417" w:right="1417" w:bottom="1417" w:left="1417"/></w:sectPr></w:body></w:document>`;
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${bodyXml}<w:sectPr>${refs}<w:pgSz w:w="${pgWtw}" w:h="${pgHtw}"${orient}/><w:pgMar w:top="${PDFTOOLS_DOCX_MARGIN_TW}" w:right="${PDFTOOLS_DOCX_MARGIN_TW}" w:bottom="${PDFTOOLS_DOCX_MARGIN_TW}" w:left="${PDFTOOLS_DOCX_MARGIN_TW}" w:header="567" w:footer="567" w:gutter="0"/>${titlePg ? '<w:titlePg/>' : ''}</w:sectPr></w:body></w:document>`;
 
   wordFolder.file('document.xml', documentXml);
 
   return zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 }
 
-/* ---------- PDF → Word ---------- */
+/* Converte os bytes de um PDF em um Blob .docx. Separado da tela para poder ser reutilizado/testado. */
+async function pdftoolsPdfToDocxBlob(bytes, onProgress) {
+  const pdfjsLib = await ensurePdfJs();
+  await ensureJSZip();
+  const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+  const pageInfos = [];
+
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    const view = page.view; // [x0, y0, x1, y1] em pontos
+    const W = view[2] - view[0], H = view[3] - view[1];
+    const info = { W, H, skip: !!page.rotate, lines: [], images: [] };
+    info.lines = pdftoolsExtractLines(content.items, view[0], view[1]);
+    if (!info.skip) {
+      try { info.images = await pdftoolsBandImages(page, pdfjsLib, W, H, view[0], view[1], pdf.numPages === 1 ? 0.08 : 0.12); } catch (e) { info.images = []; }
+    }
+    pageInfos.push(info);
+    if (onProgress) onProgress(i, pdf.numPages);
+  }
+
+  // Cabeçalho e rodapé: o que se repete no topo/rodapé das páginas sai do corpo e vai para o Word como cabeçalho/rodapé reais.
+  const hf = pdftoolsDetectHeaderFooter(pageInfos);
+  if (hf.found) await pdftoolsCropBandImages(pdf, [hf.header, hf.footer], pageInfos);
+  hf.pageW = pageInfos[0] ? pageInfos[0].W : 595.3;
+  hf.pageH = pageInfos[0] ? pageInfos[0].H : 841.9;
+
+  const pagesParagraphs = pageInfos.map(info => {
+    const lines = info.lines.filter(l => !l.hf && l.text);
+    // Descobre o espaçamento típico entre linhas desta página, para
+    // diferenciar "quebra de linha por largura" de "novo parágrafo".
+    const gaps = [];
+    for (let k = 1; k < lines.length; k++) gaps.push(lines[k - 1].y - lines[k].y);
+    const sortedGaps = gaps.filter(g => g > 0).sort((a, b) => a - b);
+    const typicalGap = sortedGaps.length ? sortedGaps[Math.floor(sortedGaps.length / 2)] : 14;
+
+    // Funde linhas com espaçamento normal no mesmo parágrafo; um
+    // espaçamento bem maior vira um parágrafo novo.
+    const paragraphs = [];
+    let currentPara = null;
+    lines.forEach((line, idx) => {
+      const gap = idx > 0 ? lines[idx - 1].y - line.y : 0;
+      const isNewParagraph = !currentPara || gap > typicalGap * 1.6;
+      if (isNewParagraph) {
+        if (currentPara) paragraphs.push(currentPara);
+        currentPara = { text: line.text, bold: line.bold, size: line.size };
+      } else {
+        currentPara.text += ' ' + line.text;
+        currentPara.bold = currentPara.bold && line.bold;
+        currentPara.size = Math.max(currentPara.size, line.size);
+      }
+    });
+    if (currentPara) paragraphs.push(currentPara);
+    return paragraphs;
+  });
+
+  const blob = await pdftoolsBuildDocx(pagesParagraphs, hf);
+  return { blob, hasHeader: !!(hf.header.lines.length || hf.header.images.some(i => i.bytes)), hasFooter: !!(hf.footer.lines.length || hf.footer.images.some(i => i.bytes)) };
+}
+
 /* Em vez de criar um parágrafo por linha física do PDF (o que deixava o
    Word cheio de quebras artificiais), agrupamos as linhas em parágrafos
    de verdade: uma nova linha só vira um novo parágrafo quando o espaço
    vertical até a linha anterior é bem maior que o espaçamento normal
    entre linhas da página (ou seja, uma quebra real de parágrafo/título),
-   e o tamanho/negrito da fonte é preservado a partir do próprio PDF. */
+   e o tamanho/negrito da fonte é preservado a partir do próprio PDF.
+   O que se repete no topo e no rodapé das páginas (nome da instituição,
+   logotipo, "Página X de Y"…) vira cabeçalho e rodapé do Word. */
 async function pdftoolsRunPdfToWord(file, inputEl) {
   if (!file) return;
   if (!pdftoolsCheckSingleFileSize(file, 'pdftoolsPdfWordStatus', inputEl)) return;
@@ -24486,71 +24869,15 @@ async function pdftoolsRunPdfToWord(file, inputEl) {
   pdftoolsSetStatus('pdftoolsPdfWordStatus', 'Carregando bibliotecas...', 'info');
   pdftoolsSetProgress('PdfWord', 0, 0);
   try {
-    const pdfjsLib = await ensurePdfJs();
-    await ensureJSZip();
     const bytes = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
-    const pagesParagraphs = [];
-
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-
-      // 1) Agrupa os itens de texto em linhas físicas, por posição vertical.
-      const rawLines = [];
-      let currentLine = null;
-      content.items.forEach(item => {
-        if (!item.str) return;
-        const y = item.transform[5];
-        const fontHeight = Math.abs(item.transform[3]) || Math.abs(item.transform[0]) || 10;
-        const isBold = /bold/i.test(item.fontName || '');
-        if (currentLine && Math.abs(y - currentLine.y) <= fontHeight * 0.4) {
-          currentLine.parts.push({ text: item.str, bold: isBold, size: fontHeight });
-          currentLine.y = (currentLine.y + y) / 2;
-        } else {
-          if (currentLine) rawLines.push(currentLine);
-          currentLine = { y, parts: [{ text: item.str, bold: isBold, size: fontHeight }] };
-        }
-      });
-      if (currentLine) rawLines.push(currentLine);
-
-      // 2) Descobre o espaçamento típico entre linhas desta página, para
-      //    diferenciar "quebra de linha por largura" de "novo parágrafo".
-      const gaps = [];
-      for (let k = 1; k < rawLines.length; k++) gaps.push(rawLines[k - 1].y - rawLines[k].y);
-      const sortedGaps = gaps.filter(g => g > 0).sort((a, b) => a - b);
-      const typicalGap = sortedGaps.length ? sortedGaps[Math.floor(sortedGaps.length / 2)] : 14;
-
-      // 3) Funde linhas com espaçamento normal no mesmo parágrafo; um
-      //    espaçamento bem maior vira um parágrafo novo.
-      const paragraphs = [];
-      let currentPara = null;
-      rawLines.forEach((line, idx) => {
-        const text = line.parts.map(p => p.text).join(' ').replace(/\s+/g, ' ').trim();
-        if (!text) { if (currentPara) { paragraphs.push(currentPara); currentPara = null; } return; }
-        const avgSize = line.parts.reduce((s, p) => s + p.size, 0) / line.parts.length;
-        const isBoldLine = line.parts.every(p => p.bold);
-        const gap = idx > 0 ? rawLines[idx - 1].y - line.y : 0;
-        const isNewParagraph = !currentPara || gap > typicalGap * 1.6;
-        if (isNewParagraph) {
-          if (currentPara) paragraphs.push(currentPara);
-          currentPara = { text, bold: isBoldLine, size: avgSize };
-        } else {
-          currentPara.text += ' ' + text;
-          currentPara.bold = currentPara.bold && isBoldLine;
-          currentPara.size = Math.max(currentPara.size, avgSize);
-        }
-      });
-      if (currentPara) paragraphs.push(currentPara);
-
-      pagesParagraphs.push(paragraphs);
-      pdftoolsSetProgress('PdfWord', i, pdf.numPages);
-      pdftoolsSetStatus('pdftoolsPdfWordStatus', `Extraindo texto (${i}/${pdf.numPages})...`, 'info');
-    }
-
-    const blob = await pdftoolsBuildDocx(pagesParagraphs);
-    pdftoolsDownloadBlob(blob, (file.name.replace(/\.pdf$/i, '') || 'documento') + '.docx');
-    pdftoolsSetStatus('pdftoolsPdfWordStatus', 'Documento Word gerado, com parágrafos, títulos e negrito preservados! (baseado no texto — layouts muito complexos podem mudar)', 'success');
+    const res = await pdftoolsPdfToDocxBlob(bytes, (i, n) => {
+      pdftoolsSetProgress('PdfWord', i, n);
+      pdftoolsSetStatus('pdftoolsPdfWordStatus', `Extraindo texto (${i}/${n})...`, 'info');
+    });
+    pdftoolsDownloadBlob(res.blob, (file.name.replace(/\.pdf$/i, '') || 'documento') + '.docx');
+    const hfMsg = res.hasHeader && res.hasFooter ? 'cabeçalho, rodapé, '
+      : res.hasHeader ? 'cabeçalho, ' : res.hasFooter ? 'rodapé, ' : '';
+    pdftoolsSetStatus('pdftoolsPdfWordStatus', `Documento Word gerado, com ${hfMsg}parágrafos, títulos e negrito preservados! (baseado no texto — layouts muito complexos podem mudar)`, 'success');
   } catch (e) {
     pdftoolsSetStatus('pdftoolsPdfWordStatus', 'Não foi possível converter este PDF.', 'error');
   } finally {
