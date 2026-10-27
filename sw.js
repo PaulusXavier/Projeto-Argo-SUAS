@@ -1,7 +1,7 @@
 // Este número é substituído automaticamente em cada build/deploy (scripts/build.mjs),
 // e é essa mudança de versão que dispara a atualização nos aparelhos. Só precisa
 // trocar à mão se for publicar a pasta SEM passar pelo build.
-const CACHE_VERSION = 'v196';
+const CACHE_VERSION = 'v197';
 const CACHE_NAME = `rede-apoio-bv-${CACHE_VERSION}`;
 
 // Cache separado e SEM número de versão, para conteúdo pesado de fora do
@@ -45,6 +45,7 @@ const ASSETS = [
   './assets/img/icon-app-toth.png',
   './assets/img/icon-app-umbrela.png',
   './assets/img/icon-app-anona.png',
+  './assets/img/icon-app-verbus.png',
   './assets/img/icon-app-notas.png',
   './assets/img/icon-app-vita.png',
   // Páginas de apoio abertas pela aba "Registro de Atendimento (CRAS)":
