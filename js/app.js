@@ -11408,6 +11408,18 @@ const EXTERNAL_APPS = [
     accentBg: 'rgba(217, 119, 6, 0.12)'
   },
   {
+    name: 'Verbus — Editor de Documentos',
+    img: 'assets/img/icon-app-verbus.png',
+    desc: 'Editor de documentos com páginas no estilo do Word, modelos prontos (como o Relatório Informativo do CRAS) e corretor ortográfico em português.',
+    url: 'https://paulusxavier.github.io/Verbus/',
+    icon: 'pen',
+    tag: 'Documentos',
+    cat: 'atend',
+    feats: ['Modelos de relatório', 'Corretor em português'],
+    accent: '#6D4AE0',
+    accentBg: 'rgba(109, 74, 224, 0.12)'
+  },
+  {
     name: 'Bloco de Notas',
     img: 'assets/img/icon-app-notas.png',
     desc: 'Bloco de notas pessoal e genérico (sem ligação com nenhum caso), sincronizado por conta e acessível em qualquer aparelho. Para anotações por caso ou atendimento, use a aba "Minhas Anotações" deste app.',
@@ -16977,7 +16989,7 @@ const NAV_QUICK_META = {
   mapa:     { title: 'Mapa dos Equipamentos', sub: 'Rede em Boa Vista' },
   tradutor: { title: 'Tradutor',              sub: 'Es · En · Fr' },
   pdftools: { title: 'Central de PDF',         sub: 'Unir, dividir, converter' },
-  appsext:  { title: 'Aplicativos',           sub: 'Toth, Umbrela, Anona…' },
+  appsext:  { title: 'Aplicativos',           sub: 'Toth, Umbrela, Verbus…' },
   noticias: { title: 'Notícias',              sub: 'MDS, MEC e Saúde' }
 };
 
@@ -17746,8 +17758,8 @@ const ARGO_ASSISTANT_INTENTS = [
     action: { label: 'Abrir CRAS', run: () => argoAssistantGoTo('cras'), reply: 'Abri o painel do CRAS.', mood: 'success' }
   },
   {
-    keys: ['toth', 'umbrela', 'anona', 'vita', 'outros aplicativos', 'outros apps', 'bloco de notas'],
-    reply: 'Na aba "Aplicativos" ficam os atalhos para os outros apps do autor (Toth, Umbrela, Anona e Bloco de Notas) e para o site Vita. Cada um tem login e sincronização próprios.',
+    keys: ['toth', 'umbrela', 'anona', 'verbus', 'vita', 'outros aplicativos', 'outros apps', 'bloco de notas'],
+    reply: 'Na aba "Aplicativos" ficam os atalhos para os outros apps do autor (Toth, Umbrela, Anona, Verbus e Bloco de Notas) e para o site Vita. Cada um tem login e sincronização próprios.',
     action: { label: 'Abrir Aplicativos', run: () => argoAssistantGoTo('appsext'), reply: 'Abri a aba de Aplicativos.', mood: 'success' }
   },
   {
