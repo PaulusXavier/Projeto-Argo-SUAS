@@ -2244,6 +2244,20 @@
     box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.18);
   }
 
+  .pdftools-protect-extra {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 1.1rem;
+    margin-top: 0.55rem;
+    font-size: 0.84rem;
+  }
+
+  .pdftools-protect-strength { font-weight: 700; font-size: 0.8rem; }
+  .pdftools-protect-strength[data-level="fraca"] { color: #B91C1C; }
+  .pdftools-protect-strength[data-level="média"] { color: #B45309; }
+  .pdftools-protect-strength[data-level="forte"] { color: #15803D; }
+
   .pdftools-chips {
     display: flex;
     flex-wrap: wrap;
@@ -7732,3 +7746,108 @@ body.hero-gone .controls-mini { max-height: 48px; opacity: 1; visibility: visibl
   body.hero-gone .controls-mini { margin-bottom: 0.45rem; }
 }
 @media (prefers-reduced-motion: reduce) { .controls-mini { transition: none; } }
+
+
+/* ===================== Cabeçalho — acabamento v3 =====================
+   Mais baixo (as ferramentas aparecem sem rolar), texto com mais contraste
+   (a foto do navio some atrás do texto e fica forte só à direita), números em
+   faixa compacta e emblema sem brigar com o "ARGO NAVIS" da foto.
+   Fica no fim do arquivo de propósito: vale sobre as regras anteriores. */
+header.hero {
+  min-height: 0;
+  padding: 2.1rem 0 1.9rem;
+  border-bottom: 0;
+}
+header.hero .hero-ship-photo {
+  opacity: 0.34;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.15) 38%, #000 78%);
+  mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.15) 38%, #000 78%);
+}
+header.hero .hero-eyebrow {
+  margin-bottom: 0.9rem;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.7rem;
+  background: rgba(5, 31, 26, 0.35);
+}
+header.hero h1 { font-size: clamp(2.5rem, 5.4vw, 3.5rem); }
+header.hero .brand-sub { margin-top: 0.35rem; font-size: 0.9rem; letter-spacing: 0.14em; }
+header.hero .hero-today { margin-top: 0.85rem; }
+header.hero .hero-lead {
+  margin-top: 1rem;
+  max-width: 600px;
+  font-size: 1.02rem;
+  line-height: 1.55;
+  color: #E6F1EE;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.35);
+}
+header.hero .argo-emblem {
+  width: 156px;
+  height: 156px;
+  right: 5%;
+  box-shadow:
+    0 0 70px 38px rgba(5, 31, 26, 0.62),
+    0 14px 30px -10px rgba(0, 0, 0, 0.6),
+    0 0 0 6px rgba(232, 172, 61, 0.14),
+    0 0 0 13px rgba(232, 172, 61, 0.06);
+}
+
+/* Números: faixa de vidro compacta, valor e rótulo lado a lado */
+header.hero .hero-stats {
+  margin-top: 1.25rem;
+  max-width: 940px;
+  gap: 0.6rem;
+}
+header.hero .hero-stat {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.7rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 12px;
+}
+header.hero .hero-stat::before { height: 2px; }
+header.hero .hero-stat:hover { transform: none; }
+header.hero .hero-stat-metric .hero-stat-value { font-size: 1.75rem; line-height: 1; }
+header.hero .hero-stat-unit .hero-stat-value { font-size: 1.25rem; line-height: 1; }
+header.hero .hero-stat-label { font-size: 0.66rem; line-height: 1.25; }
+
+/* Faixa da bandeira com um fio dourado em cima, no lugar da borda grossa */
+.flag-stripe { box-shadow: 0 -2px 0 var(--hero-gold, #E8AC3D); }
+
+@media (max-width: 900px) {
+  header.hero { padding: 1.7rem 0 1.5rem; }
+  header.hero .hero-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  header.hero { padding: 1.1rem 0 1rem; }
+  header.hero .hero-ship-photo {
+    opacity: 0.3;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.25) 45%, #000 100%);
+    mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.25) 45%, #000 100%);
+  }
+  /* Selo do SUAS em uma linha só, sem caixa */
+  header.hero .hero-eyebrow {
+    padding: 0; border: 0; background: none;
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+    font-size: 0.64rem; letter-spacing: 0.1em; margin-bottom: 0.55rem;
+  }
+  header.hero h1 { font-size: 2.4rem; }
+  header.hero .brand-sub { font-size: 0.72rem; letter-spacing: 0.1em; }
+  /* No celular a frase vai só até o ponto (sem reticências no meio) */
+  header.hero .hero-lead {
+    display: block; -webkit-line-clamp: unset; overflow: visible;
+    font-size: 0.92rem; margin-top: 0.7rem;
+  }
+  header.hero .hero-lead .lead-more { display: none; }
+  /* Números: faixa rolável, com a borda direita esmaecida para indicar que há mais */
+  header.hero .hero-stats {
+    -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent 100%);
+    mask-image: linear-gradient(90deg, #000 88%, transparent 100%);
+    margin-top: 0.85rem;
+  }
+  header.hero .hero-stat { padding: 0.5rem 0.7rem; gap: 0.55rem; min-width: 0; max-width: none; }
+  header.hero .hero-stat-metric .hero-stat-value { font-size: 1.4rem; }
+  header.hero .hero-stat-unit .hero-stat-value { font-size: 1.05rem; }
+  header.hero .hero-stat-label { font-size: 0.62rem; white-space: nowrap; }
+}
