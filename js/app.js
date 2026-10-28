@@ -10768,6 +10768,7 @@ function renderPdfToolsCard() {
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolRemove')">Excluir</button>
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolRotate')">Girar</button>
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolNumber')">Numerar</button>
+          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolProtect')">Senha</button>
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolMark')">Marca d'água</button>
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolMeta')">Dados ocultos</button>
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolText')">Texto</button>
@@ -10946,8 +10947,9 @@ ${extra.rotate}
 ${extra.number}
         </div>
 
-        <div class="pdftools-section-title">${ICONS.filebinary}<span>Outras ferramentas</span><small>marca d'água, dados ocultos, texto e tamanho</small></div>
+        <div class="pdftools-section-title">${ICONS.filebinary}<span>Outras ferramentas</span><small>senha, marca d'água, dados ocultos, texto e tamanho</small></div>
         <div class="pdftools-grid" style="margin-bottom:1.4rem;">
+${extra.protect}
 ${extra.mark}
 ${extra.meta}
 ${extra.text}
@@ -11188,6 +11190,38 @@ function pdftoolsExtraToolsHtml() {
               <div class="pdftools-chips" role="group" aria-label="Atalhos de páginas"><button type="button" class="pdftools-chip" onclick="pdftoolsSetRange('pdftoolsRemoveRange', 'ímpares')">Ímpares</button><button type="button" class="pdftools-chip" onclick="pdftoolsSetRange('pdftoolsRemoveRange', 'pares')">Pares</button><button type="button" class="pdftools-chip" onclick="pdftoolsSetRange('pdftoolsRemoveRange', 'primeira')">Primeira</button><button type="button" class="pdftools-chip" onclick="pdftoolsSetRange('pdftoolsRemoveRange', 'última')">Última</button></div>
             </div>
             ${tail('Remove', ICONS.filebinary + ' Excluir e baixar', 'pdftoolsRunRemove')}
+          </div>
+`,
+    protect: `
+          <div class="pdftools-tool" id="pdftoolsToolProtect">
+            <div class="pdftools-tool-header">
+              <span class="pdftools-tool-icon">${ICONS.filebinary}</span>
+              <div>
+                <div class="pdftools-tool-title">Proteger com senha</div>
+                <div class="pdftools-tool-limit">Um PDF · até 60 MB</div>
+              </div>
+            </div>
+            <p class="pdftools-tool-desc">Coloca uma senha no PDF: quem não souber a senha não consegue abrir o arquivo (criptografia AES 128 bits). Tudo é feito no seu aparelho. <strong>Anote a senha:</strong> se for esquecida, não há como recuperar o arquivo. Atenção: PDFs que já têm senha precisam ser abertos sem ela antes.</p>
+            ${drop('Protect', 'pdftoolsProtectInput', 'Escolher um PDF', 'para colocar senha')}
+            <div class="pdftools-opts pdftools-opts-row">
+              <label class="pdftools-opt-label">Senha para abrir
+                <input type="password" id="pdftoolsProtectPass" class="tools-input" autocomplete="new-password" maxlength="64" aria-describedby="pdftoolsProtectStrength" oninput="pdftoolsProtectStrength()" onkeydown="if(event.key==='Enter'){event.preventDefault();pdftoolsRunProtect();}">
+              </label>
+              <label class="pdftools-opt-label">Repita a senha
+                <input type="password" id="pdftoolsProtectPass2" class="tools-input" autocomplete="new-password" maxlength="64" onkeydown="if(event.key==='Enter'){event.preventDefault();pdftoolsRunProtect();}">
+              </label>
+            </div>
+            <div class="pdftools-protect-extra">
+              <label class="pdfedit-check"><input type="checkbox" onchange="pdftoolsProtectToggleShow(this.checked)"> Mostrar a senha</label>
+              <span id="pdftoolsProtectStrength" class="pdftools-protect-strength" aria-live="polite"></span>
+            </div>
+            <div class="pdftools-protect-extra" role="group" aria-label="O que quem abrir o PDF poderá fazer">
+              <label class="pdfedit-check"><input type="checkbox" id="pdftoolsProtectPrint" checked> Permitir imprimir</label>
+              <label class="pdfedit-check"><input type="checkbox" id="pdftoolsProtectCopy" checked> Permitir copiar texto</label>
+              <label class="pdfedit-check"><input type="checkbox" id="pdftoolsProtectEdit"> Permitir editar</label>
+            </div>
+            <p class="pdftools-tool-desc" style="margin-top:.4rem;"><small>Imprimir, copiar e editar são restrições que os leitores de PDF costumam respeitar, mas a proteção que realmente vale é a senha para abrir.</small></p>
+            ${tail('Protect', ICONS.filebinary + ' Proteger e baixar', 'pdftoolsRunProtect')}
           </div>
 `,
     mark: `
@@ -21914,6 +21948,21 @@ async function ensurePdfJs() {
   }
   return window.pdfjsLib;
 }
+// Biblioteca com suporte a criptografia (fork da pdf-lib), guardada no próprio
+// app (assets/vendor/) para funcionar offline. Ela define a variável global
+// PDFLib, então é carregada à parte e a PDFLib "normal" é devolvida ao lugar,
+// para não mexer nas demais ferramentas.
+async function ensurePdfLibEncrypt() {
+  if (window.__pdfLibEnc) return window.__pdfLibEnc;
+  const anterior = window.PDFLib;
+  try {
+    await pdftoolsLoadScript('assets/vendor/pdf-lib-plus-encrypt.min.js');
+    window.__pdfLibEnc = window.PDFLib;
+  } finally {
+    if (anterior) window.PDFLib = anterior;
+  }
+  return window.__pdfLibEnc;
+}
 async function ensureJSZip() {
   if (!window.JSZip) await pdftoolsLoadScript(PDFTOOLS_CDN.jszip);
   return window.JSZip;
@@ -21967,7 +22016,7 @@ function pdftoolsHandleDrop(event, kind) {
   if (kind === 'wordpdf') { pdftoolsRunWordToPdf(files[0]); return; }
   if (kind === 'pdfjpg') { pdftoolsRunPdfToJpg(files[0]); return; }
   if (kind === 'Edit') { pdftoolsEditPick(files[0]); return; }
-  if (['Split', 'Compress', 'Number', 'Rotate', 'Remove', 'Mark', 'Meta', 'Text'].includes(kind)) { pdftoolsExtraPick(kind, files[0]); return; }
+  if (['Split', 'Compress', 'Number', 'Rotate', 'Remove', 'Mark', 'Meta', 'Text', 'Protect'].includes(kind)) { pdftoolsExtraPick(kind, files[0]); return; }
 }
 
 // Limite para os conversores de um arquivo só (PDF→Word, Word→PDF, PDF→JPG):
@@ -22906,7 +22955,7 @@ async function pdftoolsRunPdfToJpg(file, inputEl) {
 
 
 /* ---------- Dividir / reduzir / numerar (um PDF por vez) ---------- */
-const pdftoolsExtra = { Split: null, Compress: null, Number: null, Rotate: null, Remove: null, Mark: null, Meta: null, Text: null, busy: false };
+const pdftoolsExtra = { Split: null, Compress: null, Number: null, Rotate: null, Remove: null, Mark: null, Meta: null, Text: null, Protect: null, busy: false };
 
 function pdftoolsExtraSetBusy(kind, busy) {
   pdftoolsExtra.busy = busy;
@@ -23052,6 +23101,7 @@ function pdftoolsExtraClear(kind) {
   if (info) info.textContent = '';
   pdftoolsSetStatus('pdftools' + kind + 'Status', '', 'info');
   pdftoolsSetProgress(kind, 0, 0);
+  if (kind === 'Protect') pdftoolsProtectResetFields();
 }
 
 function pdftoolsBaseName(file) { return file.name.replace(/\.pdf$/i, '') || 'documento'; }
@@ -23301,6 +23351,86 @@ async function pdftoolsRunMark() {
     pdftoolsSetStatus(id, 'Não foi possível aplicar a marca d\'água. Use apenas letras, números e acentos comuns.', 'error');
   } finally {
     pdftoolsExtraSetBusy('Mark', false);
+  }
+}
+
+/* ---------- Proteger PDF com senha ---------- */
+function pdftoolsProtectResetFields() {
+  ['pdftoolsProtectPass', 'pdftoolsProtectPass2'].forEach(fid => { const el = document.getElementById(fid); if (el) el.value = ''; });
+  pdftoolsProtectStrength();
+}
+
+function pdftoolsProtectToggleShow(show) {
+  ['pdftoolsProtectPass', 'pdftoolsProtectPass2'].forEach(fid => { const el = document.getElementById(fid); if (el) el.type = show ? 'text' : 'password'; });
+}
+
+function pdftoolsProtectStrength() {
+  const el = document.getElementById('pdftoolsProtectStrength');
+  const pw = (document.getElementById('pdftoolsProtectPass') || {}).value || '';
+  if (!el) return;
+  if (!pw) { el.textContent = ''; el.dataset.level = ''; return; }
+  let pts = 0;
+  if (pw.length >= 8) pts++;
+  if (pw.length >= 12) pts++;
+  if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) pts++;
+  if (/\d/.test(pw)) pts++;
+  if (/[^A-Za-z0-9]/.test(pw)) pts++;
+  const level = pts <= 1 ? 'fraca' : pts <= 3 ? 'média' : 'forte';
+  el.dataset.level = level;
+  el.textContent = 'Senha ' + level + (level === 'fraca' ? ' (use 8 ou mais caracteres, com letras e números)' : '');
+}
+
+// Senha aleatória do "dono" do PDF: sem ela, ninguém consegue tirar as restrições
+// de imprimir/copiar/editar. Não é mostrada nem guardada em lugar nenhum.
+function pdftoolsProtectRandomOwner() {
+  const a = new Uint8Array(24);
+  crypto.getRandomValues(a);
+  return Array.from(a, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function pdftoolsRunProtect() {
+  const st = pdftoolsExtra.Protect;
+  if (!st || pdftoolsExtra.busy) return;
+  const id = 'pdftoolsProtectStatus';
+  const pw = document.getElementById('pdftoolsProtectPass').value;
+  const pw2 = document.getElementById('pdftoolsProtectPass2').value;
+  if (!pw) { pdftoolsSetStatus(id, 'Digite a senha que o PDF vai pedir para abrir.', 'error'); return; }
+  if (pw.length < 4) { pdftoolsSetStatus(id, 'Use uma senha com pelo menos 4 caracteres.', 'error'); return; }
+  if (pw !== pw2) { pdftoolsSetStatus(id, 'As duas senhas não são iguais. Digite de novo.', 'error'); return; }
+  // Letras acentuadas na senha são lidas de formas diferentes conforme o leitor de PDF
+  // (Acrobat, Chrome, celulares), e o arquivo poderia não abrir em algum deles.
+  if (/[^\u0020-\u007E]/.test(pw)) { pdftoolsSetStatus(id, 'Use na senha só letras sem acento, números e símbolos comuns (ex.: Familia2026). Acentos e emojis podem impedir o PDF de abrir em alguns leitores.', 'error'); return; }
+  const canPrint = document.getElementById('pdftoolsProtectPrint').checked;
+  const canCopy = document.getElementById('pdftoolsProtectCopy').checked;
+  const canEdit = document.getElementById('pdftoolsProtectEdit').checked;
+  pdftoolsExtraSetBusy('Protect', true);
+  pdftoolsSetStatus(id, 'Protegendo o PDF...', 'info');
+  try {
+    const PDFLib = await ensurePdfLibEncrypt();
+    const doc = await PDFLib.PDFDocument.load(st.bytes);
+    // Versão 1.7 do PDF = criptografia AES de 128 bits, aceita por todos os leitores.
+    doc.context.header = PDFLib.PDFHeader.forVersion(1, 7);
+    await doc.encrypt({
+      userPassword: pw,
+      ownerPassword: pdftoolsProtectRandomOwner(),
+      permissions: {
+        printing: canPrint ? 'highResolution' : false,
+        copying: canCopy,
+        modifying: canEdit,
+        annotating: canEdit,
+        fillingForms: canEdit,
+        contentAccessibility: true,
+        documentAssembly: canEdit
+      }
+    });
+    const out = new Blob([await doc.save()], { type: 'application/pdf' });
+    pdftoolsDownloadBlob(out, pdftoolsBaseName(st.file) + '-protegido.pdf');
+    pdftoolsSetStatus(id, 'PDF protegido com senha · ' + pdftoolsFormatBytes(out.size) + '. Guarde a senha: sem ela o arquivo não abre.', 'success');
+    pdftoolsProtectResetFields();
+  } catch (e) {
+    pdftoolsSetStatus(id, 'Não foi possível proteger este PDF. Se ele já tem senha, abra-o sem senha antes; a biblioteca de criptografia também precisa ter sido carregada (internet na primeira vez).', 'error');
+  } finally {
+    pdftoolsExtraSetBusy('Protect', false);
   }
 }
 
