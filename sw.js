@@ -33,7 +33,7 @@ const ASSETS = [
   './assets/cid11.json',
   './assets/municipios-rr.json',
   './assets/coordenadas.json',
-  './assets/vendor/pdf-lib-plus-encrypt.min.js',
+  './assets/vendor/pdflibcrypt.js',
   './assets/vendor/zip-aes.js',
   './manifest.json',
   './favicon.ico',
