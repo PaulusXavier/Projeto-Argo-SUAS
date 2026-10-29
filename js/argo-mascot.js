@@ -896,6 +896,15 @@
       '.argo-assistant-panel.argo-assistant-wide{width:min(820px,calc(100vw - 32px));height:min(90vh,900px)}' +
       '.argo-assistant-field{position:relative;flex:1;min-width:0;display:flex}.argo-assistant-count{position:absolute;right:10px;bottom:-1px;font-size:10px;color:var(--text-muted,#A7B7CC);background:var(--bg-card,#151F35);padding:0 3px}' +
       '.argo-assistant-send.is-stop{background:#DC2626}' +
+      // Voz: botão do microfone (ao lado de enviar) e alternador de leitura em voz alta (no cabeçalho)
+      '.argo-assistant-voice-btn{flex:0 0 auto;width:42px;height:42px;border-radius:50%;border:1px solid rgba(127,127,127,.4);background:transparent;color:inherit;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation}' +
+      '.argo-assistant-voice-btn:hover{background:rgba(127,127,127,.14)}' +
+      '.argo-assistant-voice-btn.is-listening{background:#DC2626;border-color:#DC2626;color:#fff;animation:argoAssistantMic 1.2s ease-in-out infinite}' +
+      '@keyframes argoAssistantMic{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.45)}50%{box-shadow:0 0 0 7px rgba(220,38,38,0)}}' +
+      '.argo-assistant-voice-btn[hidden],#argoAssistantSpeak[hidden]{display:none!important}' +
+      '#argoAssistantSpeak[aria-pressed="true"]{opacity:1;background:rgba(0,145,194,.2);color:var(--brand-primary,var(--argo-mascot-info,#0091C2))}' +
+      '.argo-assistant-voice-btn:focus-visible{outline:3px solid var(--brand-primary,#0091C2);outline-offset:2px}' +
+      '@media (prefers-reduced-motion:reduce){.argo-assistant-voice-btn.is-listening{animation:none}}' +
       '.argo-assistant-chip-ask{border-style:dotted}' +
       '.argo-assistant-msg-bot .argo-assistant-bubble{background:rgba(127,127,127,.14);border-bottom-left-radius:4px}' +
       '.argo-assistant-msg-user .argo-assistant-bubble{background:var(--brand-primary,var(--argo-mascot-info,#0091C2));color:#fff;border-bottom-right-radius:4px}' +
@@ -1160,6 +1169,58 @@
     return String(text == null ? '' : text).replace(/\*\*/g, '').replace(/^\s*[-•]\s+/gm, '• ').trim();
   }
 
+  // ---------------------------------------------------------------------
+  // VOZ — texto "falável" e trechos curtos (funções puras, testáveis sem navegador).
+  // O leitor de voz do navegador tropeça em marcação, links, emojis, "art." e telefone com hífen
+  // ("3623-1234" vira "3623 menos 1234"). Aqui o texto é limpo antes de falar.
+  // ---------------------------------------------------------------------
+  var VOZ_MAX_CHARS = 1500;   // resposta longa é cortada no fim de uma frase; o texto inteiro continua na tela
+  function falavel(text) {
+    var t = String(text == null ? '' : text).replace(/\r/g, '')
+      .replace(/\[([^\]]+)\]\(https?:\/\/[^)]*\)/gi, '$1')
+      .replace(/https?:\/\/\S+/gi, '')
+      .replace(/\*\*|__|`/g, '')
+      .replace(/^\s{0,3}#{1,6}\s+/gm, '')
+      .replace(/^\s*>\s?/gm, '')
+      .replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF\u2B00-\u2BFF\uFE0F\u200D]/g, '')
+      .replace(/\barts\.\s*/gi, 'artigos ').replace(/\bart\.\s*/gi, 'artigo ')
+      .replace(/\binc\.\s*/gi, 'inciso ').replace(/§§?\s*/g, 'parágrafo ')
+      .replace(/\bn[º°]\s*(?=\d)/gi, 'número ')
+      .replace(/(\d)\s*[-–]\s*(?=\d)/g, '$1 ');
+    var linhas = [];
+    t.split('\n').forEach(function (ln) {
+      ln = ln.replace(/^\s*(?:[-•]\s+|\d{1,2}[.)]\s+)/, '').replace(/\s+/g, ' ').trim();
+      if (!ln) return;
+      linhas.push(/[.!?:;]$/.test(ln) ? ln : ln + '.');
+    });
+    t = linhas.join(' ').trim();
+    if (t.length > VOZ_MAX_CHARS) {
+      var corte = t.slice(0, VOZ_MAX_CHARS);
+      var fim = Math.max(corte.lastIndexOf('. '), corte.lastIndexOf('! '), corte.lastIndexOf('? '));
+      t = (fim > 200 ? corte.slice(0, fim + 1) : corte).trim();
+    }
+    return t;
+  }
+  // Frases juntadas até ~max caracteres: o Chrome corta falas longas (~15 s) se vierem num bloco só.
+  function partesDeFala(text, max) {
+    max = max || 220;
+    var frases = String(text == null ? '' : text).match(/[\s\S]+?(?:[.!?]+(?=\s|$)|$)/g) || [];
+    var out = [], atual = '';
+    function empurra(x) { x = x.trim(); if (x) out.push(x); }
+    frases.forEach(function (f) {
+      f = f.replace(/\s+/g, ' ');
+      while (f.length > max) {                       // frase gigante: quebra na vírgula ou no espaço mais perto do limite
+        var cut = Math.max(f.lastIndexOf(', ', max), f.lastIndexOf(' ', max));
+        if (cut < max / 2) cut = max;
+        if (atual) { empurra(atual); atual = ''; }
+        empurra(f.slice(0, cut + 1)); f = f.slice(cut + 1);
+      }
+      if ((atual + f).length > max) { empurra(atual); atual = f; } else atual += f;
+    });
+    empurra(atual);
+    return out;
+  }
+
   function mountAssistant(options) {
     if (assistantController) return assistantController;
     if (typeof document === 'undefined') return null;
@@ -1187,6 +1248,8 @@
           '<button type="button" class="argo-assistant-mascot-btn" id="argoAssistantMascot" aria-label="Ampliar ou reduzir o painel" title="Clique no Argo para ampliar">' + boatSVG('info', 48) + '</button>' +
           '<div class="argo-assistant-head-text"><strong id="argoAssistantTitle">Argo</strong>' +
             '<span id="argoAssistantStatus"><i class="argo-assistant-led" aria-hidden="true"></i><em>seu guia a bordo do Argo SUAS</em></span></div>' +
+          '<button type="button" class="argo-assistant-tool" id="argoAssistantSpeak" aria-pressed="false" aria-label="Ler as respostas em voz alta (desligado)" title="Ler as respostas em voz alta" hidden>' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg></button>' +
           '<button type="button" class="argo-assistant-tool" id="argoAssistantNew" aria-label="Nova conversa" title="Nova conversa">' +
             '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 10 9 10"/></svg></button>' +
           '<button type="button" class="argo-assistant-tool argo-assistant-wide-btn" id="argoAssistantWide" aria-label="Ampliar painel" aria-pressed="false" title="Ampliar">' +
@@ -1202,6 +1265,8 @@
             '<textarea id="argoAssistantInput" class="argo-assistant-input" rows="1" maxlength="500" placeholder="Pergunte alguma coisa..." autocomplete="off" enterkeyhint="send"></textarea>' +
             '<span class="argo-assistant-count" id="argoAssistantCount" hidden></span>' +
           '</div>' +
+          '<button type="button" class="argo-assistant-voice-btn" id="argoAssistantMic" aria-pressed="false" aria-label="Falar a pergunta" title="Falar a pergunta" hidden>' +
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="22"/></svg></button>' +
           '<button type="submit" class="argo-assistant-send" id="argoAssistantSend" aria-label="Enviar pergunta">' + svgSend + '</button>' +
         '</form>' +
       '</div>';
@@ -1388,6 +1453,13 @@
         b.col.appendChild(wrap);
       }
       var acts = document.createElement('div'); acts.className = 'argo-assistant-msg-actions';
+      if (synth && plain && plain.length > 30) {
+        acts.appendChild(tinyBtn('🔊 Ouvir', 'argo-assistant-mini-ghost', function (ev) {
+          var bt = ev.currentTarget;
+          if (speakingBtn === bt) { voiceCancelSpeech(); return; }
+          voiceSpeak(plain, true, bt);
+        }));
+      }
       if (plain && plain.length > 60 && !result.crisis) acts.appendChild(tinyBtn('Copiar', 'argo-assistant-mini-ghost', function (ev) { copyText(plain, ev.currentTarget); }));
       if (result.badge === 'IA') {
         acts.appendChild(tinyBtn('Refazer', 'argo-assistant-mini-ghost', function () { if (!busy && lastQuestion) ask(lastQuestion, { regen: true, silent: true }); }));
@@ -1478,7 +1550,7 @@
         else { var m = pendingMood || 'info'; pendingMood = null; reactMood(m); }
       }
       busy = on;
-      if (!on) { clearTimeout(phaseT); mascotBtnEl().classList.remove('argo-assistant-talking'); fab.classList.remove('argo-assistant-talking'); refreshStatus(); }
+      if (!on) { clearTimeout(phaseT); if (!voiceSpeaking) { mascotBtnEl().classList.remove('argo-assistant-talking'); fab.classList.remove('argo-assistant-talking'); } refreshStatus(); }
       fab.classList.toggle('argo-assistant-busy', on);
       sendBtn.innerHTML = on ? svgStop : svgSend;
       sendBtn.classList.toggle('is-stop', on);
@@ -1495,6 +1567,7 @@
         decorate(b, result, plainText(result.reply));
         renderQuick(quickFor(result));
         announce(result.reply);
+        voiceSpeak(plainText(result.reply));
         // Pedido explícito (ex.: "abre a agenda"): o app já devolve a ação pronta e o mascote a executa na hora.
         if (typeof result.autoRun === 'function') {
           try { result.autoRun(); } catch (e) { /* ação de navegação do app - ignora falha isolada */ }
@@ -1549,6 +1622,7 @@
         decorate(b, finalResult, plainText(text));
         renderQuick(quickFor(finalResult));
         announce(text);
+        if (!stopped) voiceSpeak(plainText(text));
         scrollDown();
       }, function (err) {
         finished = true; talking(false);
@@ -1591,6 +1665,7 @@
       if (!meta.silent) addMsg(text, 'user');
       if (RE_AGRADECE.test(text) && text.length < 60) poke(mascotBtnEl().querySelector('svg.argo-mascot-icon'), 'love');
       mascotBtnEl().classList.remove('argo-assistant-listening');
+      voiceStopAll();
       setBusy(true);
       phasesFor('procura');
       var result;
@@ -1618,7 +1693,7 @@
     }
 
     function reset() {
-      runId++; stop(); abortCtl = null; setBusy(false);
+      runId++; stop(); voiceStopAll(); abortCtl = null; setBusy(false);
       log.textContent = ''; quick.innerHTML = ''; sr.textContent = ''; lastQuestion = ''; greeted = false;
       try { if (typeof options.onReset === 'function') options.onReset(); } catch (e) { /* ignora */ }
       if (isOpen) { greeted = true; greet(); }
@@ -1644,6 +1719,7 @@
     function close() {
       if (!isOpen) return;
       isOpen = false;
+      voiceStopAll();
       panel.classList.remove('argo-assistant-open');
       fab.setAttribute('aria-expanded', 'false');
       setTimeout(function () { if (!isOpen) panel.hidden = true; }, 200);
@@ -1717,6 +1793,148 @@
       isOpen ? close() : open();
     });
 
+    // ------------------------------------------------------------------------------------------
+    // VOZ: falar a pergunta (microfone) e ouvir a resposta (leitura em voz alta).
+    //  - Tudo opcional e desligado por padrão; some sozinho em navegador sem suporte (ex.: Firefox desktop).
+    //  - O que a pessoa fala vira TEXTO no campo e só sai depois que ela toca em enviar: passa pelo mesmo
+    //    filtro de dados pessoais e socorro de qualquer pergunta digitada. Nada é enviado sozinho.
+    //  - O Argo não grava nem guarda áudio. Mas o reconhecimento de voz é do NAVEGADOR e, em vários
+    //    (Chrome/Android, Edge), o áudio vai ao serviço de voz do fabricante; por isso há aviso na 1ª vez.
+    //  - A leitura usa a voz do aparelho (prefere voz pt-BR instalada no aparelho) e para ao enviar nova pergunta,
+    //    fechar o painel, iniciar nova conversa ou trancar o app.
+    // ------------------------------------------------------------------------------------------
+    var VOICE_KEY = 'argo_assistant_voice_v1';
+    var SR = (typeof window !== 'undefined') ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
+    var synth = (typeof window !== 'undefined' && window.speechSynthesis && typeof window.SpeechSynthesisUtterance === 'function') ? window.speechSynthesis : null;
+    var micBtn = root.querySelector('#argoAssistantMic');
+    var spkBtn = root.querySelector('#argoAssistantSpeak');
+    var voicePref = voiceLoad();
+    var rec = null, listening = false, voiceSpeaking = false, speakToken = 0, speakingBtn = null, placeholder0 = input.getAttribute('placeholder') || '', noteT = 0;
+
+    function voiceLoad() {
+      try { var v = JSON.parse(localStorage.getItem(VOICE_KEY) || '{}') || {}; return { read: v.read === true, mic: v.mic === true }; }
+      catch (e) { return { read: false, mic: false }; }
+    }
+    function voiceSave() { try { localStorage.setItem(VOICE_KEY, JSON.stringify(voicePref)); } catch (e) { /* sem armazenamento: vale só nesta sessão */ } }
+    function voiceNote(msg) {   // aviso curto no campo (e para leitor de tela), sem poluir a conversa
+      input.setAttribute('placeholder', msg); announce(msg);
+      clearTimeout(noteT); noteT = setTimeout(function () { input.setAttribute('placeholder', placeholder0); }, 5000);
+    }
+    function voiceTalking(on) { mascotBtnEl().classList.toggle('argo-assistant-talking', on); fab.classList.toggle('argo-assistant-talking', on); }
+    function voicePick() {
+      var vs = [];
+      try { vs = synth.getVoices() || []; } catch (e) { /* ignora */ }
+      function pt(v) { return /^pt([-_]|$)/i.test(v.lang || ''); }
+      function br(v) { return /^pt[-_]br$/i.test(v.lang || ''); }
+      return vs.filter(function (v) { return br(v) && v.localService; })[0] || vs.filter(br)[0] || vs.filter(pt)[0] || null;
+    }
+    function markSpeakingBtn(btn) {
+      if (speakingBtn && speakingBtn !== btn) speakingBtn.textContent = '🔊 Ouvir';
+      speakingBtn = btn || null;
+      if (speakingBtn) speakingBtn.textContent = '⏹ Parar';
+    }
+    function voiceCancelSpeech() {
+      speakToken++;
+      if (synth) { try { synth.cancel(); } catch (e) { /* ignora */ } }
+      voiceSpeaking = false; voiceTalking(false); markSpeakingBtn(null);
+    }
+    function voiceEnded(token) { if (token !== speakToken) return; voiceSpeaking = false; voiceTalking(false); markSpeakingBtn(null); }
+    // plain: texto da resposta; force: pedido explícito ("Ouvir"), vale mesmo com a leitura automática desligada.
+    function voiceSpeak(plain, force, btn) {
+      if (!synth || (!force && !voicePref.read)) return;
+      var partes = partesDeFala(falavel(plain));
+      if (!partes.length) return;
+      voiceCancelSpeech();
+      var token = ++speakToken, i = 0;
+      voiceSpeaking = true; voiceTalking(true); markSpeakingBtn(btn);
+      (function next() {
+        if (token !== speakToken) return;
+        if (i >= partes.length) { voiceEnded(token); return; }
+        var u = new window.SpeechSynthesisUtterance(partes[i++]);
+        u.lang = 'pt-BR';
+        var v = voicePick(); if (v) u.voice = v;
+        u.onend = next;
+        u.onerror = function () { voiceEnded(token); };
+        try { synth.speak(u); } catch (e) { voiceEnded(token); }
+      })();
+    }
+    function micUi(on) {
+      listening = on;
+      micBtn.classList.toggle('is-listening', on);
+      micBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      micBtn.setAttribute('aria-label', on ? 'Parar de ouvir' : 'Falar a pergunta');
+      micBtn.title = on ? 'Parar de ouvir' : 'Falar a pergunta';
+      mascotBtnEl().classList.toggle('argo-assistant-listening', on);
+    }
+    function voiceStopAll() {
+      voiceCancelSpeech();
+      if (listening && rec) { try { rec.abort(); } catch (e) { /* ignora */ } micUi(false); }
+    }
+    var MIC_AVISO = 'O reconhecimento de voz é feito pelo seu navegador. Em vários (Chrome, Edge) o áudio é enviado ao serviço de voz do fabricante para virar texto. ' +
+      'O Argo não grava nem guarda o áudio, e o texto só é enviado quando você tocar em enviar.\n\n' +
+      'Não fale nomes, documentos nem dados de pessoas atendidas.\n\nAtivar o microfone?';
+    function micToggle() {
+      if (!SR) return;
+      if (listening) { try { rec.stop(); } catch (e) { /* já parou */ } return; }
+      if (busy) return;
+      if (!voicePref.mic) {
+        var ok = true;
+        try { ok = window.confirm(MIC_AVISO); } catch (e) { ok = false; }
+        if (!ok) return;
+        voicePref.mic = true; voiceSave();
+      }
+      voiceCancelSpeech();   // o microfone não pode ouvir a própria voz do Argo
+      var base = input.value.trim() ? input.value.trim() + ' ' : '';
+      var got = '', erro = '';
+      rec = new SR();
+      rec.lang = 'pt-BR'; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
+      rec.onstart = function () { micUi(true); voiceNote('Ouvindo… fale agora.'); };
+      rec.onresult = function (ev) {
+        var fin = '', tmp = '';
+        for (var k = 0; k < ev.results.length; k++) {
+          var r = ev.results[k];
+          if (r.isFinal) fin += r[0].transcript; else tmp += r[0].transcript;
+        }
+        got = (fin + tmp).trim();
+        input.value = (base + got).slice(0, 500);
+        autosize();
+      };
+      rec.onerror = function (ev) {
+        var c = ev && ev.error; erro = c || 'erro';
+        if (c === 'aborted') return;
+        if (c === 'not-allowed' || c === 'service-not-allowed') {
+          voicePref.mic = false; voiceSave();
+          addMsg('O microfone está bloqueado. Permita o uso do microfone nas configurações do navegador para este site e toque no microfone de novo.', 'bot', 'notfound');
+        } else if (c === 'no-speech') voiceNote('Não ouvi nada. Toque no microfone e fale mais perto.');
+        else if (c === 'audio-capture') voiceNote('Não encontrei um microfone neste aparelho.');
+        else if (c === 'network') voiceNote('Sem conexão com o serviço de voz do navegador. Digite a pergunta.');
+        else voiceNote('Não consegui ouvir. Tente de novo ou digite.');
+      };
+      rec.onend = function () {
+        micUi(false);
+        if (got && !erro) { voiceNote('Confira o texto e toque em enviar.'); try { input.focus(); } catch (e) { /* ignora */ } }
+      };
+      try { rec.start(); } catch (e) { micUi(false); voiceNote('Não consegui ligar o microfone.'); }
+    }
+    function speakToggle() {
+      if (!synth) return;
+      voicePref.read = !voicePref.read; voiceSave();
+      spkBtn.setAttribute('aria-pressed', voicePref.read ? 'true' : 'false');
+      spkBtn.setAttribute('aria-label', 'Ler as respostas em voz alta (' + (voicePref.read ? 'ligado' : 'desligado') + ')');
+      if (voicePref.read) voiceSpeak('Voz ligada. Vou ler as respostas em voz alta.', true);   // o toque libera o áudio em celulares (iOS exige gesto)
+      else voiceCancelSpeech();
+      voiceNote(voicePref.read ? 'Leitura em voz alta ligada.' : 'Leitura em voz alta desligada.');
+    }
+    if (SR) { micBtn.hidden = false; micBtn.addEventListener('click', micToggle); }
+    if (synth) {
+      spkBtn.hidden = false;
+      spkBtn.setAttribute('aria-pressed', voicePref.read ? 'true' : 'false');
+      spkBtn.setAttribute('aria-label', 'Ler as respostas em voz alta (' + (voicePref.read ? 'ligado' : 'desligado') + ')');
+      spkBtn.addEventListener('click', speakToggle);
+      try { synth.getVoices(); } catch (e) { /* algumas vozes só carregam depois da 1ª chamada */ }
+    }
+    window.addEventListener('pagehide', function () { voiceStopAll(); });
+
     assistantController = {
       open: open,
       close: close,
@@ -1738,6 +1956,7 @@
     react: react,         // ArgoMascot.react(svgElement, 'hop'|'cheer'|'shake'|'tilt') → reação a algo do app (não conta para o easter egg)
     lookAt: function (x, y, ms) { if (lookApi) lookApi.at(x, y, ms); }, // os olhos dos mascotes olham para (x, y) por ms milissegundos
     setMood: swapMood,    // ArgoMascot.setMood(elementoQueContémOMascote, 'success', 48)
+    voz: { falavel: falavel, partes: partesDeFala },   // ArgoMascot.voz.falavel(texto) → texto limpo para o leitor de voz
     icon: function (mood, size) { ensureStyles(); return boatSVG(mood, size); } // ArgoMascot.icon('success', 48) → string SVG avulso
   };
 });
