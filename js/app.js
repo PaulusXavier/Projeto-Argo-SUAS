@@ -17035,7 +17035,7 @@ const NAV_QUICK_META = {
   mapa:     { title: 'Mapa dos Equipamentos', sub: 'Rede em Boa Vista' },
   tradutor: { title: 'Tradutor',              sub: 'Es · En · Fr' },
   pdftools: { title: 'Central de PDF',         sub: 'Unir, dividir, converter' },
-  criptografia: { title: 'Criptografia',        sub: 'Senha em PDF e em .zip' },
+  criptografia: { title: 'Criptografia',        sub: 'Senha em PDF, Word, .zip' },
   appsext:  { title: 'Aplicativos',           sub: 'Toth, Umbrela, Verbus…' },
   noticias: { title: 'Notícias',              sub: 'MDS, MEC e Saúde' }
 };
@@ -18197,7 +18197,7 @@ const ARGO_TAB_TIPS = {
   mapa: 'Toque num pino para ver a unidade, ou busque pelo nome. "Qual CRAS/CREAS atende o bairro?" mostra a unidade de referência. "Minha localização" lista as mais próximas.',
   tradutor: 'Escreva ou fale em português e escolha o idioma. Dá para salvar frases próprias para usar de novo.',
   pdftools: 'Una até 20 arquivos, divida ou extraia páginas, reduza o tamanho de um PDF, numere as páginas e converta entre PDF, Word e JPG. Para pôr senha, use a aba Criptografia. Nada sai do seu navegador.',
-  criptografia: 'Coloque senha em um PDF, em vários PDFs ou em uma pasta inteira (saída em .zip). Tudo é feito neste aparelho; anote a senha, pois ela não pode ser recuperada.',
+  criptografia: 'Coloque senha em PDF, documento do Word/Excel/PowerPoint, arquivo de texto ou pasta inteira (saída em .zip). Tudo é feito neste aparelho; anote a senha, pois ela não pode ser recuperada.',
   appsext: 'Cada atalho abre um app do autor em nova aba, com login e sincronização independentes.',
   ferramentas: 'Relógio de Boa Vista com cronômetro, temporizador e alarmes que repetem e ficam salvos, calculadora com memória, porcentagens, soma e média de listas, renda per capita, idade, QR Code, contador de atendimentos, prazos em dias úteis, conferência de NIS e CPF, valor por extenso, link de WhatsApp, formatador de texto, analisador de planilha (duplicados, NIS/CPF e datas) e bloco de notas cifrado neste aparelho.',
   noticias: 'Toque num tema rápido (Bolsa Família, CadÚnico…), filtre por Normativos ou por período e use a estrela para salvar o que quer ler depois.',
@@ -18265,7 +18265,7 @@ const ARGO_TAB_ALIASES = [
   ['mapa', ['mapa', 'mapas', 'mapa dos equipamentos']],
   ['tradutor', ['tradutor', 'traducao', 'traduzir']],
   ['pdftools', ['pdf', 'pdfs', 'central de pdf', 'ferramentas de pdf']],
-  ['criptografia', ['criptografia', 'criptografar', 'senha no pdf', 'senha em pasta', 'proteger pdf', 'zip com senha']],
+  ['criptografia', ['criptografia', 'criptografar', 'senha no pdf', 'senha no word', 'senha no docx', 'senha em pasta', 'proteger pdf', 'zip com senha']],
   ['appsext', ['aplicativos', 'aplicativo', 'apps']],
   ['noticias', ['noticias', 'noticia', 'novidades']],
   ['cas', ['cas', 'registro cas', 'atendimento cas', 'registro de atendimento cas']],
@@ -23600,7 +23600,7 @@ async function pdftoolsRunProtectMany() {
 
 /* ============================================================
    ABA CRIPTOGRAFIA — senha em PDF (movido da Central de PDF) e pasta/arquivos em .zip com senha
-   O .zip é montado por assets/vendor/zip-aes.js (AES-256 ou ZipCrypto), sem enviar nada a servidor.
+   O .zip é montado por assets/vendor/zipaes.js (AES-256 ou ZipCrypto), sem enviar nada a servidor.
    ============================================================ */
 function renderCriptoCard() {
   const extra = pdftoolsExtraToolsHtml();
@@ -23611,7 +23611,7 @@ function renderCriptoCard() {
           <span class="pdftools-badge">${ICONS.shield}</span>
           <h2 style="margin:0;">Criptografia</h2>
         </div>
-        <span class="subtitle">🔐 Senha em PDF e em pastas (.zip)</span>
+        <span class="subtitle">🔐 Senha em PDF, Word, texto e pastas (.zip)</span>
       </div>
       <div class="card-body">
         <div class="pdftools-privacy">
@@ -23622,12 +23622,68 @@ function renderCriptoCard() {
         <nav class="pdftools-jump" aria-label="Ir direto para uma ferramenta">
           <span class="pdftools-jump-label">Ir para:</span>
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolProtect')">Senha em PDF</button>
+          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('criptoToolDoc')">Word / Excel / PowerPoint</button>
+          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('criptoToolTxt')">Texto (.txt)</button>
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('criptoToolZip')">Pasta em .zip com senha</button>
         </nav>
 
         <div class="pdftools-section-title">${ICONS.filebinary}<span>PDF</span><small>um PDF, vários PDFs ou uma pasta de PDFs</small></div>
         <div class="pdftools-grid pdftools-grid-single" style="margin-bottom:1.4rem;">
 ${extra.protect}
+        </div>
+
+        <div class="pdftools-section-title">${ICONS.form}<span>Word, Excel e PowerPoint</span><small>.docx, .xlsx e .pptx pedem a senha ao abrir</small></div>
+        <div class="pdftools-grid pdftools-grid-single" style="margin-bottom:1.4rem;">
+          <div class="pdftools-tool" id="criptoToolDoc">
+            <div class="pdftools-tool-header">
+              <span class="pdftools-tool-icon">${ICONS.form}</span>
+              <div>
+                <div class="pdftools-tool-title">Senha em documento do Office</div>
+                <div class="pdftools-tool-limit">.docx, .xlsx ou .pptx · até ${pdftoolsFormatBytes(CRIPTO_DOC_MAX_BYTES)}</div>
+              </div>
+            </div>
+            <p class="pdftools-tool-desc">Coloca a senha de abrir no próprio arquivo, no padrão do Office (AES-256): o Word, o Excel, o PowerPoint e o LibreOffice pedem a senha ao abrir. O conteúdo e os nomes de tudo que está dentro ficam cifrados. Você recebe uma cópia protegida; o original não é alterado.</p>
+            <div class="pdftools-actions">
+              <button type="button" class="pdftools-btn-ghost" onclick="document.getElementById('criptoDocInput').click()">${ICONS.form} Escolher documento</button>
+              <input type="file" id="criptoDocInput" accept=".docx,.xlsx,.pptx" hidden onchange="criptoDocPick(this.files[0], this)">
+            </div>
+            <div class="pdftools-pickinfo" id="criptoDocInfo" aria-live="polite"></div>
+            ${criptoPassHtml('Doc', 'criptoDocRun')}
+            <div class="pdftools-actions">
+              <button type="button" class="pdftools-btn" id="pdftoolsDocBtn" disabled onclick="criptoDocRun()">${ICONS.form} Proteger e baixar</button>
+              <button type="button" class="pdftools-btn-ghost" onclick="criptoDocReset(true)">Limpar</button>
+            </div>
+            <div class="pdftools-progress" id="pdftoolsDocProgress"><div class="pdftools-progress-fill" id="pdftoolsDocProgressFill"></div></div>
+            <div class="pdftools-status is-info" id="pdftoolsDocStatus"></div>
+          </div>
+        </div>
+
+        <div class="pdftools-section-title">${ICONS.filebinary}<span>Arquivo de texto</span><small>.txt e outros: o Argo cifra e o Argo abre</small></div>
+        <div class="pdftools-grid pdftools-grid-single" style="margin-bottom:1.4rem;">
+          <div class="pdftools-tool" id="criptoToolTxt">
+            <div class="pdftools-tool-header">
+              <span class="pdftools-tool-icon">${ICONS.filebinary}</span>
+              <div>
+                <div class="pdftools-tool-title">Senha em texto (.txt)</div>
+                <div class="pdftools-tool-limit">Qualquer arquivo · até ${pdftoolsFormatBytes(CRIPTO_TXT_MAX_BYTES)}</div>
+              </div>
+            </div>
+            <p class="pdftools-tool-desc">Arquivo de texto não tem senha própria. Aqui o texto vira um arquivo <strong>.argo</strong>, cifrado com AES-256, que só abre digitando a senha <strong>nesta aba do Argo SUAS</strong> (botão “Abrir arquivo .argo”). Para um arquivo que abra em qualquer computador, use a ferramenta de <em>Pasta em .zip com senha</em> logo abaixo.</p>
+            <div class="pdftools-actions">
+              <button type="button" class="pdftools-btn-ghost" onclick="document.getElementById('criptoTxtInput').click()">${ICONS.filebinary} Escolher arquivo de texto</button>
+              <button type="button" class="pdftools-btn-ghost" onclick="document.getElementById('criptoTxtOpenInput').click()">${ICONS.shield} Abrir arquivo .argo</button>
+              <input type="file" id="criptoTxtInput" hidden onchange="criptoTxtPick(this.files[0], this, 'enc')">
+              <input type="file" id="criptoTxtOpenInput" accept=".argo" hidden onchange="criptoTxtPick(this.files[0], this, 'dec')">
+            </div>
+            <div class="pdftools-pickinfo" id="criptoTxtInfo" aria-live="polite"></div>
+            ${criptoPassHtml('Txt', 'criptoTxtRun')}
+            <div class="pdftools-actions">
+              <button type="button" class="pdftools-btn" id="pdftoolsTxtBtn" disabled onclick="criptoTxtRun()">${ICONS.filebinary} Proteger e baixar</button>
+              <button type="button" class="pdftools-btn-ghost" onclick="criptoTxtReset(true)">Limpar</button>
+            </div>
+            <div class="pdftools-progress" id="pdftoolsTxtProgress"><div class="pdftools-progress-fill" id="pdftoolsTxtProgressFill"></div></div>
+            <div class="pdftools-status is-info" id="pdftoolsTxtStatus"></div>
+          </div>
         </div>
 
         <div class="pdftools-section-title">${ICONS.folder}<span>Pasta ou arquivos em .zip</span><small>qualquer tipo de arquivo, com senha para abrir</small></div>
@@ -23679,6 +23735,8 @@ ${extra.protect}
 
 function initCriptoPanel() {
   criptoZipReset(false);
+  criptoDocReset(false);
+  criptoTxtReset(false);
 }
 
 const CRIPTO_ZIP_MAX_FILES = 500;
@@ -23687,7 +23745,7 @@ const CRIPTO_ZIP_MAX_BYTES = 200 * 1024 * 1024;
 const criptoZip = { items: [], root: '' };
 
 async function ensureArgoZip() {
-  if (!window.ArgoZip) await pdftoolsLoadScript('assets/vendor/zip-aes.js');
+  if (!window.ArgoZip) await pdftoolsLoadScript('assets/vendor/zipaes.js');
   return window.ArgoZip;
 }
 
@@ -23811,6 +23869,190 @@ async function criptoZipRun() {
     pdftoolsExtra.busy = false;
     if (finished) criptoZipReset(true, true);
     else if (btn) btn.disabled = !st.items.length;
+  }
+}
+
+/* ---------- Senha em documento do Office (.docx/.xlsx/.pptx) e em texto (.argo) ---------- */
+const CRIPTO_DOC_MAX_BYTES = 100 * 1024 * 1024;
+const CRIPTO_TXT_MAX_BYTES = 50 * 1024 * 1024;
+const criptoDoc = { file: null };
+const criptoTxt = { file: null, mode: '' };
+
+async function ensureOfficeCrypt() {
+  if (!window.ArgoOffice || !window.ArgoSecret) await pdftoolsLoadScript('assets/vendor/officecrypt.js');
+  return { Office: window.ArgoOffice, Secret: window.ArgoSecret };
+}
+
+// Campos de senha (senha + repetir + mostrar + força) reaproveitados pelas ferramentas Doc e Txt.
+function criptoPassHtml(prefix, runFn) {
+  return `
+            <div class="pdftools-opts pdftools-opts-row">
+              <label class="pdftools-opt-label">Senha
+                <input type="password" id="cripto${prefix}Pass" class="tools-input" autocomplete="new-password" maxlength="64" oninput="criptoPassStrength('${prefix}')" onkeydown="if(event.key==='Enter'){event.preventDefault();${runFn}();}">
+              </label>
+              <label class="pdftools-opt-label" id="cripto${prefix}Pass2Label">Repita a senha
+                <input type="password" id="cripto${prefix}Pass2" class="tools-input" autocomplete="new-password" maxlength="64" onkeydown="if(event.key==='Enter'){event.preventDefault();${runFn}();}">
+              </label>
+            </div>
+            <div class="pdftools-protect-extra">
+              <label class="pdfedit-check"><input type="checkbox" onchange="criptoPassToggle('${prefix}', this.checked)"> Mostrar a senha</label>
+              <span id="cripto${prefix}Strength" class="pdftools-protect-strength" aria-live="polite"></span>
+            </div>`;
+}
+
+function criptoPassToggle(prefix, show) {
+  ['Pass', 'Pass2'].forEach(k => { const el = document.getElementById('cripto' + prefix + k); if (el) el.type = show ? 'text' : 'password'; });
+}
+
+function criptoPassStrength(prefix) {
+  const el = document.getElementById('cripto' + prefix + 'Strength');
+  const pw = (document.getElementById('cripto' + prefix + 'Pass') || {}).value || '';
+  if (!el) return;
+  if (!pw) { el.textContent = ''; el.dataset.level = ''; return; }
+  let pts = 0;
+  if (pw.length >= 8) pts++;
+  if (pw.length >= 12) pts++;
+  if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) pts++;
+  if (/\d/.test(pw)) pts++;
+  if (/[^A-Za-z0-9]/.test(pw)) pts++;
+  const level = pts <= 1 ? 'fraca' : pts <= 3 ? 'média' : 'forte';
+  el.dataset.level = level;
+  el.textContent = 'Senha ' + level + (level === 'fraca' ? ' (use 8 ou mais caracteres, com letras e números)' : '');
+}
+
+// Lê a senha; quando precisa repetir (proteger), confere as duas. Devolve null e avisa se algo estiver errado.
+function criptoPassRead(prefix, statusId, confirm) {
+  const pw = document.getElementById('cripto' + prefix + 'Pass').value;
+  if (!pw) { pdftoolsSetStatus(statusId, 'Digite a senha.', 'error'); return null; }
+  if (confirm) {
+    if (pw.length < 6) { pdftoolsSetStatus(statusId, 'Use uma senha com pelo menos 6 caracteres.', 'error'); return null; }
+    if (pw !== document.getElementById('cripto' + prefix + 'Pass2').value) { pdftoolsSetStatus(statusId, 'As duas senhas não são iguais. Digite de novo.', 'error'); return null; }
+  }
+  return pw;
+}
+
+function criptoPassClear(prefix) {
+  ['Pass', 'Pass2'].forEach(k => { const el = document.getElementById('cripto' + prefix + k); if (el) el.value = ''; });
+  criptoPassStrength(prefix);
+}
+
+/* Documento do Office */
+function criptoDocReset(clearAll, keepStatus) {
+  criptoDoc.file = null;
+  const info = document.getElementById('criptoDocInfo'); if (info) info.textContent = '';
+  const btn = document.getElementById('pdftoolsDocBtn'); if (btn) btn.disabled = true;
+  if (clearAll) {
+    criptoPassClear('Doc');
+    if (!keepStatus) { pdftoolsSetStatus('pdftoolsDocStatus', '', 'info'); pdftoolsSetProgress('Doc', 0, 0); }
+  }
+}
+
+async function criptoDocPick(file, inputEl) {
+  const id = 'pdftoolsDocStatus';
+  if (inputEl) inputEl.value = '';
+  if (!file || pdftoolsExtra.busy) return;
+  criptoDocReset(false);
+  if (!/\.(docx|xlsx|pptx)$/i.test(file.name)) { pdftoolsSetStatus(id, 'Escolha um arquivo .docx, .xlsx ou .pptx. Arquivos antigos (.doc, .xls, .ppt) precisam ser salvos antes no formato novo.', 'error'); return; }
+  if (file.size > CRIPTO_DOC_MAX_BYTES) { pdftoolsSetStatus(id, 'Arquivo grande demais (o limite é ' + pdftoolsFormatBytes(CRIPTO_DOC_MAX_BYTES) + ').', 'error'); return; }
+  const head = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+  if (head[0] === 0xd0 && head[1] === 0xcf) { pdftoolsSetStatus(id, 'Este arquivo já tem senha. Abra-o no Office, tire a senha e tente de novo.', 'error'); return; }
+  if (head[0] !== 0x50 || head[1] !== 0x4b) { pdftoolsSetStatus(id, 'Este arquivo não parece um documento do Office válido.', 'error'); return; }
+  criptoDoc.file = file;
+  const info = document.getElementById('criptoDocInfo'); if (info) info.textContent = file.name + ' · ' + pdftoolsFormatBytes(file.size);
+  const btn = document.getElementById('pdftoolsDocBtn'); if (btn) btn.disabled = false;
+  pdftoolsSetStatus(id, 'Pronto. Digite a senha e toque em “Proteger e baixar”.', 'info');
+}
+
+async function criptoDocRun() {
+  const st = criptoDoc;
+  if (!st.file || pdftoolsExtra.busy) return;
+  const id = 'pdftoolsDocStatus';
+  const pw = criptoPassRead('Doc', id, true);
+  if (!pw) return;
+  const btn = document.getElementById('pdftoolsDocBtn');
+  pdftoolsExtra.busy = true; if (btn) btn.disabled = true;
+  pdftoolsSetStatus(id, 'Preparando...', 'info');
+  let finished = false;
+  try {
+    const { Office } = await ensureOfficeCrypt();
+    const bytes = new Uint8Array(await st.file.arrayBuffer());
+    const out = await Office.encrypt(bytes, pw, {
+      onProgress: (i, n, frac) => {
+        if (frac === undefined) { pdftoolsSetProgress('Doc', i, n); pdftoolsSetStatus(id, 'Gerando a chave de segurança... ' + Math.round(i / n * 100) + '%', 'info'); }
+        else pdftoolsSetStatus(id, 'Cifrando o documento... ' + Math.round(frac * 100) + '%', 'info');
+      }
+    });
+    const m = st.file.name.match(/^(.*)\.(docx|xlsx|pptx)$/i);
+    const blob = new Blob([out], { type: 'application/octet-stream' });
+    pdftoolsDownloadBlob(blob, m[1] + '-protegido.' + m[2].toLowerCase());
+    pdftoolsSetProgress('Doc', 1, 1);
+    pdftoolsSetStatus(id, 'Documento protegido · ' + pdftoolsFormatBytes(blob.size) + '. Ao abrir no Office, ele vai pedir a senha. Guarde a senha: sem ela não há como recuperar o conteúdo.', 'success');
+    finished = true;
+  } catch (e) {
+    pdftoolsSetStatus(id, 'Não foi possível proteger este documento. O navegador precisa permitir criptografia (use o site em https) e o arquivo precisa ser um .docx, .xlsx ou .pptx válido.', 'error');
+  } finally {
+    pdftoolsExtra.busy = false;
+    if (finished) criptoDocReset(true, true); else if (btn) btn.disabled = !st.file;
+  }
+}
+
+/* Texto (.argo) */
+function criptoTxtReset(clearAll, keepStatus) {
+  criptoTxt.file = null; criptoTxt.mode = '';
+  const info = document.getElementById('criptoTxtInfo'); if (info) info.textContent = '';
+  const btn = document.getElementById('pdftoolsTxtBtn'); if (btn) { btn.disabled = true; btn.lastChild.textContent = ' Proteger e baixar'; }
+  const l2 = document.getElementById('criptoTxtPass2Label'); if (l2) l2.style.display = '';
+  if (clearAll) {
+    criptoPassClear('Txt');
+    if (!keepStatus) { pdftoolsSetStatus('pdftoolsTxtStatus', '', 'info'); pdftoolsSetProgress('Txt', 0, 0); }
+  }
+}
+
+function criptoTxtPick(file, inputEl, mode) {
+  const id = 'pdftoolsTxtStatus';
+  if (inputEl) inputEl.value = '';
+  if (!file || pdftoolsExtra.busy) return;
+  criptoTxtReset(false);
+  if (file.size > CRIPTO_TXT_MAX_BYTES) { pdftoolsSetStatus(id, 'Arquivo grande demais (o limite é ' + pdftoolsFormatBytes(CRIPTO_TXT_MAX_BYTES) + ').', 'error'); return; }
+  if (mode === 'dec' && !/\.argo$/i.test(file.name)) { pdftoolsSetStatus(id, 'Escolha um arquivo com final .argo.', 'error'); return; }
+  if (mode === 'enc' && /\.argo$/i.test(file.name)) { pdftoolsSetStatus(id, 'Este arquivo já é .argo. Para abri-lo, use “Abrir arquivo .argo”.', 'error'); return; }
+  criptoTxt.file = file; criptoTxt.mode = mode;
+  const info = document.getElementById('criptoTxtInfo'); if (info) info.textContent = file.name + ' · ' + pdftoolsFormatBytes(file.size);
+  const btn = document.getElementById('pdftoolsTxtBtn');
+  if (btn) { btn.disabled = false; btn.lastChild.textContent = mode === 'dec' ? ' Abrir e baixar' : ' Proteger e baixar'; }
+  const l2 = document.getElementById('criptoTxtPass2Label'); if (l2) l2.style.display = mode === 'dec' ? 'none' : '';
+  pdftoolsSetStatus(id, mode === 'dec' ? 'Digite a senha e toque em “Abrir e baixar”.' : 'Pronto. Digite a senha e toque em “Proteger e baixar”.', 'info');
+}
+
+async function criptoTxtRun() {
+  const st = criptoTxt;
+  if (!st.file || pdftoolsExtra.busy) return;
+  const id = 'pdftoolsTxtStatus';
+  const dec = st.mode === 'dec';
+  const pw = criptoPassRead('Txt', id, !dec);
+  if (!pw) return;
+  const btn = document.getElementById('pdftoolsTxtBtn');
+  pdftoolsExtra.busy = true; if (btn) btn.disabled = true;
+  pdftoolsSetStatus(id, dec ? 'Abrindo...' : 'Protegendo...', 'info');
+  let finished = false;
+  try {
+    const { Secret } = await ensureOfficeCrypt();
+    const bytes = new Uint8Array(await st.file.arrayBuffer());
+    if (dec) {
+      const out = await Secret.decrypt(bytes, pw);
+      pdftoolsDownloadBlob(new Blob([out]), st.file.name.replace(/\.argo$/i, '') || 'texto.txt');
+      pdftoolsSetStatus(id, 'Arquivo aberto e baixado (' + pdftoolsFormatBytes(out.length) + ').', 'success');
+    } else {
+      const out = await Secret.encrypt(bytes, pw);
+      pdftoolsDownloadBlob(new Blob([out]), st.file.name + '.argo');
+      pdftoolsSetStatus(id, 'Arquivo protegido · ' + pdftoolsFormatBytes(out.length) + '. Só abre com a senha, nesta aba do Argo SUAS (“Abrir arquivo .argo”). Guarde a senha: sem ela não há como recuperar o texto.', 'success');
+    }
+    finished = true;
+  } catch (e) {
+    pdftoolsSetStatus(id, dec ? 'Senha incorreta ou arquivo .argo danificado.' : 'Não foi possível proteger o arquivo. O navegador precisa permitir criptografia (use o site em https).', 'error');
+  } finally {
+    pdftoolsExtra.busy = false;
+    if (finished) criptoTxtReset(true, true); else if (btn) btn.disabled = !st.file;
   }
 }
 
