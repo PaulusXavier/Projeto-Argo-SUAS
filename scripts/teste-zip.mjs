@@ -1,4 +1,4 @@
-// Teste do gerador de .zip com senha (assets/vendor/zip-aes.js):  npm run test:zip
+// Teste do gerador de .zip com senha (assets/vendor/zipaes.js):  npm run test:zip
 // Confere o AES-256 com o vetor oficial (FIPS-197) e abre os .zip gerados com um decodificador INDEPENDENTE,
 // escrito só com node:crypto seguindo a especificação do WinZip AES (AE-2), e com o ZipCrypto clássico.
 import { readFileSync } from 'node:fs';
@@ -6,7 +6,7 @@ import { createCipheriv, createHmac, pbkdf2Sync, createDecipheriv } from 'node:c
 import { inflateRawSync } from 'node:zlib';
 import assert from 'node:assert/strict';
 
-globalThis.eval(readFileSync(new URL('../assets/vendor/zip-aes.js', import.meta.url), 'utf8'));
+globalThis.eval(readFileSync(new URL('../assets/vendor/zipaes.js', import.meta.url), 'utf8'));
 const Z = globalThis.ArgoZip;
 let ok = 0;
 const passa = (nome) => { ok++; console.log('✓ ' + nome); };
