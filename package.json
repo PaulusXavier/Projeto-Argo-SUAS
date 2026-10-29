@@ -9,7 +9,8 @@
     "build": "node scripts/build.mjs",
     "gerar:municipios": "node scripts/gerar-municipios-rr.mjs",
     "test:voz": "node scripts/teste-voz.mjs",
-    "test:zip": "node scripts/teste-zip.mjs"
+    "test:zip": "node scripts/teste-zip.mjs",
+    "test:office": "node scripts/teste-office.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.24.0"
