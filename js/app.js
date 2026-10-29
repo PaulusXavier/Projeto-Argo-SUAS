@@ -8495,6 +8495,7 @@ function render() {
   // acontece na primeira vez que a aba é aberta.
   const PANEL_TABS = {
     pdftools: { rootId: 'pdftoolsMergeList', render: renderPdfToolsCard, init: initPdfToolsPanel },
+    criptografia: { rootId: 'criptoRoot', render: renderCriptoCard, init: initCriptoPanel },
     tradutor: { rootId: 'tradutorInput',     render: renderTranslatorCard, init: initTranslatorPanel },
     noticias: { rootId: 'noticiasList',      render: renderNewsCard,       init: initNewsPanel },
     mapa:     { rootId: 'mapaRedeMapContainer', render: renderMapCard,     init: initMapPanel },
@@ -10768,7 +10769,7 @@ function renderPdfToolsCard() {
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolRemove')">Excluir</button>
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolRotate')">Girar</button>
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolNumber')">Numerar</button>
-          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolProtect')">Senha</button>
+          <button type="button" class="pdftools-jump-btn" onclick="argoAssistantGoTo('criptografia')" title="Proteger PDF com senha fica na aba Criptografia">Senha → Criptografia</button>
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolMark')">Marca d'água</button>
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolMeta')">Dados ocultos</button>
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolText')">Texto</button>
@@ -10947,9 +10948,8 @@ ${extra.rotate}
 ${extra.number}
         </div>
 
-        <div class="pdftools-section-title">${ICONS.filebinary}<span>Outras ferramentas</span><small>senha, marca d'água, dados ocultos, texto e tamanho</small></div>
+        <div class="pdftools-section-title">${ICONS.filebinary}<span>Outras ferramentas</span><small>marca d'água, dados ocultos, texto e tamanho</small></div>
         <div class="pdftools-grid" style="margin-bottom:1.4rem;">
-${extra.protect}
 ${extra.mark}
 ${extra.meta}
 ${extra.text}
@@ -17025,7 +17025,7 @@ const NAV_RECENT_KEY = 'argo_recent_tabs_v1';
 const NAV_DEFAULT_SHORTCUTS = ['agenda', 'mapa', 'tradutor', 'pdftools', 'appsext', 'noticias'];
 const NAV_SHORT_LABELS = {
   agenda: 'Agenda Argo', mapa: 'Mapa dos Equipamentos', tradutor: 'Tradutor (Es / En / Fr)',
-  pdftools: 'Central de PDF', appsext: 'Aplicativos', ferramentas: 'Ferramentas', noticias: 'Notícias do MDS, MEC e Saúde',
+  pdftools: 'Central de PDF', criptografia: 'Criptografia', appsext: 'Aplicativos', ferramentas: 'Ferramentas', noticias: 'Notícias do MDS, MEC e Saúde',
   saude: 'RAPS', hospitalar: 'Hospitais', social: 'SUAS', informes: 'Programas', cas: 'CAS', cras: 'CRAS'
 };
 const NAV_QUICK_MAX = 6;
@@ -17035,6 +17035,7 @@ const NAV_QUICK_META = {
   mapa:     { title: 'Mapa dos Equipamentos', sub: 'Rede em Boa Vista' },
   tradutor: { title: 'Tradutor',              sub: 'Es · En · Fr' },
   pdftools: { title: 'Central de PDF',         sub: 'Unir, dividir, converter' },
+  criptografia: { title: 'Criptografia',        sub: 'Senha em PDF e em .zip' },
   appsext:  { title: 'Aplicativos',           sub: 'Toth, Umbrela, Verbus…' },
   noticias: { title: 'Notícias',              sub: 'MDS, MEC e Saúde' }
 };
@@ -18195,7 +18196,8 @@ const ARGO_TAB_TIPS = {
   agenda: 'Toque num dia para anotar; cada anotação pode ser editada ou marcada como feita. O botão 🖨️ imprime o mês aberto. Use "Hoje" para voltar ao dia atual. Em PageUp/PageDown você troca de mês. Para ver as anotações em outros aparelhos, configure o código de sincronização. Pergunte ao Argo: "o que tem hoje?", "próximo feriado", "dias úteis em novembro" ou "anotar amanhã: ligar para o CRAS".',
   mapa: 'Toque num pino para ver a unidade, ou busque pelo nome. "Qual CRAS/CREAS atende o bairro?" mostra a unidade de referência. "Minha localização" lista as mais próximas.',
   tradutor: 'Escreva ou fale em português e escolha o idioma. Dá para salvar frases próprias para usar de novo.',
-  pdftools: 'Una até 20 arquivos, divida ou extraia páginas, reduza o tamanho de um PDF, numere as páginas e converta entre PDF, Word e JPG. Nada sai do seu navegador.',
+  pdftools: 'Una até 20 arquivos, divida ou extraia páginas, reduza o tamanho de um PDF, numere as páginas e converta entre PDF, Word e JPG. Para pôr senha, use a aba Criptografia. Nada sai do seu navegador.',
+  criptografia: 'Coloque senha em um PDF, em vários PDFs ou em uma pasta inteira (saída em .zip). Tudo é feito neste aparelho; anote a senha, pois ela não pode ser recuperada.',
   appsext: 'Cada atalho abre um app do autor em nova aba, com login e sincronização independentes.',
   ferramentas: 'Relógio de Boa Vista com cronômetro, temporizador e alarmes que repetem e ficam salvos, calculadora com memória, porcentagens, soma e média de listas, renda per capita, idade, QR Code, contador de atendimentos, prazos em dias úteis, conferência de NIS e CPF, valor por extenso, link de WhatsApp, formatador de texto, analisador de planilha (duplicados, NIS/CPF e datas) e bloco de notas cifrado neste aparelho.',
   noticias: 'Toque num tema rápido (Bolsa Família, CadÚnico…), filtre por Normativos ou por período e use a estrela para salvar o que quer ler depois.',
@@ -18263,6 +18265,7 @@ const ARGO_TAB_ALIASES = [
   ['mapa', ['mapa', 'mapas', 'mapa dos equipamentos']],
   ['tradutor', ['tradutor', 'traducao', 'traduzir']],
   ['pdftools', ['pdf', 'pdfs', 'central de pdf', 'ferramentas de pdf']],
+  ['criptografia', ['criptografia', 'criptografar', 'senha no pdf', 'senha em pasta', 'proteger pdf', 'zip com senha']],
   ['appsext', ['aplicativos', 'aplicativo', 'apps']],
   ['noticias', ['noticias', 'noticia', 'novidades']],
   ['cas', ['cas', 'registro cas', 'atendimento cas', 'registro de atendimento cas']],
@@ -23595,6 +23598,222 @@ async function pdftoolsRunProtectMany() {
   }
 }
 
+/* ============================================================
+   ABA CRIPTOGRAFIA — senha em PDF (movido da Central de PDF) e pasta/arquivos em .zip com senha
+   O .zip é montado por assets/vendor/zip-aes.js (AES-256 ou ZipCrypto), sem enviar nada a servidor.
+   ============================================================ */
+function renderCriptoCard() {
+  const extra = pdftoolsExtraToolsHtml();
+  return `
+    <div class="tech-card pdftools-card cripto-card" id="criptoRoot">
+      <div class="card-top">
+        <div style="display:flex; align-items:center; gap:0.55rem;">
+          <span class="pdftools-badge">${ICONS.shield}</span>
+          <h2 style="margin:0;">Criptografia</h2>
+        </div>
+        <span class="subtitle">🔐 Senha em PDF e em pastas (.zip)</span>
+      </div>
+      <div class="card-body">
+        <div class="pdftools-privacy">
+          ${ICONS.info}
+          <span>Tudo acontece aqui no seu navegador — nenhum arquivo nem senha é enviado a servidor algum. <strong>Anote a senha:</strong> se for esquecida, não há como recuperar os arquivos.</span>
+        </div>
+
+        <nav class="pdftools-jump" aria-label="Ir direto para uma ferramenta">
+          <span class="pdftools-jump-label">Ir para:</span>
+          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolProtect')">Senha em PDF</button>
+          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('criptoToolZip')">Pasta em .zip com senha</button>
+        </nav>
+
+        <div class="pdftools-section-title">${ICONS.filebinary}<span>PDF</span><small>um PDF, vários PDFs ou uma pasta de PDFs</small></div>
+        <div class="pdftools-grid pdftools-grid-single" style="margin-bottom:1.4rem;">
+${extra.protect}
+        </div>
+
+        <div class="pdftools-section-title">${ICONS.folder}<span>Pasta ou arquivos em .zip</span><small>qualquer tipo de arquivo, com senha para abrir</small></div>
+        <div class="pdftools-grid pdftools-grid-single">
+          <div class="pdftools-tool" id="criptoToolZip">
+            <div class="pdftools-tool-header">
+              <span class="pdftools-tool-icon">${ICONS.folder}</span>
+              <div>
+                <div class="pdftools-tool-title">Pasta em .zip com senha</div>
+                <div class="pdftools-tool-limit">Até ${CRIPTO_ZIP_MAX_FILES} arquivos · ${pdftoolsFormatBytes(CRIPTO_ZIP_MAX_BYTES)} no total</div>
+              </div>
+            </div>
+            <p class="pdftools-tool-desc">Escolha uma pasta (com as subpastas) ou vários arquivos de qualquer tipo. O app monta um único .zip que só abre com a senha. O navegador não consegue trancar a pasta original: você recebe uma cópia protegida e pode apagar a original depois.</p>
+            <div class="pdftools-actions">
+              <button type="button" class="pdftools-btn-ghost" onclick="document.getElementById('criptoZipFolderInput').click()">${ICONS.folder} Escolher pasta</button>
+              <button type="button" class="pdftools-btn-ghost" onclick="document.getElementById('criptoZipFilesInput').click()">${ICONS.filebinary} Escolher arquivos</button>
+              <input type="file" id="criptoZipFolderInput" webkitdirectory multiple hidden onchange="criptoZipPick(this.files, this)">
+              <input type="file" id="criptoZipFilesInput" multiple hidden onchange="criptoZipPick(this.files, this)">
+            </div>
+            <div class="pdftools-pickinfo" id="criptoZipInfo" aria-live="polite"></div>
+            <div class="pdftools-opts pdftools-opts-row">
+              <label class="pdftools-opt-label">Senha para abrir
+                <input type="password" id="criptoZipPass" class="tools-input" autocomplete="new-password" maxlength="64" oninput="criptoZipStrength()" onkeydown="if(event.key==='Enter'){event.preventDefault();criptoZipRun();}">
+              </label>
+              <label class="pdftools-opt-label">Repita a senha
+                <input type="password" id="criptoZipPass2" class="tools-input" autocomplete="new-password" maxlength="64" onkeydown="if(event.key==='Enter'){event.preventDefault();criptoZipRun();}">
+              </label>
+            </div>
+            <div class="pdftools-protect-extra">
+              <label class="pdfedit-check"><input type="checkbox" onchange="criptoZipToggleShow(this.checked)"> Mostrar a senha</label>
+              <span id="criptoZipStrength" class="pdftools-protect-strength" aria-live="polite"></span>
+            </div>
+            <div class="pdftools-opts" role="radiogroup" aria-label="Tipo de proteção do .zip">
+              <label class="pdftools-opt"><input type="radio" name="criptoZipMethod" value="aes" checked> <strong>Forte (AES-256)</strong> — recomendado. Abre no 7-Zip, WinRAR, WinZip, Keka e The Unarchiver. O Explorer do Windows e o Utilitário de Arquivos do Mac podem não abrir.</label>
+              <label class="pdftools-opt"><input type="radio" name="criptoZipMethod" value="zipcrypto"> <strong>Compatível (padrão do .zip)</strong> — abre em qualquer aparelho sem programa extra, mas a proteção é fraca: só serve para barrar curiosos.</label>
+            </div>
+            <p class="pdftools-tool-desc" style="margin-top:.4rem;"><small>Os <em>nomes</em> dos arquivos dentro do .zip continuam visíveis para quem o receber; só o conteúdo fica protegido. Não escreva dados pessoais nos nomes dos arquivos.</small></p>
+            <div class="pdftools-actions">
+              <button type="button" class="pdftools-btn" id="pdftoolsZipBtn" disabled onclick="criptoZipRun()">${ICONS.folder} Proteger e baixar .zip</button>
+              <button type="button" class="pdftools-btn-ghost" onclick="criptoZipReset(true)" title="Tirar a seleção e começar de novo">Limpar</button>
+            </div>
+            <div class="pdftools-progress" id="pdftoolsZipProgress"><div class="pdftools-progress-fill" id="pdftoolsZipProgressFill"></div></div>
+            <div class="pdftools-status is-info" id="pdftoolsZipStatus"></div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function initCriptoPanel() {
+  criptoZipReset(false);
+}
+
+const CRIPTO_ZIP_MAX_FILES = 500;
+const CRIPTO_ZIP_MAX_FILE_BYTES = 100 * 1024 * 1024;
+const CRIPTO_ZIP_MAX_BYTES = 200 * 1024 * 1024;
+const criptoZip = { items: [], root: '' };
+
+async function ensureArgoZip() {
+  if (!window.ArgoZip) await pdftoolsLoadScript('assets/vendor/zip-aes.js');
+  return window.ArgoZip;
+}
+
+function criptoZipReset(clearFields, keepStatus) {
+  criptoZip.items = [];
+  criptoZip.root = '';
+  const info = document.getElementById('criptoZipInfo');
+  if (info) info.textContent = '';
+  const btn = document.getElementById('pdftoolsZipBtn');
+  if (btn) btn.disabled = true;
+  if (clearFields) {
+    ['criptoZipPass', 'criptoZipPass2'].forEach(fid => { const el = document.getElementById(fid); if (el) el.value = ''; });
+    criptoZipStrength();
+    if (!keepStatus) { pdftoolsSetStatus('pdftoolsZipStatus', '', 'info'); pdftoolsSetProgress('Zip', 0, 0); }
+  }
+}
+
+function criptoZipToggleShow(show) {
+  ['criptoZipPass', 'criptoZipPass2'].forEach(fid => { const el = document.getElementById(fid); if (el) el.type = show ? 'text' : 'password'; });
+}
+
+function criptoZipStrength() {
+  const el = document.getElementById('criptoZipStrength');
+  const pw = (document.getElementById('criptoZipPass') || {}).value || '';
+  if (!el) return;
+  if (!pw) { el.textContent = ''; el.dataset.level = ''; return; }
+  let pts = 0;
+  if (pw.length >= 8) pts++;
+  if (pw.length >= 12) pts++;
+  if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) pts++;
+  if (/\d/.test(pw)) pts++;
+  if (/[^A-Za-z0-9]/.test(pw)) pts++;
+  const level = pts <= 1 ? 'fraca' : pts <= 3 ? 'média' : 'forte';
+  el.dataset.level = level;
+  el.textContent = 'Senha ' + level + (level === 'fraca' ? ' (use 8 ou mais caracteres, com letras e números)' : '');
+}
+
+function criptoZipPick(fileList, inputEl) {
+  const statusId = 'pdftoolsZipStatus';
+  const all = Array.from(fileList || []);
+  if (inputEl) inputEl.value = '';
+  if (!all.length || pdftoolsExtra.busy) return;
+  criptoZipReset(false);
+  // Arquivos de sistema que o computador cria sozinho e ninguém quer levar junto.
+  const lixo = /(^|\/)(\.DS_Store|Thumbs\.db|desktop\.ini|~\$[^/]*)$/i;
+  const uteis = all.filter(f => !lixo.test(f.webkitRelativePath || f.name));
+  const grandes = uteis.filter(f => f.size > CRIPTO_ZIP_MAX_FILE_BYTES).length;
+  let items = uteis.filter(f => f.size <= CRIPTO_ZIP_MAX_FILE_BYTES).map(f => ({ file: f, path: f.webkitRelativePath || f.name }));
+  let sobra = 0;
+  if (items.length > CRIPTO_ZIP_MAX_FILES) { sobra += items.length - CRIPTO_ZIP_MAX_FILES; items = items.slice(0, CRIPTO_ZIP_MAX_FILES); }
+  let total = 0;
+  const kept = [];
+  for (const it of items) {
+    if (total + it.file.size > CRIPTO_ZIP_MAX_BYTES) { sobra++; continue; }
+    total += it.file.size;
+    kept.push(it);
+  }
+  if (!kept.length) {
+    pdftoolsSetStatus(statusId, 'Não encontrei arquivos que caibam no limite (cada arquivo até ' + pdftoolsFormatBytes(CRIPTO_ZIP_MAX_FILE_BYTES) + ').', 'error');
+    return;
+  }
+  const first = kept[0].path;
+  const root = first.indexOf('/') > 0 ? first.split('/')[0] : '';
+  criptoZip.root = kept.every(k => k.path.indexOf(root + '/') === 0) ? root : '';
+  criptoZip.items = kept;
+  const notes = [];
+  if (grandes) notes.push(grandes + (grandes === 1 ? ' arquivo maior que ' : ' arquivos maiores que ') + pdftoolsFormatBytes(CRIPTO_ZIP_MAX_FILE_BYTES) + ' ficou de fora');
+  if (sobra) notes.push(sobra + (sobra === 1 ? ' arquivo ficou de fora' : ' arquivos ficaram de fora') + ' por passar do limite de ' + CRIPTO_ZIP_MAX_FILES + ' arquivos ou ' + pdftoolsFormatBytes(CRIPTO_ZIP_MAX_BYTES) + ' no total');
+  const info = document.getElementById('criptoZipInfo');
+  if (info) info.textContent = (criptoZip.root ? 'Pasta “' + criptoZip.root + '” · ' : '') + kept.length + (kept.length === 1 ? ' arquivo' : ' arquivos') + ' · ' + pdftoolsFormatBytes(total) + (notes.length ? ' · ' + notes.join('; ') : '');
+  const btn = document.getElementById('pdftoolsZipBtn');
+  if (btn) btn.disabled = false;
+  pdftoolsSetStatus(statusId, 'Pronto. Digite a senha e toque em “Proteger e baixar .zip”.', 'info');
+}
+
+async function criptoZipRun() {
+  const st = criptoZip;
+  if (!st.items.length || pdftoolsExtra.busy) return;
+  const id = 'pdftoolsZipStatus';
+  const pw = document.getElementById('criptoZipPass').value;
+  const pw2 = document.getElementById('criptoZipPass2').value;
+  const checked = document.querySelector('input[name="criptoZipMethod"]:checked');
+  const method = checked && checked.value === 'zipcrypto' ? 'zipcrypto' : 'aes';
+  if (!pw) { pdftoolsSetStatus(id, 'Digite a senha que o .zip vai pedir para abrir.', 'error'); return; }
+  if (pw.length < 6) { pdftoolsSetStatus(id, 'Use uma senha com pelo menos 6 caracteres.', 'error'); return; }
+  if (pw !== pw2) { pdftoolsSetStatus(id, 'As duas senhas não são iguais. Digite de novo.', 'error'); return; }
+  if (method === 'zipcrypto' && /[^ -~]/.test(pw)) {
+    pdftoolsSetStatus(id, 'No modo compatível use só letras sem acento, números e símbolos comuns (ex.: Familia2026): acentos fazem o .zip não abrir em alguns programas.', 'error');
+    return;
+  }
+  const btn = document.getElementById('pdftoolsZipBtn');
+  pdftoolsExtra.busy = true;
+  if (btn) btn.disabled = true;
+  pdftoolsSetStatus(id, 'Preparando...', 'info');
+  let finished = false;
+  try {
+    const Zip = await ensureArgoZip();
+    const total = st.items.length;
+    const baseName = (st.root || 'arquivos') + '-protegido';
+    const items = st.items.map(it => {
+      let rel = it.path;
+      if (st.root && rel.indexOf(st.root + '/') === 0) rel = rel.slice(st.root.length + 1);
+      return { path: (st.root || 'arquivos') + '/' + rel, file: it.file };
+    });
+    const blob = await Zip.build(items, {
+      password: pw,
+      method,
+      onProgress: (i, n, it) => {
+        pdftoolsSetProgress('Zip', i, n);
+        if (it) pdftoolsSetStatus(id, 'Protegendo ' + (i + 1) + ' de ' + n + ': ' + it.file.name, 'info');
+        else pdftoolsSetStatus(id, 'Finalizando o .zip...', 'info');
+      }
+    });
+    pdftoolsDownloadBlob(blob, baseName + '.zip');
+    pdftoolsSetStatus(id, total + (total === 1 ? ' arquivo protegido' : ' arquivos protegidos') + ' · ' + pdftoolsFormatBytes(blob.size) + '. Guarde a senha: sem ela o .zip não abre.' +
+      (method === 'aes' ? ' Para abrir, use 7-Zip, WinRAR, Keka ou The Unarchiver.' : ''), 'success');
+    finished = true;
+  } catch (e) {
+    pdftoolsSetStatus(id, 'Não foi possível criar o .zip. Se a pasta for grande, tente em partes menores; o navegador também precisa permitir criptografia (use https).', 'error');
+  } finally {
+    pdftoolsExtra.busy = false;
+    if (finished) criptoZipReset(true, true);
+    else if (btn) btn.disabled = !st.items.length;
+  }
+}
+
 async function pdftoolsRunMeta() {
   const st = pdftoolsExtra.Meta;
   if (!st || pdftoolsExtra.busy) return;
@@ -27905,7 +28124,7 @@ function argoAskAI(rawText, tab, fallbackResult) {
   /* ---- deslizar para trocar de aba (celular, modo destaque) ---- */
   const SWIPE_BLOCK = 'input, textarea, select, button, a, summary, label, table, pre, canvas, [contenteditable], ' +
     '.leaflet-container, [data-no-swipe], #agendaBook, #agendaCalendarGrid, .pdftools-fileitem, .tab-focus-bar, #notesRoot, .tech-card.is-expanded';
-  const LIST_ONLY = ['pdftools', 'tradutor', 'noticias', 'mapa', 'agenda', 'appsext', 'ferramentas', 'anotacoes'];
+  const LIST_ONLY = ['pdftools', 'criptografia', 'tradutor', 'noticias', 'mapa', 'agenda', 'appsext', 'ferramentas', 'anotacoes'];
   let sx = 0, sy = 0, st = 0, tracking = false;
 
   function scrollsSideways(el) {
