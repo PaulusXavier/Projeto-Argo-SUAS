@@ -21971,7 +21971,7 @@ async function ensurePdfLibEncrypt() {
   if (window.__pdfLibEnc) return window.__pdfLibEnc;
   const anterior = window.PDFLib;
   try {
-    await pdftoolsLoadScript('assets/vendor/pdf-lib-plus-encrypt.min.js');
+    await pdftoolsLoadScript('assets/vendor/pdflibcrypt.js');
     window.__pdfLibEnc = window.PDFLib;
   } finally {
     if (anterior) window.PDFLib = anterior;
