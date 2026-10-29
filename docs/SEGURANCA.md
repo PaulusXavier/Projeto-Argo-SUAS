@@ -25,3 +25,11 @@ Para que o código e os dados do app não fiquem legíveis no site publicado:
 5. Publique em um repositório **novo** (ou privado): o histórico do Git antigo continua com os arquivos em texto aberto.
 
 > Esse fluxo é alternativo ao deploy automático (`deploy.yml`), que publica a versão aberta. Use um ou outro.
+
+## Voz no assistente (microfone e leitura em voz alta)
+
+- **Desligada por padrão.** O microfone só liga depois de um aviso (uma vez) e de o usuário tocar no 🎤.
+- **O áudio não é do Argo.** O reconhecimento de voz é feito pelo navegador; em vários (Chrome, Edge) o áudio vai ao serviço de voz do fabricante. O Argo não grava, não guarda e não envia áudio ao Worker. Em atendimento, **não fale nome, documento nem dado de pessoa atendida** (o mesmo cuidado de digitar).
+- **O texto falado entra no campo e espera o toque em enviar.** Depois disso vale tudo que vale para pergunta digitada: filtro de dados pessoais, socorro e limite de tamanho (500 caracteres).
+- **Leitura em voz alta:** usa a voz do aparelho, só do texto da resposta (sem fontes, notas ou cartões), e para ao trancar o app, fechar o painel, nova conversa ou nova pergunta. Em local com outras pessoas por perto, prefira deixar desligada: a resposta pode ter dado da rede ou de um caso descrito.
+- **Salvo no aparelho:** apenas `argo_assistant_voice_v1` = `{ read, mic }` (ligado/desligado). Nenhum conteúdo.
