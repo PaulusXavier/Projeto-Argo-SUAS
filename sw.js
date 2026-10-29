@@ -33,6 +33,7 @@ const ASSETS = [
   './assets/cid11.json',
   './assets/municipios-rr.json',
   './assets/coordenadas.json',
+  './assets/vendor/pdf-lib-plus-encrypt.min.js',
   './manifest.json',
   './favicon.ico',
   './apple-touch-icon.png',
