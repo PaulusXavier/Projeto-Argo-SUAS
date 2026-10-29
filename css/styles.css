@@ -6981,6 +6981,7 @@ details.card-fold[open] > *:not(summary) + *:not(summary) { margin-top: 1rem; }
   .filter-chip[data-cat="mapa"], .quick-nav-btn[data-goto="mapa"] { --ic: #16a34a; }
   .filter-chip[data-cat="tradutor"], .quick-nav-btn[data-goto="tradutor"] { --ic: #7c3aed; }
   .filter-chip[data-cat="pdftools"], .quick-nav-btn[data-goto="pdftools"] { --ic: #e11d48; }
+  .filter-chip[data-cat="criptografia"], .quick-nav-btn[data-goto="criptografia"] { --ic: #4f46e5; }
   .filter-chip[data-cat="appsext"], .quick-nav-btn[data-goto="appsext"] { --ic: #d97706; }
   .filter-chip[data-cat="noticias"], .quick-nav-btn[data-goto="noticias"] { --ic: #0284c7; }
   .filter-chip[data-cat="cas"], .quick-nav-btn[data-goto="cas"] { --ic: #0d9488; }
