@@ -11076,9 +11076,9 @@ function pdftoolsExtraToolsHtml() {
             </label>
             <div class="pdftools-pickinfo" id="pdftools${kind}Info"></div>
             <div class="pdftools-pages" id="pdftools${kind}Pages" hidden></div>`;
-  const tail = (id, btnLabel, fn) => `
+  const tail = (id, btnLabel, fn, extra = '') => `
             <div class="pdftools-actions">
-              <button type="button" class="pdftools-btn" id="pdftools${id}Btn" disabled onclick="${fn}()">${btnLabel}</button>
+              <button type="button" class="pdftools-btn" id="pdftools${id}Btn" disabled onclick="${fn}()">${btnLabel}</button>${extra}
               <button type="button" class="pdftools-btn-ghost" id="pdftools${id}ClearBtn" onclick="pdftoolsExtraClear('${id}')" title="Tirar o arquivo escolhido e começar de novo">Limpar</button>
             </div>
             <div class="pdftools-progress" id="pdftools${id}Progress"><div class="pdftools-progress-fill" id="pdftools${id}ProgressFill"></div></div>
@@ -11197,12 +11197,23 @@ function pdftoolsExtraToolsHtml() {
             <div class="pdftools-tool-header">
               <span class="pdftools-tool-icon">${ICONS.filebinary}</span>
               <div>
-                <div class="pdftools-tool-title">Proteger com senha</div>
-                <div class="pdftools-tool-limit">Um PDF · até 60 MB</div>
+                <div class="pdftools-tool-title">Proteger PDF ou pasta com senha</div>
+                <div class="pdftools-tool-limit">Um PDF, vários PDFs ou uma pasta · até 60 MB cada</div>
               </div>
             </div>
             <p class="pdftools-tool-desc">Coloca uma senha no PDF: quem não souber a senha não consegue abrir o arquivo (criptografia AES 128 bits). Tudo é feito no seu aparelho. <strong>Anote a senha:</strong> se for esquecida, não há como recuperar o arquivo. Atenção: PDFs que já têm senha precisam ser abertos sem ela antes.</p>
             ${drop('Protect', 'pdftoolsProtectInput', 'Escolher um PDF', 'para colocar senha')}
+            <div class="pdftools-protect-many" style="margin:.9rem 0;padding:.8rem .9rem;border:1.5px dashed var(--border-ui);border-radius:10px;">
+              <div style="font-weight:700;margin-bottom:.25rem;">${ICONS.folder} Proteger uma pasta inteira (ou vários PDFs)</div>
+              <p class="pdftools-tool-desc" style="margin:.2rem 0 .6rem;"><small>Escolha a pasta: todos os PDFs dentro dela (inclusive nas subpastas) recebem a mesma senha e saem juntos em um .zip. A pasta em si não ganha senha; quem for abrir cada PDF é que precisará dela. Se o seu celular não deixar escolher pasta, use “Escolher vários PDFs”.</small></p>
+              <div class="pdftools-actions">
+                <button type="button" class="pdftools-btn-ghost" onclick="document.getElementById('pdftoolsProtectFolderInput').click()">${ICONS.folder} Escolher pasta</button>
+                <button type="button" class="pdftools-btn-ghost" onclick="document.getElementById('pdftoolsProtectManyInput').click()">${ICONS.pdf} Escolher vários PDFs</button>
+                <input type="file" id="pdftoolsProtectFolderInput" webkitdirectory multiple hidden onchange="pdftoolsProtectPickMany(this.files, this)">
+                <input type="file" id="pdftoolsProtectManyInput" accept=".pdf,application/pdf" multiple hidden onchange="pdftoolsProtectPickMany(this.files, this)">
+              </div>
+              <div class="pdftools-pickinfo" id="pdftoolsProtectManyInfo" aria-live="polite"></div>
+            </div>
             <div class="pdftools-opts pdftools-opts-row">
               <label class="pdftools-opt-label">Senha para abrir
                 <input type="password" id="pdftoolsProtectPass" class="tools-input" autocomplete="new-password" maxlength="64" aria-describedby="pdftoolsProtectStrength" oninput="pdftoolsProtectStrength()" onkeydown="if(event.key==='Enter'){event.preventDefault();pdftoolsRunProtect();}">
@@ -11221,7 +11232,8 @@ function pdftoolsExtraToolsHtml() {
               <label class="pdfedit-check"><input type="checkbox" id="pdftoolsProtectEdit"> Permitir editar</label>
             </div>
             <p class="pdftools-tool-desc" style="margin-top:.4rem;"><small>Imprimir, copiar e editar são restrições que os leitores de PDF costumam respeitar, mas a proteção que realmente vale é a senha para abrir.</small></p>
-            ${tail('Protect', ICONS.filebinary + ' Proteger e baixar', 'pdftoolsRunProtect')}
+            ${tail('Protect', ICONS.filebinary + ' Proteger e baixar', 'pdftoolsRunProtect', `
+              <button type="button" class="pdftools-btn" id="pdftoolsProtectManyBtn" disabled onclick="pdftoolsRunProtectMany()">${ICONS.folder} Proteger pasta e baixar .zip</button>`)}
           </div>
 `,
     mark: `
@@ -23101,7 +23113,7 @@ function pdftoolsExtraClear(kind) {
   if (info) info.textContent = '';
   pdftoolsSetStatus('pdftools' + kind + 'Status', '', 'info');
   pdftoolsSetProgress(kind, 0, 0);
-  if (kind === 'Protect') pdftoolsProtectResetFields();
+  if (kind === 'Protect') { pdftoolsProtectResetFields(); pdftoolsProtectManyReset(); }
 }
 
 function pdftoolsBaseName(file) { return file.name.replace(/\.pdf$/i, '') || 'documento'; }
@@ -23431,6 +23443,155 @@ async function pdftoolsRunProtect() {
     pdftoolsSetStatus(id, 'Não foi possível proteger este PDF. Se ele já tem senha, abra-o sem senha antes; a biblioteca de criptografia também precisa ter sido carregada (internet na primeira vez).', 'error');
   } finally {
     pdftoolsExtraSetBusy('Protect', false);
+  }
+}
+
+/* ---------- Proteger vários PDFs / uma pasta inteira (mesma senha, saída em .zip) ---------- */
+// O navegador não consegue pôr senha numa pasta do computador. O que dá para fazer
+// (e é o que as pessoas precisam na prática) é trancar cada PDF da pasta com a mesma
+// senha e devolver tudo num .zip, mantendo as subpastas. Tudo roda no aparelho.
+const PDFTOOLS_MANY_MAX_FILES = 200;
+const PDFTOOLS_MANY_MAX_BYTES = 200 * 1024 * 1024;
+const pdftoolsProtectMany = { items: [], root: '' };
+
+function pdftoolsProtectManyReset() {
+  pdftoolsProtectMany.items = [];
+  pdftoolsProtectMany.root = '';
+  const info = document.getElementById('pdftoolsProtectManyInfo');
+  if (info) info.textContent = '';
+  const btn = document.getElementById('pdftoolsProtectManyBtn');
+  if (btn) btn.disabled = true;
+}
+
+function pdftoolsProtectPickMany(fileList, inputEl) {
+  const statusId = 'pdftoolsProtectStatus';
+  const all = Array.from(fileList || []);
+  if (inputEl) inputEl.value = '';
+  if (!all.length || pdftoolsExtra.busy) return;
+  pdftoolsProtectManyReset();
+  const pdfs = all.filter(pdftoolsIsPdfFile);
+  const notPdf = all.length - pdfs.length;
+  const tooBig = pdfs.filter(f => f.size > PDFTOOLS_SINGLE_MAX_BYTES).length;
+  let items = pdfs.filter(f => f.size <= PDFTOOLS_SINGLE_MAX_BYTES)
+    .map(f => ({ file: f, path: f.webkitRelativePath || f.name }));
+  let overflow = 0;
+  if (items.length > PDFTOOLS_MANY_MAX_FILES) { overflow += items.length - PDFTOOLS_MANY_MAX_FILES; items = items.slice(0, PDFTOOLS_MANY_MAX_FILES); }
+  let total = 0;
+  const kept = [];
+  for (const it of items) {
+    if (total + it.file.size > PDFTOOLS_MANY_MAX_BYTES) { overflow++; continue; }
+    total += it.file.size;
+    kept.push(it);
+  }
+  if (!kept.length) {
+    pdftoolsSetStatus(statusId, 'Não encontrei PDFs que possam ser protegidos nessa seleção (cada PDF pode ter até 60 MB).', 'error');
+    return;
+  }
+  const first = kept[0].path;
+  pdftoolsProtectMany.root = first.indexOf('/') > 0 ? first.split('/')[0] : '';
+  pdftoolsProtectMany.items = kept;
+  const notes = [];
+  if (notPdf) notes.push(notPdf + (notPdf === 1 ? ' arquivo que não é PDF ficou de fora' : ' arquivos que não são PDF ficaram de fora'));
+  if (tooBig) notes.push(tooBig + (tooBig === 1 ? ' PDF maior que 60 MB ficou de fora' : ' PDFs maiores que 60 MB ficaram de fora'));
+  if (overflow) notes.push(overflow + (overflow === 1 ? ' PDF ficou de fora' : ' PDFs ficaram de fora') + ' por passar do limite de ' + PDFTOOLS_MANY_MAX_FILES + ' arquivos ou ' + pdftoolsFormatBytes(PDFTOOLS_MANY_MAX_BYTES) + ' no total');
+  const info = document.getElementById('pdftoolsProtectManyInfo');
+  if (info) info.textContent = (pdftoolsProtectMany.root ? 'Pasta “' + pdftoolsProtectMany.root + '” · ' : '') + kept.length + (kept.length === 1 ? ' PDF' : ' PDFs') + ' · ' + pdftoolsFormatBytes(total) + (notes.length ? ' · ' + notes.join('; ') : '');
+  const btn = document.getElementById('pdftoolsProtectManyBtn');
+  if (btn) btn.disabled = false;
+  pdftoolsSetStatus(statusId, 'Pronto. Digite a senha e toque em “Proteger pasta e baixar .zip”.', 'info');
+}
+
+// Lê e confere senha e permissões (as mesmas regras do PDF avulso).
+function pdftoolsProtectReadOptions(statusId) {
+  const pw = document.getElementById('pdftoolsProtectPass').value;
+  const pw2 = document.getElementById('pdftoolsProtectPass2').value;
+  if (!pw) { pdftoolsSetStatus(statusId, 'Digite a senha que os PDFs vão pedir para abrir.', 'error'); return null; }
+  if (pw.length < 4) { pdftoolsSetStatus(statusId, 'Use uma senha com pelo menos 4 caracteres.', 'error'); return null; }
+  if (pw !== pw2) { pdftoolsSetStatus(statusId, 'As duas senhas não são iguais. Digite de novo.', 'error'); return null; }
+  if (/[^\u0020-\u007E]/.test(pw)) { pdftoolsSetStatus(statusId, 'Use na senha só letras sem acento, números e símbolos comuns (ex.: Familia2026). Acentos e emojis podem impedir o PDF de abrir em alguns leitores.', 'error'); return null; }
+  const canPrint = document.getElementById('pdftoolsProtectPrint').checked;
+  const canCopy = document.getElementById('pdftoolsProtectCopy').checked;
+  const canEdit = document.getElementById('pdftoolsProtectEdit').checked;
+  return {
+    pw,
+    permissions: {
+      printing: canPrint ? 'highResolution' : false,
+      copying: canCopy,
+      modifying: canEdit,
+      annotating: canEdit,
+      fillingForms: canEdit,
+      contentAccessibility: true,
+      documentAssembly: canEdit
+    }
+  };
+}
+
+async function pdftoolsRunProtectMany() {
+  const st = pdftoolsProtectMany;
+  if (!st.items.length || pdftoolsExtra.busy) return;
+  const id = 'pdftoolsProtectStatus';
+  const opt = pdftoolsProtectReadOptions(id);
+  if (!opt) return;
+  const manyBtn = document.getElementById('pdftoolsProtectManyBtn');
+  const mainBtn = document.getElementById('pdftoolsProtectBtn');
+  pdftoolsExtra.busy = true;
+  if (manyBtn) manyBtn.disabled = true;
+  if (mainBtn) mainBtn.disabled = true;
+  pdftoolsSetStatus(id, 'Preparando...', 'info');
+  const failed = [];
+  let okCount = 0;
+  let finished = false;
+  try {
+    const [PDFLib, JSZip] = await Promise.all([ensurePdfLibEncrypt(), ensureJSZip()]);
+    const zip = new JSZip();
+    const total = st.items.length;
+    const baseName = (st.root || 'pdfs') + '-protegida';
+    const used = new Set();
+    for (let i = 0; i < total; i++) {
+      const it = st.items[i];
+      pdftoolsSetProgress('Protect', i, total);
+      pdftoolsSetStatus(id, 'Protegendo ' + (i + 1) + ' de ' + total + ': ' + it.file.name, 'info');
+      await new Promise(r => setTimeout(r, 0)); // deixa a tela atualizar entre um arquivo e outro
+      try {
+        const bytes = await it.file.arrayBuffer();
+        const doc = await PDFLib.PDFDocument.load(bytes);
+        doc.context.header = PDFLib.PDFHeader.forVersion(1, 7);
+        await doc.encrypt({ userPassword: opt.pw, ownerPassword: pdftoolsProtectRandomOwner(), permissions: opt.permissions });
+        const out = await doc.save();
+        let rel = it.path;
+        if (st.root && rel.indexOf(st.root + '/') === 0) rel = rel.slice(st.root.length + 1);
+        const dot = rel.search(/\.pdf$/i);
+        const stem = dot > -1 ? rel.slice(0, dot) : rel;
+        const ext = dot > -1 ? rel.slice(dot) : '.pdf';
+        let name = stem + ext;
+        let n = 2;
+        while (used.has(name.toLowerCase())) name = stem + ' (' + (n++) + ')' + ext;
+        used.add(name.toLowerCase());
+        zip.file(baseName + '/' + name, out);
+        okCount++;
+      } catch (e) {
+        failed.push(it.file.name);
+      }
+    }
+    pdftoolsSetProgress('Protect', total, total);
+    if (!okCount) {
+      pdftoolsSetStatus(id, 'Nenhum PDF pôde ser protegido. Eles podem já ter senha (abra-os sem senha antes) ou estar danificados.', 'error');
+      return;
+    }
+    pdftoolsSetStatus(id, 'Montando o .zip...', 'info');
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
+    pdftoolsDownloadBlob(blob, baseName + '.zip');
+    let msg = okCount + (okCount === 1 ? ' PDF protegido' : ' PDFs protegidos') + ' com a mesma senha · ' + pdftoolsFormatBytes(blob.size) + '. Guarde a senha: sem ela os arquivos não abrem.';
+    if (failed.length) msg += ' Ficaram de fora (já têm senha ou estão danificados): ' + failed.slice(0, 5).join(', ') + (failed.length > 5 ? ' e mais ' + (failed.length - 5) : '') + '.';
+    pdftoolsSetStatus(id, msg, 'success');
+    finished = true;
+  } catch (e) {
+    pdftoolsSetStatus(id, 'Não foi possível proteger os arquivos. A biblioteca de criptografia e a de .zip precisam ser carregadas (internet na primeira vez).', 'error');
+  } finally {
+    pdftoolsExtra.busy = false;
+    if (finished) { pdftoolsProtectResetFields(); pdftoolsProtectManyReset(); }
+    else if (manyBtn) manyBtn.disabled = !st.items.length;
+    if (mainBtn) mainBtn.disabled = !pdftoolsExtra.Protect;
   }
 }
 
