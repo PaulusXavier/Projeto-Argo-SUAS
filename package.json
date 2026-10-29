@@ -7,7 +7,8 @@
     "test:territorio": "node scripts/teste-territorio.mjs",
     "test:conversa": "node scripts/teste-conversa.mjs",
     "build": "node scripts/build.mjs",
-    "gerar:municipios": "node scripts/gerar-municipios-rr.mjs"
+    "gerar:municipios": "node scripts/gerar-municipios-rr.mjs",
+    "test:voz": "node scripts/teste-voz.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.24.0"
