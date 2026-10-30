@@ -3025,6 +3025,175 @@
       return { titulo: 'Censo SUAS 2025 — ' + (x.trecho.referencia || x.trecho.titulo), texto: x.trecho.texto, origem: x.trecho.origem || 'Censo SUAS 2025, dados agregados de Recursos Humanos e Dados Gerais de Roraima' };
     });
   }
+  // ---------------------------------------------------------------------
+  // MANUAL DO APP — o mascote sabe usar o Argo (abas, ferramentas, Central de PDF, segurança, backup)
+  // Resposta direta, SEM IA e sem internet. Cada verbete foi conferido no código do app (js/app.js, index.html).
+  // Os números que o app define (bloqueio por inatividade, "manter conectado", tentativas de senha) entram por
+  // init({ manual: {...} }) e são lidos do próprio app, para o manual nunca ficar desatualizado.
+  // Para acrescentar um verbete: um item em MANUAL (id, nome, keys sem acento, texto; open = aba que o botão abre).
+  var MANUAL_VARS = { bloqueioMin: 45, lembrarHoras: 12, tentativas: 5 };
+  var MANUAL = [
+    { id: 'visao', nome: 'O que o Argo faz', keys: ['o que o app faz', 'o que o argo faz', 'para que serve o app', 'para que serve o argo', 'o que tem no app', 'quais abas', 'quais as abas', 'lista de abas', 'o que posso fazer', 'como funciona o app', 'como funciona o argo', 'tour', 'visao geral', 'menu lateral', 'barra lateral'],
+      texto: 'O Argo SUAS reúne, num só lugar: o **diretório da rede** (hospitais, saúde mental, proteção social, educação, justiça, segurança, documentação, entre outros) com telefone, endereço e requisitos; os painéis de **Registro de Atendimento (CRAS e CAS)**; a **Agenda**; o **Mapa**; o **Tradutor**; as **Notícias** do MDS, MEC e Saúde; os **Aplicativos** do autor; a **Criptografia**; a **Central de PDF**; e as **Ferramentas** (relógio, calculadoras, bloco de notas, planilhas). A barra lateral organiza tudo por grupos. É só me dizer o que procura que eu abro a aba.' },
+    { id: 'mascote', nome: 'O que o mascote sabe fazer', keys: ['o que voce sabe fazer', 'o que voce faz', 'quem e voce', 'como voce pode me ajudar', 'o que o mascote faz', 'como falar com o mascote', 'como usar o mascote', 'como usar o assistente', 'como funciona o assistente', 'como te usar'],
+      texto: 'Eu respondo na hora, sem internet, sobre o **diretório** (telefone, endereço, horário, requisitos), **dúvidas de SUAS** (glossário e normas), **valores de referência**, **calendário do Bolsa Família**, **municípios de Roraima** e **como usar o app**. Também **abro abas** ("abre o mapa"), **busco no diretório**, **troco o tema** (claro/escuro) e **consulto a Agenda**. Quando a IA está ligada, ela aprofunda as respostas. Não guardo dados pessoais de ninguém: evite digitar nome, CPF ou NIS de quem foi atendido.' },
+    { id: 'busca', nome: 'Busca no diretório', keys: ['como busco', 'como buscar', 'como pesquisar', 'como pesquiso', 'como procurar', 'como procuro', 'campo de busca', 'barra de busca', 'pesquisa do app', 'busca por proximidade', 'ordenar por proximidade', 'perto de mim'],
+      texto: 'Digite na **barra de busca** do alto: nome do serviço, bairro, tipo de atendimento ou até um sintoma/assunto. A busca ignora acentos e maiúsculas. Em cada aba do diretório ela filtra só aquela categoria; na aba **Rede Intersetorial de Serviços** ela procura em tudo. Dá para **ordenar por proximidade** (usa a sua localização, se você permitir).', open: 'all', abrir: 'Rede Intersetorial' },
+    { id: 'recentes', nome: 'Recentes', keys: ['aba recentes', '!recentes', 'ultimas unidades', 'unidades que abri', 'historico de unidades', 'o que abri'],
+      texto: 'A aba **Recentes** guarda as últimas unidades que você abriu, para voltar a elas num toque.', open: 'recentes' },
+    { id: 'cartao', nome: 'Cartão de uma unidade', keys: ['cartao da unidade', 'ficha da unidade', 'o que tem no cartao'],
+      texto: 'Cada unidade aparece num **cartão** com endereço, telefones (toque para ligar), horário, descrição do serviço e, quando existem, requisitos e documentos. As fichas vêm do diretório do app e devem ser conferidas no órgão responsável quando a regra for importante.' },
+    { id: 'abas-diretorio', nome: 'Abas do diretório', keys: ['abas do diretorio', 'quais abas do diretorio', 'aba hospitalar', 'aba raps', 'aba juridico', 'aba educacao', 'aba bancos', 'aba previdencia', 'categorias do diretorio', 'em que aba fica', 'em qual aba'],
+      texto: 'As abas do diretório são: **Rede Hospitalar e Atenção Básica**, **RAPS** (saúde mental), **Pessoa com Deficiência e TEA**, **Proteção Social** (CRAS/CREAS), **Segurança Alimentar**, **Educação**, **Poder Judiciário**, **Conselho Tutelar**, **Segurança Pública**, **Rede de Enfrentamento à Violência contra a Mulher**, **Conselhos Municipais de Direitos**, **Documentação Civil**, **Rede Bancária**, **Previdência (INSS)**, **Serviço de Migração**, **Trabalho e Renda**, **Cultura, Esporte e Lazer**, **Habitação**, **Mobilidade**, **Defesa Civil** e **Programas, Projetos e Serviços**. Diga o assunto e eu abro a aba certa.' },
+    { id: 'cras-registro', nome: 'Registro de Atendimento (CRAS)', keys: ['registro de atendimento cras', 'aba cras', 'atalhos do cras', 'painel do cras', 'rma', 'equipe tecnica do cras', 'consulta tecnica cras', 'registro mensal de atendimentos', 'registro de atendimento'],
+      texto: 'A aba **Registro de Atendimento (CRAS)** é um painel de atalhos técnicos da equipe. Ela reúne páginas internas do app, como a **consulta técnica da equipe do CRAS**, o **RMA** (Registro Mensal de Atendimentos, formulário e planilha com soma) e os calendários do **Bolsa Família**.', open: 'cras', abrir: 'Registro CRAS' },
+    { id: 'cas-registro', nome: 'Registro de Atendimento (CAS)', keys: ['registro de atendimento cas', 'aba cas', 'atalhos do cas', 'painel do cas', 'centro de atendimento social'],
+      texto: 'A aba **Registro de Atendimento (CAS)** é o painel de atalhos técnicos do Centro de Atendimento Social, para uso interno da equipe.', open: 'cas', abrir: 'Registro CAS' },
+    { id: 'agenda', nome: 'Agenda Argo', keys: ['!agenda', 'agenda argo', 'calendario', 'feriados', 'pontos facultativos', 'dia de pagamento', 'como uso a agenda', 'como usar a agenda'],
+      texto: 'A **Agenda Argo** é um calendário com **feriados, pontos facultativos e dias de pagamento** marcados, mais as suas **anotações por dia**. Use **＋ Anotar** (ou a tecla **N**) para anotar rápido, por exemplo "14:30 reunião CRAS". As anotações só ficam disponíveis depois de definir um **código de sincronização**; o calendário funciona sem ele.', open: 'agenda' },
+    { id: 'agenda-sync', nome: 'Sincronização da Agenda', keys: ['codigo de sincronizacao', 'sincronizar agenda', 'sincronizacao', 'anotacoes em outro aparelho', 'agenda no celular e no computador', 'firebase'],
+      texto: 'Para ver as anotações da Agenda em **mais de um aparelho**, defina o mesmo **código de sincronização** em cada um (botão de sincronização da Agenda). O ponto colorido mostra se está conectado. Sem código, o calendário funciona normalmente, só as anotações ficam indisponíveis. Use um código difícil de adivinhar.', open: 'agenda' },
+    { id: 'agenda-extras', nome: 'Notificações, estatísticas e calendário do celular', keys: ['notificacoes da agenda', 'lembrete da agenda', 'resumo da semana', 'estatisticas da agenda', 'estatisticas das atividades', 'baixar para o celular', 'exportar agenda', 'arquivo ics', 'ics'],
+      texto: 'Na Agenda: o botão de **notificações** ativa o lembrete do resumo da semana (o navegador precisa permitir); o botão **📊** mostra as **estatísticas das atividades** (feitas, pendentes, atrasadas, por dia da semana e período), calculadas no próprio aparelho; e o menu tem **Baixar para o celular (.ics)**, que leva as datas de feriados e pagamentos para o calendário do aparelho. As suas anotações pessoais não entram no .ics.', open: 'agenda' },
+    { id: 'mapa', nome: 'Mapa da Rede', keys: ['!mapa', 'mapa da rede', 'mapa dos equipamentos', 'localizar agora', 'pinos do mapa', 'mapa de unidades', 'ver no mapa'],
+      texto: 'O **Mapa da Rede** mostra os equipamentos no mapa. Dá para escolher a **categoria**, a **distância** (raio a partir de você) e a base do mapa, e mostrar ou esconder **CRAS/CREAS**. Os pinos usam endereços já localizados e guardados neste aparelho; os que faltam podem ser localizados no botão **Localizar agora**.', open: 'mapa' },
+    { id: 'tradutor', nome: 'Tradutor', keys: ['!tradutor', '!traduzir', 'traducao', 'venezuelano', 'espanhol', 'frances', 'ingles', 'estrangeiro', 'falar com estrangeiro', 'frases prontas'],
+      texto: 'O **Tradutor** traduz entre português, espanhol, inglês e francês, com **texto e voz** (microfone e alto-falante). Há **frases prontas** de atendimento. A tradução usa um serviço online gratuito e precisa de internet; por isso **não digite nome, endereço, NIS ou outro dado** da pessoa atendida: prefira frases genéricas.', open: 'tradutor' },
+    { id: 'noticias', nome: 'Notícias', keys: ['!noticias', 'aba noticias', 'normativos', 'portarias', 'feed', 'novidades do mds', 'noticias do mds', 'salvar noticia', 'noticias nao lidas'],
+      texto: 'A aba **Notícias** traz as últimas publicações do **MDS, MEC e Saúde**, com os **normativos separados** das notícias. Você usa **temas rápidos** (ex.: Bolsa Família), filtra por ministério, tipo e período, escolhe a ordem (mais recentes ou mais relevantes para o SUAS), **salva** itens, marca **não lidas**, copia a lista e exporta as salvas em .txt. Precisa de internet para atualizar.', open: 'noticias' },
+    { id: 'aplicativos', nome: 'Aplicativos do autor', keys: ['!aplicativos', 'aba aplicativos', '!toth', '!umbrela', '!anona', '!verbus', 'vita', 'caderno de campo', 'paif paf', 'condicionalidades', 'editor de documentos', 'apps do autor'],
+      texto: 'A aba **Aplicativos** lista as outras ferramentas do autor, cada uma em seu endereço e com login próprio: **Toth** (caderno de campo), **Umbrela** (PAIF/PAF), **Anona** (condicionalidades do Bolsa Família 2026), **Verbus** (editor de documentos), **Bloco de Notas** e o site **Vita**. Abrem em outra aba e precisam de internet. No celular, use "Adicionar à tela inicial" para criar atalho.', open: 'appsext' },
+    { id: 'cripto', nome: 'Criptografia', keys: ['!criptografia', 'aba criptografia', 'proteger com senha', 'senha em documento', 'senha em word', 'senha em excel', 'senha em zip', 'zip com senha', 'proteger arquivo', 'cifrar arquivo', 'criptografar'],
+      texto: 'A aba **Criptografia** coloca **senha** em **PDF** (um, vários ou uma pasta), em **Word, Excel e PowerPoint** (padrão do Office, AES-256), em **texto (.txt)** e em **pasta .zip**. Tudo acontece no seu navegador: nenhum arquivo nem senha é enviado a servidor. **Anote a senha**: se for esquecida, não há como recuperar o arquivo. Você recebe uma cópia protegida; o original não é alterado.', open: 'criptografia' },
+    { id: 'pdf', nome: 'Central de PDF', keys: ['central de pdf', 'ferramentas de pdf', 'o que tem na central de pdf', 'funcoes do pdf', 'mexer em pdf', 'trabalhar com pdf', 'aba pdf'],
+      texto: 'A **Central de PDF** faz tudo no seu navegador, sem enviar arquivo a servidor: **Editar, Unir, Dividir, Excluir páginas, Girar, Numerar, Senha (leva à Criptografia), Marca d\'água, Dados ocultos, Texto, Reduzir, PDF ⇄ Word, PDF ⇄ JPG e Digitalizar (fotos → PDF)**. Na primeira vez que usa cada função, o app baixa uma pequena biblioteca (precisa de internet só nesse momento). Diga qual função quer e eu explico.', open: 'pdftools' },
+    { id: 'pdf-editar', nome: 'Editar PDF', keys: ['editar pdf', 'escrever no pdf', 'escrevo no pdf', 'assinar pdf', 'assinatura no pdf', 'realcar pdf', 'cobrir informacao no pdf', 'preencher pdf', 'desenhar no pdf'],
+      texto: 'Em **Editar PDF** (até 60 MB) você escreve textos, desenha, realça trechos, cobre informações e coloca uma imagem ou **assinatura** em qualquer página. O texto original não é alterado: as edições ficam por cima. Depois é só **Baixar PDF editado**.', open: 'pdftools', abrir: 'Central de PDF' },
+    { id: 'pdf-unir', nome: 'Unir PDFs e fotos', keys: ['unir pdf', 'juntar pdf', 'unificar pdf', 'unir pdfs', 'juntar pdfs', 'juntar fotos em pdf', 'mesclar pdf', 'combinar pdf'],
+      texto: 'Em **Unificar PDFs e fotos** você junta até **20 arquivos** (total de 50 MB), PDFs e fotos JPG/PNG, num só documento, na ordem que escolher (arraste ou use as setas). Em cada PDF dá para usar só algumas páginas, e qualquer item pode ser girado.', open: 'pdftools', abrir: 'Central de PDF' },
+    { id: 'pdf-dividir', nome: 'Dividir / extrair páginas', keys: ['dividir pdf', 'separar pdf', 'extrair paginas', 'extrair pagina', 'cortar pdf', 'separar paginas', 'pegar so algumas paginas'],
+      texto: 'Em **Dividir / extrair páginas** você fica só com as páginas que importam (ex.: **1-3, 5**) ou **separa cada página em um arquivo**, baixado em .zip.', open: 'pdftools', abrir: 'Central de PDF' },
+    { id: 'pdf-excluir', nome: 'Excluir páginas', keys: ['excluir paginas', 'apagar paginas do pdf', 'remover paginas', 'tirar pagina do pdf', 'pagina em branco', 'deletar pagina'],
+      texto: 'Em **Excluir páginas** você tira páginas em branco ou desnecessárias (há atalhos para ímpares, pares, primeira e última) e baixa o PDF com as demais, na mesma ordem.', open: 'pdftools', abrir: 'Central de PDF' },
+    { id: 'pdf-girar', nome: 'Girar páginas', keys: ['girar pdf', 'girar paginas', 'pdf de lado', 'pdf de cabeca para baixo', 'rotacionar pdf', 'virar pagina'],
+      texto: 'Em **Girar páginas** você corrige páginas escaneadas de lado ou de cabeça para baixo: 90° à direita, 180° ou 90° à esquerda. Deixe o campo vazio para girar todas ou informe algumas (ex.: **2, 4-6, pares**). O texto original é mantido.', open: 'pdftools', abrir: 'Central de PDF' },
+    { id: 'pdf-numerar', nome: 'Numerar páginas', keys: ['numerar paginas', 'numerar pdf', 'numeracao de paginas', 'colocar numero nas paginas', 'paginar pdf', 'rodape com numero'],
+      texto: 'Em **Numerar páginas** o app coloca o número de cada página no rodapé (formato "Página 1 de N" ou só o número; posição centro, direita ou esquerda; e o número inicial à sua escolha). Útil para relatórios, pareceres e processos.', open: 'pdftools', abrir: 'Central de PDF' },
+    { id: 'pdf-marca', nome: "Marca d'água", keys: ['marca d agua', 'marca dagua', 'marcadagua', 'carimbo no pdf', 'confidencial no pdf', 'copia no pdf', 'uso interno pdf'],
+      texto: 'Em **Marca d\'água** você escreve um texto em diagonal sobre todas as páginas (como CÓPIA, CONFIDENCIAL ou USO INTERNO) e escolhe a intensidade (suave, média ou forte). Útil antes de enviar documentos.', open: 'pdftools', abrir: 'Central de PDF' },
+    { id: 'pdf-meta', nome: 'Dados ocultos do PDF', keys: ['dados ocultos', 'limpar dados ocultos', 'metadados', 'autor do pdf', 'remover autor do pdf', 'propriedades do pdf', 'anonimizar pdf'],
+      texto: 'Em **Limpar dados ocultos** o app apaga título, autor, assunto, palavras-chave e o programa que criou o arquivo. É bom antes de enviar documentos para fora, porque esses dados podem revelar quem e onde o PDF foi feito. O conteúdo das páginas não muda.', open: 'pdftools', abrir: 'Central de PDF' },
+    { id: 'pdf-texto', nome: 'Extrair texto do PDF', keys: ['extrair texto', 'pdf para txt', 'copiar texto do pdf', 'texto do pdf', 'pdf em texto'],
+      texto: 'Em **Extrair texto (.txt)** o app copia todo o texto do PDF para um arquivo .txt, página por página. Só funciona em PDFs com texto selecionável: documentos escaneados (fotos) não têm texto para copiar.', open: 'pdftools', abrir: 'Central de PDF' },
+    { id: 'pdf-reduzir', nome: 'Reduzir tamanho do PDF', keys: ['reduzir pdf', 'comprimir pdf', 'diminuir pdf', 'pdf muito grande', 'reduzir tamanho', 'compactar pdf', 'pdf pesado', 'limite de tamanho', 'reduzir tamanho do pdf'],
+      texto: 'Em **Reduzir tamanho** o app diminui o arquivo para caber em sistemas com limite (e-mail, portais). Atenção: as **páginas viram imagens**, então o texto deixa de poder ser selecionado ou copiado. Escolha a qualidade e confira o resultado antes de usar.', open: 'pdftools', abrir: 'Central de PDF' },
+    { id: 'pdf-word', nome: 'PDF ⇄ Word', keys: ['pdf para word', 'word para pdf', 'pdf em word', 'converter pdf', 'converter word', 'docx para pdf', 'pdf para docx', 'converter documento'],
+      texto: 'A Central converte **PDF → Word** (extrai o texto para um .docx editável, até 60 MB; a conversão é baseada no texto do arquivo) e **Word → PDF** (de um .docx para PDF pronto para impressão, mantendo títulos e parágrafos). Confira o resultado antes de usar, principalmente a formatação.', open: 'pdftools', abrir: 'Central de PDF' },
+    { id: 'pdf-jpg', nome: 'PDF → JPG e fotos → PDF', keys: ['pdf para jpg', 'pdf em imagem', 'pdf para imagem', 'jpg para pdf', 'imagem para pdf', 'foto para pdf', 'digitalizar documento', '!digitalizar', 'escanear documento', '!escanear', '!scanner', 'fotografar documento'],
+      texto: '**PDF → JPG** transforma cada página em uma imagem (vários arquivos saem juntos num .zip). **Digitalizar: fotos → PDF** (até 20 imagens, total de 40 MB) deixa você fotografar ou escolher as páginas, **cortar as bordas (✂)**, limpar o papel e gerar um único PDF na ordem escolhida. Para várias páginas, toque em "Tirar foto" uma vez por página.', open: 'pdftools', abrir: 'Central de PDF' },
+    { id: 'ferramentas', nome: 'Ferramentas', keys: ['aba ferramentas', 'o que tem nas ferramentas', 'quais ferramentas', 'lista de ferramentas', 'relogio calculos planilhas e notas', 'ferramentas do app'],
+      texto: 'A aba **Ferramentas** tem 16 cartões: **Relógio** (cronômetro, temporizador e alarme), **Calculadora**, **Renda per capita**, **Idade e datas**, **Gerador de QR Code**, **Contador de atendimentos**, **Calculadora de prazos**, **Conferir NIS e CPF**, **Porcentagens**, **Soma e média de uma lista**, **Valor por extenso**, **Link de WhatsApp**, **Formatar texto**, **Acompanhamento de famílias**, **Analisador de planilha** e **Bloco de notas**. Há uma busca para achar o cartão pelo assunto.', open: 'ferramentas' },
+    { id: 'relogio', nome: 'Relógio, cronômetro e alarme', keys: ['!relogio', '!cronometro', '!temporizador', 'timer', 'alarme', 'despertador', 'lembrete de horario', 'horario de boa vista'],
+      texto: 'O **Relógio** mostra o horário de Boa Vista e tem **cronômetro**, **temporizador** e **alarme** (uma vez, todo dia ou segunda a sexta, com aviso digitado). O aviso toca (som e vibração) mesmo se você trocar de aba, **desde que o app continue aberto e destrancado**. Os alarmes ficam salvos, cifrados, neste aparelho.', open: 'ferramentas' },
+    { id: 'calculadora', nome: 'Calculadora', keys: ['!calculadora', 'calcular', 'fazer conta', 'historico da calculadora', 'memoria da calculadora', 'teclado da calculadora'],
+      texto: 'A **Calculadora** tem memória (M), histórico, botão **Copiar**, modo em **R$** e aceita o **teclado** (números, + − * /, Enter, Backspace, Esc limpa tudo, Del limpa o número). Ctrl+V cola um valor.', open: 'ferramentas' },
+    { id: 'renda', nome: 'Renda per capita', keys: ['renda per capita', 'per capita', 'meio salario minimo', 'calcular renda', 'renda familiar', 'renda da familia', 'corte do cadunico'],
+      texto: 'O cartão **Renda per capita** divide a renda da família pelo número de pessoas. Você informa o **salário mínimo** e a **linha do Bolsa Família** (valores de referência de 2026, editáveis), as **pessoas na família** e soma cada renda em **+ Adicionar renda**. Conte a renda bruta mensal de quem mora na casa; em geral não entram BPC, Bolsa Família e auxílios assistenciais. Os valores de referência eu também sei dizer. Confirme a regra vigente com o órgão responsável.', open: 'ferramentas' },
+    { id: 'idade', nome: 'Idade e datas', keys: ['calcular idade', 'idade e datas', 'faixa etaria', 'idade em meses', 'data de nascimento', 'quantos anos tem'],
+      texto: 'O cartão **Idade e datas** calcula a idade a partir da **data de nascimento** até uma data à sua escolha. Serve para checar a **faixa etária** de serviços (crianças, adolescentes, idosos) e a idade em meses de bebês.', open: 'ferramentas' },
+    { id: 'qr', nome: 'Gerador de QR Code', keys: ['qr code', 'qrcode', 'gerar qr', 'codigo qr', 'qr de link'],
+      texto: 'O **Gerador de QR Code** transforma um link (ou texto) em um QR Code que você pode baixar como imagem PNG.', open: 'ferramentas' },
+    { id: 'contador', nome: 'Contador de atendimentos', keys: ['contador de atendimentos', 'contar atendimentos', 'contador rma', 'contagem mensal', 'contagem de atendimentos'],
+      texto: 'O **Contador de atendimentos** conta os atendimentos **dia a dia** e gera o **resumo do mês** para copiar (botões Copiar resumo do mês e Zerar este dia). Guarda só contagens, sem nomes. Atenção: essas contagens ficam neste aparelho e **não entram no backup** nem saem em "Apagar dados salvos".', open: 'ferramentas' },
+    { id: 'prazos', nome: 'Calculadora de prazos', keys: ['calculadora de prazos', 'calcular prazo', 'prazo em dias uteis', 'dias uteis', 'dias corridos', 'data de vencimento', 'somar dias'],
+      texto: 'A **Calculadora de prazos** soma ou subtrai **dias corridos ou úteis** a partir de uma data (atalhos de 5, 10, 15, 30, 60 e 90 dias). A contagem começa no **dia seguinte** à data de partida; em dias úteis saem sábados, domingos, feriados e pontos facultativos cadastrados na Agenda. Confira a regra do prazo no normativo ou no ofício.', open: 'ferramentas' },
+    { id: 'nis-cpf', nome: 'Conferir NIS e CPF', keys: ['conferir nis', 'conferir cpf', 'validar cpf', 'validar nis', 'digito verificador', 'nis esta certo', 'cpf esta certo', 'numero do nis', 'conferir tudo'],
+      texto: 'O cartão **Conferir NIS e CPF** confere o **dígito verificador** (e as datas) do número digitado: botões Conferir tudo, Conferir NIS, Conferir CPF e Conferir datas. Ele só mostra se o número é **válido na forma**; não consulta nenhum cadastro.', open: 'ferramentas' },
+    { id: 'porcentagem', nome: 'Porcentagens', keys: ['porcentagem', 'porcentagens', 'calcular percentual', 'percentual', 'acrescimo', 'desconto', 'reajuste', 'variacao percentual'],
+      texto: 'O cartão **Porcentagens** faz cinco contas: quanto é X% de um valor, quanto uma parte representa do total, acréscimo, desconto e variação entre dois valores (aumento ou redução). Tem botão para copiar o resultado.', open: 'ferramentas' },
+    { id: 'lista', nome: 'Soma e média de uma lista', keys: ['soma e media', 'somar lista', 'media de uma lista', 'mediana', 'somar valores', 'somar coluna', 'estatistica de lista'],
+      texto: 'O cartão **Soma e média de uma lista** recebe valores (um por linha ou separados por ;) e calcula **soma, média, mediana, menor e maior**. Texto misturado é ignorado: só os números entram na conta. O que você cola fica só na tela.', open: 'ferramentas' },
+    { id: 'extenso', nome: 'Valor por extenso', keys: ['valor por extenso', 'escrever valor', 'numero por extenso', 'valor em extenso', 'por extenso', 'recibo', 'beneficio eventual por extenso'],
+      texto: 'O cartão **Valor por extenso** escreve um valor em reais por extenso (ex.: para recibos, ofícios e declarações de benefício eventual).', open: 'ferramentas' },
+    { id: 'whatsapp', nome: 'Link de WhatsApp', keys: ['link de whatsapp', 'link do whatsapp', 'abrir whatsapp sem salvar', 'whatsapp sem salvar contato', 'wa me', 'mensagem no whatsapp'],
+      texto: 'O cartão **Link de WhatsApp** monta o link para abrir uma conversa com um número (com DDD) e uma mensagem pronta, sem precisar salvar o contato.', open: 'ferramentas' },
+    { id: 'texto', nome: 'Formatar texto', keys: ['formatar texto', 'maiuscula', 'minuscula', 'nome proprio', 'limpar espacos', 'contar palavras', 'padronizar texto', 'tirar acentos'],
+      texto: 'O cartão **Formatar texto** muda maiúsculas/minúsculas e nome próprio, limpa espaços e acentos, conta palavras e padroniza textos colados.', open: 'ferramentas' },
+    { id: 'acomp', nome: 'Acompanhamento de famílias e Analisador de planilha', keys: ['acompanhamento de familias', 'analisador de planilha', 'planilha de familias', 'duplicados na planilha', 'importar planilha', 'xlsx', 'csv', 'retorno vencido', 'visitas pendentes', 'achar repetidos'],
+      texto: '**Acompanhamento de famílias** lê uma planilha (.xlsx ou .csv) e mostra retornos vencidos, pendências e situação por técnico ou bairro. O **Analisador de planilha** acha **duplicados** e conta repetições por coluna (por exemplo, NIS repetido). O processamento é feito no seu aparelho.', open: 'ferramentas' },
+    { id: 'bloco', nome: 'Bloco de notas', keys: ['bloco de notas', '!anotacao', '!anotacoes', 'nova nota', 'modelo de nota', 'lista de tarefas', 'checklist', 'fixar nota', 'nota em pdf', 'anotar atendimento'],
+      texto: 'O **Bloco de notas** (aba **Ferramentas**) guarda quantas notas você quiser: **+ Nova**, **Modelos** (Atendimento, Visita domiciliar, Contato por telefone, Acompanhamento familiar, Reunião de equipe, Tarefas do dia), **Data/hora**, **☐ Lista** (checklist), **Fixar**, **Copiar**, **Exportar** e **Esta nota em PDF**. As notas ficam cifradas neste aparelho. Para anotações por dia, com sincronização entre aparelhos, use a **Agenda**.', open: 'ferramentas', abrir: 'Ferramentas' },
+    { id: 'senha', nome: 'Senha e entrada no app', keys: ['senha do app', 'esqueci a senha', 'trocar a senha', 'login', 'entrar no app', 'tela de login', 'senha errada', 'bloqueou depois de errar', 'tentativas de senha', 'app trancado'],
+      texto: 'O app pede **senha** para abrir. Depois de **{tentativas} tentativas erradas**, ele bloqueia por um tempo que vai aumentando (começa em 30 segundos e chega a 10 minutos). A senha protege os dados salvos neste aparelho. Se a senha for trocada, faça o **backup antes**, troque e só então restaure.' },
+    { id: 'conectado', nome: 'Manter-me conectado e bloqueio automático', keys: ['manter conectado', 'manter me conectado', 'bloqueio automatico', 'inatividade', 'trancou sozinho', 'app trancou', 'sessao expirou', 'por que pediu a senha de novo', 'sair do app', 'sair'],
+      texto: '**Manter-me conectado nesta aba** evita digitar a senha de novo ao atualizar a página, mas só vale na mesma aba e **expira em {lembrarHoras} horas**; use só em aparelho seu. O app **tranca sozinho depois de {bloqueioMin} minutos sem uso** (ou ao voltar de uma aba escondida por esse tempo), para proteger os dados dos atendidos. **Sair** tranca na hora e apaga o "manter conectado".' },
+    { id: 'backup', nome: 'Backup e restauração', keys: ['!backup', 'backup de anotacoes', 'fazer backup', 'importar backup', 'restaurar backup', 'restaurar dados', 'exportar dados', 'trocar de aparelho', 'passar dados para outro aparelho', 'perdi minhas anotacoes'],
+      texto: 'No menu lateral há **Backup de anotações** (baixa um arquivo com os seus dados salvos) e **Importar backup** (restaura). O arquivo é **cifrado com a senha em uso** na hora de exportar; para restaurar, entre com a mesma senha. Use o backup antes de trocar de aparelho, de limpar o navegador ou de trocar a senha.' },
+    { id: 'apagar', nome: 'Apagar dados do aparelho', keys: ['apagar dados', 'apagar dados salvos', 'limpar dados do aparelho', 'computador compartilhado', 'apagar tudo', 'limpar meus dados', 'emprestar computador'],
+      texto: 'O botão **Apagar dados salvos neste dispositivo** (menu lateral) remove deste navegador nomes, endereços, anexos, notas e alarmes salvos. Use **antes de emprestar ou devolver um computador compartilhado**, porque a tela de login não protege o que já está no navegador. Faça o **backup** antes, se quiser guardar. A ação pede confirmação.' },
+    { id: 'privacidade', nome: 'Privacidade e dados pessoais', keys: ['privacidade', 'dados pessoais', 'lgpd', 'o app guarda dados', 'onde ficam os dados', 'e seguro', 'e seguro usar', 'seguranca do app', 'dados dos atendidos'],
+      texto: 'Os dados que você salva ficam **neste aparelho**, cifrados com a sua senha; a Central de PDF e a Criptografia trabalham no navegador, sem enviar arquivos. Exceções: o **Tradutor** e as **Notícias** usam serviços online, e a **sincronização da Agenda** guarda as anotações na nuvem sob o seu código. Evite digitar nome, CPF ou NIS de quem foi atendido no Tradutor e na conversa comigo.' },
+    { id: 'offline', nome: 'Uso sem internet', keys: ['sem internet', 'offline', 'funciona sem internet', 'sem conexao', 'instalar o app', 'adicionar a tela inicial', 'instalar no celular', 'pwa'],
+      texto: 'O diretório, a base SUAS e várias ferramentas funcionam **sem internet** depois de carregados. Precisam de internet: **Notícias**, **Tradutor**, **Aplicativos**, a **sincronização da Agenda** e, na primeira vez, cada função da Central de PDF. No celular, use "Adicionar à tela inicial" do navegador para ter o atalho.' },
+    { id: 'tema', nome: 'Tema claro e escuro', keys: ['modo escuro', 'tema escuro', 'tema claro', 'modo claro', 'trocar o tema', 'mudar a cor do app'],
+      texto: 'Para mudar o tema, é só pedir: **"modo escuro"** ou **"modo claro"**. Eu troco na hora.' }
+  ];
+  var manualIndex = null;
+  function manualTexto(e) {
+    return e.texto.replace(/\{(\w+)\}/g, function (m, k) { return MANUAL_VARS[k] != null ? MANUAL_VARS[k] : m; });
+  }
+  // palavra sem plural simples e sem as de ligação ("pdf de lado" ~ "pdfs lado")
+  var MAN_LIGACAO = asSet(['o', 'a', 'os', 'as', 'um', 'uma', 'de', 'do', 'da', 'dos', 'das', 'em', 'no', 'na', 'nos', 'nas', 'e', 'ou', 'que', 'para', 'pra', 'por', 'com', 'se', 'ao']);
+  function manualRaiz(w) { return w.length > 3 && w.charAt(w.length - 1) === 's' ? w.slice(0, -1) : w; }
+  function manualToks(s) { return norm(s).split(' ').filter(function (w) { return w && !MAN_LIGACAO[w]; }).map(manualRaiz); }
+  // chave que começa com "!" é nome de aba/ferramenta (ex.: "!mapa"): uma palavra só já basta. As demais precisam de 2+ palavras.
+  function manualBuild() {
+    manualIndex = MANUAL.map(function (e) {
+      return { e: e, keys: e.keys.map(function (k) {
+        var forte = k.charAt(0) === '!', toks = manualToks(forte ? k.slice(1) : k);
+        return { toks: toks, forte: forte, peso: forte ? 4 : (toks.length > 1 ? 3 + toks.length : 2) };
+      }).filter(function (k) { return k.toks.length; }) };
+    });
+  }
+  // melhor verbete: vale a melhor chave (todas as suas palavras presentes na pergunta) + 1 por chave extra
+  function manualAcha(text) {
+    if (!manualIndex) manualBuild();
+    var q = asSet(manualToks(text)), best = null;
+    manualIndex.forEach(function (it) {
+      var top = 0, extra = 0;
+      it.keys.forEach(function (k) {
+        for (var i = 0; i < k.toks.length; i++) if (!q[k.toks[i]]) return;
+        if (k.peso > top) { if (top) extra++; top = k.peso; } else extra++;
+      });
+      var sc = top ? top + Math.min(extra, 3) : 0;
+      if (sc && (!best || sc > best.score)) best = { entry: it.e, score: sc };
+    });
+    return best;
+  }
+  var RE_MAN_PERGUNTA = /\b(como|onde|qual|quais|que aba|o que|para que|pra que|serve|funciona|funcao|usar|uso|usa|abrir|abro|acho|achar|encontro|encontrar|fica|explica|ensina|aprender|tutorial|passo a passo|consigo|posso|da para|tem como|tem (alguma|algum)|existe|quero|preciso)\b/;
+  var RE_MAN_DIRETORIO = /\b(telefone|fone|numero de contato|endereco|horario de funcionamento|atende|atendem|quem atende|bairro|cep|requisitos|documentos necessarios)\b/;
+  function manualAsk(text) {
+    var n = norm(text);
+    if (n.length < 5 || n.length > 240) return null;
+    if (!RE_MAN_PERGUNTA.test(n)) return null;
+    if (RE_MAN_DIRETORIO.test(n)) return null;
+    var b = manualAcha(text);
+    if (!b || b.score < 3) return null;
+    var e = b.entry, acts = [];
+    if (e.open) acts.push({ label: 'Abrir ' + (e.abrir || e.nome), cat: e.open });
+    return { reply: manualTexto(e), mood: 'info', badge: 'Manual do Argo',
+      note: 'Resumo de como o app funciona hoje; se algo na tela estiver diferente, vale conferir lá.',
+      quickActions: acts, followups: ['O que o app faz?', 'Quais ferramentas tem?'], units: [] };
+  }
+  // verbetes que acompanham a pergunta à IA (pergunta sobre o app): a IA não tem como adivinhar como o Argo funciona
+  function manualBase(text) {
+    var n = norm(text);
+    if (n.length < 5 || RE_MAN_DIRETORIO.test(n)) return [];
+    var b = manualAcha(text);
+    if (!b || b.score < 3 || !RE_MAN_PERGUNTA.test(n)) return [];
+    return [{ titulo: 'Manual do app Argo: ' + b.entry.nome, texto: limpaMd(manualTexto(b.entry)), origem: 'manual conferido no código do app' }];
+  }
+
   // Itens (até 3) que acompanham a pergunta à IA: o que o app sabe e a IA não tem como adivinhar.
   function baseApp(text) {
     var out = [], n = norm(text);
@@ -3045,9 +3214,11 @@
     if (RE_REFS.test(n) && refsTexto()) out.push({ titulo: 'Valores de referência do app (2026)', texto: refsTexto(), origem: 'ferramenta de renda per capita do Argo' });
     var pg = pbfPagamento(text);
     if (pg && out.length < 4) out.push({ titulo: 'Calendário de pagamento do Bolsa Família', texto: pg, origem: 'ferramentas/pagamento-pbf.html (Argo)' });
+    var man = manualBase(text);
+    if (man.length) out = man.concat(out);
     var censo = censoBaseApp(text);
     if (censo.length) return censo.concat(out).slice(0, 4);
-    return out;
+    return out.slice(0, 4);
   }
 
   // Resposta direta da ficha (sem IA) para "requisitos / documentos / valor / como solicitar" de um serviço que o diretório identifica bem.
@@ -3572,6 +3743,9 @@
     // CID-11: código → transtorno e nome → código (tabela local, sem IA)
     var cd = cidAsk(text);
     if (cd) return { kind: 'directory', result: cd, dir: { units: [], confidence: 1, mode: 'list' }, con: { score: 0 } };
+    // manual do app: "como uso a Central de PDF?", "onde fica o backup?" (sem IA, sem internet)
+    var ma = manualAsk(text);
+    if (ma) return { kind: 'manual', result: ma, dir: { units: [], confidence: 1, mode: 'list' }, con: { score: 0 } };
     // psicólogos no Censo SUAS 2025 (Boa Vista em detalhe, Roraima em totais): número fixo da base, nunca da IA
     var cp = psiCensoAsk(text);
     if (cp) return { kind: 'directory', result: cp, dir: { units: [], confidence: 1, mode: 'list' }, con: { score: 0 } };
@@ -3742,6 +3916,8 @@
     data = Array.isArray(opts.data) ? opts.data : [];
     REFS = (opts.refs && typeof opts.refs === 'object') ? opts.refs : {}; passIdx = null; panoramaCache = null;
     index = null; vocab = null; expCache = {}; gloIndex = null; psiIndex = null; phoneIdx = null; terrIdx = null; terrAll = null; munIdx = null; contIdx = null;
+    if (opts.manual && typeof opts.manual === 'object') for (var mv in opts.manual) if (Object.prototype.hasOwnProperty.call(MANUAL_VARS, mv) && isFinite(opts.manual[mv])) MANUAL_VARS[mv] = opts.manual[mv];
+    manualIndex = null;
     if (opts.ia) for (var k in opts.ia) if (Object.prototype.hasOwnProperty.call(CFG, k)) CFG[k] = opts.ia[k];
   }
 
@@ -3749,7 +3925,7 @@
     interpretar: interpretar, init: init, setCid: setCid, setMunicipios: setMunicipios, setCensoSuas: setCensoSuas, psiCenso: psiCensoAsk, psiCensoDados: function () { return { mun: CP_MUN, perfil: CP_PERFIL_MUN, equipe: CP_EQUIPE_MUN, interior: CP_INTERIOR, bvEquipe: CP_BV_EQUIPE }; }, bvCenso: boaVistaCensoAsk, municipiosRR: rrAsk, cid: cidAsk, norm: norm, piiBlock: piiBlock, crisis: crisis, plan: plan, planMulti: planMulti, planSeguimento: planSeguimento, contagem: contagem,
     directory: function (t, tabCat) { return directory(t, session, tabCat); },
     glossary: glossaryScore, compose: { directory: composeDirectory, glossary: composeGlossary },
-    psi: psiScore, psiLista: PSI_BASE, baseApp: baseApp, fichaAsk: fichaAsk, trechosDa: trechosDa, pbfPagamento: pbfPagamento,
+    psi: psiScore, psiLista: PSI_BASE, manual: manualAsk, manualLista: MANUAL, baseApp: baseApp, fichaAsk: fichaAsk, trechosDa: trechosDa, pbfPagamento: pbfPagamento,
     remember: remember, reset: reset, session: session, notar: notar, estado: estadoParaIA, deveEsclarecer: deveEsclarecer, historicoParaIA: historicoParaIA,
     aiOn: aiOn, aiGate: aiGate, buildPayload: buildPayload, streamAI: streamAI,
     verifyPhones: verifyPhones, panorama: panorama, isAmpla: isAmpla, cleanAI: cleanAI, separarSugestoes: separarSugestoes, ocultarSugestoes: ocultarSugestoes, mentionedUnits: mentionedUnits, telHref: telHref, slim: slim,
