@@ -6,6 +6,7 @@
     "check": "node scripts/verificar.mjs",
     "test:territorio": "node scripts/teste-territorio.mjs",
     "test:conversa": "node scripts/teste-conversa.mjs",
+    "test:manual": "node scripts/teste-manual.mjs",
     "build": "node scripts/build.mjs",
     "gerar:municipios": "node scripts/gerar-municipios-rr.mjs",
     "test:voz": "node scripts/teste-voz.mjs",
