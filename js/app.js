@@ -17786,7 +17786,7 @@ const ARGO_ASSISTANT_INTENTS = [
   },
   {
     keys: ['anotacao', 'anotacoes', 'bloco de notas', 'calculadora', 'relogio', 'ferramentas', 'novo caso'],
-    reply: 'Em "Minhas Anotações" você cria uma anotação por caso ou atendimento, registra os dados de quem foi atendido (ficam cifrados neste aparelho) e pode gerar a guia ou enviar por WhatsApp.',
+    reply: 'Em "Ferramentas" fica o Bloco de notas: você cria quantas notas quiser (uma por caso ou atendimento, se preferir), usa modelos prontos, faz listas, fixa, copia e exporta a nota em PDF. As notas ficam cifradas neste aparelho. Ali também estão o relógio, a calculadora, os prazos e as planilhas. Para anotar por dia, use a Agenda.',
     action: { label: 'Abrir Ferramentas', run: () => argoAssistantGoTo('ferramentas'), reply: 'Abri as Ferramentas (relógio, calculadoras, prazos, planilha e bloco de notas).', mood: 'success' }
   },
   {
@@ -27938,7 +27938,9 @@ let argoCensoReady = Promise.resolve(0);
 function argoBrain() {
   if (typeof ArgoCerebro === 'undefined') return null;
   if (!argoBrainReady) {
-    ArgoCerebro.init({ data: typeof DATA !== 'undefined' ? DATA : [], ia: { url: ARGO_IA.url }, refs: typeof PC_REF !== 'undefined' ? PC_REF : {} });
+    ArgoCerebro.init({ data: typeof DATA !== 'undefined' ? DATA : [], ia: { url: ARGO_IA.url }, refs: typeof PC_REF !== 'undefined' ? PC_REF : {},
+      // números que o manual do app cita: lidos das constantes do próprio app, para não ficarem desatualizados
+      manual: { bloqueioMin: Math.round(AUTO_LOCK_IDLE_MS / 60000), lembrarHoras: Math.round(REMEMBER_SESSION_MAX_MS / 3600000), tentativas: AUTH_MAX_ATTEMPTS } });
     // Paulus (js/paulus.v1.js): faz a ida à IA e traz a base de normas offline (assets/conhecimento.json).
     // Se o arquivo não carregar, o app segue com o transporte antigo do ArgoCerebro.
     if (typeof Paulus !== 'undefined' && ARGO_IA.url) {
@@ -28123,7 +28125,7 @@ function argoAssistantAskHybridCore(rawText, meta) {
     // Dúvida do psicólogo no SUAS: verbete curado, com a norma citada. Responde na hora, mesmo com a IA ligada
     // (a resposta precisa ser a da norma); a IA fica a um toque, em "Aprofundar com a IA".
     // 'ficha': requisitos/documentos/valor copiados do cartão do diretório (mesmo tratamento do psi: responde na hora, IA a um toque)
-    if ((plan.kind === 'psi' || plan.kind === 'ficha') && !longMsg) {
+    if ((plan.kind === 'psi' || plan.kind === 'ficha' || plan.kind === 'manual') && !longMsg) {
       return keep(argoAssistantToUi(plan.result, rawText, true), plan.result.units);
     }
     // Dúvida de conteúdo (pergunta de verdade): com a IA ligada, ela responde com a norma e a conversa; o verbete pronto
@@ -28216,7 +28218,24 @@ const ARGO_ACOES_IA = [
   { id: 'conselho', cat: 'conselho', rotulo: 'Conselho Tutelar', descricao: 'Proteção à criança e ao adolescente' },
   { id: 'mulher', cat: 'mulher', rotulo: 'Rede de Enfrentamento à Violência contra a Mulher', descricao: 'Serviços de atenção à mulher' },
   { id: 'previdencia', cat: 'previdencia', rotulo: 'Previdência (INSS)', descricao: 'Agências e serviços do INSS' },
-  { id: 'documentacao', cat: 'documentacao', rotulo: 'Documentação Civil', descricao: 'Serviços de documentação civil e fiscal' }
+  { id: 'documentacao', cat: 'documentacao', rotulo: 'Documentação Civil', descricao: 'Serviços de documentação civil e fiscal' },
+  { id: 'todos', cat: 'all', rotulo: 'Rede Intersetorial de Serviços', descricao: 'Busca em todo o diretório' },
+  { id: 'hospitalar', cat: 'hospitalar', rotulo: 'Rede Hospitalar e Atenção Básica', descricao: 'Hospitais e unidades de atenção básica' },
+  { id: 'alimentar', cat: 'alimentar', rotulo: 'Segurança Alimentar e Nutricional', descricao: 'Restaurante Cidadão, doação e abastecimento de alimentos' },
+  { id: 'educacao', cat: 'educacao', rotulo: 'Educação Básica', descricao: 'Escolas, creches e ensino superior' },
+  { id: 'juridico', cat: 'juridico', rotulo: 'Poder Judiciário', descricao: 'Defensoria, Ministério Público, Justiça e OAB' },
+  { id: 'delegacias', cat: 'delegacias', rotulo: 'Segurança Pública', descricao: 'Delegacias, polícias e bombeiros' },
+  { id: 'conselhosdireitos', cat: 'conselhosdireitos', rotulo: 'Conselhos Municipais de Direitos', descricao: 'CMAS, CMDCA e conselho da pessoa idosa' },
+  { id: 'bancos', cat: 'bancos', rotulo: 'Rede Bancária e Correspondentes', descricao: 'Agências da Caixa e correspondentes' },
+  { id: 'migracao', cat: 'migracao', rotulo: 'Serviço de Migração', descricao: 'Política migratória e rede de apoio ao migrante' },
+  { id: 'trabalho', cat: 'trabalho', rotulo: 'Trabalho, Emprego e Renda', descricao: 'SINE, jovem aprendiz e qualificação' },
+  { id: 'cultura', cat: 'cultura', rotulo: 'Cultura, Esporte e Lazer', descricao: 'Programas socioeducativos e de convivência' },
+  { id: 'habitacao', cat: 'habitacao', rotulo: 'Habitação e Moradia', descricao: 'Programas de moradia' },
+  { id: 'mobilidade', cat: 'mobilidade', rotulo: 'Mobilidade Urbana', descricao: 'Transporte e passe livre' },
+  { id: 'defesacivil', cat: 'defesacivil', rotulo: 'Defesa Civil e Situações de Emergência', descricao: 'Emergências e Defesa Civil' },
+  { id: 'informes', cat: 'informes', rotulo: 'Programas, Projetos e Serviços', descricao: 'Informes sobre programas e projetos' },
+  { id: 'criptografia', cat: 'criptografia', rotulo: 'Criptografia', descricao: 'Senha em PDF, Office, texto e pastas .zip' },
+  { id: 'appsext', cat: 'appsext', rotulo: 'Aplicativos', descricao: 'Outros aplicativos do autor' }
 ];
 
 function argoStreamIA(B, rawText, payload, hooks) {
