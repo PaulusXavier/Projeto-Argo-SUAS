@@ -18409,7 +18409,7 @@ function argoCloseAppAsk(rawText) {
 const ARGO_SISTEMAS = [
   { nome: 'SIBEC (Caixa)', url: 'https://www.beneficiossociais.caixa.gov.br/sibec2/sisgrSibec', keys: ['sibec'] },
   { nome: 'SICON / SIGPBF (MDS)', url: 'https://www.mds.gov.br/mds-sigpbf-web/carregarTelaLogin.jsf', keys: ['sicon', 'sigpbf'] },
-  { nome: 'Cidade Social', url: 'https://cidadesocial1.ae3tecnologia.com.br/login', keys: ['cidade social', 'cidadesocial'] },
+  { nome: 'Cidade Social', url: 'https://cidadesocial.pmbv.rr.gov.br/auth/login', keys: ['cidade social', 'cidadesocial'] },
   { nome: 'BV Cidadão', url: 'https://bvcidadao.prefeitura.boavista.br/proton/login.asp', keys: ['bv cidadao', 'bvcidadao'] },
   { nome: 'Banco de Talentos', url: 'https://bt.pmbv.rr.gov.br/SMT73/open.do?sys=SMT', keys: ['banco de talentos', 'banco talentos'] },
   { nome: 'Portal CadÚnico', url: 'https://cadunico.dataprev.gov.br/portal/', keys: ['cadunico', 'cad unico', 'cadastro unico'] },
