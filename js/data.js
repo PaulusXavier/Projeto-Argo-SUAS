@@ -5107,7 +5107,7 @@ const DATA = [
     teamPanelLink: { label: "Consulta em Tela Cheia (buscar por bairro)", icon: "building", url: "ferramentas/equipe-tecnica-cras.html" },
     municipalLinks: [
       { label: "BV Cidadão", icon: "badge", url: "https://bvcidadao.prefeitura.boavista.br/proton/login.asp" },
-      { label: "Cidade Social", icon: "building", url: "https://cidadesocial1.ae3tecnologia.com.br/login" },
+      { label: "Cidade Social", icon: "building", url: "https://cidadesocial.pmbv.rr.gov.br/auth/login" },
       { label: "Contracheque (SIPWEB)", icon: "layers", url: "http://sipweb.boavista.rr.gov.br:8080/sipweb/trabalhador/login/login.xhtml" },
       { label: "Banco de Talentos", icon: "activity", url: "https://bt.pmbv.rr.gov.br/SMT73/open.do?sys=SMT" },
       { label: "Cédula C", icon: "filebinary", url: "http://servicos.boavista.rr.gov.br/cedulac/" }
