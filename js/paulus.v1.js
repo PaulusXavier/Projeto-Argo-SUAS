@@ -18,7 +18,7 @@ const GATILHOS = '[Nn]ome|[Cc]hama|[Cc]hamada|[Cc]hamado|[Ss]obrenome|[Pp]acient
 
 const RE_NOME = new RegExp(FORA + '(?:' + GATILHOS + ')(?![A-Za-zÀ-ÿ])[^.?!\\n]{0,25}?' + FORA + NOME2, 'g');
 const RE_TRAT = new RegExp(FORA + '(?:[Dd]ona|[Dd]na|[Ss]r|[Ss]ra|[Ss]eu|[Ss]enhor|[Ss]enhora)\\.?\\s+[' + CAP + '][' + MIN_L + ']{2,}\\s+[' + CAP + '][' + MIN_L + ']{2,}');
-const RE_ENDERECO = /\b(mora|moram|moradora?|reside|residente|endere[cç]o)\b[^.?!\n]{0,40}\b(rua|av\.?|avenida|travessa|tv\.?|quadra|lote)(?![A-Za-zÀ-ÿ])[^?!\n]{0,40}\b\d+/i;
+const RE_ENDERECO = /\b(mora|moro|moramos|moram|moradora?|reside|residente|endere[cç]o)\b[^.?!\n]{0,40}\b(rua|av\.?|avenida|travessa|tv\.?|quadra|lote)(?![A-Za-zÀ-ÿ])[^?!\n]{0,40}\b\d+/i;
 // "RG 1234567", "CPF: 12345678", "NIS nº 123456": o número curto também é dado pessoal quando vem rotulado.
 const RE_DOC_ROTULADO = /\b(?:rg|cpf|nis|nit|pis|cnh|cnpj|titulo(?:\s+de\s+eleitor)?|t[ií]tulo(?:\s+de\s+eleitor)?|cart[aã]o|matr[ií]cula|prontu[aá]rio|sus|cns|c[oó]digo\s+familiar)\b[^\d\n]{0,15}\d[\d.\-\/\s]{4,}\d/i;
 
@@ -72,13 +72,75 @@ function achouNomeIdade(t) {
 // Intervalo de anos ("2023-2026", "2023 2024 2025") não é documento nem telefone.
 const SO_ANOS = /^(?:(?:19|20)\d{2}[\s\-\/]+)*(?:19|20)\d{2}$/;
 
+// Conta escrita com operador entre espaços ("quanto é 1518 - 218 - 164 - 58"): somando tudo passa de 9 dígitos, mas cada número é curto.
+// Só vale com palavra ou símbolo de conta na mensagem e operador COM espaços ("95-3623-1234" e "123.456.789-01" continuam barrados).
+const RE_SINAL_DE_CONTA = /[+*×÷=%]|\b(?:calcul|quanto|soma\b|some\b|subtra|resultado|vezes|menos\b|dividid|media|média|percent|per capita)/i;
+function ehContaComOperador(sequencia, texto) {
+  if (!RE_SINAL_DE_CONTA.test(texto)) return false;
+  const partes = sequencia.trim().split(/\s+[-\/]\s+/);
+  return partes.length >= 2 && partes.every(function (p) { return p.replace(/\D/g, '').length <= 8; });
+}
+
+// E-mail em tempo linear: ancora em cada "@" e olha só a "palavra" de cada lado.
+// (O regex antigo /[^\s@]+@[^\s@]+\.[a-z]{2,}/ era quadrático: 60 KB sem espaço levavam ~2,6 s.)
+function temEmail(t) {
+  let i = t.indexOf('@');
+  while (i !== -1) {
+    let a = i - 1;
+    while (a >= 0 && !/[\s@]/.test(t.charAt(a))) a--;
+    let b = i + 1;
+    while (b < t.length && !/[\s@]/.test(t.charAt(b))) b++;
+    if (a + 1 < i && /^[^\s@]+\.[a-z]{2,}/i.test(t.slice(i + 1, b))) return true;
+    i = t.indexOf('@', i + 1);
+  }
+  return false;
+}
+
+// Telefone: com DDD entre parênteses, ou rotulado (\"tel\", \"whatsapp\"...), inclusive fixo de 8 dígitos (3623-1234), que a regra de 9 dígitos não pegava.
+const RE_TEL_DDD = /\(\d{2}\)\s*\d{4,5}[-\s]?\d{4}(?!\d)/;
+const RE_TEL_ROTULADO = /\b(?:tel(?:efone)?|fone|celular|cel|whats(?:app)?|zap|contato)\b[^\d\n]{0,15}(?:\(?\d{2}\)?[\s-]?)?\d{4,5}[\s-]?\d{4}(?!\d)/i;
+// Data de nascimento (\"nasceu em 12/03/2015\", \"data de nascimento: 12-03-15\"): com o resto da conversa, identifica a criança.
+const RE_NASCIMENTO = /\b(?:nasc\w*|data de nascimento|dn)\b[^\d\n]{0,20}\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}/i;
+// Nome escrito em minúsculas (celular): \"a criança chamada joão pedro\", \"o nome dela é maria souza\". Só com gatilho forte.
+const PESSOA = 'crianca|menin[oa]|adolescente|usuari[oa]|idos[oa]|mae|pai|filh[oa]|senhora?|moca|moco|rapaz|homem|mulher|jovem|bebe|paciente|vizinh[oa]|beneficiari[oa]';
+const PALAVRA_NOME = '([a-z]{3,})\\s+(?:d[aeo]s?\\s+)?([a-z]{3,})';
+const RE_NOME_MINUSCULO = new RegExp('\\b(?:(?:' + PESSOA + ')\\s+(?:chamad[oa]|de nome)|nome\\s+(?:dele|dela|completo)\\s+e|se chama|chama-se)\\s+' + PALAVRA_NOME + '\\b', 'g');
+const NAO_NOME_MINUSCULO = new Set('para pelo pela pelos pelas por com sem que uma uns umas aos nas nos dos das desde sobre entre quando como mais muito muita obrigatorio obrigatoria importante necessario nao tem ser esta foi'.split(' '));
+function achouNomeMinusculo(t) {
+  const x = semAcentoMin(t);
+  RE_NOME_MINUSCULO.lastIndex = 0;
+  let m;
+  while ((m = RE_NOME_MINUSCULO.exec(x)) !== null) {
+    if (![m[1], m[2]].some(function (w) { return NAO_NOME.has(w) || NAO_NOME_MINUSCULO.has(w); })) return true;
+    RE_NOME_MINUSCULO.lastIndex = m.index + 1;
+  }
+  return false;
+}
+
+// Nome em CAIXA ALTA ("MARIA DA SILVA recebe bolsa"): só quando há 2+ palavras seguidas em maiúsculas, que viram "Maria Da Silva" para
+// passar pelas mesmas regras de nome. Sigla isolada (CRAS, PAIF) não conta, e as siglas conhecidas estão em NAO_NOME.
+function achouNomeCaixaAlta(t) {
+  if (!/[A-ZÁÉÍÓÚÂÊÔÃÕÇ]{3,}\s+(?:D[AEO]S?\s+)?[A-ZÁÉÍÓÚÂÊÔÃÕÇ]{3,}/.test(t)) return false;
+  const suave = t.replace(/[A-ZÁÉÍÓÚÂÊÔÃÕÇ]{3,}/g, function (w) { return w.charAt(0) + w.slice(1).toLowerCase(); }).replace(/\bD([AEO]S?)\b/g, function (m) { return m.toLowerCase(); });
+  return achouNomeVerbo(suave) || achouNome(suave);
+}
+
+// Para texto que o APP manda (fichas do diretório, base do app, panorama): telefone, endereço e nome de unidade são esperados ali,
+// então só vale o que identifica PESSOA: e-mail, documento rotulado, CPF formatado e nome depois de gatilho.
+function temIdentificacaoPessoal(texto) {
+  const t = String(texto == null ? '' : texto);
+  if (temEmail(t) || RE_DOC_ROTULADO.test(t) || /\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/.test(t)) return true;
+  return achouNome(t) || achouNomeIdade(t) || achouNomeMinusculo(t) || RE_TRAT.test(t);
+}
+
 function temDadoPessoal(texto) {
   const t = String(texto == null ? '' : texto);
-  if (/[^\s@]+@[^\s@]+\.[a-z]{2,}/i.test(t)) return true;
+  if (temEmail(t)) return true;
+  if (RE_TEL_DDD.test(t) || RE_TEL_ROTULADO.test(t) || RE_NASCIMENTO.test(t)) return true;
   const sequencias = t.match(/\d[\d.\-\/\s]{6,}\d/g) || [];
-  if (sequencias.some(s => !SO_ANOS.test(s.trim()) && s.replace(/\D/g, '').length >= 9)) return true;
+  if (sequencias.some(s => !SO_ANOS.test(s.trim()) && s.replace(/\D/g, '').length >= 9 && !ehContaComOperador(s, t))) return true;
   if (RE_DOC_ROTULADO.test(t)) return true;
-  if (achouNome(t) || achouNomeVerbo(t) || achouNomeIdade(t) || RE_TRAT.test(t)) return true;
+  if (achouNome(t) || achouNomeVerbo(t) || achouNomeIdade(t) || achouNomeMinusculo(t) || achouNomeCaixaAlta(t) || RE_TRAT.test(t)) return true;
   return RE_ENDERECO.test(t);
 }
 
@@ -128,6 +190,12 @@ const SINAIS_SUICIDIO = [
   '(?:me|se) (?:enforcar|enforcando|afogar|afogando|envenenar|envenenando)',
   '(?:me|se) jogar (?:da|do|de|embaixo|debaixo)',
   'pular (?:da|do|de) (?:ponte|predio|janela|viaduto|sacada|terraco|laje|cima)',
+  // revisão: ideação passiva, meio planejado e autolesão no presente
+  'nao quer(?:o|ia|er)? mais acordar|(?:melhor|seria melhor) (?:eu )?nao estar mais aqui',
+  '(?:vou|quero|ia|pensando em|penso em) tomar (?:todos|todo) (?:os |o )?(?:\\w+ )?(?:remedios?|comprimidos?|medicamentos?|cartela)',
+  '(?:vou|quero|ia|pensando em|penso em) (?:me )?atirar em mim',
+  '(?:me|se) (?:corto|corta|cortam)(?! (?:com|na|no|ao|fazendo|cortando|durante|enquanto)\\b)',
+  '(?:vontade|desejo|impulso) de (?:me|se) (?:machucar|ferir|cortar|furar|queimar)',
   // ideação indireta (ampliação do detector): cansaço de viver, desejo de não acordar, peso para os outros, despedida, meio já à mão
   'cansad[oa] de viver|cansei de viver',
   '(?:dormir|adormecer) (?:e )?(?:nunca|nao) mais acordar|dormir (?:pra|para) sempre|nao acordar mais',
@@ -184,13 +252,13 @@ function perguntaGeral(t, ignorarAmeaca) {
 // ---- ampliação: ameaça, violência relatada na primeira pessoa, agressão que o(a) cuidador(a) teme cometer, abandono e emergências clínicas ----
 // Alguém ameaça MATAR a pessoa que escreve ou outra pessoa. Antes ia para o cartão de suicídio (\"vai me matar\" casava com \"me matar\").
 const OBJETO_PESSOA = '(?:o|a|os|as|meu|minha|meus|minhas|seu|sua|seus|suas|ela|ele|elas|eles|alguem|todos|todas|esposa|marido|mulher|filh\\w+|crianc\\w+|menin\\w+|net[oa]s?|mae|pai)';
-const NAO_E_PESSOA = '(?!(?:a |o )?(?:fome|sede|saudade|aula|tempo|curiosidade|vontade|barata|mosquito|rato|ratos|formiga|insetos?|servico|trabalho|charada|duvida|duvidas|pendencia|pendencias|demanda|demandas|fila|filas|vaga|vagas|processo|processos|ligacao|ligacoes|ansiedade|dor)\\b)';
+const NAO_E_PESSOA = '(?!(?:a |o )?(?:fome|sede|saudade|aula|tempo|curiosidade|vontade|barata|mosquito|rato|ratos|formiga|insetos?|servico|trabalho|charada|duvida|duvidas|pendencia|pendencias|demanda|demandas|fila|filas|vaga|vagas|processo|processos|ligacao|ligacoes|ansiedade|dor|prazo|prazos|relatorio|relatorios|tarefa|tarefas|planilha|planilhas|atraso|atrasos|lista|listas|pauta|pautas|agenda|ata|oficio|oficios|backlog|problema|problemas)\\b)';
 const AMEACA_MATAR_ME = /\b(?:vai|vao|quer|querem|prometeu|jurou|ameaca|ameacou|ameacando|ameacam|tentou|tentaram|tenta) (?:de |em )?me (?:matar|esfaquear|espancar|estrangular)\b/;
 const AMEACA_TERCEIRO = new RegExp('\\b(?:(?:ameac(?:a|ou|ando|am|aram)|prometeu|jurou|disse que (?:vai|vao|quer)|(?:vai|vao|quer|querem|ia|queria)) (?:de )?matar ' + NAO_E_PESSOA + OBJETO_PESSOA + '\\b|ameac(?:a|ou|ando|am|aram)s? (?:de )?morte|ameac(?:a|as) de morte|medo de (?:ser )?(?:morta|morto|assassinad[oa]|agredid[oa]|espancad[oa])|medo (?:pela|por) (?:minha|a minha) vida|temo pela minha vida)');
 // Quem diz que VAI machucar alguém (raiva, esgotamento de cuidador): outra conduta, outro texto.
 const INTENCAO_AGREDIR = new RegExp('\\b(?:(?:vou|quero|vontade de|estou com vontade de|tenho vontade de|ia|penso em|pensando em) (?:matar|machucar|espancar|esfaquear) ' + NAO_E_PESSOA + '(?:o|a|os|as|n[oa]s?|meu|minha|meus|minhas|alguem|ela|ele|elas|eles|crianc\\w+|filh\\w+|menin\\w+|marido|esposa|mulher|bebe)\\b|(?:vou|quero|vontade de|estou com vontade de|tenho vontade de|ia|penso em|pensando em) (?:bater|surrar) (?:n[oa]s?|em) ?(?:meu|minha|meus|minhas|o|a|os|as)? ?(?:filh\\w+|crianc\\w+|bebe|menin\\w+|marido|esposa|mulher|alguem|ela|ele)\\b|(?:estou|to|ando) (?:perdendo|sem) (?:o )?controle (?:com|d[eao]s?) (?:meu|minha|meus|minhas|a|o|os|as)? ?(?:filh\\w+|crianc\\w+|bebe|menin\\w+|marido|esposa)|nao (?:consigo|aguento) me controlar (?:com|d[eao]s?) (?:meu|minha|meus|minhas|a|o|os|as)? ?(?:filh\\w+|crianc\\w+|bebe|menin\\w+)|(?:bati|espanquei|machuquei|agredi) (?:n[oa]s?|em|o|a|os|as) ?(?:meu|minha|meus|minhas)? ?(?:filh\\w+|crianc\\w+|bebe|menin\\w+|esposa|marido|mulher))');
 // Violência sofrida, dita por quem sofre, ou de um adulto contra criança/adolescente sem a palavra \"abuso\".
-const VIOLENCIA_SOFRIDA = /\b(?:(?:me|nos) (?:bate|bateu|batem|espanca|espancou|agride|agrediu|estrangula|estrangulou|sufoca|sufocou|ameaca de morte)|(?:fui|foi|foram|fomos) (?:agredid|espancad|estuprad|abusad|violentad|molestad|ameacad)\w*|(?:padrasto|madrasta|pai|mae|tio|tia|avo|avos|primo|irmao|padrinho|vizinho|professor|pastor|patrao|marido|namorado|companheiro|ex) (?:me|nela|nele) (?:toca|tocou|forca|forcou)\b|(?:padrasto|madrasta|pai|mae|tio|tia|avo|avos|primo|irmao|padrinho|vizinho|professor|pastor|patrao|marido|namorado|companheiro|ex) (?:mexe|mexeu) comigo\b|(?:ele|ela) mexe com (?:a |o )?(?:sobrinh|filh|entead|net|menin|crianc)\w*|mexe com (?:a |o )?(?:sobrinh|filh|entead|net|menin|crianc)\w*|(?:abus|estupr|molest|violent)(?:ando|a|am) (?:a |o |as |os |da |do |das |dos |de )?(?:crianc\w*|menin\w*|filh\w*|sobrinh\w*|entead\w*|net[ao]s?|adolescent\w*|irma\w*|prim[ao]s?|mulher)\b|(?:sofrendo|sofre|sofreu|sofri) (?:abuso|violencia|maus tratos|agressao|agressoes)\b|(?:trancad[oa]|presa|preso) (?:em casa|no quarto|no comodo)|carcere privado|nao (?:deixa|deixou|deixam) (?:ela|ele|eu|a mulher|a menina|o menino) sair de casa)\b/;
+const VIOLENCIA_SOFRIDA = /\b(?:abus(?:a|ou|am|aram|ando) de mim|(?:me|nos) (?:abus|molest|estupr)(?:a|ou|am|aram)|(?:me|nos) (?:bate|bateu|batem|espanca|espancou|agride|agrediu|estrangula|estrangulou|sufoca|sufocou|ameaca de morte)|(?:fui|foi|foram|fomos) (?:agredid|espancad|estuprad|abusad|violentad|molestad|ameacad)\w*|(?:padrasto|madrasta|pai|mae|tio|tia|avo|avos|primo|irmao|padrinho|vizinho|professor|pastor|patrao|marido|namorado|companheiro|ex) (?:me|nela|nele) (?:toca|tocou|forca|forcou)\b|(?:padrasto|madrasta|pai|mae|tio|tia|avo|avos|primo|irmao|padrinho|vizinho|professor|pastor|patrao|marido|namorado|companheiro|ex) (?:mexe|mexeu) comigo\b|(?:ele|ela) mexe com (?:a |o )?(?:sobrinh|filh|entead|net|menin|crianc)\w*|mexe com (?:a |o )?(?:sobrinh|filh|entead|net|menin|crianc)\w*|(?:abus|estupr|molest|violent)(?:ando|a|am) (?:a |o |as |os |da |do |das |dos |de )?(?:crianc\w*|menin\w*|filh\w*|sobrinh\w*|entead\w*|net[ao]s?|adolescent\w*|irma\w*|prim[ao]s?|mulher)\b|(?:sofrendo|sofre|sofreu|sofri) (?:abuso|violencia|maus tratos|agressao|agressoes)\b|(?:trancad[oa]|presa|preso) (?:em casa|no quarto|no comodo)|carcere privado|nao (?:deixa|deixou|deixam) (?:ela|ele|eu|a mulher|a menina|o menino) sair de casa)\b/;
 // Criança, adolescente ou pessoa idosa em abandono, cárcere ou sem comida.
 const ABANDONO = /\b(?:crianca|bebe|idos[oa]|menin[oa]|adolescent\w*)s?\b[^.?!]{0,40}?\b(?:abandonad[oa]s?|trancad[oa]s?|amarrad[oa]s?|acorrentad[oa]s?|sem (?:comer|comida) (?:ha|desde|por) (?:\w+ )?(?:dias|horas))\b/;
 // Ferimento grave e emergência de saúde sem as palavras \"overdose\" ou \"desmaiou\".
@@ -320,13 +388,39 @@ const TEXTO_AMEACA = 'Ameaça de morte é risco real e deve ser levada a sério.
 const TEXTO_AGRESSAO = 'Pare um instante: o mais importante agora é que ninguém se machuque. Se puder, afaste-se da situação (outro cômodo, a rua, um vizinho) e, se houver criança por perto, peça para outro adulto ficar com ela. Respire fundo e converse com alguém agora: CVV, 188 (gratuito, 24 horas). Se alguém estiver em perigo neste momento, ligue 190. Passada a crise, procure o CRAS, o CREAS ou a UBS: sentir esse limite é sinal de que você precisa de apoio, e a rede existe para isso. Se você é profissional e escreveu sobre um caso, reformule em terceira pessoa, sem identificar ninguém.';
 
 // Quem fala de si, além de PRIMEIRA_PESSOA. Fica de fora se a frase relata o que outra pessoa disse ("ela falou que queria sumir").
-const PRIMEIRA_PESSOA_EXTRA = /\b(?:minha vida nao tem (?:mais )?sentido|nao (?:aguento|suporto|consigo) mais (?:viver|essa vida|esta vida)|nao (?:vejo|tenho) (?:mais )?(?:sentido em viver|sentido na vida|razao (?:pra|para) viver|motivo (?:pra|para) viver)|quer(?:o|ia) (?:sumir|desaparecer)|(?:vou|quero|pensando em|penso em|ia) me (?:jogar|enforcar|afogar|envenenar)|vou pular|queria estar morto|queria estar morta|queria nao ter nascido|(?:vou|quero) dar fim a minha vida|(?:cansei|estou cansad[oa]|to cansad[oa]) de viver|nao quero mais (?:estar aqui|existir)|ninguem sentiria (?:a )?minha falta|melhor (?:pra|para) (?:todo mundo|todos) se eu (?:morresse|nao existisse)|(?:acabar|acabando) com (?:a )?minha dor de uma vez|(?:vou|quero) (?:por|pondo) fim a tudo|so a morte (?:me )?(?:resolve|ajuda)|(?:queria|quero) dormir (?:e nunca mais acordar|pra sempre|para sempre)|(?:vou|quero) me (?:atirar|lancar) na frente|me dar (?:um )?tiro|(?:vou|quero) usar (?:a arma|ela|isso) em mim|me atropelasse|usar [^.?!]{0,12}em mim|(?:queria|quero) [^.?!]{0,25}dormir (?:pra|para) sempre|(?:carta|bilhete) de despedida|me cortei(?! (?:com|na|no|ao|fazendo|cortando|durante|enquanto)\\b)|(?:me) (?:machuco|machucando|firo|ferindo) de proposito)\b/;
+const PRIMEIRA_PESSOA_EXTRA = /\b(?:minha vida nao tem (?:mais )?sentido|nao (?:aguento|suporto|consigo) mais (?:viver|essa vida|esta vida)|nao (?:vejo|tenho) (?:mais )?(?:sentido em viver|sentido na vida|razao (?:pra|para) viver|motivo (?:pra|para) viver)|quer(?:o|ia) (?:sumir|desaparecer)|(?:vou|quero|pensando em|penso em|ia) me (?:jogar|enforcar|afogar|envenenar)|vou pular|queria estar morto|queria estar morta|queria nao ter nascido|(?:vou|quero) dar fim a minha vida|(?:cansei|estou cansad[oa]|to cansad[oa]) de viver|nao quero mais (?:estar aqui|existir)|ninguem sentiria (?:a )?minha falta|melhor (?:pra|para) (?:todo mundo|todos) se eu (?:morresse|nao existisse)|(?:acabar|acabando) com (?:a )?minha dor de uma vez|(?:vou|quero) (?:por|pondo) fim a tudo|so a morte (?:me )?(?:resolve|ajuda)|(?:queria|quero) dormir (?:e nunca mais acordar|pra sempre|para sempre)|(?:vou|quero) me (?:atirar|lancar) na frente|me dar (?:um )?tiro|(?:vou|quero) usar (?:a arma|ela|isso) em mim|me atropelasse|usar [^.?!]{0,12}em mim|(?:queria|quero) [^.?!]{0,25}dormir (?:pra|para) sempre|(?:carta|bilhete) de despedida|me cortei(?! (?:com|na|no|ao|fazendo|cortando|durante|enquanto)\b)|(?:me) (?:machuco|machucando|firo|ferindo) de proposito|nao quer(?:o|ia) mais acordar|(?:melhor|seria melhor) eu nao estar mais aqui|(?:vou|quero|ia|pensando em|penso em) tomar (?:todos|todo) (?:os |o )?(?:\w+ )?(?:remedios?|comprimidos?|medicamentos?|cartela)|(?:vou|quero|ia|pensando em|penso em) (?:me )?atirar em mim|me corto(?! (?:com|na|no|ao|fazendo|cortando|durante|enquanto)\b)|(?:vontade|desejo|impulso) de me (?:machucar|ferir|cortar|furar|queimar))\b/;
 const RELATA_TERCEIRO = /\b(?:disse|disseram|falou|falaram|contou|relatou|verbalizou|mencionou)\b/;
 
+// Erro de digitação em duas palavras-chave ("me mattar", "vou me matr", "suisidio"). Distância de edição pequena e só nestes casos:
+// "matar" só depois de "me"/"se" e a no máximo 1 letra; "suicídio/suicidar" a no máximo 2 letras e com 7+ letras. Outras palavras ("morrer",
+// "cortar") ficam de fora de propósito: "correr" e "portar" virariam alarme falso.
+function criseDistancia(a, b) {
+  const m = a.length, n = b.length;
+  let ant = [], atual = [];
+  for (let j = 0; j <= n; j++) ant.push(j);
+  for (let i = 1; i <= m; i++) {
+    atual = [i];
+    for (let j = 1; j <= n; j++) atual.push(Math.min(ant[j] + 1, atual[j - 1] + 1, ant[j - 1] + (a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1)));
+    ant = atual;
+  }
+  return ant[n];
+}
+function criseCorrigirGrafia(t) {
+  const palavras = t.split(' ');
+  let mudou = false;
+  for (let i = 0; i < palavras.length; i++) {
+    const w = palavras[i].replace(/[^a-z]/g, '');
+    if (w.length >= 7 && w.length <= 10 && w !== 'suicidio' && w !== 'suicidar' && (criseDistancia(w, 'suicidio') <= 2 || criseDistancia(w, 'suicidar') <= 2) && /^su/.test(w)) { palavras[i] = 'suicidio'; mudou = true; }
+    else if (i > 0 && /^(?:me|se)$/.test(palavras[i - 1]) && w.length >= 4 && w.length <= 6 && w !== 'matar' && criseDistancia(w, 'matar') <= 1 && /^m/.test(w) && /r$/.test(w)) { palavras[i] = 'matar'; mudou = true; }
+  }
+  return mudou ? palavras.join(' ') : t;
+}
+
 // Devolve null se não for pedido de socorro.
-function detectarCrise(texto) {
+function detectarCrise(texto, jaCorrigido) {
   // "Pronto Socorro" é um serviço de saúde, não um pedido de socorro ("qual o endereço do pronto-socorro?")
-  const t = semAcento(texto).replace(/pronto[ -]+socorro/g, 'pronto atendimento');
+  // Dígito entre letras vira a letra parecida ("su1c1dio" -> "suicidio"), para a grafia disfarçada não passar. Dígito solto fica como está.
+  const t = semAcento(texto).replace(/([a-z])([013457])(?=[a-z])/g, function (_, l, d) { return l + ({ '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't' })[d]; }).replace(/pronto[ -]+socorro/g, 'pronto atendimento');
   for (const p of PADROES) {
     if (!p.re.test(t) && !(p.extra && p.extra.test(t))) continue;
     if (p.geral && perguntaGeral(t, p.texto === 'AMEACA')) continue;
@@ -352,6 +446,10 @@ function detectarCrise(texto) {
       telefones: EMERGENCIAS.filter(e => p.numeros.includes(e.numero))
     };
   }
+  if (!jaCorrigido) {
+    const corrigido = criseCorrigirGrafia(t);
+    if (corrigido !== t) return detectarCrise(corrigido, true);
+  }
   return null;
 }
 
@@ -361,7 +459,7 @@ function detectarCrise(texto) {
 
 const STOP = new Set(('a o as os um uma uns umas de do da dos das em no na nos nas por para com sem sobre e ou que se ao aos ' +
   'qual quais como quem onde quando ser sao foi ha pelo pela pelos pelas seu sua seus suas ele ela eles elas isso essa esse este esta ' +
-  'meu minha eu voce nos eh mais muito sao tem ter pode podem deve devem fazer faz quanto quanta fica ficam').split(' '));
+  'meu minha eu voce nos eh mais muito sao tem ter pode podem deve devem fazer faz quanto quanta quantos quantas fica ficam').split(' '));
 
 // Siglas comuns viram também a forma por extenso (a base costuma escrever por extenso).
 const SIGLAS = {
@@ -474,14 +572,19 @@ function tokenizar(s, { expandir = false } = {}) {
 // Termos da pergunta com peso: o que a pessoa escreveu vale 1; a forma por extenso de uma sigla vale PESO_EXTENSO
 // (senão "BPC" favorece qualquer trecho que repita "Benefício de Prestação Continuada", mesmo sem falar do assunto).
 const PESO_EXTENSO = 0.35;
+// Quanto vale a sigla quando o trecho a traz só por extenso (em relação a ela aparecer escrita).
+const PESO_SIGLA_POR_EXTENSO = 0.8;
 function termosDaConsulta(consulta) {
   const pesos = new Map();
+  const siglas = []; // { t: raiz da sigla, exp: raízes da forma por extenso }
   for (const t of tokenizar(consulta)) pesos.set(t, 1);
   for (const t of normalizar(consulta).split(' ')) {
     if (STOP.has(t) || !SIGLAS[t]) continue;
-    for (const x of SIGLAS[t]) { const r = raiz(x); if (!pesos.has(r)) pesos.set(r, PESO_EXTENSO); }
+    const exp = SIGLAS[t].map(raiz);
+    for (const r of exp) if (!pesos.has(r)) pesos.set(r, PESO_EXTENSO);
+    siglas.push({ t: raiz(t), exp: exp });
   }
-  return pesos;
+  return { pesos, siglas };
 }
 
 function trechosValidos(trechos) {
@@ -585,14 +688,130 @@ function fatorPreferido(preferir, doc) {
 // cobertura = fração dos termos da pergunta que aparecem no trecho (filtra resultados "de sorte").
 // preferir (opcional): { [doc]: fator } leve favorecimento dos documentos que a pessoa mais consulta (memória do Paulus).
 // Só desempata a ORDEM entre trechos que já passaram nos cortes; nunca traz resultado que a busca não traria. Fator limitado a 1,3.
+// "O que é o BPC?": o trecho que DEFINE a coisa ("O benefício de prestação continuada é a garantia de...") deve vir antes dos que só a citam.
+const RE_PERGUNTA_DEFINICAO = /^(?:o que e|o que sao|que e|oq e|defina|definicao de|conceito de|significado de|o que significa)\b/;
+const PESO_DEFINICAO = 1.5;
+function defineASigla(textoNormalizado, expansao) {
+  // as palavras da forma por extenso, em ordem e perto do começo, seguidas de "e"/"sao"/"consiste" ("o beneficio de prestacao continuada e a garantia...")
+  const p = textoNormalizado.split(' ', 24);
+  let i = 0;
+  for (const alvo of expansao) {
+    const j = p.indexOf(alvo, i);
+    if (j < 0 || j - i > 3) return false;
+    i = j + 1;
+  }
+  return i < p.length - 1 && p.slice(i, i + 3).some(function (w) { return w === 'e' || w === 'sao' || w === 'consiste'; });
+}
+
+
+// ------------------------------------------------------------------ gíria do trabalho -> termo da norma
+// Quem pergunta escreve "cesta básica", "pai bate nos filhos", "morador de rua"; a norma escreve "benefício eventual",
+// "violência" e "situação de rua". Cada conceito abaixo liga a fala do dia a dia às palavras técnicas (só para a BUSCA; a IA não vê isto).
+// O trecho que traz pelo menos metade dos termos técnicos conta a frase da pessoa como encontrada, como acontece com as siglas.
+const CONCEITOS = [
+  { re: /\b(?:cestas? basicas?|auxilio alimentacao|auxilio alimento|ajuda de alimento|vale alimento)\b/, exp: ['beneficio', 'eventual', 'seguranca', 'alimentar'] },
+  { re: /\b(?:aluguel social|auxilio aluguel|bolsa aluguel|ajuda de aluguel|pagar o aluguel)\b/, exp: ['beneficio', 'eventual', 'vulnerabilidade', 'temporaria', 'moradia'] },
+  { re: /\b(?:auxilio funeral|auxilio funerario|enterro|sepultamento|velorio|caixao)\b/, exp: ['beneficio', 'eventual', 'funeral', 'morte'] },
+  { re: /\b(?:auxilio natalidade|enxoval|nascimento do bebe)\b/, exp: ['beneficio', 'eventual', 'natalidade', 'nascimento'] },
+  { re: /\b(?:bate|batem|bateu|apanha|apanham|apanhou|espanca\w*|surra\w*|agride|agridem|agrediu|agressao|agressoes|maus tratos|castigo fisico|palmada)\b/, exp: ['violencia', 'maus', 'tratos', 'agressao', 'protecao'] },
+  { re: /\b(?:abandono|abandonad[oa]s?|largad[oa]s?|jogad[oa]s? de lado)\b/, exp: ['negligencia', 'abandono'] },
+  { re: /\b(?:morador(?:es)? de rua|mendig\w+|sem teto|dormindo na rua|vive na rua|vivem na rua)\b/, exp: ['situacao', 'rua', 'populacao'] },
+  { re: /\b(?:drogad[oa]s?|viciad[oa]s?|crack|craqueir\w+|usuarios? de drogas|cheirando|bebe demais|alcoolatra)\b/, exp: ['uso', 'alcool', 'outras', 'drogas'] },
+  { re: /\b(?:lou[ck][oa]s?|doid[oa]s?|surto|surtou|surtando|crise nervosa|crise de nervos|perturbad[oa]s?)\b/, exp: ['saude', 'mental', 'sofrimento', 'psiquico'] },
+  { re: /\b(?:laudos?|pareceres?|atestados? psicologic\w+|declaracao psicologica)\b/, exp: ['documento', 'psicologico', 'relatorio', 'parecer', 'declaracao'] },
+  { re: /\b(?:indios?|aldeias?|aldeados?|tribo|tribos)\b/, exp: ['indigena', 'povos', 'comunidade', 'tradicional'] },
+  { re: /\b(?:venezuelan\w+|imigrantes?|estrangeir\w+|haitian\w+|refugiad\w+)\b/, exp: ['migrante', 'refugio', 'acolhida', 'migracao'] },
+  { re: /\b(?:cortaram|cortado|cortou|suspenderam|suspenso|suspensa|travado|travada|bloqueado|bloqueada|bloquearam)\b.*\b(?:bolsa|beneficio|auxilio|pbf)\b|\b(?:bolsa|beneficio|auxilio|pbf)\b.*\b(?:cortaram|cortado|cortou|suspenderam|suspenso|suspensa|travado|travada|bloqueado|bloqueada|bloquearam)\b/, exp: ['bloqueio', 'suspensao', 'cancelamento', 'repercussao'] },
+  { re: /\b(?:deficientes?|cadeirantes?|aleijad[oa]s?|invalid[oa]s?)\b/, exp: ['pessoa', 'deficiencia', 'bpc'] },
+  { re: /\b(?:velhos?|velhinh[oa]s?|terceira idade|anciao|anciaos|melhor idade)\b/, exp: ['pessoa', 'idosa', 'idoso'] },
+  { re: /\b(?:menores? de idade|menorzinho|pivetes?|meninos? de rua)\b/, exp: ['crianca', 'adolescente', 'estatuto'] },
+  { re: /\b(?:passando fome|fome|sem comida|sem ter o que comer)\b/, exp: ['inseguranca', 'alimentar', 'seguranca', 'alimentacao'] },
+  { re: /\b(?:desempregad[oa]s?|desemprego|sem emprego|sem trabalho|sem renda)\b/, exp: ['trabalho', 'renda', 'inclusao', 'produtiva'] },
+  { re: /\b(?:briga em casa|brigas em casa|briga de familia|conflito familiar|conflitos familiares|familia brigando)\b/, exp: ['conflito', 'familiar', 'vinculos', 'familia'] },
+  { re: /\b(?:menina gravida|gravidez na adolescencia|adolescente gravida|gravidez precoce)\b/, exp: ['gravidez', 'adolescencia', 'adolescente'] },
+  { re: /\b(?:crianca trabalhando|menor trabalhando|trabalho de crianca|criancas trabalhando)\b/, exp: ['trabalho', 'infantil', 'erradicacao'] }
+];
+const PESO_CONCEITO = 0.6;
+
+function conceitosDaConsulta(consultaNorm) {
+  const saida = [];
+  for (const c of CONCEITOS) {
+    const m = c.re.exec(consultaNorm);
+    if (!m) continue;
+    const frase = tokenizar(m[0]);
+    saida.push({ exp: c.exp.map(raiz), frase: frase, pesoFrase: Math.max(1, frase.length) });
+  }
+  return saida;
+}
+
+// ------------------------------------------------------------------ onde: município da pergunta x município do trecho
+// A base tem um diagnóstico por município (e o Censo SUAS tem uma seção por município). Sem isto, "quantos CRAS tem em Boa Vista?"
+// trazia o diagnóstico de Pacaraima. Regras: pergunta que cita município favorece os trechos dele e rebaixa os de outros;
+// pergunta sem município assume Boa Vista (onde o Paulus trabalha) e rebaixa os dos outros municípios.
+const MUNICIPIOS = ['boa vista', 'alto alegre', 'amajari', 'bonfim', 'canta', 'caracarai', 'caroebe', 'iracema', 'mucajai', 'normandia', 'pacaraima', 'rorainopolis', 'sao joao da baliza', 'sao luiz', 'uiramuta'];
+const RE_DOC_LOCAL = /^(?:.*diagnostico-socioterritorial.*|censo-suas-2025-roraima-psicologos)$/;
+const RE_DOC_DIAGNOSTICO = /diagnostico-socioterritorial/;
+// "Quantas famílias..., renda, habitação, território": a pergunta quer dado do território. Sem isso o diagnóstico só atrapalha ("relatório de visita domiciliar").
+// O Censo SUAS (equipes, unidades) só ajuda quando a pergunta fala de equipe, unidade ou psicólogo do SUAS.
+const RE_QUER_CENSO = /\b(?:psicolog\w+|cras|creas|centro pop|censo|equipe|equipes|rh|profissionais|unidades?|capacidade|implantacao|equipamentos?|carga horaria|servidores?|trabalhadores?)\b/;
+const RE_QUER_DADO_LOCAL = /\b(?:quantos|quantas|quantidade|numero|numeros|dados|diagnostico|setor|setores|indicador|indicadores|percentual|porcentagem|populacao|habitantes|censo|ivcad|estatistica|estatisticas|total|perfil|cadastrad\w+|renda|pobreza|vulnerabilidade|habitacao|habitacionais|territorio|territorial|bairros?|domicilios|moradia|alfabetizacao|escolaridade|equipe|equipes|psicolog\w+|capacidade|implantacao|cras|creas)\b/;
+
+function municipiosEm(textoNormalizado) {
+  const t = ' ' + textoNormalizado + ' ';
+  return MUNICIPIOS.filter(function (m) { return t.indexOf(' ' + m + ' ') >= 0; });
+}
+
+function fatorLocal(trecho, municipiosPergunta, querDado, querCenso) {
+  if (!RE_DOC_LOCAL.test(trecho.doc || '')) return 1;
+  const quer = RE_DOC_DIAGNOSTICO.test(trecho.doc) ? querDado : querCenso;
+  let f = quer ? 1 : 0.5;
+  const doTrecho = municipiosEm(normalizar(trecho.referencia));
+  if (!doTrecho.length) return f;
+  // Citar o município só favorece o trecho dele quando a pergunta pede dado do território; fora disso, só rebaixa os de outros municípios.
+  if (municipiosPergunta.length) return f * (doTrecho.some(function (m) { return municipiosPergunta.indexOf(m) >= 0; }) ? (quer ? 1.3 : 1) : 0.6);
+  return f * (doTrecho.indexOf('boa vista') >= 0 ? (quer ? 1.25 : 1) : 0.65);
+}
+
+// Chave do assunto de um trecho de diagnóstico, sem o nome do município: os três diagnósticos que incluem Boa Vista repetem o mesmo assunto.
+function assuntoDoDiagnostico(trecho) {
+  let t = ' ' + normalizar(trecho.referencia) + ' ';
+  for (const m of MUNICIPIOS) t = t.split(' ' + m + ' ').join(' ');
+  // "Cantá, Boa Vista e Bonfim" deixa um "e" solto: sai de todas as chaves, para as chaves continuarem comparáveis
+  return t.replace(/ e /g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// ------------------------------------------------------------------ pistas por documento
+// Pergunta que só um documento da base responde bem: ele sobe na ordem (nunca entra se a busca não o trouxe).
+const PISTAS = [
+  { todas: [/psicolog/, /\b(?:quantos|quantas|quantidade|equipe|equipes|rh|profissionais|censo|carga horaria|vinculo|vinculos|contratad\w+|concursad\w+|efetiv\w+|cobertura|lotad\w+)\b/], doc: 'censo-suas-2025-roraima-psicologos', fator: 1.6 },
+  { todas: [/\bcenso suas\b/], doc: 'censo-suas-2025-roraima-psicologos', fator: 1.8 },
+  { todas: [/\b(?:cras|creas)\b/, /\b(?:quantos|quantas|equipe|equipes|capacidade|implantacao|equipamentos?|unidades|estrutura)\b/], doc: 'censo-suas-2025-roraima-psicologos', fator: 1.4 },
+  { todas: [/\bvenezuel\w+|\bacolhida\b|\bmigrantes?\b|\brefugi\w+/], doc: 'roraima-operacao-acolhida-2026', fator: 1.3 }
+];
+
+function fatorPista(doc, consultaNorm) {
+  let f = 1;
+  for (const p of PISTAS) if (p.doc === doc && p.todas.every(function (r) { return r.test(consultaNorm); })) f = Math.max(f, p.fator);
+  return f;
+}
+
 function buscar(indice, consulta, { k = 3, minScore = 1.2, minCobertura = 0.5, preferir = null } = {}) {
   if (!indice || !indice.N) return [];
-  const pesos = termosDaConsulta(consulta);
+  const { pesos, siglas } = termosDaConsulta(consulta);
   const termos = Array.from(pesos.keys());
   if (!termos.length) return [];
   let pesoTotal = 0;
   for (const p of pesos.values()) pesoTotal += p;
   const k1 = 1.4, b = 0.75;
+  // Pergunta de definição com sigla: formas por extenso (palavras normalizadas) cujo trecho de definição ganha prioridade.
+  const consultaNorm = normalizar(consulta);
+  const expansoesDefinicao = RE_PERGUNTA_DEFINICAO.test(consultaNorm)
+    ? consultaNorm.split(' ').filter(function (t) { return SIGLAS[t] && !STOP.has(t); }).map(function (t) { return SIGLAS[t]; })
+    : [];
+  const conceitos = conceitosDaConsulta(consultaNorm);
+  const municipiosPergunta = municipiosEm(consultaNorm);
+  const querDado = RE_QUER_DADO_LOCAL.test(consultaNorm);
+  const querCenso = RE_QUER_CENSO.test(consultaNorm);
   const res = [];
   for (const d of indice.docs) {
     let score = 0, achou = 0;
@@ -604,10 +823,52 @@ function buscar(indice, consulta, { k = 3, minScore = 1.2, minCobertura = 0.5, p
       const idf = Math.log(1 + (indice.N - (indice.df[t] || 0) + 0.5) / ((indice.df[t] || 0) + 0.5));
       score += w * idf * (f * (k1 + 1)) / (f + k1 * (1 - b + b * d.len / (indice.avg || 1)));
     }
-    const cobertura = achou / pesoTotal;
-    if (score >= minScore && cobertura >= minCobertura) res.push({ trecho: d.c, score, cobertura, ordem: score * (PESO_TIPO[d.c.tipo || 'norma'] || 1) * fatorPreferido(preferir, d.c.doc) });
+    // Lei escreve "benefício de prestação continuada" por extenso e quem pergunta digita "BPC": quando o trecho traz TODAS as palavras
+    // da forma por extenso, a sigla conta como encontrada (senão o artigo que define o BPC perde para quem só repete a sigla).
+    for (const g of siglas) {
+      if (d.tf[g.t]) continue;
+      let menor = Infinity;
+      for (const e of g.exp) menor = Math.min(menor, d.tf[e] || 0);
+      if (!menor || menor === Infinity) continue;
+      const idf = Math.log(1 + (indice.N - (indice.df[g.t] || 0) + 0.5) / ((indice.df[g.t] || 0) + 0.5));
+      score += PESO_SIGLA_POR_EXTENSO * idf * (menor * (k1 + 1)) / (menor + k1 * (1 - b + b * d.len / (indice.avg || 1)));
+      achou += pesos.get(g.t) || 1; // a sigla vale 1 na cobertura
+    }
+    // Gíria do trabalho ("cesta básica") achada pelos termos técnicos da norma ("benefício eventual"): ver CONCEITOS.
+    for (const g of conceitos) {
+      let achados = 0, s = 0;
+      for (const e of g.exp) {
+        const f = d.tf[e];
+        if (!f) continue;
+        achados++;
+        const idf = Math.log(1 + (indice.N - (indice.df[e] || 0) + 0.5) / ((indice.df[e] || 0) + 0.5));
+        s += idf * (f * (k1 + 1)) / (f + k1 * (1 - b + b * d.len / (indice.avg || 1)));
+      }
+      if (achados / g.exp.length < 0.5) continue;
+      score += PESO_CONCEITO * s;
+      let jaAchou = 0;
+      for (const t of g.frase) if (d.tf[t]) jaAchou += pesos.get(t) || 1;
+      achou += Math.max(0, g.pesoFrase - jaAchou);
+    }
+    const cobertura = Math.min(1, achou / pesoTotal);
+    if (score >= minScore && cobertura >= minCobertura) {
+      let ordem = score * (PESO_TIPO[d.c.tipo || 'norma'] || 1) * fatorPreferido(preferir, d.c.doc) * fatorLocal(d.c, municipiosPergunta, querDado, querCenso) * fatorPista(d.c.doc, consultaNorm);
+      if (expansoesDefinicao.length) {
+        const inicio = normalizar(String(d.c.texto).slice(0, 220));
+        if (expansoesDefinicao.some(function (e) { return defineASigla(inicio, e); })) ordem *= PESO_DEFINICAO;
+      }
+      res.push({ trecho: d.c, score, cobertura, ordem });
+    }
   }
   res.sort((x, y) => y.ordem - x.ordem);
+  // O mesmo assunto de diagnóstico repetido em vários documentos (Boa Vista aparece em três): fica só o melhor.
+  const assuntosVistos = new Set();
+  for (let i = 0; i < res.length; i++) {
+    if (!RE_DOC_DIAGNOSTICO.test(res[i].trecho.doc || '')) continue;
+    const chave = assuntoDoDiagnostico(res[i].trecho);
+    if (!chave) continue;
+    if (assuntosVistos.has(chave)) { res.splice(i, 1); i--; } else assuntosVistos.add(chave);
+  }
   // No máximo MAX_POR_DOC trechos do mesmo documento; se faltar resultado, completa com os que ficaram de fora.
   const escolhidos = [], sobras = [], porDoc = Object.create(null);
   for (const r of res) {
@@ -637,6 +898,40 @@ function fonteDe(trecho) {
   const f = { documento: trecho.titulo || trecho.doc, norma: trecho.norma, ano: trecho.ano, referencia: trecho.referencia };
   if (trecho.tipo && trecho.tipo !== 'norma') f.tipo = trecho.tipo;
   return f;
+}
+
+// "Qual a diferença entre CRAS e CREAS?": uma busca só mistura os dois assuntos e acaba trazendo trechos que citam um deles de passagem.
+// Aqui cada lado é buscado separado (como pergunta de definição) e os resultados se alternam, para a IA receber os dois.
+const RE_COMPARACAO = /\b(?:diferenca|diferencas|diferenciar|diferencia|difere|distincao|comparar|comparacao|compare)\s+(?:entre\s+|de\s+|do\s+|da\s+)?(.+?)\s+(?:e|x|vs|versus|ou|com|para)\s+(?:o\s+|a\s+|os\s+|as\s+)?(.+)$/;
+
+function ladosDaComparacao(consulta) {
+  const m = RE_COMPARACAO.exec(normalizar(consulta));
+  if (!m) return null;
+  const limpar = function (t) { return t.replace(/^(?:o|a|os|as)\s+/, '').trim(); };
+  const lados = [limpar(m[1]), limpar(m[2])];
+  // cada lado precisa ter assunto próprio, e os dois têm de ser diferentes
+  if (lados.some(function (l) { return tokenizar(l).length === 0 || l.split(' ').length > 6; })) return null;
+  if (lados[0] === lados[1]) return null;
+  return lados;
+}
+
+function buscarPergunta(indice, consulta, opcoes = {}) {
+  const lados = ladosDaComparacao(consulta);
+  const k = opcoes.k || 3;
+  if (!lados || k < 2) return buscar(indice, consulta, opcoes);
+  const metade = Math.ceil(k / 2);
+  const listas = lados.map(function (l) { return buscar(indice, 'o que e ' + l, Object.assign({}, opcoes, { k: metade })); });
+  if (listas.some(function (l) { return !l.length; })) return buscar(indice, consulta, opcoes);
+  const saida = [], vistos = new Set();
+  for (let i = 0; saida.length < k && i < metade; i++) {
+    for (const l of listas) {
+      const r = l[i];
+      if (r && !vistos.has(r.trecho) && saida.length < k) { vistos.add(r.trecho); saida.push(r); }
+    }
+  }
+  // sobrou vaga (lados repetidos): completa com a busca da pergunta inteira
+  if (saida.length < k) for (const r of buscar(indice, consulta, opcoes)) if (saida.length < k && !vistos.has(r.trecho)) { vistos.add(r.trecho); saida.push(r); }
+  return saida;
 }
 
 // ---- shared/pedido.mjs ----
@@ -760,10 +1055,12 @@ function trechosParaOPedido(modo, pergunta, padrao) {
 // Parâmetros da IA por situação. Os valores "normais" são os de sempre (900 tokens, temperatura 0,4),
 // para a resposta de rotina não mudar; o que muda é o que precisa mudar.
 //   pref.tamanho === 'curto' (memória do aparelho) continua mandando no teto de respostas comuns.
-function perfilDaIA({ modo, tema = false, comTextoPronto = false, pref = null }) {
+function perfilDaIA({ modo, tema = false, comTextoPronto = false, pref = null, quantitativo = false }) {
   if (modo === 'saudacao') return { max_tokens: 160, temperature: 0.5 };
   if (tema) return { max_tokens: 900, temperature: 0.4 };
-  if (comTextoPronto) return { max_tokens: 1400, temperature: 0.5 };
+  // Pergunta de conta: o número vem do programa, a IA só explica. Temperatura baixa para não reescrever o resultado.
+  if (comTextoPronto) return { max_tokens: 1400, temperature: quantitativo ? 0.3 : 0.5 };
+  if (quantitativo && modo !== 'refinamento') return { max_tokens: pref && pref.tamanho === 'curto' ? 600 : 1000, temperature: 0.2 };
   if (modo === 'refinamento') return { max_tokens: pref && pref.tamanho === 'curto' ? 700 : 1200, temperature: 0.45 };
   if (pref && pref.tamanho === 'curto') return { max_tokens: 500, temperature: modo === 'consulta' ? 0.2 : 0.4 };
   if (modo === 'consulta') return { max_tokens: 900, temperature: 0.2 };
@@ -927,6 +1224,33 @@ const RE_ARTIGO = /\bart(?:igos?|s?\.)?\s*(\d{1,4})((?:\s*(?:,|e|a|ao)\s*\d{1,4}
 // "Lei 8.742", "Lei nº 8.742/1993", "Decreto 7.053", "Resolução CFP nº 06/2019", "Resolução nº 109"
 const RE_LEI = /\b([Ll]ei|LEI|[Dd]ecreto|[Rr]esolu[cç][aã]o|[Pp]ortaria|[Ii]nstru[cç][aã]o [Nn]ormativa)(?:\s+(?:[Ff]ederal|[Cc]omplementar|[Mm]unicipal|[Ee]stadual|[Cc]onjunta))?(?:\s+[A-Z]{2,8})?\s*(?:[Nn][ºo°.]{0,2}\s*)?(\d[\d.]{0,8})/g;
 
+// "R$ 600", "R$ 1.518,00", "R$ 218,50", "R$ 142". Guardado na forma canônica: sem ponto de milhar e sem ",00" ("1518", "218.5").
+const RE_VALOR = /R\$\s*(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:,\d{1,2})?)/g;
+
+function valorCanonico(bruto) {
+  const n = Number(String(bruto).replace(/\./g, '').replace(',', '.'));
+  return Number.isFinite(n) ? String(n) : '';
+}
+
+// Valores em reais citados no texto: conjunto de strings canônicas.
+function valoresCitados(texto) {
+  const achou = new Set();
+  const t = String(texto == null ? '' : texto);
+  let m;
+  RE_VALOR.lastIndex = 0;
+  while ((m = RE_VALOR.exec(t)) !== null) {
+    const v = valorCanonico(m[1]);
+    if (v) achou.add(v);
+  }
+  return achou;
+}
+
+// "R$ 1.518" para mostrar à pessoa.
+function rotuloValor(canonico) {
+  const [inteiro, dec] = canonico.split('.');
+  return 'R$ ' + inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + (dec ? ',' + (dec.length === 1 ? dec + '0' : dec) : '');
+}
+
 function semZeros(n) { return String(n).replace(/\./g, '').replace(/^0+(?=\d)/, ''); }
 
 // Números de artigo citados no texto (conjunto de strings).
@@ -959,8 +1283,9 @@ function leisCitadas(texto) {
 
 // Do lado do Worker: o que a IA tinha diante de si. { a: ['17','20'], l: ['lei 8742'] }
 // Olha o texto inteiro de cada trecho (referência, título, norma e texto), porque é isso que a IA leu.
-function numerosCitaveis(achados) {
-  const a = new Set(), l = new Set();
+// extras (opcional): outros textos que a IA recebeu (fichas, base do app, panorama, a própria pergunta). Deles só se tiram os valores em R$.
+function numerosCitaveis(achados, extras) {
+  const a = new Set(), l = new Set(), v = new Set();
   for (const x of Array.isArray(achados) ? achados : []) {
     const t = x && x.trecho;
     if (!t) continue;
@@ -969,8 +1294,10 @@ function numerosCitaveis(achados) {
     // número solto na referência ("art. 20, § 3º") também vale: parágrafo e inciso não são tratados como artigo novo
     (String(t.referencia || '').match(/\d{1,4}/g) || []).forEach(function (n) { a.add(semZeros(n)); });
     leisCitadas(tudo).forEach(function (_, k) { l.add(k); });
+    valoresCitados(tudo).forEach(function (n) { v.add(n); });
   }
-  return { a: Array.from(a).sort(), l: Array.from(l).sort() };
+  for (const e of Array.isArray(extras) ? extras : []) valoresCitados(e).forEach(function (n) { v.add(n); });
+  return { a: Array.from(a).sort(), l: Array.from(l).sort(), v: Array.from(v).sort(function (x, y) { return Number(x) - Number(y); }) };
 }
 
 // Do lado do navegador. citaveis = { a, l } vindo do Worker; sem ele (Worker antigo), usa só as fontes que vieram.
@@ -988,14 +1315,568 @@ function citacoesSemFonte(texto, citaveis, fontes, extras) {
       leisCitadas(tudo).forEach(function (_, k) { leis.add(k); });
     });
   }
+  // Valores em R$: só se confere quando o Worker informou a lista (Worker antigo não manda "v": nada a comparar).
+  const valoresOk = citaveis && Array.isArray(citaveis.v) ? new Set(citaveis.v.map(String)) : null;
   (Array.isArray(extras) ? extras : []).forEach(function (e) {
     artigosCitados(e).forEach(function (n) { arts.add(n); });
     leisCitadas(e).forEach(function (_, k) { leis.add(k); });
+    if (valoresOk) valoresCitados(e).forEach(function (n) { valoresOk.add(n); });
   });
   const saida = [];
   artigosCitados(texto).forEach(function (n) { if (!arts.has(n)) saida.push('art. ' + n); });
   leisCitadas(texto).forEach(function (rotulo, k) { if (!leis.has(k)) saida.push(rotulo); });
+  if (valoresOk) valoresCitados(texto).forEach(function (n) { if (!valoresOk.has(n)) saida.push(rotuloValor(n)); });
   return saida;
+}
+
+// ---- shared/calculo.mjs ----
+// Calculadora do Paulus: conta exata, sem IA e sem eval. FONTE ÚNICA: o navegador (dist/paulus.v1.js) e o Worker usam este arquivo.
+//
+// Por que existe: modelo de linguagem erra conta. Aqui a IA só ESCREVE a conta (ou nem isso, quando a pergunta já é uma conta)
+// e um programa executa. O resultado volta para a IA explicar, e o verificador (shared/verificacao.mjs) sabe que o valor é conferido.
+//
+//   calcularExpressao('15% * 1200')            -> { ok, valor: 180, bool, ops, literais, refs, tokens }
+//   extrairContas('quanto é 15% de 1200?')     -> { itens:[{ expressao, texto, valor... }], intencao, soConta, moeda }
+//   contasConfiaveis(texto)                    -> o mesmo, mas só se a mensagem pede mesmo uma conta (senão null)
+//   respostaDeConta(texto)                     -> { texto, itens } só quando a mensagem É a conta (resposta direta, sem IA)
+//   pareceProblemaDeCalculo(texto, historico)  -> pergunta com números que pede uma conta em linguagem natural (vai para o passo de planejamento)
+//
+// Números: aceita o jeito brasileiro ("1.518,50", "R$ 3.200", "15,04%") e o ponto decimal ("0.1504").
+// Sem lookbehind e sem BigInt de propósito (Safari/iOS antigos quebram o arquivo inteiro).
+// No navegador os módulos viram um arquivo só: os nomes abaixo não podem repetir os de outros módulos (por isso o prefixo "calc").
+
+const CALC_MAX_TEXTO = 400;
+const CALC_MAX_TOKENS = 160;
+const CALC_MAX_PROFUNDIDADE = 24;
+const CALC_LIMITE = 1e15;
+
+const CALC_FUNCOES = {
+  raiz: 'raiz', sqrt: 'raiz', media: 'media', min: 'min', max: 'max', arred: 'arred', arredonda: 'arred', round: 'arred',
+  teto: 'teto', ceil: 'teto', piso: 'piso', floor: 'piso', abs: 'abs', soma: 'soma', sum: 'soma'
+};
+const CALC_ROTULO_FUNCAO = { raiz: 'raiz', media: 'média', min: 'mín', max: 'máx', arred: 'arred', teto: 'teto', piso: 'piso', abs: 'abs', soma: 'soma' };
+const CALC_ROTULO_CMP = { '<': '<', '<=': '≤', '>': '>', '>=': '≥', '==': '=', '!=': '≠' };
+
+function calcSemAcentos(s) {
+  return String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+// Tira o ruído de ponto flutuante (0,1 + 0,2 = 0,30000000000000004).
+function calcLimpar(x) {
+  return Number(x.toPrecision(14));
+}
+
+// Arredondamento comercial (meio para cima, longe do zero), sem o erro de 1,005 -> 1,00 do toFixed.
+function arredondarCasas(x, casas) {
+  if (!isFinite(x)) return x;
+  const n = Math.max(0, Math.min(10, casas | 0));
+  const sinal = x < 0 ? -1 : 1;
+  const a = Math.abs(x);
+  const s = String(a);
+  if (s.indexOf('e') !== -1) return sinal * Math.round(a * Math.pow(10, n)) / Math.pow(10, n);
+  return sinal * Number(Math.round(Number(s + 'e' + n)) + 'e-' + n);
+}
+
+// ------------------------------------------------------------------ números
+
+// Lê um número em s a partir de pos. ponto 'milhar' (padrão, texto de gente): "1.518" é 1518 e "2.5" é 2,5.
+// ponto 'decimal' (conta escrita pela IA): o ponto é sempre decimal ("1.504" é 1,504); milhar só com vírgula decimal ("1.518,00").
+function calcLerNumero(s, pos, ponto) {
+  const resto = s.slice(pos, pos + 40);
+  let m;
+  if (ponto === 'decimal') m = /^[1-9]\d{0,2}(?:\.\d{3})+,\d+/.exec(resto);
+  else m = /^[1-9]\d{0,2}(?:\.\d{3})+(?:,\d+)?(?!\d)/.exec(resto);
+  if (m) return { v: Number(m[0].replace(/\./g, '').replace(',', '.')), len: m[0].length };
+  m = /^\d+,\d+/.exec(resto);
+  if (m) return { v: Number(m[0].replace(',', '.')), len: m[0].length };
+  m = /^\d+(?:\.\d+)?/.exec(resto);
+  if (m) return { v: Number(m[0]), len: m[0].length };
+  return null;
+}
+
+// Todos os números de um texto, na forma canônica ("1.518,00" -> "1518", "15,04%" -> "15.04"), igual à de verificacao.mjs.
+function numerosDoTexto(texto) {
+  const t = String(texto == null ? '' : texto);
+  const saida = new Set();
+  let i = 0;
+  while (i < t.length) {
+    const c = t.charAt(i);
+    if (c >= '0' && c <= '9') {
+      const n = calcLerNumero(t, i, 'milhar');
+      if (n && isFinite(n.v)) { saida.add(String(n.v)); i += n.len; continue; }
+    }
+    i++;
+  }
+  return saida;
+}
+
+// ------------------------------------------------------------------ leitura (tokens)
+
+function calcPreparar(s) {
+  return String(s)
+    .replace(/R\$\s*/gi, '')
+    .replace(/[−–]/g, '-').replace(/×/g, '*').replace(/÷/g, '/')
+    .replace(/(\d|\)|%)\s*[xX]\s*(?=[\d(])/g, '$1 * ');
+}
+
+function calcTokens(s, opc) {
+  const ponto = opc && opc.ponto;
+  const tks = [];
+  let i = 0;
+  while (i < s.length) {
+    const c = s.charAt(i);
+    if (c === ' ' || c === '\t' || c === '\n' || c === ' ') { i++; continue; }
+    if (c >= '0' && c <= '9') {
+      const n = calcLerNumero(s, i, ponto);
+      if (n) {
+        const prox = s.charAt(i + n.len);
+        // "18h", "3º", "5a": número colado em letra não é quantidade
+        const colado = /[A-Za-zÀ-ÿºª°]/.test(prox);
+        tks.push({ t: colado ? 'out' : 'num', v: n.v, ini: i, fim: i + n.len });
+        i += n.len;
+        continue;
+      }
+    }
+    const dois = s.substr(i, 2);
+    if (dois === '<=' || dois === '>=' || dois === '==' || dois === '!=') { tks.push({ t: 'cmp', v: dois, ini: i, fim: i + 2 }); i += 2; continue; }
+    if (dois === '**') { tks.push({ t: 'op', v: '^', ini: i, fim: i + 2 }); i += 2; continue; }
+    if (c === '≤') { tks.push({ t: 'cmp', v: '<=', ini: i, fim: i + 1 }); i++; continue; }
+    if (c === '≥') { tks.push({ t: 'cmp', v: '>=', ini: i, fim: i + 1 }); i++; continue; }
+    if (c === '≠') { tks.push({ t: 'cmp', v: '!=', ini: i, fim: i + 1 }); i++; continue; }
+    if (c === '<' || c === '>') { tks.push({ t: 'cmp', v: c, ini: i, fim: i + 1 }); i++; continue; }
+    if (c === '+' || c === '-' || c === '*' || c === '/' || c === '^') { tks.push({ t: 'op', v: c, ini: i, fim: i + 1 }); i++; continue; }
+    if (c === '%') { tks.push({ t: 'pct', ini: i, fim: i + 1 }); i++; continue; }
+    if (c === '(') { tks.push({ t: 'lp', ini: i, fim: i + 1 }); i++; continue; }
+    if (c === ')') { tks.push({ t: 'rp', ini: i, fim: i + 1 }); i++; continue; }
+    if (c === ';') { tks.push({ t: 'sep', ini: i, fim: i + 1 }); i++; continue; }
+    if (c === ',' && /\s/.test(s.charAt(i + 1))) { tks.push({ t: 'sep', ini: i, fim: i + 1 }); i++; continue; }
+    if (c === '#') {
+      const m = /^#(\d{1,2})/.exec(s.slice(i, i + 4));
+      if (m) { tks.push({ t: 'ref', v: Number(m[1]), ini: i, fim: i + m[0].length }); i += m[0].length; continue; }
+    }
+    const letras = /^[A-Za-zÀ-ÿ]+/.exec(s.slice(i, i + 30));
+    if (letras) {
+      tks.push({ t: 'id', v: calcSemAcentos(letras[0]).toLowerCase(), ini: i, fim: i + letras[0].length });
+      i += letras[0].length;
+      continue;
+    }
+    tks.push({ t: 'out', v: c, ini: i, fim: i + 1 });
+    i++;
+  }
+  return tks;
+}
+
+// ------------------------------------------------------------------ cálculo
+
+function calcErro(msg) {
+  const e = new Error(msg);
+  e.calc = true;
+  return e;
+}
+
+function calcChecar(x) {
+  if (!isFinite(x) || Math.abs(x) >= CALC_LIMITE) throw calcErro('resultado fora do limite');
+  return x;
+}
+
+// Executa os tokens. vars: { 1: 800, 2: 1 } para #1, #2. Devolve { valor, bool, ops, literais, refs }.
+// "ops" conta operadores, comparações e funções (porcentagem sozinha não conta): zero significa que não era uma conta.
+function calcAvaliar(tokens, vars) {
+  if (tokens.length > CALC_MAX_TOKENS) throw calcErro('conta longa demais');
+  let p = 0, ops = 0, prof = 0;
+  const literais = [], refs = [];
+  const olhar = function () { return tokens[p]; };
+  const exigir = function (tipo) {
+    const t = tokens[p];
+    if (!t || t.t !== tipo) throw calcErro('faltou fechar ou separar');
+    p++;
+    return t;
+  };
+  const numero = function (r) {
+    if (r.bool) throw calcErro('resultado sim/não em conta');
+    return r.v;
+  };
+
+  function comparacao() {
+    const a = soma();
+    const t = olhar();
+    if (!t || t.t !== 'cmp') return a;
+    p++;
+    const b = soma();
+    ops++;
+    const x = numero(a), y = numero(b);
+    const igual = Math.abs(x - y) <= 1e-9 * Math.max(1, Math.abs(x), Math.abs(y));
+    let r;
+    if (t.v === '<') r = x < y && !igual;
+    else if (t.v === '<=') r = x < y || igual;
+    else if (t.v === '>') r = x > y && !igual;
+    else if (t.v === '>=') r = x > y || igual;
+    else if (t.v === '==') r = igual;
+    else r = !igual;
+    if (olhar() && olhar().t === 'cmp') throw calcErro('comparação encadeada');
+    return { v: r ? 1 : 0, bool: true };
+  }
+
+  function soma() {
+    let a = termo();
+    for (;;) {
+      const t = olhar();
+      if (!t || t.t !== 'op' || (t.v !== '+' && t.v !== '-')) return a;
+      p++;
+      let b = termo();
+      ops++;
+      numero(a); numero(b);
+      // "1200 + 15%" e "1200 - 10%": a porcentagem é sobre o valor da esquerda
+      if (b.pct) b = { v: a.v * b.v };
+      a = { v: calcChecar(calcLimpar(t.v === '+' ? a.v + b.v : a.v - b.v)) };
+    }
+  }
+
+  function termo() {
+    let a = unario();
+    for (;;) {
+      const t = olhar();
+      if (!t || t.t !== 'op' || (t.v !== '*' && t.v !== '/')) return a;
+      p++;
+      const b = unario();
+      ops++;
+      const x = numero(a), y = numero(b);
+      if (t.v === '/' && y === 0) throw calcErro('divisão por zero');
+      a = { v: calcChecar(t.v === '*' ? x * y : x / y) };
+    }
+  }
+
+  function unario() {
+    const t = olhar();
+    if (t && t.t === 'op' && (t.v === '-' || t.v === '+')) {
+      p++;
+      if (++prof > CALC_MAX_PROFUNDIDADE) throw calcErro('conta funda demais');
+      const r = unario();
+      prof--;
+      return t.v === '-' ? { v: -numero(r) } : r;
+    }
+    return potencia();
+  }
+
+  function potencia() {
+    const base = posfixo();
+    const t = olhar();
+    if (!t || t.t !== 'op' || t.v !== '^') return base;
+    p++;
+    const exp = unario();
+    ops++;
+    const b = numero(base), e = numero(exp);
+    if (Math.abs(e) > 100) throw calcErro('expoente grande demais');
+    return { v: calcChecar(Math.pow(b, e)) };
+  }
+
+  function posfixo() {
+    let x = primario();
+    while (olhar() && olhar().t === 'pct') {
+      p++;
+      x = { v: calcLimpar(numero(x) / 100), pct: true };
+    }
+    return x;
+  }
+
+  function primario() {
+    const t = olhar();
+    if (!t) throw calcErro('conta incompleta');
+    if (++prof > CALC_MAX_PROFUNDIDADE) throw calcErro('conta funda demais');
+    let r;
+    if (t.t === 'num') { p++; literais.push(t.v); r = { v: t.v }; }
+    else if (t.t === 'ref') {
+      p++;
+      const v = vars ? vars[t.v] : undefined;
+      if (typeof v !== 'number' || !isFinite(v)) throw calcErro('a conta #' + t.v + ' não tem resultado');
+      refs.push(t.v);
+      r = { v: v };
+    } else if (t.t === 'lp') {
+      p++;
+      r = comparacao();
+      exigir('rp');
+    } else if (t.t === 'id') {
+      const f = CALC_FUNCOES[t.v];
+      if (!f) throw calcErro('não conheço "' + t.v + '"');
+      p++;
+      exigir('lp');
+      const args = [];
+      if (olhar() && olhar().t !== 'rp') {
+        for (;;) {
+          args.push(numero(comparacao()));
+          if (olhar() && olhar().t === 'sep') { p++; continue; }
+          break;
+        }
+      }
+      exigir('rp');
+      ops++;
+      r = { v: calcChecar(calcFuncao(f, args)) };
+    } else throw calcErro('conta mal escrita');
+    prof--;
+    return r;
+  }
+
+  const r = comparacao();
+  if (p !== tokens.length) throw calcErro('sobrou texto na conta');
+  return { valor: r.bool ? r.v : calcLimpar(r.v), bool: !!r.bool, ops: ops, literais: literais, refs: refs };
+}
+
+function calcFuncao(f, a) {
+  const um = function () { if (a.length !== 1) throw calcErro(f + ' pede 1 número'); return a[0]; };
+  const varios = function () { if (!a.length) throw calcErro(f + ' pede números'); return a; };
+  if (f === 'raiz') { const x = um(); if (x < 0) throw calcErro('raiz de número negativo'); return calcLimpar(Math.sqrt(x)); }
+  if (f === 'abs') return Math.abs(um());
+  if (f === 'teto') return Math.ceil(calcLimpar(um()));
+  if (f === 'piso') return Math.floor(calcLimpar(um()));
+  if (f === 'arred') {
+    if (a.length < 1 || a.length > 2) throw calcErro('arred pede 1 ou 2 números');
+    return arredondarCasas(a[0], a.length === 2 ? a[1] : 0);
+  }
+  if (f === 'min') return Math.min.apply(null, varios());
+  if (f === 'max') return Math.max.apply(null, varios());
+  const soma = varios().reduce(function (x, y) { return x + y; }, 0);
+  return f === 'media' ? calcLimpar(soma / a.length) : calcLimpar(soma);
+}
+
+// Calcula uma conta escrita em texto. opc.ponto: 'milhar' (padrão) ou 'decimal'; opc.vars: { 1: 800 } para #1.
+function calcularExpressao(texto, opc) {
+  const o = opc || {};
+  try {
+    const s = calcPreparar(String(texto == null ? '' : texto)).trim();
+    if (!s) return { ok: false, erro: 'conta vazia' };
+    if (s.length > CALC_MAX_TEXTO) return { ok: false, erro: 'conta longa demais' };
+    const tks = calcTokens(s, o);
+    if (tks.some(function (t) { return t.t === 'out'; })) return { ok: false, erro: 'caractere que não entendi' };
+    const r = calcAvaliar(tks, o.vars);
+    return { ok: true, valor: r.valor, bool: r.bool, ops: r.ops, literais: r.literais, refs: r.refs, tokens: tks };
+  } catch (e) {
+    return { ok: false, erro: e && e.calc ? e.message : 'não consegui ler a conta' };
+  }
+}
+
+// ------------------------------------------------------------------ apresentação
+
+function calcMilhar(inteiro) {
+  return inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+// 1234.5 -> "1.234,5"; moeda: "R$ 1.234,50" (inteiro fica "R$ 800"); número com resto longo vira "≈ 0,3333".
+// opc: { moeda, casas } (casas: máximo de decimais fora de moeda, padrão 4).
+function formatarNumero(x, opc) {
+  const o = opc || {};
+  if (!isFinite(x)) return String(x);
+  const v = calcLimpar(x);
+  let casas = o.moeda ? 2 : (o.casas != null ? o.casas : 4);
+  let r = arredondarCasas(v, casas);
+  if (!o.moeda && v !== 0 && r === 0) { casas = 8; r = arredondarCasas(v, casas); }
+  const aprox = !o.moeda && Math.abs(r - v) > 1e-12;
+  const neg = r < 0;
+  const abs = Math.abs(r);
+  let [inteiro, dec] = abs.toFixed(casas).split('.');
+  if (o.moeda) { if (/^0+$/.test(dec || '')) dec = ''; } else if (dec) dec = dec.replace(/0+$/, '');
+  const corpo = calcMilhar(inteiro) + (dec ? ',' + dec : '');
+  return (aprox ? '≈ ' : '') + (neg ? '-' : '') + (o.moeda ? 'R$ ' : '') + corpo;
+}
+
+// A conta lida de volta para o(a) profissional: "15% de 1.200", "[1] ≤ 218".
+function calcRenderizar(tokens) {
+  let s = '';
+  tokens.forEach(function (t, i) {
+    const ant = tokens[i - 1];
+    let x;
+    if (t.t === 'num') x = (Number.isInteger(t.v) && t.v >= 1900 && t.v <= 2100) ? String(t.v) : formatarNumero(t.v, { casas: 10 });
+    else if (t.t === 'op') x = t.v === '*' ? (ant && ant.t === 'pct' ? 'de' : '×') : t.v === '/' ? '÷' : t.v;
+    else if (t.t === 'cmp') x = CALC_ROTULO_CMP[t.v];
+    else if (t.t === 'pct') x = '%';
+    else if (t.t === 'lp') x = '(';
+    else if (t.t === 'rp') x = ')';
+    else if (t.t === 'sep') x = ';';
+    else if (t.t === 'ref') x = '[' + t.v + ']';
+    else x = CALC_ROTULO_FUNCAO[CALC_FUNCOES[t.v]] || t.v;
+    const grudaAntes = t.t === 'pct' || t.t === 'rp' || t.t === 'sep';
+    const grudaDepois = ant && (ant.t === 'lp' || (ant.t === 'id' && t.t === 'lp'));
+    const unarioAntes = ant && ant.t === 'op' && ant.v === '-' && (i < 2 || tokens[i - 2].t === 'op' || tokens[i - 2].t === 'lp' || tokens[i - 2].t === 'cmp' || tokens[i - 2].t === 'sep');
+    s += (i === 0 || grudaAntes || grudaDepois || unarioAntes || (t.t === 'lp' && ant.t === 'id') ? '' : ' ') + x;
+  });
+  return s;
+}
+
+// Resultado escrito: "R$ 800", "25%", "3 pessoas", "sim"/"não". unidade: 'R$' | '%' | texto livre curto | ''.
+function descreverResultado(r, unidade) {
+  if (r.bool) return r.valor ? 'SIM' : 'NÃO';
+  const u = String(unidade || '').trim().slice(0, 14);
+  if (u === 'R$' || /^reais?$/i.test(u)) return formatarNumero(r.valor, { moeda: true });
+  const num = formatarNumero(r.valor);
+  if (u === '%') return num + '%';
+  return u ? num + ' ' + u : num;
+}
+
+// Renderiza a conta lida (tokens de calcularExpressao) para mostrar.
+function expressaoLegivel(tokens) {
+  return calcRenderizar(Array.isArray(tokens) ? tokens : []);
+}
+
+// ------------------------------------------------------------------ contas em linguagem natural
+
+const CALC_RE_INTENCAO = /\b(?:calcul\w*|quanto\s+(?:e|da|dao|fica|ficou|ficaria|sobra|sobrou|vai|vale|valeria|seria|serao|custa|recebe|receberia|ganha|paga|pagaria|falta|faltam|resta|restam|passa|deu)|da\s+quanto|qual\s+(?:e\s+)?(?:o\s+)?(?:resultado|total|valor\s+total|soma|media|percentual|porcentagem|saldo|diferenca)|resultado\s+d[ea]|some|soma|somar|subtra\w+|multipli\w+|divid\w+|media|percentual|porcentagem|por\s+cento|per\s*capita|dentro\s+do\s+limite|acima\s+do|abaixo\s+do)\b/;
+
+// Palavras que sobram numa pergunta que É só a conta ("quanto é 15% de 1200 reais, por favor?").
+const CALC_FILLER = new Set(('quanto e calcule calcula calcular calculo me ajuda ajude pode poderia voce vc por favor pfv pf qual o a os as resultado de do da dos das ' +
+  'conta isso seria fica ficou ficaria total valor soma some somar uma um paulus ola oi bom dia tarde noite para pra em que sao deu reais real r sobre ' +
+  'com aqui ai agora so apenas vale vai sera resolva resolve faca faz pro na no media entre cento percentual porcentagem hein ne').split(' '));
+
+// Trechos que parecem conta mas não são: data, lei, artigo, parágrafo, horário.
+function calcMascarar(n) {
+  return n
+    .replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g, ' ')
+    .replace(/\b(?:lei|decreto|portaria|resolucao|instrucao normativa|nota tecnica|art|arts|artigo|artigos|paragrafo|inciso)\.?\s*[\d.]+(?:\/\d{2,4})?/g, ' ')
+    .replace(/\bn[º°]\s*[\d.]+(?:\/\d{2,4})?/g, ' ')
+    .replace(/§\s*\d+[º°]?/g, ' ')
+    .replace(/\b\d{1,2}:\d{2}\b/g, ' ');
+}
+
+const CALC_NUM = '\\d[\\d.,]*';
+
+function calcListaDe(lista) {
+  return lista.split(/\s*(?:;|,\s+|\s+e\s+|\s+com\s+|\s*\+\s*)\s*/).map(function (x) { return x.trim().replace(/[.,]+$/, ''); }).filter(Boolean);
+}
+
+// Troca as palavras de conta por símbolos, só quando estão entre números ("300 mais 200", "15% de 1200", "reajuste de 15,04% sobre 143").
+function calcNormalizarFrase(n) {
+  let s = ' ' + n.replace(/r\$/g, ' ').replace(/\bpor cento\b/g, '%') + ' ';
+  s = s.replace(new RegExp('\\b(?:aumento|reajuste|acrescimo|majoracao)\\s+(?:de\\s+)?(' + CALC_NUM + ')\\s*%\\s*(?:sobre|em|no valor de|do valor de|ao valor de|de)\\s+(?:o\\s+|a\\s+)?(' + CALC_NUM + ')', 'g'), ' $2 + $1% ');
+  s = s.replace(new RegExp('\\b(?:desconto|abatimento|reducao|corte)\\s+(?:de\\s+)?(' + CALC_NUM + ')\\s*%\\s*(?:sobre|em|no valor de|do valor de|ao valor de|de)\\s+(?:o\\s+|a\\s+)?(' + CALC_NUM + ')', 'g'), ' $2 - $1% ');
+  s = s.replace(new RegExp('(' + CALC_NUM + ')\\s*%\\s*(?:de|do|da)\\s+(?=[\\d(])', 'g'), '$1% * ');
+  s = s.replace(new RegExp('\\bdiferenca\\s+entre\\s+(' + CALC_NUM + ')\\s+e\\s+(' + CALC_NUM + ')', 'g'), ' abs($1 - $2) ');
+  s = s.replace(new RegExp('\\b(?:soma|some|somar|total)\\s+(?:de\\s+|dos\\s+|das\\s+)?(' + CALC_NUM + '(?:\\s*(?:;|,\\s+|\\s+e\\s+|\\s+com\\s+|\\+)\\s*' + CALC_NUM + ')+)', 'g'),
+    function (_, lista) { return ' ' + calcListaDe(lista).join(' + ') + ' '; });
+  s = s.replace(new RegExp('\\bmedia\\s+(?:de\\s+|dos\\s+|das\\s+|entre\\s+)?(' + CALC_NUM + '(?:\\s*(?:;|,\\s+|\\s+e\\s+|\\s+com\\s+)\\s*' + CALC_NUM + ')+)', 'g'),
+    function (_, lista) { return ' media(' + calcListaDe(lista).join('; ') + ') '; });
+  s = s.replace(new RegExp('\\braiz(?:\\s+quadrada)?\\s+de\\s+(' + CALC_NUM + ')', 'g'), ' raiz($1) ');
+  s = s.replace(new RegExp('(' + CALC_NUM + ')\\s+ao\\s+quadrado', 'g'), '$1 ^ 2 ');
+  s = s.replace(new RegExp('(' + CALC_NUM + ')\\s+ao\\s+cubo', 'g'), '$1 ^ 3 ');
+  const entre = '(' + CALC_NUM + '%?|\\))\\s+';
+  const prox = '\\s+(?=\\d|\\()';
+  s = s.replace(new RegExp(entre + 'mais' + prox, 'g'), '$1 + ');
+  s = s.replace(new RegExp(entre + 'menos' + prox, 'g'), '$1 - ');
+  s = s.replace(new RegExp(entre + '(?:vezes|multiplicado\\s+por|multiplicado\\s+pela|multiplicada\\s+por)' + prox, 'g'), '$1 * ');
+  s = s.replace(new RegExp(entre + '(?:dividido\\s+por|dividido\\s+pela|dividido\\s+entre|dividido\\s+em|dividida\\s+por)' + prox, 'g'), '$1 / ');
+  s = s.replace(new RegExp(entre + '(?:elevado\\s+a|elevado\\s+ao|elevada\\s+a)' + prox, 'g'), '$1 ^ ');
+  s = s.replace(new RegExp('(' + CALC_NUM + '%?|\\))\\s*[x×]\\s*(?=\\d|\\()', 'g'), '$1 * ');
+  s = s.replace(new RegExp('(' + CALC_NUM + '%?|\\))\\s+[:÷]\\s+(?=\\d|\\()', 'g'), '$1 / ');
+  return s.replace(/\s+/g, ' ');
+}
+
+function calcTokenValido(t) {
+  return t.t === 'num' || t.t === 'op' || t.t === 'cmp' || t.t === 'pct' || t.t === 'lp' || t.t === 'rp' || t.t === 'sep' || t.t === 'ref'
+    || (t.t === 'id' && !!CALC_FUNCOES[t.v]);
+}
+
+// Acha, nos tokens, as contas completas (a maior janela que fecha, da esquerda para a direita).
+function calcJanelas(tokens) {
+  const achados = [];
+  let i = 0;
+  while (i < tokens.length) {
+    const t = tokens[i];
+    const abre = t.t === 'num' || t.t === 'lp' || t.t === 'id' || (t.t === 'op' && (t.v === '-' || t.v === '+'));
+    if (!abre || !calcTokenValido(t)) { i++; continue; }
+    let j = i;
+    while (j < tokens.length && calcTokenValido(tokens[j])) j++;
+    let achou = null;
+    for (let f = j; f > i && !achou; f--) {
+      const fatia = tokens.slice(i, f);
+      if (!fatia.some(function (x) { return x.t === 'ref'; })) {
+        try {
+          const r = calcAvaliar(fatia, null);
+          if (r.ops >= 1) achou = { i: i, f: f, r: r, fatia: fatia };
+        } catch (e) { /* esta janela não fecha: tenta uma menor */ }
+      }
+    }
+    if (achou) { achados.push(achou); i = achou.f; } else i++;
+  }
+  return achados;
+}
+
+// Procura contas em uma mensagem em linguagem natural. Não decide se ela DEVE ser respondida como conta: veja contasConfiaveis.
+// intencao: a mensagem usa palavra de conta ("quanto é", "calcule", "soma"...). soConta: fora a conta só sobra enchimento ("por favor", "reais").
+function extrairContas(texto) {
+  const bruto = calcSemAcentos(String(texto == null ? '' : texto).slice(0, 600)).toLowerCase();
+  const mascarado = calcMascarar(bruto);
+  const moeda = /r\$|\breais\b|\breal\b/.test(mascarado);
+  const frase = calcNormalizarFrase(mascarado);
+  const tokens = calcTokens(frase, { ponto: 'milhar' });
+  const janelas = calcJanelas(tokens);
+  const itens = janelas.map(function (j) {
+    const fonte = frase.slice(j.fatia[0].ini, j.fatia[j.fatia.length - 1].fim);
+    const forte = j.fatia.some(function (x) { return x.t === 'id' || x.t === 'cmp' || (x.t === 'op' && x.v !== '-'); }) || /\s-\s/.test(fonte);
+    return { expressao: calcRenderizar(j.fatia), valor: j.r.valor, bool: j.r.bool, ops: j.r.ops, moeda: moeda, forte: forte, ini: j.fatia[0].ini, fim: j.fatia[j.fatia.length - 1].fim, tokens: j.fatia };
+  });
+  // O que sobra depois de tirar as contas: só enchimento (sem letra de conteúdo, sem outro número)?
+  let resto = frase;
+  for (let k = itens.length - 1; k >= 0; k--) resto = resto.slice(0, itens[k].ini) + ' ' + resto.slice(itens[k].fim);
+  const palavras = resto.replace(/[^a-z0-9$%]+/g, ' ').split(' ').filter(Boolean);
+  const soConta = itens.length > 0 && palavras.every(function (w) { return CALC_FILLER.has(w); });
+  return { itens: itens, intencao: CALC_RE_INTENCAO.test(bruto), soConta: soConta, moeda: moeda };
+}
+
+// extrairContas + a decisão de confiar: a mensagem pede conta (palavra de conta) ou é só uma conta com operador claro.
+// Evita tratar "Lei 8.742/1993", "3 - 5 anos" ou "10-20" como aritmética.
+function contasConfiaveis(texto) {
+  let r;
+  try { r = extrairContas(texto); } catch (e) { return null; }
+  if (!r.itens.length) return null;
+  if (r.intencao) return r;
+  if (r.soConta && r.itens.every(function (i) { return i.forte; })) return r;
+  return null;
+}
+
+// Linha escrita de uma conta: "15% de 1.200 = 180", "[1] ≤ 218 → NÃO".
+function linhaDeConta(item) {
+  const r = { valor: item.valor, bool: item.bool };
+  const fim = descreverResultado(r, item.moeda ? 'R$' : item.unidade);
+  return item.expressao + (item.bool ? ' → ' : ' = ') + fim;
+}
+
+// Resposta direta, sem IA e sem rede, SÓ quando a mensagem é a conta. Se há mais assunto na mensagem, devolve null (a IA responde com a conta pronta).
+function respostaDeConta(texto) {
+  const r = contasConfiaveis(texto);
+  if (!r || !r.soConta) return null;
+  const itens = r.itens.slice(0, 4).map(function (i) {
+    return { expressao: i.expressao, valor: i.valor, bool: i.bool, moeda: i.moeda, texto: descreverResultado({ valor: i.valor, bool: i.bool }, i.moeda ? 'R$' : '') };
+  });
+  return { texto: r.itens.slice(0, 4).map(linhaDeConta).join('\n'), itens: itens };
+}
+
+// ------------------------------------------------------------------ pergunta que pede conta (para o passo de planejamento da IA)
+
+const CALC_RE_NUM_EXTENSO = /\b(?:dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez|onze|doze|treze|quinze|vinte|trinta|quarenta|cinquenta|sessenta|setenta|oitenta|noventa|cem|cento|duzentos|trezentos|quinhentos|mil|milhao|milhoes)\b/g;
+// Palavras do trabalho que costumam pedir conta, mas só valem com mais de um número, valor em reais ou porcentagem.
+const CALC_RE_DOMINIO = /\b(?:renda|per\s*capita|frequencia|faltas?|faltou|faltaram|limite|teto|piso|beneficio|parcelas?|prazo|simul\w+|estimativa|custo|orcamento|repasse|cofinanciamento|valor\s+(?:total|mensal|anual)|quantos\s+(?:dias|meses|anos)|quantas\s+(?:pessoas|parcelas|faltas|aulas|semanas|vezes|familias|criancas))\b/;
+
+function pareceProblemaDeCalculo(texto, historico) {
+  const n = calcSemAcentos(String(texto == null ? '' : texto).slice(0, 800)).toLowerCase();
+  const digitos = numerosDoTexto(n).size;
+  const extenso = (n.match(CALC_RE_NUM_EXTENSO) || []).length;
+  const quantos = digitos + extenso;
+  if (!quantos) return false;
+  if (CALC_RE_INTENCAO.test(n)) return true;
+  if (CALC_RE_DOMINIO.test(n) && (quantos >= 2 || /r\$|%|\breais\b/.test(n))) return true;
+  // seguimento curto de uma conta anterior: "e se forem 5 pessoas?", "e com renda de 4000?"
+  if (digitos >= 1 && n.split(/\s+/).length <= 12 && /^(?:e|mas|entao|agora)\b|\be\s+se\b/.test(n) && Array.isArray(historico)) {
+    for (let i = historico.length - 1; i >= 0; i--) {
+      const h = historico[i];
+      if (!h || h.papel !== 'usuario' || !h.texto) continue;
+      const a = calcSemAcentos(String(h.texto)).toLowerCase();
+      return CALC_RE_INTENCAO.test(a) || (CALC_RE_DOMINIO.test(a) && numerosDoTexto(a).size >= 1);
+    }
+  }
+  return false;
+}
+
+// A pergunta usa número por extenso ("três mil", "quatro pessoas")? Nesse caso a IA converte para dígitos e o número "novo" não é invenção.
+function temNumeroPorExtenso(texto) {
+  const n = calcSemAcentos(String(texto == null ? '' : texto)).toLowerCase();
+  return (n.match(CALC_RE_NUM_EXTENSO) || []).length > 0;
 }
 
 // ---- shared/suicidio.mjs ----
@@ -1238,6 +2119,12 @@ const SKINS = {
     mascote: 'Umbrella',
     saudacao: 'Oi! Eu sou o Paulus, aqui como Umbrella. Posso ajudar a usar o app, abrir telas e tirar dúvidas do PAIF e do SUAS. Não tenho acesso aos dados das famílias.',
     sugestoes: ['qual a diferença entre atendimento e acompanhamento?', 'como construir o PAF junto com a família?', 'abrir prioridades']
+  },
+  verbus: {
+    app: 'verbus',
+    mascote: 'Verbus',
+    saudacao: 'Oi! Eu sou o Paulus, aqui como Verbus. Posso explicar o editor, indicar a aba certa e ajudar com a estrutura de relatórios, ofícios e cartas. Não tenho acesso aos seus documentos.',
+    sugestoes: ['como fazer referências no padrão ABNT?', 'como funciona a mala direta?', 'como estruturar um ofício de encaminhamento?']
   }
 };
 
@@ -1660,6 +2547,7 @@ function memEhSensivel(texto) { return MEM_RE_SENSIVEL.test(normalizar(texto)); 
 //
 // Este arquivo é concatenado com shared/*.mjs por scripts/build.mjs (dist/paulus.v1.js).
 // Por isso: imports em UMA linha, e nomes de função sem repetir entre os módulos.
+
 
 
 
@@ -2110,6 +2998,19 @@ async function perguntar(texto, opcoes) {
 
   if (temDadoPessoal(t)) return { tipo: 'bloqueio', texto: AVISO_PESSOAL };
 
+  // Mensagem que É só uma conta ("quanto é 15% de 1200?"): o programa resolve no aparelho, exato, sem rede e sem gastar a cota da IA.
+  // Pergunta com mais assunto (\"renda per capita de 3200 / 4\") segue para a IA, que recebe a conta já feita.
+  if (!o.semCalculo) {
+    const conta = respostaDeConta(t);
+    if (conta) {
+      if (!Array.isArray(o.historico)) {
+        estado.historico.push({ papel: 'usuario', texto: t }, { papel: 'paulus', texto: conta.texto });
+        estado.historico = estado.historico.slice(-cfg.maxHistorico * 4);
+      }
+      return { tipo: 'calculo', texto: conta.texto, itens: conta.itens, fontes: [], avisos: ['Conta feita no aparelho, sem IA. Confira os números que você digitou.'], pergunta: t, docs: [] };
+    }
+  }
+
   if (!o.semAcoes) {
     const alvo = normalizar(t);
     let m = REG_ACAO.exec(alvo);
@@ -2193,7 +3094,7 @@ async function consultarNormas(texto, opcoes) {
   return achados.length ? respostaDasNormas(achados) : null;
 }
 
-const Paulus = { init, perguntar, consultarNormas, registrarAcao, registrarBusca, avaliar, sugestoesPessoais, memoria, limpar, skin, iaLigada, temDadoPessoal, detectarCrise, versao: '0.8.0',
+const Paulus = { init, perguntar, consultarNormas, registrarAcao, registrarBusca, avaliar, sugestoesPessoais, memoria, limpar, skin, iaLigada, temDadoPessoal, detectarCrise, versao: '0.10.0',
   // Memória da conversa inteira (estado, resumo do que já foi perguntado e regra do esclarecimento), para os apps usarem do mesmo jeito.
   conversa: { sanearEstado, mesclarEstado, estadoComoTexto, deveEsclarecer, compactarHistorico, soPerguntou } };
 
