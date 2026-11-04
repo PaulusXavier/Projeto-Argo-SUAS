@@ -339,6 +339,8 @@ function finishUnlockAfterRender() {
 
 function lockApp(reason) {
   if (typeof tradutorClearSession === 'function') tradutorClearSession();
+  // A conversa do Paulus (histórico em memória) acaba com a sessão; o que ele aprendeu de estilo fica só no aparelho.
+  try { if (typeof Paulus !== 'undefined' && Paulus.limpar) Paulus.limpar(); } catch (e) { /* sem Paulus */ }
   // Ao trancar (inclusive ao carregar a página, antes do login), a chave de
   // cifragem sai da memória — os dados sensíveis salvos ficam ilegíveis até
   // a senha correta ser digitada de novo.
@@ -18250,6 +18252,13 @@ function argoAssistantDefaultQuickActions() {
     { label: 'Municípios de Roraima', run: () => argoAssistantAskInline('quais são os municípios de Roraima') },
     { label: 'Atalhos do teclado', run: () => argoAssistantAskInline('atalhos') }
   );
+  // Perguntas que a pessoa mais repete neste aparelho (memória do Paulus; vazia no começo)
+  try {
+    if (typeof Paulus !== 'undefined' && Paulus.memoria && Paulus.memoria.ativa()) {
+      const freq = (Paulus.memoria.frequentes(2) || []).map(x => x && x.texto).filter(Boolean);
+      freq.reverse().forEach(q => list.unshift({ label: '↺ ' + (q.length > 34 ? q.slice(0, 33) + '…' : q), run: () => argoAssistantAskInline(q) }));
+    }
+  } catch (e) { /* sem memória: segue com os atalhos padrão */ }
   return list.slice(0, cat === 'all' ? 7 : 6);
 }
 
@@ -28247,6 +28256,7 @@ function argoStreamIA(B, rawText, payload, hooks) {
   }
   let acc = '';
   let fontes = [];
+  let skills = [];
   // O caminho do Paulus não passa por B.streamAI, que é quem alimenta o aiGate (intervalo mínimo e limite por minuto).
   B.session.lastAi = Date.now(); B.session.aiTimes.push(B.session.lastAi);
   const falha = (msg, userMessage, noRetry) => {
@@ -28269,19 +28279,33 @@ function argoStreamIA(B, rawText, payload, hooks) {
     estado: payload.estado,         // unidade, bairro, município e assunto já firmados na conversa (Paulus v0.8.0)
     sinal: hooks.signal,
     onToken: (pedaco, tudo) => { acc = tudo; if (hooks.onDelta) hooks.onDelta(pedaco, tudo); },
-    onFontes: f => { fontes = f; }
+    onFontes: f => {
+      fontes = f;
+      const n = new Set((f || []).map(x => x && x.documento).filter(Boolean)).size;
+      if (hooks.onFase && n) hooks.onFase('lendo ' + n + (n === 1 ? ' norma' : ' normas') + ' da base…');
+    },
+    // roteiro de trabalho que o Paulus escolheu (relatório, ofício, PAF...): o mascote avisa que está seguindo um
+    onHabilidades: h => {
+      skills = (h || []).slice(0, 2);
+      if (hooks.onFase && skills.length) hooks.onFase('seguindo o roteiro: ' + skills[0] + '…');
+    }
   }).then(r => {
     if (hooks.signal && hooks.signal.aborted) throw falha('interrompida');
     if (r.tipo === 'ia') {
       const txt = B.cleanAI(r.texto);
       if (!txt) throw falha('vazia');
-      return { txt, fontes: r.fontes && r.fontes.length ? r.fontes : fontes, offline: false, sugestoes: r.sugestoes || [], acoes: r.acoes || [] };
+      return { txt, fontes: r.fontes && r.fontes.length ? r.fontes : fontes, offline: false, sugestoes: r.sugestoes || [], acoes: r.acoes || [], avisos: r.avisos || [], paulusResult: r, skills };
     }
     // IA indisponível: se nada chegou ainda, a base de normas pode ter o trecho certo
     if (r.tipo === 'norma' && !acc) {
       return { txt: B.cleanAI(r.texto), fontes: r.fontes || [], avisos: r.avisos || [], offline: true };
     }
-    if (r.tipo === 'erro' || r.tipo === 'bloqueio') throw falha(r.tipo, r.texto, r.tipo === 'bloqueio');
+    // Conta pura ("quanto é 15% de 1200?"): o Paulus (v0.9.0+) resolve no aparelho, exato, sem rede e sem IA.
+    if (r.tipo === 'calculo' && r.texto) {
+      if (hooks.onDelta) hooks.onDelta(r.texto, r.texto);
+      return { txt: B.cleanAI(r.texto), fontes: [], offline: false, calculo: true, avisos: r.avisos || [], sugestoes: [] };
+    }
+    if (r.tipo === 'erro' || r.tipo === 'bloqueio') throw falha(r.tipo, r.texto, r.tipo === 'bloqueio' || r.limite === true); // limite por minuto: repetir na hora só piora
     if (r.tipo === 'crise') {
       const tels = (r.telefones || []).map(t => t.numero + ' ' + t.nome).join(' · ');
       throw falha('crise', r.texto + (tels ? '\n' + tels : ''), true);
@@ -28302,26 +28326,39 @@ function argoAskAI(rawText, tab, fallbackResult) {
     reply: '', mood: 'info', badge: 'IA',
     stream: {
       fallback: fallbackResult || { reply: 'Não consegui consultar a IA agora. Posso procurar o termo direto no diretório, se você quiser.', mood: 'notfound', quickActions: [{ label: 'Buscar "' + rawText.slice(0, 22) + '" nos equipamentos', run: () => argoAssistantSearch(rawText), reply: 'Pronto! Joguei essa busca no diretório.', mood: 'success' }] },
-      run: (onDelta, signal) => argoCensoReady.then(() => {
+      run: (onDelta, signal, onFase) => argoCensoReady.then(() => {
         const payload = B.buildPayload(rawText, { tabCat: tab.cat, tabName: tab.name });
         const ctxNames = payload.contexto.map(f => B.norm(f.nome));
         // Resposta que só perguntou, com a conversa já em andamento: pede de novo, uma vez, mandando a IA assumir a premissa
         // mais provável e responder (o texto na tela é trocado pela nova resposta). Se falhar, vale a primeira.
         const sondar = typeof Paulus !== 'undefined' && Paulus.conversa && Paulus.conversa.soPerguntou;
         const comConversa = Object.keys(B.estado()).length > 0 || B.session.history.length >= 2;
-        const primeira = argoStreamIA(B, rawText, payload, { onDelta, signal });
+        // Falha passageira (rede oscilando, resposta vazia) sem texto parcial: tenta de novo UMA vez, sem incomodar a pessoa.
+        const tentar = (pl, extra) => argoStreamIA(B, rawText, pl, Object.assign({ onDelta, signal, onFase }, extra || {}))
+          .catch(err => {
+            if (!err || err.noRetry || err.partial || (signal && signal.aborted) || /^(crise|interrompida)$/.test(err.message)) throw err;
+            if (onFase) onFase('a conexão falhou, tentando de novo…');
+            return new Promise(ok => setTimeout(ok, 1500)).then(() => {
+              if (signal && signal.aborted) throw err;
+              return argoStreamIA(B, rawText, B.buildPayload(rawText, { tabCat: tab.cat, tabName: tab.name }), Object.assign({ onDelta, signal, onFase }, extra || {}));
+            });
+          });
+        const primeira = tentar(payload);
         const final = !sondar || !comConversa ? primeira : primeira.then(r => {
           if (r.offline || !Paulus.conversa.soPerguntou(r.txt) || (signal && signal.aborted)) return r;
           return new Promise(ok => setTimeout(ok, 1400))        // o Paulus deixa 1,2 s entre perguntas
-            .then(() => argoStreamIA(B, rawText, B.buildPayload(rawText, { tabCat: tab.cat, tabName: tab.name }), { onDelta, signal, semPerguntar: true }))
+            .then(() => argoStreamIA(B, rawText, B.buildPayload(rawText, { tabCat: tab.cat, tabName: tab.name }), { onDelta, signal, onFase, semPerguntar: true }))
             .then(r2 => (r2 && r2.txt && !Paulus.conversa.soPerguntou(r2.txt) ? r2 : r), () => r);
         });
-        return final.then(({ txt, fontes, avisos, offline, sugestoes, acoes }) => {
+        return final.then(({ txt, fontes, avisos, offline, sugestoes, acoes, calculo, paulusResult, skills }) => {
           const units = B.mentionedUnits(txt, ctxNames);
           B.remember(rawText, txt, units);
           const bad = B.verifyPhones(txt);
           let note = 'Posso errar: confira os dados com a unidade antes de encaminhar.';
           if (offline) note = (avisos && avisos[0]) || 'Estou sem IA agora, mas achei um trecho na minha base SUAS. Confira a fonte e o ano citados.';
+          // Nota da IA: avisos de conferência do Paulus (artigo, lei ou valor citado que não estava nas normas lidas)
+          if (!offline && !calculo && avisos && avisos[0]) note = avisos[0] + ' Confira antes de usar.';
+          if (calculo) note = (avisos && avisos[0]) || 'Conta feita no aparelho, sem IA. Confira os números.';
           if (bad) note = '⚠️ Citei um número que não consta no diretório. Confirme com a unidade antes de usar.';
           // Perguntas de continuação: as da IA primeiro; se ela citou unidade e não sugeriu nada, as de contato.
           const seguintes = (sugestoes || []).slice(0, 3);
@@ -28330,7 +28367,11 @@ function argoAskAI(rawText, tab, fallbackResult) {
             text: txt,
             note,
             bad: !!bad,                 // número que não consta no diretório: o mascote fica preocupado
-            badge: offline ? 'Base SUAS' : undefined,
+            mood: calculo ? 'success' : undefined,
+            skills: skills && skills.length ? skills : undefined,
+            badge: calculo ? 'Cálculo' : (offline ? 'Base SUAS' : undefined),
+            // 👍/👎, "mais curto" e "copiar": o Paulus aprende o estilo e guarda as respostas aprovadas SÓ neste aparelho
+            rate: paulusResult ? (sinal => { try { Paulus.avaliar(paulusResult, sinal); } catch (e) { /* aprender é opcional */ } }) : undefined,
             sources: fontes || [],      // o mascote mostra como lista que abre e fecha
             units: argoUnitsForUi(units),
             followups: seguintes,
