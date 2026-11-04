@@ -438,10 +438,10 @@
       text: 'A diferença está no tipo de situação:\n- **CRAS** (Proteção Básica): **prevenção**. Famílias em vulnerabilidade, sem violação de direitos. Oferta PAIF e SCFV.\n- **CREAS** (Proteção Especial): **violação de direitos já ocorrida** (violência, abuso, negligência, situação de rua). Oferta PAEFI e medidas socioeducativas em meio aberto.\nO CRAS é porta de entrada; o CREAS costuma receber casos encaminhados pela rede, mas também atende demanda espontânea.',
       base: 'Tipificação Nacional (Res. CNAS 109/2009).',
       actions: [{ label: 'Ver CRAS e CREAS', cat: 'social' }], follow: ['O que é o PAIF?', 'O que é o PAEFI?'] },
-    { id: 'paif', keys: ['paif', 'plano de acompanhamento familiar', 'paf', 'acompanhamento familiar'],
-      text: 'O **PAIF** é o trabalho social com famílias do CRAS: acolhida, oficinas, ações comunitárias, encaminhamentos e **acompanhamento familiar**.\nNo acompanhamento, a equipe constrói com a família um **plano (PAF)**, com objetivos e prazos combinados, para fortalecer vínculos e a função protetiva da família e prevenir rupturas.',
-      base: 'Tipificação Nacional (Res. CNAS 109/2009).',
-      actions: [{ label: 'Abrir Anotações', cat: 'ferramentas' }], follow: ['O que é o SCFV?', 'Como é a visita domiciliar?'] },
+    { id: 'paif', keys: ['paif', 'paf', 'trabalho social com familias'],
+      text: 'O **PAIF** é o trabalho social com famílias, de caráter continuado, ofertado no **CRAS**: acolhida, oficinas, ações comunitárias, encaminhamentos e **acompanhamento familiar**. Busca fortalecer a função protetiva da família e prevenir a ruptura de vínculos. Não tem caráter terapêutico.\nNo acompanhamento, a equipe constrói com a família um **plano (PAF)**, com objetivos e prazos combinados.\nPergunte por tema: objetivos, quem é atendido, acolhida, oficinas, PAF, equipe, registro, Bolsa Família, PAIF e PAEFI.',
+      base: 'Tipificação Nacional (Res. CNAS 109/2009); LOAS, art. 24-A.',
+      actions: [{ label: 'Abrir Anotações', cat: 'ferramentas' }], follow: ['Quais são os objetivos do PAIF?', 'O que é o PAF?', 'Qual a diferença entre PAIF e PAEFI?'] },
     { id: 'paefi', keys: ['paefi'],
       text: 'O **PAEFI** é o serviço do CREAS de apoio, orientação e acompanhamento **especializado** a famílias e pessoas com direitos violados.\nInclui escuta qualificada, estudo psicossocial, orientação sociojurídica, articulação com o sistema de garantia de direitos e acompanhamento do caso. A responsabilização do autor da violência cabe ao sistema de justiça.',
       base: 'Tipificação Nacional (Res. CNAS 109/2009).',
@@ -785,22 +785,434 @@
       actions: [{ label: 'Ver UBS', search: 'UBS' }, { label: 'Ver CAPS', search: 'CAPS' }], follow: ['O que é a RAPS?', 'Como encaminhar com responsabilidade?'] },
 
     // ---- Trabalho no PAIF ----
-    { id: 'psi-acompanhamento', cat: 'Trabalho no CRAS',
-      keys: ['o que e acompanhamento familiar', 'acompanhamento familiar', 'acompanhamento familiar no paif', 'plano de acompanhamento familiar', 'como montar o plano de acompanhamento', 'objetivos do plano de acompanhamento', 'como fazer o paf', 'o que e o paf', 'quando iniciar acompanhamento familiar'],
-      text: 'No PAIF, o **acompanhamento familiar** é um conjunto de intervenções **continuadas**, feitas a partir de **compromissos entre a família e os profissionais**, com objetivos definidos.\nSua peça central é o **Plano de Acompanhamento Familiar (PAF)**, construído **junto com a família**, com objetivos e mediações periódicas, para a superação gradual das vulnerabilidades e o fortalecimento de vínculos e da função protetiva da família.\nOs critérios de inclusão e a metodologia detalhada estão nas Orientações Técnicas do PAIF (MDS, 2012) e no protocolo do seu município; confira-os com a coordenação do CRAS.',
-      base: 'Tipificação Nacional (Res. CNAS 109/2009); Orientações Técnicas sobre o PAIF (MDS, 2012).',
-      actions: [{ label: 'Abrir Anotações', cat: 'ferramentas' }], follow: ['O que é o PAIF?', 'Como é a visita domiciliar?'] },
-
-    // ---- Orientação ----
     { id: 'psi-crp', cat: 'Orientação',
       keys: ['duvida etica', 'onde tirar duvida etica', 'comissao de orientacao e fiscalizacao', 'cof do crp', 'orientacao do crp', 'falar com o crp', 'crp 20', 'quem orienta o psicologo', 'consultar o crp', 'o crp pode orientar'],
       text: 'Para dúvida ética ou técnica sobre o seu trabalho, a via oficial é a **Comissão de Orientação e Fiscalização (COF) do seu CRP**: ela orienta os profissionais. Para parâmetros de atuação em políticas públicas, há ainda as **Referências Técnicas do CREPOP/CFP** (CRAS, CREAS, gestores, rede de atenção psicossocial, entre outras) e as notas técnicas do CFP.\nEste app traz respostas de apoio, **não substitui parecer ético, jurídico ou a orientação da sua coordenação**.',
       base: 'Sistema Conselhos de Psicologia (CFP e CRPs); CREPOP.',
       actions: [], follow: ['E se o juiz pedir um relatório?'] }
   ];
+  // ---------------------------------------------------------------------
+  // Base do PAIF (trabalho social com famílias no CRAS): 61 verbetes curados, cada um com a norma citada.
+  // Fontes: Tipificação (Res. CNAS 109/2009), LOAS art. 24-A, Orientações Técnicas do PAIF, guias de PAF,
+  // trilhas do MDS (2024/2026), Referências do CFP/CREPOP e Censo SUAS 2025. Respondem sem internet e sem IA.
+  // ---------------------------------------------------------------------
+  var PAIF_REV = 'nov/2026';
+  var PAIF_BASE = [
+    { id: 'paif-o-que-e', cat: 'O serviço',
+      keys: ['oq+e+paif', 'oq+paif', 'paif+oq', 'paif+significa', 'paif e o que', 'me fala do paif', 'me fala sobre o paif', 'fala sobre o paif', 'sobre o paif', 'o que voce sabe sobre o paif', 'me conta sobre o paif', 'o que e o paif', 'o que e paif', 'o que significa paif', 'paif significa', 'servico de protecao e atendimento integral a familia', 'conceito de paif', 'definicao de paif', 'explica o paif', 'me explica o paif', 'resumo do paif', 'para que serve o paif', 'qual a finalidade do paif', 'o que faz o paif', 'como funciona o paif'],
+      text: 'O **PAIF** (Serviço de Proteção e Atendimento Integral à Família) é o **trabalho social com famílias, de caráter continuado**, ofertado no CRAS.\n- **Finalidade:** fortalecer a **função protetiva** das famílias, **prevenir a ruptura dos vínculos**, promover o acesso e o usufruto de direitos e melhorar a qualidade de vida.\n- **Caráter:** preventivo, protetivo e proativo; desenvolve potencialidades e aquisições das famílias.\n- **Na lei:** integra a proteção social básica e busca prevenir o rompimento dos vínculos familiares e a violência nas relações, garantindo o direito à convivência familiar e comunitária.\n- **Não é terapêutico:** as ações do PAIF não têm caráter terapêutico.',
+      base: 'Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009); LOAS, art. 24-A (Lei 8.742/1993).',
+      actions: [{ label: 'Ver CRAS', cat: 'social' }], follow: ['Quais são os objetivos do PAIF?', 'Quem é atendido no PAIF?', 'Quais são as ações do PAIF?'] },
+
+    { id: 'paif-base-legal', cat: 'O serviço',
+      keys: ['base legal do paif', 'lei do paif', 'paif na loas', 'artigo 24-a', 'art 24-a da loas', 'legislacao do paif', 'normas do paif', 'qual norma regulamenta o paif', 'onde esta o paif na lei', 'paif e obrigatorio', 'o paif e obrigatorio no cras', 'quem criou o paif', 'quando surgiu o paif'],
+      text: 'Onde o PAIF está previsto:\n- **LOAS, art. 24-A:** institui o PAIF como serviço da proteção social básica, de prestação continuada, **nos CRAS**, por meio do trabalho social com famílias em vulnerabilidade, para prevenir o rompimento de vínculos e a violência nas relações.\n- **Tipificação Nacional (Res. CNAS 109/2009):** descreve o serviço, usuários, objetivos, aquisições e funcionamento. Diz que é ofertado **necessariamente no CRAS** e que a implementação cabe exclusivamente ao Estado.\n- **Orientações Técnicas sobre o PAIF (MDS):** detalham as ações, o acompanhamento familiar e o PAF.\n- **Res. CNAS 17/2011:** assistente social e psicólogo compõem obrigatoriamente a equipe de referência da proteção social básica.',
+      base: 'LOAS, art. 24-A (Lei 8.742/1993); Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009); Res. CNAS 17/2011.',
+      actions: [], follow: ['O que é o PAIF?', 'Quem compõe a equipe do PAIF?'] },
+
+    { id: 'paif-objetivos', cat: 'O serviço',
+      keys: ['objetivos do paif', 'objetivo do paif', 'qual o objetivo do paif', 'quais os objetivos do paif', 'quais sao os objetivos do paif', 'paif+objetivos', 'paif+objetivo', 'metas do paif'],
+      text: 'Objetivos do PAIF, segundo a Tipificação:\n- fortalecer a **função protetiva da família**, melhorando sua qualidade de vida;\n- **prevenir a ruptura dos vínculos** familiares e comunitários, superando fragilidades sociais;\n- promover **aquisições sociais e materiais**, potencializando o protagonismo e a autonomia de famílias e comunidades;\n- promover o **acesso a benefícios**, programas de transferência de renda e serviços socioassistenciais;\n- promover o acesso aos **demais serviços setoriais** (saúde, educação etc.), para o usufruto de direitos;\n- **apoiar famílias com membros que precisam de cuidados**, com espaços coletivos de escuta e troca de vivências.',
+      base: 'Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009) (PAIF, objetivos).',
+      actions: [], follow: ['Quem é atendido no PAIF?', 'Quais são as aquisições dos usuários do PAIF?'] },
+
+    { id: 'paif-usuarios', cat: 'O serviço',
+      keys: ['o paif atende quem', 'paif atende quem', 'quem o paif atende', 'quem pode ser acompanhado no paif', 'quem e atendido no paif', 'quem pode participar do paif', 'quem tem direito ao paif', 'quem pode ser atendido no paif', 'publico do paif', 'publico alvo do paif', 'usuarios do paif', 'paif+publico', 'paif+usuarios', 'paif+usuario', 'para quem e o paif', 'quem participa do paif', 'quem frequenta o paif'],
+      text: 'O público do PAIF são **famílias em situação de vulnerabilidade social** (por pobreza, acesso precário ou nulo a serviços públicos, fragilização de vínculos ou outra vulnerabilidade e risco) **que moram no território de abrangência do CRAS**. A Tipificação destaca:\n- famílias **beneficiárias de transferência de renda** (como o Bolsa Família) e de benefícios assistenciais (como o BPC);\n- famílias **elegíveis a esses programas que ainda não foram contempladas**;\n- famílias em vulnerabilidade por **dificuldades de algum membro**;\n- **pessoas com deficiência e/ou idosas** em vulnerabilidade e risco social.\nA prioridade orienta a busca ativa e a fila do acompanhamento; **não retira o direito** de nenhuma família do território ser atendida.',
+      base: 'Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009) (PAIF, usuários); Orientações Técnicas sobre o PAIF (MDS).',
+      actions: [{ label: 'Ver CRAS', cat: 'social' }], follow: ['Como a família chega ao PAIF?', 'Quando propor acompanhamento familiar?'] },
+
+    { id: 'paif-acesso', cat: 'O serviço',
+      keys: ['como a familia chega ao paif', 'como acessar o paif', 'como entrar no paif', 'formas de acesso ao paif', 'forma de acesso ao paif', 'como e o acesso ao paif', 'porta de entrada do paif', 'como a familia entra no paif', 'como inserir familia no paif', 'como incluir familia no paif', 'paif+acesso', 'paif+encaminhamento'],
+      text: 'A Tipificação prevê quatro formas de acesso ao PAIF:\n- **procura espontânea**;\n- **busca ativa**;\n- **encaminhamento da rede socioassistencial**;\n- **encaminhamento das demais políticas públicas** (saúde, educação etc.).\nA família precisa ser **territorialmente referenciada** ao CRAS. O serviço dá atenção especial a famílias em reconstrução de autonomia ou de vínculos, com crianças, adolescentes, jovens e idosos em serviços socioassistenciais, com beneficiários do BPC e inseridas em programas de transferência de renda.\nA porta de entrada do trabalho social é a **acolhida**.',
+      base: 'Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009) (PAIF, condições e formas de acesso).',
+      actions: [{ label: 'Ver CRAS', cat: 'social' }], follow: ['O que é a acolhida no PAIF?', 'O que é busca ativa?'] },
+
+    { id: 'paif-funcionamento', cat: 'O serviço',
+      keys: ['horario de funcionamento do paif', 'funcionamento do paif', 'quantas horas funciona o cras', 'quantos dias o cras funciona', 'cras funciona sabado', 'periodo de funcionamento do cras', 'jornada do cras', 'paif+funcionamento', 'paif+abrangencia', 'abrangencia do paif', 'onde e ofertado o paif', 'onde o paif e ofertado'],
+      text: 'Pela Tipificação, o PAIF é ofertado no **CRAS** (unidade pública estatal), com funcionamento **mínimo de 5 dias por semana e 8 horas diárias**, necessariamente no período diurno. Pode haver atividades complementares à noite e funcionamento em feriados e fins de semana.\nA **abrangência** é municipal; em metrópoles e municípios de médio e grande porte corresponde ao **território de abrangência do CRAS**, conforme a incidência da demanda.\nO CRAS é, por lei, unidade de base territorial localizada em áreas de maior vulnerabilidade e risco social (LOAS, art. 6º-C, § 1º).',
+      base: 'Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009) (PAIF, unidade e funcionamento); LOAS, art. 6º-C.',
+      actions: [{ label: 'Ver CRAS', cat: 'social' }], follow: ['Como funciona o PAIF em território de baixa densidade?'] },
+
+    { id: 'paif-trabalho-essencial', cat: 'O serviço',
+      keys: ['trabalho social essencial do paif', 'trabalho social essencial ao servico', 'o que o paif oferece', 'o que o paif inclui', 'o que o paif faz com a familia', 'atividades do paif', 'quais as atividades do paif', 'paif+atividades', 'paif+oferece', 'servicos oferecidos pelo paif'],
+      text: 'O **trabalho social essencial** ao PAIF, segundo a Tipificação, inclui:\n- acolhida; estudo social; visita domiciliar;\n- orientação e encaminhamentos;\n- grupos de famílias; **acompanhamento familiar**;\n- atividades comunitárias e campanhas socioeducativas;\n- informação, comunicação e defesa de direitos; promoção do acesso à **documentação pessoal**;\n- mobilização e fortalecimento de redes sociais de apoio; convívio familiar e comunitário; mobilização para a cidadania;\n- conhecimento do território; cadastramento socioeconômico; elaboração de relatórios e/ou prontuários;\n- notificação de situações de vulnerabilidade e risco social; **busca ativa**.',
+      base: 'Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009) (PAIF, trabalho social essencial ao serviço).',
+      actions: [], follow: ['Quais são as ações do PAIF?', 'O que é a acolhida no PAIF?'] },
+
+    { id: 'paif-aquisicoes', cat: 'O serviço',
+      keys: ['aquisicoes+usuarios', 'aquisicoes+paif', 'aquisicoes do paif', 'aquisicoes dos usuarios do paif', 'o que a familia ganha no paif', 'o que a familia adquire no paif', 'segurancas afiancadas no paif', 'seguranca de acolhida', 'seguranca de convivio familiar', 'seguranca de autonomia', 'seguranca de desenvolvimento da autonomia', 'paif+aquisicoes', 'paif+segurancas', 'paif+seguranca'],
+      text: 'As **aquisições** esperadas dos usuários, organizadas nas seguranças afiançadas pela assistência social:\n- **Acolhida:** ter demandas e necessidades acolhidas; receber orientações e encaminhamentos a benefícios, transferência de renda e outros direitos; ambiência acolhedora; privacidade.\n- **Convívio familiar e comunitário:** experiências que fortaleçam vínculos e ampliem a capacidade protetiva; acesso a serviços de qualidade.\n- **Desenvolvimento da autonomia:** respeito a si e aos outros, participação cidadã, projetos individuais e coletivos, autoestima; **redução do descumprimento de condicionalidades do Bolsa Família**; acesso à **documentação civil**; informação sobre emprego, renda, associativismo e cooperativismo.',
+      base: 'Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009) (PAIF, aquisições dos usuários).',
+      actions: [], follow: ['Quais são os objetivos do PAIF?'] },
+
+    { id: 'paif-provisoes', cat: 'O serviço',
+      keys: ['estrutura do paif', 'provisoes do paif', 'ambiente fisico do paif', 'recursos materiais do paif', 'o que o cras precisa ter para o paif', 'espaco fisico do cras', 'salas do cras', 'paif+provisoes', 'paif+ambiente', 'paif+estrutura'],
+      text: 'Provisões previstas na Tipificação para o PAIF:\n- **Ambiente físico:** recepção, sala(s) de atendimento individualizado, sala(s) de atividades coletivas e comunitárias, sala administrativa e sanitários, com iluminação, ventilação, privacidade, salubridade e **acessibilidade** (normas da ABNT).\n- **Recursos materiais:** mobiliário, computadores, materiais socioeducativos (pedagógicos, culturais e esportivos).\n- **Bases de dados:** de usuários de benefícios e serviços, dos serviços socioassistenciais, o **Cadastro Único** e o cadastro de beneficiários do **BPC**.\n- **Recursos humanos:** conforme a NOB-RH/SUAS.',
+      base: 'Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009) (PAIF, provisões).',
+      actions: [], follow: ['Quem compõe a equipe do PAIF?'] },
+
+    { id: 'paif-impacto', cat: 'O serviço',
+      keys: ['impacto do paif', 'impacto social esperado do paif', 'resultado esperado do paif', 'resultados do paif', 'para que serve o trabalho social com familias', 'paif+impacto', 'paif+resultados', 'como saber se o paif funciona'],
+      text: 'O **impacto social esperado** do PAIF, segundo a Tipificação, é contribuir para:\n- reduzir a ocorrência de situações de **vulnerabilidade social** no território do CRAS;\n- **prevenir** riscos sociais, seu agravamento ou reincidência;\n- ampliar o acesso a serviços socioassistenciais e setoriais;\n- melhorar a qualidade de vida das famílias do território.\nÉ um serviço de **prevenção e fortalecimento**; quando já há violação de direitos, o caminho é o CREAS/PAEFI.',
+      base: 'Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009) (PAIF, impacto social esperado).',
+      actions: [], follow: ['Qual a diferença entre PAIF e PAEFI?'] },
+
+    { id: 'paif-nao-terapeutico', cat: 'O serviço',
+      keys: ['paif+saude', 'paif+ubs', 'paif+caps', 'encaminhar+saude+paif', 'paif e terapia', 'paif tem carater terapeutico', 'paif e psicoterapia', 'o paif e terapeutico', 'carater terapeutico do paif', 'paif+terapeutico', 'paif+terapia', 'paif+psicoterapia', 'paif+clinico', 'paif+clinica', 'grupo do paif e terapia'],
+      text: 'A Tipificação é direta: **as ações do PAIF não devem ter caráter terapêutico**. Grupos, oficinas e acompanhamento são **trabalho social**: escuta qualificada, reflexão sobre vulnerabilidades e potencialidades, acesso a direitos e fortalecimento de vínculos.\nQuando há sofrimento psíquico que pede cuidado clínico, o caminho é **articular com a rede de saúde** (UBS, CAPS), sem fazer psicoterapia no CRAS. Para a psicologia no PAIF, o foco é psicossocial: compreender os processos subjetivos ligados à vulnerabilidade e prevenir rupturas de vínculos.',
+      base: 'Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009) (PAIF, descrição); Referências Técnicas do CREPOP/CFP para atuação no CRAS (2021).',
+      actions: [{ label: 'Ver UBS', search: 'UBS' }, { label: 'Ver CAPS', search: 'CAPS' }], follow: ['Qual o papel da psicologia no PAIF?', 'Quando encaminhar para a saúde?'] },
+
+    { id: 'paif-acoes', cat: 'Ações do PAIF',
+      keys: ['acoes do paif', 'quais as acoes do paif', 'quais sao as acoes do paif', 'tipos de acao do paif', 'paif+acoes', 'acoes individuais e coletivas do paif', 'acoes particularizadas', 'o que e acao particularizada'],
+      text: 'Segundo as Orientações Técnicas, as ações do PAIF são:\n- **Individuais** (com a família ou um de seus membros): **acolhida**, **ações particularizadas** e **encaminhamentos**.\n- **Coletivas:** **oficinas com famílias** e **ações comunitárias**.\nO **acompanhamento familiar** reúne esse conjunto de ações em torno de um plano (o PAF) construído junto com a família. As trilhas do MDS orientam dar preferência às **ações coletivas**, sem negar o atendimento individual quando necessário.',
+      base: 'Orientações Técnicas sobre o PAIF (MDS); Trilhas do PAIF (MDS, 2024 e 2026).',
+      actions: [], follow: ['O que é a acolhida no PAIF?', 'O que são oficinas com famílias?', 'O que são ações comunitárias?'] },
+
+    { id: 'paif-acolhida', cat: 'Ações do PAIF',
+      keys: ['diferenca entre acolhida e atendimento', 'acolhida e atendimento', 'acolhida no paif', 'o que e a acolhida', 'o que e acolhida', 'o que e acolhida no paif', 'o que e a acolhida no paif', 'como e a acolhida no cras', 'como fazer a acolhida', 'acolhida em grupo', 'paif+acolhida', 'acolhida do paif', 'escuta qualificada no paif'],
+      text: 'A **acolhida** é a escuta qualificada da demanda da família e a **porta de entrada do trabalho social** no PAIF.\nÉ nela que a equipe verifica, com o **estudo social** e o prontuário da família, se é preciso iniciar um **acompanhamento familiar** ou se o atendimento nas ações do PAIF já responde à demanda.\nPode ser **em grupo** (informações gerais, escuta coletiva) ou **particularizada** (a família ou um membro, com preenchimento do Prontuário).',
+      base: 'Orientações Técnicas sobre o PAIF (MDS) (acolhida no PAIF).',
+      actions: [{ label: 'Abrir Anotações', cat: 'ferramentas' }], follow: ['O que é a acolhida particularizada?', 'Qual a diferença entre atendimento e acompanhamento?'] },
+
+    { id: 'paif-acolhida-particularizada', cat: 'Ações do PAIF',
+      keys: ['acolhida particularizada', 'o que e acolhida particularizada', 'o que e a acolhida particularizada', 'acolhida no domicilio', 'acolhida particularizada no domicilio', 'quando fazer acolhida no domicilio', 'paif+particularizada', 'paif+particularizado'],
+      text: 'Na **acolhida particularizada**, o profissional preenche ou atualiza o **Prontuário da Família**, no CRAS ou no domicílio.\nA acolhida **no domicílio exige o consentimento da família** e é indicada, por exemplo, em **descumprimento reiterado de condicionalidades**, ou para crianças e adolescentes com deficiência, beneficiários do BPC e fora da escola.\nO atendimento particularizado também é indicado quando a situação pede proteção imediata, sigilo ou quando a família tem dificuldade de deslocamento.',
+      base: 'Orientações Técnicas sobre o PAIF (MDS) (acolhida particularizada).',
+      actions: [{ label: 'Abrir Anotações', cat: 'ferramentas' }], follow: ['O que é o prontuário da família?', 'Como é a visita domiciliar?'] },
+
+    { id: 'paif-estudo-social', cat: 'Ações do PAIF',
+      keys: ['estudo social no paif', 'o que e estudo social', 'o que e o estudo social', 'estudo social do cras', 'como fazer estudo social', 'paif+estudo+social'],
+      text: 'O **estudo social** é a leitura da situação da família e do território: suas vulnerabilidades, potencialidades, rede de apoio e acesso a direitos.\nEle é feito na acolhida e **orienta a decisão** de a família ser apenas atendida ou ser **acompanhada** (com PAF). Faz parte do trabalho social essencial do PAIF (Tipificação) e antecede o plano de acompanhamento (Referências do CFP/CREPOP).\nRegistre fatos e a escuta da família, sem rotular.',
+      base: 'Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009); Orientações Técnicas sobre o PAIF (MDS); Referências Técnicas do CREPOP/CFP para atuação no CRAS (2021).',
+      actions: [{ label: 'Abrir Anotações', cat: 'ferramentas' }], follow: ['Quando propor acompanhamento familiar?'] },
+
+    { id: 'paif-visita-domiciliar', cat: 'Ações do PAIF',
+      keys: ['visita+surpresa', 'visita+sem+avisar', 'visita+agendada', 'visita+consentimento', 'visita+familia+recusa', 'visita+domiciliar+recusa', 'visita domiciliar', 'visita domiciliar no paif', 'como e a visita domiciliar', 'como fazer visita domiciliar', 'visita domiciliar do cras', 'visita domiciliar e obrigatoria', 'a visita domiciliar e obrigatoria', 'visita fiscalizatoria', 'visita domiciliar fiscaliza', 'paif+visita', 'paif+domicilio'],
+      text: 'No PAIF, a **visita domiciliar** é uma ação possível do trabalho social e tem regras claras:\n- exige **consentimento da família** e é **agendada**;\n- **não tem caráter fiscalizatório**;\n- **não é obrigatória** para acompanhar uma família;\n- é feita pela equipe técnica; o nível médio pode apoiar.\nUm aviso sobre o futuro: segundo a trilha do MDS de 2026, a Resolução CIT nº 30/2025 dá papel estruturante à visita domiciliar na proteção social básica por meio do **SPSBD-GC** (gestantes e crianças), com início em **1º/1/2027**, substituindo o Programa Criança Feliz. Confira a nomenclatura e as regras no texto oficial.',
+      base: 'Orientações Técnicas sobre o PAIF (MDS); Trilhas do PAIF (MDS, 2024 e 2026).',
+      actions: [{ label: 'Abrir Anotações', cat: 'ferramentas' }], follow: ['O que é a acolhida particularizada?', 'Qual a diferença entre PAIF e SCFV?'] },
+
+    { id: 'paif-oficinas', cat: 'Ações do PAIF',
+      keys: ['oficinas com familias', 'oficina com familias', 'o que sao oficinas com familias', 'o que e oficina com familias', 'oficinas do paif', 'oficina do paif', 'como fazer oficina com familias', 'quantas pessoas na oficina do paif', 'paif+oficinas', 'paif+oficina'],
+      text: '**Oficinas com famílias** são encontros previamente organizados, com **objetivos de curto prazo**, conduzidos por **técnicos de nível superior**, para refletir sobre situações de vulnerabilidade e potencialidades.\n- A inserção é **por convite**; a oficina **não deve ser a única possibilidade** de atendimento da família.\n- As Orientações Técnicas sugerem **7 a 15 participantes** e **60 a 120 minutos**.\n- Uma oficina pode revelar uma família que precisa de acompanhamento ou de ação particularizada.\n- A metodologia é participativa, no ciclo **ação-reflexão-ação**; ludicidade e brincar ajudam o diálogo (trilhas do MDS).',
+      base: 'Orientações Técnicas sobre o PAIF (MDS); Trilhas do PAIF (MDS, 2024 e 2026).',
+      actions: [], follow: ['O que são ações comunitárias?', 'Como funcionam os grupos de famílias?'] },
+
+    { id: 'paif-acoes-comunitarias', cat: 'Ações do PAIF',
+      keys: ['acoes comunitarias', 'acao comunitaria', 'o que sao acoes comunitarias', 'o que e acao comunitaria', 'acoes comunitarias do paif', 'atividades comunitarias do paif', 'paif+comunitarias', 'paif+comunitaria', 'paif+comunitario'],
+      text: '**Ações comunitárias** são coletivas, voltadas a **dinamizar as relações no território**, com mais participantes que as oficinas: palestras, campanhas e eventos comunitários.\nServem para enfrentar problemas coletivos (violência, trabalho infantil, falta de acessibilidade, de transporte, de espaços de lazer e cultura) e para **fortalecer a participação social e a defesa de direitos**.',
+      base: 'Orientações Técnicas sobre o PAIF (MDS) (ações comunitárias).',
+      actions: [], follow: ['O que são oficinas com famílias?', 'O que é o trabalho social com famílias e territórios?'] },
+
+    { id: 'paif-grupos', cat: 'Ações do PAIF',
+      keys: ['reuniao+grupo+paif', 'paif+reuniao', 'grupos de familias', 'grupo de familias', 'grupos do paif', 'grupo do paif', 'como organizar grupos no paif', 'grupos por tema', 'grupo de familias com condicionalidades', 'paif+grupos', 'paif+grupo', 'grupos de familias por tema'],
+      text: 'Grupos de famílias são **ações coletivas** do PAIF. O guia de acompanhamento familiar sugere uma **agenda mensal** de grupos por afinidade temática, por exemplo:\n- famílias com **condicionalidades do Bolsa Família descumpridas**;\n- famílias com **pessoas que precisam de cuidados**;\n- famílias em **insegurança alimentar**;\n- famílias com **violência doméstica**;\n- famílias de **adolescentes fora da escola**.\nPrivilegie o trabalho coletivo, sem negar o atendimento individual quando necessário. Lembre que grupo do PAIF é trabalho social, **não terapia**.',
+      base: 'Guia de acompanhamento familiar do PAIF; Trilhas do PAIF (MDS, 2024 e 2026).',
+      actions: [], follow: ['O que são oficinas com famílias?', 'O que é acompanhamento em grupo?'] },
+
+    { id: 'paif-busca-ativa', cat: 'Ações do PAIF',
+      keys: ['busca ativa', 'o que e busca ativa', 'busca ativa no paif', 'como fazer busca ativa', 'busca ativa no cras', 'paif+busca', 'equipe volante busca ativa'],
+      text: 'A **busca ativa** é a procura de famílias em vulnerabilidade e risco no território para **incluir ou atualizar o Cadastro Único** e garantir o acesso aos serviços do SUAS. Faz parte do trabalho social essencial do PAIF (Tipificação).\nNo Bolsa Família, a busca ativa deve **priorizar famílias ainda não inseridas no PAIF**, em especial as em descumprimento de condicionalidades (trilha de 2024).\nSegundo a trilha de 2026, as Resoluções CIT nº 18/2024 e CNAS/MDS nº 185/2025 orientam a busca ativa com prioridade para os **Grupos Populacionais Tradicionais e Específicos (GPTE)**; equipes volantes atendem e cadastram nas comunidades, inclusive de barco na Amazônia Legal.\nRegistre as tentativas de contato.',
+      base: 'Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009); Trilhas do PAIF (MDS, 2024 e 2026).',
+      actions: [], follow: ['Como funciona o PAIF em território de baixa densidade?', 'Como o PAIF atende famílias do Bolsa Família?'] },
+
+    { id: 'paif-atend-x-acomp', cat: 'Acompanhamento e PAF',
+      keys: ['diferenca entre atendimento e acompanhamento', 'atendimento e acompanhamento', 'atendimento x acompanhamento', 'atendimento ou acompanhamento', 'todo atendimento exige paf', 'toda familia atendida precisa de acompanhamento', 'toda familia precisa de paf', 'paif+atendimento+acompanhamento'],
+      text: '- **Atendimento** é **pontual**: a família procura orientação sobre serviço, direito ou benefício e a demanda se resolve naquele contato ou com um encaminhamento.\n- **Acompanhamento** é um **processo**: tem plano (PAF), prazos, vários encontros e monitoramento.\n**Nem toda família atendida precisa ser acompanhada**: a decisão sai da acolhida, com o estudo social. Atendimento pontual **não exige PAF**.',
+      base: 'Guia de acompanhamento familiar do PAIF; Orientações Técnicas sobre o PAIF (MDS).',
+      actions: [], follow: ['Quando propor acompanhamento familiar?', 'O que é o PAF?'] },
+
+    { id: 'paif-acompanhamento', cat: 'Acompanhamento e PAF',
+      keys: ['o que e acompanhamento familiar', 'o que e o acompanhamento familiar', 'acompanhamento familiar', 'acompanhamento familiar no paif', 'como funciona o acompanhamento familiar', 'definicao de acompanhamento familiar', 'conceito de acompanhamento familiar', 'paif+acompanhamento'],
+      text: 'O **acompanhamento familiar** é a inserção da família em um conjunto de intervenções **continuadas e particularizadas**, para **superar gradativamente as vulnerabilidades** e enfrentar riscos que limitam o exercício da cidadania.\n- Baseia-se em **compromissos** entre a família e os profissionais e **pressupõe o PAF**.\n- É feito por **técnicos de nível superior** (assistente social e psicólogo/a), com mais de um encontro.\n- A participação é **voluntária**: a família pode recusar sem perder o direito ao serviço.\n- Oferece à família um espaço para refletir sobre a própria realidade.',
+      base: 'Orientações Técnicas sobre o PAIF (MDS); guia de acompanhamento familiar do PAIF; Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009).',
+      actions: [{ label: 'Abrir Anotações', cat: 'ferramentas' }], follow: ['O que é o PAF?', 'Quais são os cinco momentos do acompanhamento?', 'Quando propor acompanhamento familiar?'] },
+
+    { id: 'paif-quando-acompanhar', cat: 'Acompanhamento e PAF',
+      keys: ['quando+propor+acompanhamento', 'quando+iniciar+acompanhamento', 'quando+indicar+acompanhamento', 'quando propor acompanhamento familiar', 'quando iniciar acompanhamento familiar', 'quando acompanhar uma familia', 'quando indicar acompanhamento', 'quem deve ser acompanhado no paif', 'criterio para acompanhamento familiar', 'criterios de inclusao no acompanhamento', 'quem tem prioridade no paif', 'prioridade no paif', 'prioridade no acompanhamento familiar', 'paif+prioridade', 'paif+prioritarias'],
+      text: 'A decisão sai da **acolhida e do estudo social**: indica-se o acompanhamento quando há vulnerabilidades ou riscos que um atendimento pontual não resolve e que limitam o exercício da cidadania.\n**Têm prioridade** (na busca ativa e na fila): famílias **beneficiárias de transferência de renda** e de benefícios socioassistenciais (inclusive em descumprimento de condicionalidades), famílias com membros em dificuldade, famílias elegíveis ainda não contempladas e famílias com **pessoas idosas ou com deficiência** em vulnerabilidade.\nPrioridade orienta a **ordem do trabalho**; não cria nem retira o direito de ser atendida.',
+      base: 'Guia de acompanhamento familiar do PAIF; Orientações Técnicas sobre o PAIF (MDS); Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009).',
+      actions: [], follow: ['Qual a diferença entre atendimento e acompanhamento?', 'O que é o PAF?'] },
+
+    { id: 'paif-paf', cat: 'Acompanhamento e PAF',
+      keys: ['paf+fazer', 'paf+faco', 'paf+escrever', 'paf+montar', 'paf+elaborar', 'paf+construir', 'paf+redigir', 'o que e o paf', 'o que e paf', 'o que e o plano de acompanhamento familiar', 'plano de acompanhamento familiar', 'plano de acompanhamento', 'como montar o plano de acompanhamento', 'como fazer o paf', 'como elaborar o paf', 'como construir o paf', 'para que serve o paf', 'paf+familiar', 'paf+plano', 'paf+acompanhamento', 'objetivos do plano de acompanhamento', 'sigla paf'],
+      text: 'O **PAF (Plano de Acompanhamento Familiar)** é o planejamento **conjunto**, feito pela família e pelo profissional de referência, do acompanhamento no PAIF.\n- Define **objetivos**, estratégias para fortalecer a família e enfrentar vulnerabilidades, inserção em ações do PAIF e **mediações periódicas**, com **prazos** e data de retorno.\n- A família é **sujeito do plano, não objeto**: ele é construído com ela, não decidido pela técnica.\n- Pode ser **readequado** sempre que a situação mudar.\n- É o instrumento que transforma a decisão de acompanhar em um processo com começo, meio e fim e permite avaliar se a família avançou.',
+      base: 'Orientações Técnicas sobre o PAIF (MDS); guia de acompanhamento familiar do PAIF.',
+      actions: [{ label: 'Abrir Anotações', cat: 'ferramentas' }], follow: ['O que o PAF deve registrar?', 'Como escrever boas metas no PAF?', 'O PAF é obrigatório?'] },
+
+    { id: 'paif-paf-conteudo', cat: 'Acompanhamento e PAF',
+      keys: ['o que o paf registra', 'o que o paf deve registrar', 'o que colocar no paf', 'o que tem no paf', 'conteudo do paf', 'campos do paf', 'estrutura do paf', 'modelo de paf', 'o que escrever no paf', 'paf+registra', 'paf+conteudo', 'paf+modelo', 'paf+campos', 'paf+estrutura'],
+      text: 'Segundo as **Referências do CFP/CREPOP** para o CRAS (2021), no encontro inicial de construção do plano registram-se: **demandas, necessidades, vulnerabilidades, potencialidades**, recursos da rede e do território, **estratégias e percursos possíveis**, o **compromisso da família** e a **atuação do Estado**. Antes disso, há o estudo social.\nUm bom PAF costuma ter (prática sugerida): situação de partida em fatos, objetivos da família, metas com prazo, estratégias, compromissos da família/serviço/rede e data de retorno.\nRegistre fatos, sem rótulos como "desestruturada".',
+      base: 'Referências Técnicas do CREPOP/CFP para atuação no CRAS (2021) (item 3.10); guia de acompanhamento familiar do PAIF.',
+      actions: [{ label: 'Abrir Anotações', cat: 'ferramentas' }], follow: ['Como escrever boas metas no PAF?', 'Quais são os erros comuns do PAF?'] },
+
+    { id: 'paif-paf-metas', cat: 'Acompanhamento e PAF',
+      keys: ['como escrever metas do paf', 'como escrever boas metas no paf', 'como formular metas do paf', 'metas do paf', 'meta do paf', 'exemplo de meta do paf', 'exemplos de meta do paf', 'exemplo de meta', 'como definir objetivos no paf', 'exemplos de estrategia do paf', 'paf+metas', 'paf+meta', 'paf+exemplos', 'paf+exemplo'],
+      text: '**Boa meta** (prática sugerida): nasce do que a família quer mudar, é **pequena, observável e tem prazo**.\n- Ruim: "melhorar a vida da família".\n- Melhor: "até a data de retorno, os dois filhos em idade escolar estarão matriculados e frequentando".\n- Teste: dá para saber, no próximo encontro, se foi cumprida?\n- Limite o plano a **poucas metas por ciclo** (cerca de três é regra prática).\n- Meta que só depende de a família mudar, sem nada da rede, é sinal de **familismo**: o que é dever do Estado (vaga, atendimento, documento) entra como **compromisso do serviço e da rede**.\nTemas comuns: documentação civil, criança fora da escola, benefícios (conferir CadÚnico, sem prometer concessão), cuidado de idoso/pessoa com deficiência, trabalho e renda, isolamento.',
+      base: 'Guia de acompanhamento familiar do PAIF (prática sugerida, não é norma); Referências Técnicas do CREPOP/CFP para atuação no CRAS (2021).',
+      actions: [{ label: 'Abrir Anotações', cat: 'ferramentas' }], follow: ['Quais são os erros comuns do PAF?', 'O que são compromissos no PAF?'] },
+
+    { id: 'paif-momentos', cat: 'Acompanhamento e PAF',
+      keys: ['momentos do acompanhamento familiar', 'cinco momentos do acompanhamento', 'quais os momentos do acompanhamento', 'etapas do acompanhamento familiar', 'etapas do paf', 'passo a passo do acompanhamento familiar', 'fluxo do acompanhamento familiar', 'fluxo do paif', 'passo a passo do paif', 'paif+etapas', 'paif+momentos', 'paif+fluxo', 'acompanhamento+etapas'],
+      text: 'Os **cinco momentos** do acompanhamento familiar, nas Orientações Técnicas:\n1. **Encontro inicial:** a equipe apresenta objetivos e compromissos e a família escolhe com ela o tipo (particularizado ou em grupo).\n2. **Construção conjunta do PAF.**\n3. **Inserção em ações do PAIF:** acolhida, ações particularizadas, oficinas, ações comunitárias e encaminhamentos.\n4. **Mediações periódicas:** o profissional está junto da família durante o percurso.\n5. **Avaliação conjunta:** as vulnerabilidades que motivaram o acompanhamento foram superadas?\nUm guia complementar descreve o fluxo antes disso: busca ativa, demanda espontânea, acolhida em grupo, acolhida particularizada, visita (opcional e agendada) e agendamento para construir o PAF.',
+      base: 'Orientações Técnicas sobre o PAIF (MDS); guia de acompanhamento familiar do PAIF.',
+      actions: [], follow: ['O que é o PAF?', 'Quando reavaliar o PAF?'] },
+
+    { id: 'paif-particularizado-grupo', cat: 'Acompanhamento e PAF',
+      keys: ['acompanhamento particularizado', 'acompanhamento em grupo', 'acompanhamento particularizado ou em grupo', 'particularizado ou em grupo', 'quando fazer acompanhamento em grupo', 'quando fazer acompanhamento particularizado', 'diferenca entre acompanhamento particularizado e em grupo', 'acompanhamento coletivo'],
+      text: 'O acompanhamento familiar pode ser:\n- **Particularizado** (uma só família): indicado quando a situação exige **proteção imediata ou sigilo**, há dificuldade de deslocamento, a família não se sente à vontade em grupo ou corre risco de recair em situação mais grave.\n- **Em grupo** (famílias com vulnerabilidades parecidas): indicado quando a vulnerabilidade tem forte relação com o **território**, tem objetivos de longo prazo e tempo determinado, e exige bom diagnóstico do território.\nUm não exclui o outro: uma família pode ter plano particularizado e também participar de grupo. A família escolhe o tipo com a equipe, no encontro inicial.',
+      base: 'Orientações Técnicas sobre o PAIF (MDS) (acompanhamento particularizado e em grupo).',
+      actions: [], follow: ['Quais são os cinco momentos do acompanhamento?'] },
+
+    { id: 'paif-compromissos', cat: 'Acompanhamento e PAF',
+      keys: ['compromissos no paf', 'compromisso no paf', 'o que sao compromissos do paf', 'compromissos do acompanhamento familiar', 'compromisso da familia no paf', 'compromisso e condicao para o beneficio', 'paf+compromissos', 'paf+compromisso', 'contrato do paf'],
+      text: '**Compromisso** é a pactuação do que cada parte fará:\n- **Família:** o que ela quer e pode fazer, no seu ritmo.\n- **Serviço:** acolher, visitar, orientar, articular, informar prazos.\n- **Rede:** saúde, educação e outros serviços, com contrarreferência.\nCompromisso **não é condição para manter benefício** nem contrato punitivo: o descumprimento de uma etapa é motivo para **rever o plano e escutar a família**, não para sancionar. Registre em linguagem que a família entenda e ofereça cópia, se ela quiser.',
+      base: 'Orientações Técnicas sobre o PAIF (MDS); Referências Técnicas do CREPOP/CFP para atuação no CRAS (2021); guia de acompanhamento familiar do PAIF.',
+      actions: [], follow: ['A família pode recusar o acompanhamento?'] },
+
+    { id: 'paif-mediacoes', cat: 'Acompanhamento e PAF',
+      keys: ['registrar+atendimento+paif', 'registrar+encontros+paf', 'mediacoes periodicas', 'mediacao periodica', 'o que e mediacao no paif', 'como registrar encontros do paf', 'registro dos encontros do acompanhamento', 'como registrar o atendimento no paif', 'quantos encontros tem o acompanhamento', 'quantos encontros no paf', 'quantos atendimentos por familia', 'periodicidade do acompanhamento', 'frequencia dos encontros do paif', 'paf+encontros', 'paf+mediacoes', 'paf+periodicidade'],
+      text: '**Mediação periódica** é a presença do profissional ao longo do plano: encontros, visitas, contatos e apoio nos momentos de decisão.\nA cada encontro, registre em ordem cronológica: **data, tipo** (CRAS, visita, telefone, grupo, reunião de rede), o que foi tratado e dito pela família, o que avançou e o que travou, e os **próximos passos com prazo**. Registro com fatos e sem juízo de valor: o prontuário pode ser lido por outros profissionais e pela própria família.\n**Quantos encontros?** Não há número fixado em norma nacional. Um guia consultado recomenda no mínimo seis por ano, mas **o município define**: confira o protocolo local.',
+      base: 'Orientações Técnicas sobre o PAIF (MDS); guia de acompanhamento familiar do PAIF (recomendação, não é norma nacional).',
+      actions: [{ label: 'Abrir Anotações', cat: 'ferramentas' }], follow: ['Quando reavaliar o PAF?', 'O que é o prontuário da família?'] },
+
+    { id: 'paif-reavaliar', cat: 'Acompanhamento e PAF',
+      keys: ['quando reavaliar o paf', 'reavaliar o paf', 'readequar o paf', 'readequacao do paf', 'revisar o paf', 'quando revisar o paf', 'avaliacao do paf', 'avaliar o paf', 'e se a meta nao for alcancada', 'meta nao alcancada', 'objetivos nao foram alcancados', 'paf+reavaliar', 'paf+revisar', 'paf+readequar', 'paf+avaliacao'],
+      text: 'Se os objetivos **não foram alcançados**, o caminho é **adequar o plano** às vulnerabilidades que persistem, **não encerrar nem culpar a família**.\nRevise o PAF quando a **situação mudar** (nova vulnerabilidade, mudança de composição, perda de renda, violência, mudança de território), quando a **meta for cumprida** e quando **travar**. Na revisão, pergunte: a meta ainda faz sentido para a família? O que a rede deixou de fazer? O que a família disse que não consegue?\nGuarde o **histórico**: o plano antigo e as datas das mudanças mostram a evolução. A avaliação é **conjunta** com a família (5º momento do acompanhamento).',
+      base: 'Orientações Técnicas sobre o PAIF (MDS); guia de acompanhamento familiar do PAIF.',
+      actions: [{ label: 'Abrir Anotações', cat: 'ferramentas' }], follow: ['Quando e como encerrar o acompanhamento?'] },
+
+    { id: 'paif-encerrar', cat: 'Acompanhamento e PAF',
+      keys: ['acompanhamento+quantos+meses', 'quantos+meses+acompanhamento', 'acompanhamento+quantos+anos', 'quanto+tempo+acompanhamento', 'tempo+acompanhamento+familiar', 'quando+encerrar+acompanhamento', 'como+encerrar+acompanhamento', 'quando+desligar+familia', 'quando encerrar o acompanhamento', 'como encerrar o acompanhamento', 'encerrar o acompanhamento familiar', 'encerramento do acompanhamento', 'desligamento do acompanhamento', 'desligar familia do paif', 'quando desligar a familia', 'quando encerrar o paf', 'como encerrar o paf', 'tempo do acompanhamento familiar', 'quanto tempo dura o acompanhamento', 'duracao do acompanhamento', 'paf+encerrar', 'paf+desligamento', 'paif+encerramento'],
+      text: 'O **desligamento** ocorre quando os objetivos do plano são alcançados, **depois da avaliação conjunta** com a família. Há outros desfechos legítimos: mudança de domicílio ou território, **encaminhamento ao CREAS** quando há violação de direitos, recusa da família, óbito e localização desconhecida após busca ativa sem êxito.\nAo encerrar, registre o que foi alcançado, o que segue em aberto e **para onde a família é referenciada** (SCFV, rede, outro serviço), e deixe claro que ela **pode voltar ao CRAS**.\n**Prazo:** não há duração nacional fixa. Um guia recomenda encerramento após um ano, salvo necessidade de manter o plano readequado; confira o protocolo do município. Encerrar não pode ser um modo de culpar a família.',
+      base: 'Orientações Técnicas sobre o PAIF (MDS); guia de acompanhamento familiar do PAIF (prazo é recomendação, não norma nacional).',
+      actions: [], follow: ['Quando reavaliar o PAF?', 'Qual a diferença entre PAIF e PAEFI?'] },
+
+    { id: 'paif-nao-adere', cat: 'Acompanhamento e PAF',
+      keys: ['o que fazer quando a familia falta', 'quando a familia nao adere', 'familia falta ou nao adere', 'paif+obrigar', 'paif+obrigada', 'paif+obrigado', 'paif+forcar', 'paif+impor', 'obrigar+familia', 'familia+nao+quer+acompanhamento', 'familia+nao+quer+paif', 'familia que falta', 'familia que nao adere', 'familia nao adere', 'familia nao quer participar do paif', 'familia recusa o acompanhamento', 'familia que some', 'familia nao comparece', 'baixa adesao no paif', 'familia nao vem ao cras', 'falta de adesao no paif', 'familia recusa paif', 'a familia pode recusar o paif', 'a familia pode recusar o acompanhamento', 'participacao no paif e obrigatoria', 'paif+recusa', 'paif+adesao', 'paif+faltas', 'paif+voluntario', 'paif+voluntaria'],
+      text: 'A participação no PAIF é **voluntária**: a família pode recusar **sem perder o direito ao serviço**, e a participação **não pode ser condição para manter benefício**.\nFaltas e baixa adesão são **sinal para a equipe**, não motivo de punição. Procure entender os motivos (horário, transporte, cuidado de filhos, trabalho, desconfiança, vergonha, plano que não faz sentido para a família), tente nova abordagem, ajuste o plano e use a **busca ativa**. **Registre as tentativas.**\nSó depois de tentativas registradas e sem localização se justifica o encerramento por localização desconhecida.',
+      base: 'Orientações Técnicas sobre o PAIF (MDS); Trilhas do PAIF (MDS, 2024 e 2026); guia de acompanhamento familiar do PAIF.',
+      actions: [{ label: 'Abrir Anotações', cat: 'ferramentas' }], follow: ['Quando e como encerrar o acompanhamento?', 'O que são compromissos no PAF?'] },
+
+    { id: 'paif-exito', cat: 'Acompanhamento e PAF',
+      keys: ['exito do acompanhamento', 'como saber que o acompanhamento deu certo', 'acompanhamento deu certo', 'o acompanhamento avalia a familia', 'avaliar a familia', 'o que o acompanhamento nao avalia', 'sucesso do acompanhamento', 'paif+exito', 'paif+sucesso', 'vulnerabilidade superada'],
+      text: 'As **Referências do CFP/CREPOP** para o CRAS (2021) dizem que o acompanhamento **não visa avaliar a família**, sua organização interna, seu modo de vida ou sua dinâmica. O foco são as **seguranças afiançadas** pela assistência social e o **acesso da família a direitos**, para fortalecer sua capacidade protetiva a partir das respostas do Estado.\nFala-se em **êxito** quando se viabilizam e fortalecem as seguranças básicas e se materializa o direito da família à proteção social do Estado, facilitando o desenvolvimento de suas potencialidades.\nVulnerabilidade é expressão de **necessidades humanas decorrentes da desigualdade social**, não defeito da família.',
+      base: 'Referências Técnicas do CREPOP/CFP para atuação no CRAS (2021) (p. 122-124).',
+      actions: [], follow: ['Quais são os erros comuns do PAF?', 'Como o PAIF evita culpar a família?'] },
+
+    { id: 'paif-paf-faq', cat: 'Acompanhamento e PAF',
+      keys: ['o paf e obrigatorio', 'paf e obrigatorio', 'paf obrigatorio', 'quantas familias por tecnico', 'quantas familias cada tecnico acompanha', 'quantas familias um tecnico pode acompanhar', 'numero de familias por tecnico', 'quem elabora o paf', 'quem faz o paf', 'o paf precisa de visita domiciliar', 'paf sem visita domiciliar', 'duvidas sobre o paf', 'perguntas frequentes sobre o paf', 'paf+faq', 'paf+duvidas'],
+      text: 'Respostas rápidas sobre o PAF:\n- **É obrigatório?** Para acompanhar uma família no PAIF, **sim**: o acompanhamento pressupõe o plano.\n- **Todo atendimento exige PAF?** **Não.** Atendimento pontual não exige.\n- **A família pode recusar?** **Sim**, a participação é voluntária.\n- **Quem elabora?** Técnicos de **nível superior** (assistente social e psicólogo/a), **com a família**.\n- **Precisa de visita domiciliar?** Não; a visita é uma ação possível, com consentimento.\n- **Quantas famílias por técnico? Quantos encontros? Quanto tempo?** Não há número único na norma nacional consultada: veja o **protocolo do município** e a NOB-RH/SUAS.',
+      base: 'Orientações Técnicas sobre o PAIF (MDS); guia de acompanhamento familiar do PAIF; NOB-RH/SUAS.',
+      actions: [], follow: ['O que é o PAF?', 'Quem compõe a equipe do PAIF?'] },
+
+    { id: 'paif-erros-paf', cat: 'Acompanhamento e PAF',
+      keys: ['erros comuns do paf', 'erros comuns ao elaborar o paf', 'erros no paf', 'erro no paf', 'o que evitar no paf', 'o que nao fazer no paf', 'paf mal feito', 'cuidados ao fazer o paf', 'paf+erros', 'paf+erro', 'paf+evitar'],
+      text: 'Erros comuns ao elaborar o PAF:\n- meta **vaga ou sem prazo**; nenhuma **data de retorno**;\n- plano feito pela técnica e **só apresentado** à família; cópia do plano de outra família;\n- **só a mulher** como responsável por tudo (a trilha do MDS alerta que centralidade na família não pode virar centralidade na mulher);\n- descrição que **rotula** ("desestruturada", "negligente") em vez de descrever fatos;\n- potencialidades esquecidas; **nenhum compromisso do serviço ou da rede**;\n- falta de revisão quando a situação muda; excesso de anexos que não servem ao acompanhamento;\n- PAF usado como ficha de cadastro ou como **condição para benefício**.',
+      base: 'Guia de acompanhamento familiar do PAIF (prática sugerida); Trilhas do PAIF (MDS, 2024 e 2026).',
+      actions: [{ label: 'Abrir Anotações', cat: 'ferramentas' }], follow: ['Como escrever boas metas no PAF?'] },
+
+    { id: 'paif-prontuario', cat: 'Equipe e registro',
+      keys: ['paif+registrar', 'prontuario da familia', 'o que e o prontuario da familia', 'prontuario no paif', 'prontuario suas', 'prontuario do cras', 'ficha de evolucao familiar', 'como registrar o acompanhamento', 'registro do acompanhamento familiar', 'sigilo do prontuario', 'paif+prontuario', 'paif+registro'],
+      text: 'O **Prontuário da Família** é o registro do trabalho social com a família no PAIF. É **preenchido ou atualizado na acolhida particularizada** e acompanha o acompanhamento familiar.\nTodo acompanhamento e a participação da família em grupos e serviços devem ser registrados em prontuário específico (**ficha de evolução familiar**) e lançados nos relatórios e sistemas do SUAS.\nContém **informação sigilosa**: guarde e compartilhe só o necessário, conforme o sigilo profissional e a **LGPD**. As trilhas do MDS citam o Prontuário Eletrônico do SUAS, que tem ficha de encaminhamento intra e intersetorial.',
+      base: 'Orientações Técnicas sobre o PAIF (MDS) (prontuário da família); Trilhas do PAIF (MDS, 2024 e 2026).',
+      actions: [{ label: 'Abrir Anotações', cat: 'ferramentas' }], follow: ['Como o PAIF entra no RMA?', 'Como registrar os encontros do PAF?'] },
+
+    { id: 'paif-rma', cat: 'Equipe e registro',
+      keys: ['rma do cras', 'rma no paif', 'o que e rma', 'o que e o rma', 'relatorio mensal de atendimentos', 'registro mensal de atendimentos', 'paif e rma', 'como preencher o rma', 'familias em acompanhamento no rma', 'novas familias no rma', 'paif+rma', 'rma+cras', 'rma+familias'],
+      text: 'O **RMA (Registro/Relatório Mensal de Atendimentos)** do CRAS informa, entre outros itens, o **total de famílias em acompanhamento pelo PAIF** e as **novas famílias inseridas no mês**. Confira o formulário vigente para os campos exatos.\nRegistro completo e datado do PAF e das revisões é o que permite **contar corretamente** as famílias em acompanhamento e as novas inserções. Segundo o guia de acompanhamento, a equipe analisa mensalmente os relatórios da Vigilância Socioassistencial ou o RMA; **registro bem feito no dia a dia facilita o RMA**.',
+      base: 'Guia de acompanhamento familiar do PAIF; Manual do RMA CRAS (MDS); confira o formulário vigente.',
+      actions: [{ label: 'Abrir Anotações', cat: 'ferramentas' }], follow: ['O que é o prontuário da família?'] },
+
+    { id: 'paif-equipe', cat: 'Equipe e registro',
+      keys: ['estudo+de+caso', 'reuniao+de+equipe+paif', 'estudo+caso+paif', 'equipe do paif', 'quem compoe a equipe do paif', 'quem trabalha no paif', 'equipe de referencia do cras', 'equipe minima do cras', 'quem faz o que no paif', 'papeis na equipe do paif', 'papel do tecnico de nivel medio no paif', 'nivel medio no paif', 'tecnico de referencia no paif', 'composicao da equipe do cras', 'paif+equipe', 'paif+tecnicos'],
+      text: 'Pela **Res. CNAS 17/2011**, a equipe de referência da proteção social básica tem, obrigatoriamente, **assistente social e psicólogo**. A composição por porte do município está na **NOB-RH/SUAS** (confira a tabela vigente).\nPapéis no PAIF, segundo o guia de acompanhamento:\n- **Nível superior:** acolhida particularizada, elabora e monitora o PAF, conduz encontros e avaliação, participa dos grupos.\n- **Nível médio:** apoia busca ativa, acolhida em grupo, execução das atividades e, com a equipe técnica, as visitas domiciliares.\n- **Gestão:** distribui as famílias entre os técnicos de referência, organiza reuniões de planejamento e estudo de caso e constrói o fluxo de referência e contrarreferência com o CREAS.',
+      base: 'Res. CNAS 17/2011, art. 1º; NOB-RH/SUAS; guia de acompanhamento familiar do PAIF.',
+      actions: [], follow: ['Qual o papel da psicologia no PAIF?', 'O psicólogo é obrigatório no SUAS?'] },
+
+    { id: 'paif-psicologia', cat: 'Equipe e registro',
+      keys: ['psicologia no paif', 'papel da psicologia no paif', 'psicologo no paif', 'psicologa no paif', 'o que o psicologo faz no paif', 'atuacao do psicologo no paif', 'atribuicoes do psicologo no paif', 'psicologo e o paf', 'a psicologia no paf', 'paif+psicologia', 'paif+psicologo', 'paif+psicologa', 'paf+psicologo', 'paf+psicologia'],
+      text: 'O psicólogo ou a psicóloga do CRAS participa da **escuta qualificada**, da leitura da **dinâmica e dos vínculos** familiares e comunitários, da **construção do plano com a família** e da condução de **grupos e oficinas**, em trabalho **interdisciplinar** com o serviço social.\nO PAIF **não tem caráter terapêutico**: sofrimento psíquico que pede cuidado clínico é articulado com a rede de saúde (UBS, CAPS), sem psicoterapia no CRAS. Parecer sobre um caso é da equipe e fica dentro do **sigilo e do Código de Ética**; o plano é construído com a família, não decidido pela técnica.',
+      base: 'Referências Técnicas do CREPOP/CFP para atuação no CRAS (2021); Orientações Técnicas sobre o PAIF (MDS).',
+      actions: [{ label: 'Ver CAPS', search: 'CAPS' }], follow: ['Posso fazer psicoterapia no SUAS?', 'Quando encaminhar para a saúde?'] },
+
+    { id: 'paif-x-paefi', cat: 'Articulação',
+      keys: ['paif e paefi', 'paif x paefi', 'diferenca entre paif e paefi', 'diferenca do paif e paefi', 'paif ou paefi', 'paf e paefi', 'quando encaminhar para o creas', 'quando encaminhar ao creas', 'quando passar para o paefi', 'contrarreferencia', 'referencia e contrarreferencia', 'paif+paefi', 'paif+creas', 'paf+creas', 'paf+paefi'],
+      text: '- **PAIF** (CRAS, proteção social básica): **prevenir** e fortalecer vínculos e ampliar acessos; o plano é o **PAF**.\n- **PAEFI** (CREAS, proteção social especial): acompanhamento **especializado** de famílias e pessoas com **direitos violados** (violência, abuso, exploração, trabalho infantil), com plano próprio.\nSe há **violação de direitos**, a família é encaminhada ao CREAS/PAEFI; o retorno ao território se dá pela **contrarreferência**. O CRAS pode continuar articulado com a família durante o acompanhamento no CREAS, **sem duplicar o plano**.\nNão confunda o PAF com o plano individual de atendimento do **acolhimento** de crianças e adolescentes, que é de outro serviço. Os fluxos devem prever acesso, unidade de referência, registro com sigilo e avaliação (trilhas do MDS).',
+      base: 'Orientações Técnicas sobre o PAIF (MDS); Trilhas do PAIF (MDS, 2024 e 2026); Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009).',
+      actions: [{ label: 'Ver CRAS e CREAS', cat: 'social' }], follow: ['O que é o PAEFI?', 'Como funciona o Conselho Tutelar?'] },
+
+    { id: 'paif-x-scfv', cat: 'Articulação',
+      keys: ['paif e scfv', 'paif x scfv', 'diferenca entre paif e scfv', 'diferenca do paif e scfv', 'paif ou scfv', 'paif e convivencia', 'paif e servico de convivencia', 'scfv e paif', 'scfv complementa o paif', 'paif+scfv', 'paif+convivencia'],
+      text: '- **PAIF:** trabalho social **com a família**, de caráter continuado, no CRAS. É o serviço **central** da proteção social básica.\n- **SCFV:** serviço **em grupos**, organizado em percursos por **ciclo de vida** (crianças, adolescentes, jovens, adultos, idosos), que **complementa** o trabalho social com famílias do PAIF e previne riscos.\nPela Tipificação, os serviços da proteção social básica no território, **em especial o SCFV**, devem ser **referenciados ao CRAS** e articulados ao PAIF. É a partir do trabalho do PAIF que se organizam os serviços referenciados. Crianças de até 6 anos podem ser incluídas no SCFV (trilha do MDS).',
+      base: 'Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009) (PAIF, referenciamento; SCFV); Trilhas do PAIF (MDS, 2024 e 2026).',
+      actions: [{ label: 'Ver CRAS', cat: 'social' }], follow: ['O que é o SCFV?', 'O que é matricialidade sociofamiliar?'] },
+
+    { id: 'paif-bolsa-familia', cat: 'Articulação',
+      keys: ['paif e bolsa familia', 'bolsa familia no paif', 'paif e condicionalidades', 'condicionalidades e paif', 'familia em descumprimento no paif', 'descumprimento de condicionalidades no paif', 'interrupcao temporaria dos efeitos', 'interrupcao dos efeitos no sicon', 'paif+bolsa', 'paif+condicionalidades', 'paif+condicionalidade', 'paif+sicon', 'paif+descumprimento', 'paif+pbf'],
+      text: 'Como o PAIF se liga ao Bolsa Família (trilha do MDS de 2024 e Portaria MDS 1.058/2025):\n- Famílias do Bolsa Família, **sobretudo em descumprimento de condicionalidades**, têm **atenção prioritária**; a busca ativa deve priorizar as ainda **não inseridas no PAIF**.\n- Em **todas as fases de repercussão** (alerta, bloqueio, suspensão) o **trabalho social deve ser oferecido**.\n- A participação no PAIF é **voluntária** e **não pode ser imposta como condicionalidade**.\n- Famílias incluídas no **Trabalho Social com Famílias e Territórios** podem ter os **efeitos interrompidos temporariamente** (art. 22 da Portaria), o que se ativa no **Sicon**; o técnico de nível superior pode decidir pela interrupção, registrando no Sicon.\n- Acolha sem culpabilizar: a comunicação vexatória é vedada (art. 34).\nA Tipificação inclui entre as aquisições a **redução do descumprimento de condicionalidades**.',
+      base: 'Trilhas do PAIF (MDS, 2024 e 2026); Portaria MDS 1.058/2025, arts. 22 e 34; Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009).',
+      actions: [], follow: ['Como atender família em descumprimento no CRAS?', 'PAIF e BPC'] },
+
+    { id: 'paif-bpc', cat: 'Articulação',
+      keys: ['paif e bpc', 'bpc no paif', 'familia com beneficiario do bpc no paif', 'beneficiario do bpc no paif', 'paif+bpc', 'bpc+paif', 'paif e beneficio de prestacao continuada'],
+      text: 'Famílias **com beneficiários do BPC** estão entre as condições de acesso destacadas pela Tipificação ao PAIF, e o **cadastro de beneficiários do BPC** é uma das bases de dados do serviço.\nNas Orientações Técnicas, a **acolhida no domicílio** (com consentimento) é indicada, por exemplo, para **crianças e adolescentes com deficiência, beneficiários do BPC e fora da escola**.\nNa NOB-SUAS (art. 17, XIV), cabe aos municípios a **gestão local do BPC**, garantindo aos beneficiários e famílias o acesso aos serviços da rede socioassistencial.',
+      base: 'Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009); Orientações Técnicas sobre o PAIF (MDS); NOB-SUAS/2012, art. 17, XIV.',
+      actions: [], follow: ['Quem tem direito ao BPC?'] },
+
+    { id: 'paif-matricialidade', cat: 'Articulação',
+      keys: ['matricialidade sociofamiliar', 'o que e matricialidade sociofamiliar', 'matricialidade', 'familismo', 'o que e familismo', 'como o paif evita culpar a familia', 'paif culpabiliza a familia', 'centralidade na familia', 'paif+matricialidade', 'paif+familismo', 'paif+culpabilizar', 'paif+culpar'],
+      text: 'Pela PNAS, a **família é o núcleo central** dos serviços e benefícios (**matricialidade sociofamiliar**), mas a capacidade de proteger depende do **acesso a políticas públicas**: o Estado deve **apoiar** a família, não **penalizá-la** por suas dificuldades.\nA trilha do MDS alerta que a centralidade na família **não pode virar centralidade na mulher** nem **intervenção punitiva**, e recomenda olhar para **raça, gênero, renda e local de vivência**.\nPara a Tipificação, é a partir do trabalho do PAIF que se organizam os serviços referenciados ao CRAS, rompendo com o atendimento segmentado e descontextualizado.\n**Familismo** é pôr sobre a família o que é dever do Estado.',
+      base: 'Trilhas do PAIF (MDS, 2024 e 2026); Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009) (PAIF, matricialidade sociofamiliar).',
+      actions: [], follow: ['Quais são os erros comuns do PAF?', 'O que é o trabalho social com famílias e territórios?'] },
+
+    { id: 'paif-tsft', cat: 'Articulação',
+      keys: ['trabalho social com familias e territorios', 'tsft', 'o que e tsft', 'trabalho social com familias e territorios no paif', 'trilhas do paif', 'trilha do paif', 'o que sao as trilhas do paif', 'colecao trilhas do paif', 'paif+territorios', 'paif+territorio', 'paif+trilhas', 'paif+trilha'],
+      text: 'O **Trabalho Social com Famílias e Territórios (TSFT)** é o modo como as trilhas atuais do MDS (2024 e 2026) descrevem o trabalho do PAIF: olha também o **território como espaço de vida, pertencimento e relações**, não só como área de abrangência do CRAS.\nDeve reconhecer as famílias como **sujeitos de direitos** e romper com práticas **compensatórias, emergenciais e reativas**; é **proativo, preventivo** e com foco no **coletivo**. A trilha orienta preferir ações coletivas e valorizar saberes e práticas de cuidado não violentas, incentivando a participação de **homens e pais**.\nO TSFT articula PAIF, SCFV, SPSBD-GC, Bolsa Família, BPC, benefícios eventuais e as políticas de saúde, educação e demais setores.',
+      base: 'Trilhas do PAIF (MDS, 2024 e 2026) (resumo de partes, não é o texto literal).',
+      actions: [], follow: ['O que são ações comunitárias?', 'Como o PAIF atende famílias do Bolsa Família?'] },
+
+    { id: 'paif-rede', cat: 'Articulação',
+      keys: ['paif em rede', 'articulacao em rede do paif', 'intersetorialidade no paif', 'trabalho em rede no paif', 'rede do paif', 'com quem o paif se articula', 'paif+rede', 'paif+intersetorialidade', 'paif+intersetorial', 'paif+articulacao'],
+      text: 'A Tipificação prevê que o PAIF se articule com:\n- serviços socioassistenciais da proteção social **básica e especial**;\n- serviços públicos locais de **educação, saúde, trabalho, cultura, esporte, segurança pública** e outros;\n- **conselhos** de políticas públicas e de defesa de direitos;\n- instituições de ensino e pesquisa; serviços de enfrentamento à pobreza; programas de **inclusão produtiva**;\n- **redes sociais locais**: associações de moradores, ONGs etc.\nAs trilhas do MDS lembram que o trabalho em rede **não é automático**: exige governança intersetorial, diagnóstico integrado, **fluxos pactuados de referência e contrarreferência**, comunicação com proteção de dados e formação das equipes.',
+      base: 'Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009) (PAIF, articulação em rede); Trilhas do PAIF (MDS, 2024 e 2026).',
+      actions: [], follow: ['Qual a diferença entre PAIF e PAEFI?'] },
+
+    { id: 'paif-vigilancia', cat: 'Articulação',
+      keys: ['vigilancia socioassistencial no paif', 'paif e vigilancia socioassistencial', 'cadunico no paif', 'cadastro unico no paif', 'paif e cadunico', 'paif e cadastro unico', 'diagnostico socioterritorial do paif', 'paif+vigilancia', 'paif+cadunico', 'paif+ivcad', 'paif+diagnostico'],
+      text: 'A **vigilância socioassistencial** identifica vulnerabilidades, riscos e **vazios protetivos** que afetam a capacidade protetiva das famílias; a NOB-SUAS (art. 12, XIX) é responsabilidade comum dos entes estruturá-la. O município organiza a oferta de forma **territorializada**, conforme o **diagnóstico socioterritorial** (art. 17, IX).\nO **Cadastro Único** é o principal instrumento para identificar a vulnerabilidade social. As trilhas citam o **Observatório do Cadastro Único, o Sicon e o IVCAD** como ferramentas.\nNo PAIF, esses dados orientam a **busca ativa** e a prioridade do acompanhamento.',
+      base: 'Trilhas do PAIF (MDS, 2024 e 2026); NOB-SUAS/2012, art. 12, XIX e art. 17, IX.',
+      actions: [], follow: ['O que é busca ativa?'] },
+
+    { id: 'paif-baixa-densidade', cat: 'Território',
+      keys: ['paif em territorio de baixa densidade', 'territorio de baixa densidade', 'baixa densidade demografica', 'equipes volantes', 'equipe volante', 'cras itinerante', 'paif em area rural', 'paif em comunidade indigena', 'paif em comunidades indigenas', 'paif na zona rural', 'paif+volante', 'paif+itinerante', 'paif+rural', 'paif+indigenas', 'paif+ribeirinhas', 'paif+quilombolas'],
+      text: 'A Tipificação prevê que famílias em **territórios de baixa densidade demográfica**, com espalhamento ou dispersão populacional (**áreas rurais, comunidades indígenas, quilombolas, calhas de rios, assentamentos** etc.), sejam atendidas por **equipes volantes** ou por **CRAS itinerantes**.\nPara a busca ativa, as trilhas do MDS lembram que equipes volantes atendem e cadastram nas comunidades, **inclusive de barco na Amazônia Legal**.\nCom famílias indígenas, o respeito à organização social, à língua e à forma de decidir é parte do trabalho (veja também a orientação técnica do MDS sobre trabalho social com famílias indígenas).',
+      base: 'Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009) (PAIF, territórios de baixa densidade); Trilhas do PAIF (MDS, 2024 e 2026).',
+      actions: [{ label: 'Ver CRAS', cat: 'social' }], follow: ['Como funciona o PAF com famílias migrantes e indígenas?'] },
+
+    { id: 'paif-migrantes-indigenas', cat: 'Território',
+      keys: ['paif+indigenas', 'paif+indigena', 'paif+migrante', 'paf com familias migrantes', 'paf com familias indigenas', 'paif com migrantes', 'paif com venezuelanos', 'paif com indigenas', 'paif com familias migrantes', 'paif com familias indigenas', 'acompanhamento familiar com migrantes', 'acompanhamento familiar com indigenas', 'paif e operacao acolhida', 'paf+migrantes', 'paf+indigenas', 'paif+migrantes', 'paif+venezuelanos', 'paif+imigrantes'],
+      text: 'Orientações práticas para Boa Vista e Roraima (prática sugerida, construída com a família):\n- **Famílias migrantes** (inclusive em abrigos da Operação Acolhida): acolher **sem exigir comprovação migratória prévia**, cuidar da barreira do **idioma** e do luto migratório, mapear a situação documental (RNM, protocolo de refúgio, CPF) e acionar a rede específica (ACNUR, OIM, Pastoral do Migrante, quando houver).\n- **Famílias indígenas:** respeitar a organização social, a língua e a forma de decidir; contar com **intérprete ou liderança** quando a família quiser; articular com a saúde indígena (SESAI) e a FUNAI; **não impor modelo de família**.\nEm ambos os casos, meta e estratégia são construídas com a família, no ritmo e com os recursos dela.',
+      base: 'Guia de PAF do Paulus (prática sugerida, não é norma); Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009) (diversidade).',
+      actions: [], follow: ['Como funciona o PAIF em território de baixa densidade?'] },
+
+    { id: 'paif-boa-vista', cat: 'Território',
+      keys: ['paif em boa vista', 'paif coletivo em boa vista', 'atendimento coletivo do paif', 'paif coletivo no censo suas', 'quantas pessoas no paif coletivo', 'paif coletivo roraima', 'paif+boa+vista', 'paif+roraima', 'paif+censo', 'paif+coletivo', 'paif+cras+boa+vista'],
+      text: 'Pelo **Censo SUAS 2025** (dados declarados pelos municípios, não medem a adequação da estrutura):\n- **Atendimento coletivo do PAIF:** 8.623 pessoas em Roraima, das quais **5.749 em Boa Vista**.\n- **Por CRAS de Boa Vista:** União 1.144; Nova Cidade 1.078; Itinerante 991; Cauamé 852; Cristiana Vicente Nunes 720; Pintolândia 674; São Francisco 264; Dr. Sílvio Leite 26.\n- **Psicólogos nos CRAS de Boa Vista:** 19 registros; o serviço principal é o PAIF para 14.\nSão indicadores de 2025 da planilha de resumo: não são estimativas populacionais nem o total de famílias acompanhadas.',
+      base: 'Censo SUAS 2025 (MDS), planilhas de CRAS e RH de Roraima (assets/conhecimento.json).',
+      actions: [{ label: 'Ver CRAS', cat: 'social' }], follow: ['Quantos psicólogos há nos CRAS de Boa Vista?'] },
+
+    { id: 'paif-glossario', cat: 'Glossário',
+      keys: ['glossario do paif', 'glossario do acompanhamento familiar', 'siglas do paif', 'significado de acolhida', 'o que e referencia e contrarreferencia', 'o que e mediacao', 'o que e readequacao', 'termos do paif', 'vocabulario do paif', 'paif+glossario', 'paif+siglas', 'paif+termos'],
+      text: 'Glossário rápido do PAIF:\n- **Acolhida:** escuta qualificada da demanda.\n- **Estudo social:** leitura da situação da família e do território.\n- **Acompanhamento familiar:** intervenção continuada com a família, com PAF.\n- **PAF:** plano construído com a família, com prazos e data de retorno.\n- **Compromisso:** pactuação do que cada parte fará (família, serviço, rede).\n- **Mediação:** presença do profissional ao longo do percurso.\n- **Readequação:** ajuste do plano quando a meta não é alcançada ou a situação muda.\n- **Busca ativa:** procura de famílias e situações no território.\n- **Referência e contrarreferência:** encaminhamento e retorno da família ao serviço de origem.\n- **Prontuário:** registro do trabalho social com a família.\n- **TSFT:** Trabalho Social com Famílias e Territórios.',
+      base: 'Guia de acompanhamento familiar do PAIF; Orientações Técnicas sobre o PAIF (MDS); Trilhas do PAIF (MDS, 2024 e 2026).',
+      actions: [], follow: ['O que é o PAIF?', 'O que é o PAF?'] },
+
+    { id: 'paif-cuidadores', cat: 'O serviço',
+      keys: ['paif com cuidadores', 'familias com pessoas que precisam de cuidado', 'paif e cuidado', 'apoio a cuidadora', 'apoio a cuidador', 'cuidadora de idoso no paif', 'familia com idoso no paif', 'familia com pessoa com deficiencia no paif', 'paif+cuidadores', 'paif+cuidadora', 'paif+cuidador', 'paif+cuidado', 'paif+cuidados', 'paif+idoso', 'paif+idosos', 'paif+deficiencia'],
+      text: 'O PAIF tem um objetivo próprio para **famílias que têm membros que precisam de cuidado**: promover **espaços coletivos de escuta e troca de vivências**, com foco na troca de informações sobre primeira infância, adolescência, juventude, **envelhecimento e deficiências**, para expressar dificuldades, trocar experiências e reconhecer possibilidades.\nO público do PAIF inclui **pessoas idosas e pessoas com deficiência** em vulnerabilidade e risco social. No PAF, o apoio à cuidadora e a articulação com saúde, SCFV e serviço no domicílio são estratégias possíveis (prática sugerida).\nAs trilhas do MDS lembram que a centralidade na família não pode virar **sobrecarga da mulher**: incentive a participação de homens e pais nos espaços de cuidado.',
+      base: 'Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009) (PAIF, descrição e objetivos); Trilhas do PAIF (MDS, 2024 e 2026); guia de PAF (prática sugerida).',
+      actions: [{ label: 'Ver CRAS', cat: 'social' }], follow: ['Quem é atendido no PAIF?', 'O que são oficinas com famílias?'] },
+
+    { id: 'paif-escola', cat: 'Articulação',
+      keys: ['crianca fora da escola', 'criancas fora da escola', 'adolescente fora da escola', 'adolescentes fora da escola', 'paif e escola', 'paif e evasao escolar', 'baixa frequencia escolar', 'o que o cras faz com crianca fora da escola', 'paif+escola', 'paif+escolar', 'paif+evasao', 'paif+frequencia', 'paf+escola'],
+      text: 'Criança ou adolescente **fora da escola** ou com baixa frequência, no PAIF:\n- **Escute os motivos** (transporte, documento, cuidado, trabalho, desinteresse, barreiras da escola) e **articule com a escola** e a busca ativa escolar; o plano pode incluir isso como compromisso do serviço e da rede (prática sugerida).\n- A **acolhida no domicílio**, com consentimento, é indicada para crianças e adolescentes com deficiência, beneficiários do BPC e fora da escola (Orientações Técnicas).\n- O guia de acompanhamento sugere **grupo de famílias de adolescentes fora da escola**.\n- No Bolsa Família, o MDS orienta **matricular de imediato** crianças e adolescentes fora da escola, manter a **escola e a série atualizadas no CadÚnico** e orientar a família a avisar a escola de que recebe o benefício (Informe nº 94/2025).\nO objetivo é garantir o direito, não punir a família.',
+      base: 'Orientações Técnicas sobre o PAIF (MDS); guia de acompanhamento familiar do PAIF; Informe Bolsa Família nº 94/2025 (MDS).',
+      actions: [], follow: ['PAIF e Bolsa Família', 'Como funcionam os grupos de famílias?'] },
+
+    { id: 'paif-diversidade', cat: 'O serviço',
+      keys: ['paif e diversidade', 'arranjos familiares no paif', 'tipos de familia no paif', 'o que e familia para o paif', 'conceito de familia no paif', 'cultura do dialogo no paif', 'paif e preconceito', 'paif+diversidade', 'paif+arranjos', 'paif+preconceito', 'paif+discriminacao', 'paif+valores'],
+      text: 'Segundo a Tipificação, o PAIF é baseado no **respeito à heterogeneidade dos arranjos familiares**, aos **valores, crenças e identidades** das famílias.\nFundamenta-se no fortalecimento da **cultura do diálogo** e no **combate a todas as formas de violência, preconceito, discriminação e estigmatização** nas relações familiares.\nNa prática: nada de modelo único de família, descrição sem rótulos e plano construído com a família (as trilhas do MDS pedem olhar para **raça, gênero, renda e local de vivência**).',
+      base: 'Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009) (PAIF, descrição); Trilhas do PAIF (MDS, 2024 e 2026).',
+      actions: [], follow: ['O que é matricialidade sociofamiliar?', 'Quais são os erros comuns do PAF?'] },
+
+    { id: 'paif-gratuidade', cat: 'O serviço',
+      keys: ['paif e gratuito', 'o paif e gratuito', 'paif pode ser privado', 'paif pode ser ofertado por ong', 'quem pode ofertar o paif', 'quem oferta o paif', 'paif e estatal', 'paif pode ser terceirizado', 'universalidade do paif', 'paif+gratuito', 'paif+gratuidade', 'paif+estatal', 'paif+ong', 'paif+terceirizado', 'paif+universalidade'],
+      text: 'Pela Tipificação, o PAIF tem como princípios norteadores a **universalidade e a gratuidade** do atendimento, e a sua implementação cabe **exclusivamente à esfera estatal**. É ofertado **necessariamente no CRAS**.\nOu seja: não se cobra da família e não é serviço de entidade privada; as entidades podem ofertar outros serviços da proteção social básica, que devem ser **referenciados ao CRAS** e articulados ao PAIF. **Universalidade** quer dizer que toda família do território pode ser atendida; a prioridade só organiza a ordem do trabalho.',
+      base: 'Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009) (PAIF, descrição); LOAS, art. 6º-C.',
+      actions: [{ label: 'Ver CRAS', cat: 'social' }], follow: ['Qual a diferença entre PAIF e SCFV?', 'Quem é atendido no PAIF?'] },
+
+    { id: 'paif-referenciamento', cat: 'Articulação',
+      keys: ['o que e referenciar ao cras', 'o que e referenciar', 'referenciar+cras', 'referenciar+servico', 'referenciamento ao cras', 'servicos referenciados ao cras', 'o que significa referenciar ao cras', 'referenciar servico ao cras', 'organizacao da rede no territorio', 'paif organiza os servicos do territorio', 'paif+referenciamento', 'paif+referenciados', 'paif+referenciado', 'cras+referenciados'],
+      text: 'Pela Tipificação, **todos os serviços da proteção social básica** desenvolvidos no território do CRAS, **em especial o SCFV** e o serviço de proteção social básica no domicílio para pessoas com deficiência e idosas, devem ser **referenciados ao CRAS** e manter **articulação com o PAIF**.\nÉ a partir do trabalho com famílias no PAIF que se organizam os serviços referenciados. Isso **organiza e hierarquiza a rede** no território (descentralização) e permite trabalhar a família como um todo, **rompendo com o atendimento segmentado e descontextualizado** das vulnerabilidades.\nPor lei, o CRAS articula os serviços socioassistenciais do seu território de abrangência (LOAS, art. 6º-C, § 1º).',
+      base: 'Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009) (PAIF, referenciamento dos serviços ao CRAS); LOAS, art. 6º-C.',
+      actions: [{ label: 'Ver CRAS', cat: 'social' }], follow: ['Qual a diferença entre PAIF e SCFV?', 'O que é matricialidade sociofamiliar?'] },
+
+    { id: 'paif-spsbd-gc', cat: 'Articulação',
+      keys: ['spsbd gc', 'spsbd-gc', 'o que e o spsbd', 'servico de protecao social basica no domicilio para gestantes e criancas', 'novo servico no lugar do crianca feliz', 'substituicao do crianca feliz', 'o que substitui o crianca feliz', 'crianca feliz acaba', 'fim do crianca feliz', 'resolucao cit 30 2025', 'paif+spsbd', 'paif+criancafeliz', 'spsbd+gestantes'],
+      text: 'Segundo a **trilha do MDS de 2026**, a **Resolução CIT nº 30/2025** dá à **visita domiciliar** papel estruturante na proteção social básica por meio do **Serviço de Proteção Social Básica no Domicílio para Gestantes e Crianças (SPSBD-GC)**, com início em **1º de janeiro de 2027**, substituindo o **Programa Criança Feliz**.\nO serviço entra no conjunto articulado pelo Trabalho Social com Famílias e Territórios (PAIF, SCFV, SPSBD-GC, Bolsa Família, BPC, benefícios eventuais e políticas setoriais).\nÉ informação de trilha de capacitação, não o texto da resolução: **confira a nomenclatura e as regras no texto oficial** e o que o seu município definiu. A visita no PAIF continua exigindo **consentimento** e sem caráter fiscalizatório.',
+      base: 'Trilhas do PAIF (MDS, 2024 e 2026) (resumo de parte da trilha de 2026; confira a Resolução CIT nº 30/2025).',
+      actions: [], follow: ['Como é a visita domiciliar?', 'O que é o trabalho social com famílias e territórios?'] },
+
+    { id: 'paif-documentacao', cat: 'Ações do PAIF',
+      keys: ['paif e documentacao', 'documentacao civil no paif', 'familia sem documento', 'familia sem certidao', 'acesso a documentacao pessoal', 'promover acesso a documentos', 'meta de documentacao civil', 'paif+documentacao', 'paif+documentos', 'paif+certidao', 'paif+documento', 'paf+documentacao', 'paf+certidao'],
+      text: 'A **promoção do acesso à documentação pessoal** faz parte do trabalho social essencial do PAIF, e o **acesso à documentação civil** está entre as aquisições esperadas dos usuários (Tipificação).\nNo PAF, uma meta típica (prática sugerida) é emitir certidão ou RG de quem não tem: **orientar o passo a passo**, acompanhar o agendamento e **articular com o serviço emissor**.\nCom famílias migrantes, mapeie a situação documental (RNM, protocolo de refúgio, CPF) e acolha **sem exigir comprovação migratória prévia**.\nDocumento faltando pode travar benefício e matrícula: trate como **meta de curto prazo** e compromisso do serviço e da rede, não só da família.',
+      base: 'Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009) (PAIF, trabalho social essencial e aquisições); guia de PAF (prática sugerida).',
+      actions: [{ label: 'Ver CRAS', cat: 'social' }], follow: ['Como escrever boas metas no PAF?', 'Como funciona o PAF com famílias migrantes e indígenas?'] },
+
+    { id: 'paif-campanhas', cat: 'Ações do PAIF',
+      keys: ['campanhas socioeducativas', 'campanha socioeducativa', 'campanhas do paif', 'informacao comunicacao e defesa de direitos', 'defesa de direitos no paif', 'mobilizacao para a cidadania', 'mobilizacao de redes sociais de apoio', 'redes sociais de apoio', 'paif+campanhas', 'paif+campanha', 'paif+cidadania', 'paif+mobilizacao', 'paif+direitos'],
+      text: 'Entre as ações de trabalho social essencial do PAIF (Tipificação) estão as **campanhas socioeducativas**; **informação, comunicação e defesa de direitos**; **mobilização para a cidadania**; **mobilização e fortalecimento de redes sociais de apoio**; e o desenvolvimento do **convívio familiar e comunitário**.\nNas Orientações Técnicas, isso se concretiza em **ações comunitárias** (palestras, campanhas, eventos), que enfrentam problemas coletivos do território (violência, trabalho infantil, falta de transporte, acessibilidade, lazer e cultura) e fortalecem a **participação social**.\nA trilha do MDS pede que essas ações **reconheçam as famílias como sujeitos de direitos** e ajudem a organizar a defesa coletiva de direitos.',
+      base: 'Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009) (PAIF, trabalho social essencial); Orientações Técnicas sobre o PAIF (MDS); Trilhas do PAIF (MDS, 2024 e 2026).',
+      actions: [], follow: ['O que são ações comunitárias?', 'Qual o trabalho social essencial do PAIF?'] },
+
+    { id: 'paif-notificacao', cat: 'Articulação',
+      keys: ['descobri+violencia', 'violencia+familia+acompanhada', 'violencia+acompanhamento+familiar', 'violencia+durante+acompanhamento', 'notificacao de vulnerabilidade e risco', 'notificar situacao de risco no paif', 'notificacao no paif', 'notificar o creas', 'o que fazer se descobrir violencia no paif', 'violencia descoberta no acompanhamento', 'suspeita de violencia no paif', 'identifiquei violencia na familia acompanhada', 'paif+notificacao', 'paif+notificar', 'paif+violencia', 'paif+abuso', 'paf+violencia'],
+      text: 'A **notificação da ocorrência de situações de vulnerabilidade e risco social** faz parte do trabalho social essencial do PAIF (Tipificação).\nSe, no acompanhamento, aparecer **violação de direitos** (violência, abuso, exploração, trabalho infantil), a situação **sai do alcance do PAIF**: a família é **encaminhada ao CREAS/PAEFI**, que acompanha com plano próprio. O CRAS pode seguir articulado, **sem duplicar o plano**, e a família volta ao território pela **contrarreferência**.\nRegistre o que foi dito e feito com **fatos e sigilo profissional**, e acione também a rede de proteção quando a lei exigir (Conselho Tutelar, em caso de criança ou adolescente). Se houver **risco imediato**, não espere o fluxo: acione os serviços de urgência.',
+      base: 'Tipificação Nacional de Serviços Socioassistenciais (Res. CNAS 109/2009) (PAIF); Trilhas do PAIF (MDS, 2024 e 2026) (encaminhamento e contrarreferência); guia de PAF.',
+      actions: [{ label: 'Ver CRAS e CREAS', cat: 'social' }, { label: 'Ver Saúde/Urgência', cat: 'hospitalar' }], follow: ['Qual a diferença entre PAIF e PAEFI?', 'Como funciona o Conselho Tutelar?'] }
+  ];
+  PAIF_BASE.forEach(function (e) { e.paif = true; });
+  var PSI_E_PAIF = PSI_BASE.concat(PAIF_BASE);
   var psiIndex = null;
+  // Erro de digitação (comum no celular): se a pergunta não bateu em nenhum verbete, troca cada palavra desconhecida
+  // pela palavra do vocabulário dos verbetes que está a 1 letra de distância (2 em palavras longas) e tenta de novo.
+  var psiVocab = null;
+  var SIGLAS_ERRADAS = { paiff: 'paif', paifs: 'paif', piaf: 'paif', paaif: 'paif', paef: 'paefi', paefy: 'paefi', paeffi: 'paefi', paefii: 'paefi', scvf: 'scfv', sfcv: 'scfv', scfvv: 'scfv', craz: 'cras', crass: 'cras', creaz: 'creas', paff: 'paf' };
+  function distLetras(a, b, max) {
+    if (Math.abs(a.length - b.length) > max) return max + 1;
+    var d = [], i, j;
+    for (i = 0; i <= a.length; i++) { d[i] = [i]; }
+    for (j = 1; j <= b.length; j++) d[0][j] = j;
+    for (i = 1; i <= a.length; i++) {
+      for (j = 1; j <= b.length; j++) {
+        var c = a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1;
+        d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + c);
+        if (i > 1 && j > 1 && a.charAt(i - 1) === b.charAt(j - 2) && a.charAt(i - 2) === b.charAt(j - 1)) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+      }
+    }
+    return d[a.length][b.length];
+  }
+  function corrigeDigitacao(n) {
+    if (!psiVocab) {
+      psiVocab = {};
+      PSI_E_PAIF.forEach(function (e) { e.keys.forEach(function (k) { norm(k.replace(/\+/g, ' ')).split(' ').forEach(function (w) { if (w.length >= 5) psiVocab[w] = 1; }); }); });
+    }
+    var lista = Object.keys(psiVocab), mudou = false;
+    var out = n.split(' ').map(function (t) {
+      if (SIGLAS_ERRADAS[t]) { mudou = true; return SIGLAS_ERRADAS[t]; }
+      if (t.length < 6 || psiVocab[t] || APP_WORDS[t] || /^\d/.test(t)) return t;
+      var max = t.length >= 9 ? 2 : 1, melhor = null, md = max + 1, empate = false;
+      for (var i = 0; i < lista.length; i++) {
+        var dd = distLetras(t, lista[i], max);
+        if (dd < md) { md = dd; melhor = lista[i]; empate = false; } else if (dd === md && dd <= max && lista[i] !== melhor) empate = true;
+      }
+      if (melhor && md <= max && !empate) { mudou = true; return melhor; }
+      return t;
+    }).join(' ');
+    return mudou ? out : n;
+  }
   function psiScore(text) {
-    if (!psiIndex) psiIndex = PSI_BASE.map(function (g) { return { g: g, keys: g.keys.map(function (k) { return k.indexOf('+') > -1 ? { all: k.split('+').map(norm) } : { phrase: norm(k) }; }) }; });
+    var r = psiScoreBruto(text);
+    if (r.score >= 3) return r;
+    var n = norm(text), f = corrigeDigitacao(n);
+    if (f !== n) { var r2 = psiScoreBruto(f); if (r2.score >= 3) return r2; }
+    return r;
+  }
+  function psiScoreBruto(text) {
+    if (!psiIndex) psiIndex = PSI_E_PAIF.map(function (g) { return { g: g, keys: g.keys.map(function (k) { return k.indexOf('+') > -1 ? { all: k.split('+').map(norm) } : { phrase: norm(k) }; }) }; });
     var n = norm(text), padded = ' ' + n + ' ', tokens = n ? n.split(' ') : [];
     for (var i = 0; i < tokens.length; i++) if (APP_WORDS[tokens[i]]) return { score: 0 };
     var best = null, bestScore = 0;
@@ -816,8 +1228,8 @@
   }
   function composePsi(entry) {
     return {
-      reply: entry.text, mood: 'info', badge: 'Base do psicólogo no SUAS · ' + entry.cat,
-      note: 'Base: ' + entry.base + ' Conferido em ' + PSI_REV + '; normas mudam, confirme a versão vigente.',
+      reply: entry.text, mood: 'info', badge: (entry.paif ? 'Base PAIF · ' : 'Base do psicólogo no SUAS · ') + entry.cat,
+      note: 'Base: ' + entry.base + ' Conferido em ' + (entry.paif ? PAIF_REV : PSI_REV) + '; normas mudam, confirme a versão vigente.',
       quickActions: entry.actions || [], followups: (entry.follow || []).slice(0, 3), psiId: entry.id
     };
   }
@@ -3278,7 +3690,7 @@
     var out = [], n = norm(text);
     try {
       var ps = psiScore(text);
-      if (ps.score >= 3 && ps.entry) out.push({ titulo: 'Base do psicólogo no SUAS: ' + ps.entry.cat, texto: limpaMd(ps.entry.text), origem: ps.entry.base });
+      if (ps.score >= 3 && ps.entry) out.push({ titulo: (ps.entry.paif ? 'Base PAIF (app): ' : 'Base do psicólogo no SUAS: ') + ps.entry.cat, texto: limpaMd(ps.entry.text), origem: ps.entry.base });
       var gs = glossaryScore(text);
       if (gs.score >= 3 && gs.entry && out.length < 3) out.push({ titulo: 'Base SUAS (glossário do app)', texto: limpaMd(gs.entry.text), origem: gs.entry.base });
     } catch (e) { /* sem verbete */ }
@@ -3824,7 +4236,7 @@
     if (cd) return { kind: 'directory', result: cd, dir: { units: [], confidence: 1, mode: 'list' }, con: { score: 0 } };
     // manual do app: "como uso a Central de PDF?", "onde fica o backup?" (sem IA, sem internet)
     var ma = manualAsk(text);
-    if (ma) return { kind: 'manual', result: ma, dir: { units: [], confidence: 1, mode: 'list' }, con: { score: 0 } };
+    if (ma && psiScore(text).score < 6) return { kind: 'manual', result: ma, dir: { units: [], confidence: 1, mode: 'list' }, con: { score: 0 } };
     // psicólogos no Censo SUAS 2025 (Boa Vista em detalhe, Roraima em totais): número fixo da base, nunca da IA
     var cp = psiCensoAsk(text);
     if (cp) return { kind: 'directory', result: cp, dir: { units: [], confidence: 1, mode: 'list' }, con: { score: 0 } };
@@ -4004,7 +4416,7 @@
     interpretar: interpretar, init: init, setCid: setCid, setMunicipios: setMunicipios, setCensoSuas: setCensoSuas, psiCenso: psiCensoAsk, psiCensoDados: function () { return { mun: CP_MUN, perfil: CP_PERFIL_MUN, equipe: CP_EQUIPE_MUN, interior: CP_INTERIOR, bvEquipe: CP_BV_EQUIPE }; }, bvCenso: boaVistaCensoAsk, municipiosRR: rrAsk, cid: cidAsk, norm: norm, piiBlock: piiBlock, crisis: crisis, plan: plan, planMulti: planMulti, planSeguimento: planSeguimento, contagem: contagem,
     directory: function (t, tabCat) { return directory(t, session, tabCat); },
     glossary: glossaryScore, compose: { directory: composeDirectory, glossary: composeGlossary },
-    psi: psiScore, psiLista: PSI_BASE, manual: manualAsk, manualLista: MANUAL, baseApp: baseApp, fichaAsk: fichaAsk, trechosDa: trechosDa, pbfPagamento: pbfPagamento,
+    psi: psiScore, psiLista: PSI_E_PAIF, paifLista: PAIF_BASE, manual: manualAsk, manualLista: MANUAL, baseApp: baseApp, fichaAsk: fichaAsk, trechosDa: trechosDa, pbfPagamento: pbfPagamento,
     remember: remember, reset: reset, session: session, notar: notar, estado: estadoParaIA, deveEsclarecer: deveEsclarecer, historicoParaIA: historicoParaIA,
     aiOn: aiOn, aiGate: aiGate, buildPayload: buildPayload, streamAI: streamAI,
     verifyPhones: verifyPhones, panorama: panorama, isAmpla: isAmpla, cleanAI: cleanAI, separarSugestoes: separarSugestoes, ocultarSugestoes: ocultarSugestoes, mentionedUnits: mentionedUnits, telHref: telHref, slim: slim,
