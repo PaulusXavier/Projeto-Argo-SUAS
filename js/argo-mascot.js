@@ -1426,13 +1426,17 @@
     }
 
     // badge, nota, cartões e ações de uma resposta do Argo
+    var lastRate = null; // avisa o Paulus (👍/👎/mais curto/copiar) sobre a última resposta da IA
+    function rate(sinal) { try { if (lastRate) lastRate(sinal); } catch (e) { /* aprender é opcional */ } }
     function decorate(b, result, plain) {
+      if (result.badge === 'IA') lastRate = typeof result.rate === 'function' ? result.rate : null;
       if (result.badge) {
         var bd = document.createElement('span');
         bd.className = 'argo-assistant-badge argo-assistant-badge-' + String(result.badge).replace(/\s+/g, '').toLowerCase();
         bd.textContent = result.badge === 'IA' ? '✨ Resposta gerada por IA' : result.badge;
         b.col.insertBefore(bd, b.col.firstChild);
       }
+      if (result.skills && result.skills.length) { var sk = document.createElement('div'); sk.className = 'argo-assistant-note'; sk.textContent = '📋 Segui o roteiro: ' + result.skills.join(' · ') + '. É um apoio de escrita; revise antes de usar.'; b.col.appendChild(sk); }
       if (result.note) { var n = document.createElement('div'); n.className = 'argo-assistant-note'; n.textContent = result.note; b.col.appendChild(n); }
       var srcs = [], seen = {};
       (result.sources || []).forEach(function (f) {
@@ -1460,21 +1464,21 @@
           voiceSpeak(plain, true, bt);
         }));
       }
-      if (plain && plain.length > 60 && !result.crisis) acts.appendChild(tinyBtn('Copiar', 'argo-assistant-mini-ghost', function (ev) { copyText(plain, ev.currentTarget); }));
+      if (plain && plain.length > 60 && !result.crisis) acts.appendChild(tinyBtn('Copiar', 'argo-assistant-mini-ghost', function (ev) { copyText(plain, ev.currentTarget); if (result.badge === 'IA') rate('copiou'); }));
       if (result.badge === 'IA') {
         acts.appendChild(tinyBtn('Refazer', 'argo-assistant-mini-ghost', function () { if (!busy && lastQuestion) ask(lastQuestion, { regen: true, silent: true }); }));
         var up = tinyBtn('👍', 'argo-assistant-mini-ghost', function () {
-          up.disabled = down.disabled = true; up.classList.add('is-on');
+          up.disabled = down.disabled = true; up.classList.add('is-on'); rate('bom');
           poke(root.querySelector('#argoAssistantMascot svg.argo-mascot-icon'), 'love');
           announce('Que bom que ajudou!');
         });
         up.setAttribute('aria-label', 'Resposta útil');
         var down = tinyBtn('👎', 'argo-assistant-mini-ghost', function () {
-          up.disabled = down.disabled = true; down.classList.add('is-on');
+          up.disabled = down.disabled = true; down.classList.add('is-on'); rate('ruim');
           addMsg('Obrigado por avisar! Posso tentar de outro jeito. Quanto mais específica a pergunta (unidade, bairro, público), melhor a resposta.', 'bot', 'notfound');
           renderQuick([
-            { label: 'Explicar de outro jeito', ask: 'Explique de outro jeito, mais simples e com um exemplo.', force: true },
-            { label: 'Mais curto, só o essencial', ask: 'Resuma em 2 ou 3 frases, só o essencial.', force: true },
+            { label: 'Explicar de outro jeito', ask: 'Explique de outro jeito, mais simples e com um exemplo.', force: true, signal: 'outro_jeito' },
+            { label: 'Mais curto, só o essencial', ask: 'Resuma em 2 ou 3 frases, só o essencial.', force: true, signal: 'mais_curto' },
             { label: 'Refazer a resposta', run: function () { if (!busy && lastQuestion) ask(lastQuestion, { regen: true, silent: true }); } },
             { label: 'Mais assuntos', menu: true }
           ]);
@@ -1496,6 +1500,7 @@
         btn.textContent = a.label;
         btn.addEventListener('click', function () {
           if (a.menu) { addMsg('Claro! Por onde quer seguir?', 'bot', 'info'); renderQuick(defaultQuick()); return; }
+          if (a.signal) rate(a.signal);
           if (a.ask) { ask(a.ask, a.force ? { forceAI: true, silent: true } : null); return; }
           runAction(a);
         });
@@ -1607,7 +1612,7 @@
         if (!raf) raf = (window.requestAnimationFrame || setTimeout)(paint, 16);
       }
       var p;
-      try { p = result.stream.run(onDelta, abortCtl.signal); } catch (e) { p = Promise.reject(e); }
+      try { p = result.stream.run(onDelta, abortCtl.signal, function (t) { if (myRun === runId && !b && !finished) { setPhase(t); phaseT = setTimeout(function () { if (busy) setPhase('ainda trabalhando nisso… (dá para parar)'); }, 7000); } }); } catch (e) { p = Promise.reject(e); }
       return Promise.resolve(p).then(function (final) {
         finished = true; talking(false);
         if (myRun !== runId) return;
@@ -1618,7 +1623,7 @@
         renderMd(text, bub);
         var endMood = f.mood || moodFromText(text, f.bad);
         if (endMood !== 'info') { pendingMood = endMood; swapMood(b.icon, endMood, 24); }
-        var finalResult = { badge: f.badge || result.badge || 'IA', note: f.note || '', sources: f.sources || [], units: f.units || [], quickActions: f.quickActions || result.quickActions, followups: f.followups || result.followups, mood: result.mood };
+        var finalResult = { skills: f.skills, rate: f.rate, badge: f.badge || result.badge || 'IA', note: f.note || '', sources: f.sources || [], units: f.units || [], quickActions: f.quickActions || result.quickActions, followups: f.followups || result.followups, mood: result.mood };
         decorate(b, finalResult, plainText(text));
         renderQuick(quickFor(finalResult));
         announce(text);
