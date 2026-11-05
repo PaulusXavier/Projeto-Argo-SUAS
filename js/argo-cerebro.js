@@ -455,7 +455,7 @@
       base: 'LOAS, art. 20 (Lei 8.742/1993).',
       actions: [{ label: 'Ver Previdência/INSS', cat: 'previdencia' }, { label: 'Notícias do MDS', cat: 'noticias' }], follow: ['O que é o CadÚnico?'] },
     { id: 'cadunico', keys: ['cadunico', 'cad unico', 'cadastro unico'],
-      text: 'O **Cadastro Único** identifica famílias de baixa renda: renda mensal de até **1/2 salário mínimo por pessoa**. Famílias com renda maior também podem se cadastrar quando algum programa ou serviço exigir. É a porta de entrada para mais de 40 programas (Bolsa Família, BPC, Tarifa Social, Pé-de-Meia, Gás do Povo e outros), cada um com a sua própria regra de renda.\n- Cadastro gratuito e presencial, no CRAS ou posto de atendimento, pelo(a) **responsável familiar** (16 anos ou mais, de preferência mulher). Leva o **CPF de todas as pessoas** da família e o comprovante de endereço (de preferência a conta de luz; na falta dela, declaração de residência assinada). Título de eleitor, certidões, RG e carteira de trabalho são facultativos.\n- Quem mora sozinho pode se cadastrar; para Bolsa Família e BPC, o cadastro costuma exigir entrevista no domicílio.\n- Deve ser atualizado **a cada 2 anos** ou quando algo mudar (endereço, renda, composição da família).',
+      text: 'O **Cadastro Único** identifica famílias de baixa renda: renda mensal de até **1/2 salário mínimo por pessoa**. Famílias com renda maior também podem se cadastrar quando algum programa ou serviço exigir. É a porta de entrada para mais de 40 programas (Bolsa Família, BPC, Tarifa Social, Pé-de-Meia, Gás do Povo e outros), cada um com a sua própria regra de renda.\n- Cadastro gratuito e presencial, no CRAS ou posto de atendimento, pelo(a) **responsável familiar** (16 anos ou mais, de preferência mulher). Leva documento com foto, **CPF** e comprovante de endereço (na falta dele, declaração de residência assinada); das demais pessoas, **pelo menos um documento** de cada uma (o **CPF** é o mais importante). Pergunte também por documentos, entrevista, atualização e programas.\n- Quem mora sozinho pode se cadastrar; para Bolsa Família e BPC, o cadastro costuma exigir entrevista no domicílio.\n- Deve ser atualizado **a cada 2 anos** ou quando algo mudar (endereço, renda, composição da família).',
       base: 'Decreto 11.016/2022.',
       actions: [{ label: 'Ver CRAS', cat: 'social' }], follow: ['Como funciona o Bolsa Família?', 'O que é o BPC?'] },
     { id: 'pbf', keys: ['bolsa familia', 'pbf', 'condicionalidades', 'condicionalidade', 'regra de protecao'],
@@ -667,7 +667,8 @@
 
     // ---- Documentos ----
     { id: 'psi-documentos', cat: 'Documentos',
-      keys: ['quais documentos', 'que documentos posso emitir', 'documentos que o psicologo pode emitir', 'tipos de documento psicologico', 'tipos de documentos psicologicos', 'modalidades de documento', 'resolucao 06 2019', 'resolucao 6 2019', 'resolucao cfp 6 2019', 'resolucao cfp 06 2019', 'documentos escritos do psicologo', 'documentos psicologicos'],
+      // 'quais documentos' sozinho foi retirado: sequestrava "quais documentos para o BPC / para a gestante". Agora exige o contexto do psicólogo.
+      keys: ['quais documentos posso emitir', 'quais documentos o psicologo pode emitir', 'documentos+psicologo', 'documentos+psicologa', 'documentos+psicologos', 'documentos+emitir', 'documentos+cfp', 'que documentos posso emitir', 'documentos que o psicologo pode emitir', 'tipos de documento psicologico', 'tipos de documentos psicologicos', 'modalidades de documento', 'resolucao 06 2019', 'resolucao 6 2019', 'resolucao cfp 6 2019', 'resolucao cfp 06 2019', 'documentos escritos do psicologo', 'documentos psicologicos'],
       text: 'A **Resolução CFP 06/2019** prevê seis modalidades de documento escrito:\n- **Declaração:** comparecimento, acompanhamento e tempo/dias/horários. Sem sintomas nem estados psicológicos.\n- **Atestado psicológico:** certifica situação, estado ou funcionamento psicológico, com base em avaliação psicológica.\n- **Relatório psicológico:** descreve e detalha a atuação profissional; pode trazer orientações e encaminhamentos, mas **não tem finalidade de diagnóstico**.\n- **Relatório multiprofissional:** resulta de atuação em equipe, com profissionais de outras áreas.\n- **Laudo psicológico:** resulta de um processo de avaliação psicológica e subsidia decisões ligadas à demanda.\n- **Parecer psicológico:** análise técnica escrita que responde a uma questão ou a documentos questionados; não resulta de avaliação nem de intervenção.',
       base: 'Res. CFP 06/2019, arts. 8º a 14 (vigente; Manual Orientativo do CFP, nov/2025).',
       actions: [], follow: ['Qual a diferença entre relatório e laudo?', 'Quanto tempo guardar os documentos?'] },
@@ -1165,7 +1166,145 @@
       actions: [{ label: 'Ver CRAS e CREAS', cat: 'social' }, { label: 'Ver Saúde/Urgência', cat: 'hospitalar' }], follow: ['Qual a diferença entre PAIF e PAEFI?', 'Como funciona o Conselho Tutelar?'] }
   ];
   PAIF_BASE.forEach(function (e) { e.paif = true; });
-  var PSI_E_PAIF = PSI_BASE.concat(PAIF_BASE);
+  // ---------------------------------------------------------------------
+  // BASE DO CADASTRO ÚNICO (CadÚnico): verbetes por tema, na mesma forma do PAIF_BASE (keys, text, base = norma citada).
+  // Responde na hora, sem internet e sem IA, e vai à IA como "baseApp" quando a pergunta é sobre o CadÚnico.
+  // Fontes conferidas em nov/2026: Decreto 11.016/2022; Lei 15.077/2024; Portaria MDS 1.145/2025 (alterada pela 1.199/2026);
+  // IN SAGICAD/MDS 20/2026 (alterada pela 22/2026); IN Conjunta 2/2026 (Averiguação e Revisão, ed. ago/2026);
+  // Informe do Cadastro Único 95 (08/06/2026); Cartilha "Noções básicas do Cadastro Único" (MDS).
+  // Prazos e cronogramas do CadÚnico mudam várias vezes por ano: cada verbete diz a norma, e a nota da resposta manda conferir.
+  // Para ajustar: edite o verbete (id cad-*). Chaves com "cadunico" já valem para "cadastro unico" e "cad unico" (ver expansão abaixo).
+  // Testes: npm run test:cadunico
+  // ---------------------------------------------------------------------
+  var CAD_REV = 'nov/2026';
+  var CAD_BASE = [
+    { id: 'cad-o-que-e', cat: 'O que é',
+      keys: ['o que e o cadunico', 'o que e cadunico', 'para que serve o cadunico', 'cadunico+serve', 'cadunico+significa', 'cadunico+sigla', 'explique o cadunico', 'cadunico+resumo'],
+      text: 'O **Cadastro Único para Programas Sociais (CadÚnico)** é o instrumento que **identifica e caracteriza as famílias de baixa renda**: quem mora na casa, a renda, o trabalho, a escolaridade e as condições do domicílio.\n- É a **porta de entrada** de programas como Bolsa Família, BPC e Tarifa Social: cada programa usa os dados para selecionar quem atende.\n- Também orienta o **diagnóstico do território** (vigilância socioassistencial) e o planejamento do CRAS.\n- A gestão nacional é do **MDS**; o cadastramento é feito pelos **municípios que aderiram**, no CRAS ou em posto de atendimento.\n- Estar no cadastro **não garante** benefício: cada programa tem a própria regra.',
+      base: 'Decreto 11.016/2022 (arts. 2º, 6º e 7º); Cartilha Noções básicas do Cadastro Único (MDS).',
+      actions: [{ label: 'Ver CRAS', cat: 'social' }], follow: ['Quem pode se cadastrar no CadÚnico?', 'Quais documentos levar para o CadÚnico?', 'Quais programas usam o CadÚnico?'] },
+
+    { id: 'cad-quem-deve', cat: 'Quem se cadastra',
+      keys: ['renda para entrar no cadunico', 'renda maxima do cadunico', 'limite de renda do cadunico', 'quem pode fazer o cadunico', 'quem pode se cadastrar no cadunico', 'quem deve se cadastrar no cadunico', 'quem tem direito ao cadunico', 'quem pode se inscrever no cadunico', 'quem pode entrar no cadunico', 'cadunico+renda+limite', 'cadunico+meio+salario', 'cadunico+renda+per+capita', 'renda para o cadunico', 'cadunico+quem+pode', 'cadunico+baixa+renda', 'familia de baixa renda'],
+      text: 'Pelo decreto, **família de baixa renda** é a que tem **renda mensal por pessoa de até meio salário mínimo** (art. 5º, II). Essa é a regra para entrar no cadastro.\n- Famílias com **renda maior** podem ser incluídas quando forem **vinculadas à seleção de um programa social** cujo órgão tenha firmado termo de uso (art. 5º, parágrafo único, e art. 11).\n- **Não precisa ter parentesco**: família é quem mora no mesmo domicílio e contribui para a renda ou tem as despesas atendidas por ela.\n- **Quem mora sozinho** também se cadastra (família unipessoal).\n- Para calcular, use o cartão **Renda per capita** da aba Ferramentas. Cada programa (Bolsa Família, BPC, Tarifa Social) tem o **seu próprio limite de renda**.',
+      base: 'Decreto 11.016/2022 (art. 5º, I e II, e parágrafo único; art. 11); Cartilha Noções básicas do Cadastro Único (MDS).',
+      actions: [{ label: 'Abrir Ferramentas', cat: 'ferramentas' }, { label: 'Ver CRAS', cat: 'social' }], follow: ['Quem é o responsável familiar no CadÚnico?', 'Quais programas usam o CadÚnico?'] },
+
+    { id: 'cad-familia-responsavel', cat: 'Família e responsável',
+      keys: ['quem e o responsavel familiar', 'responsavel familiar no cadunico', 'responsavel familiar do cadunico', 'conceito de familia no cadunico', 'o que e familia no cadunico', 'o que e domicilio no cadunico', 'cadunico+responsavel', 'cadunico+representante+legal', 'cadunico+domicilio', 'quem pode ser responsavel familiar', 'responsavel familiar+16+anos', 'responsavel familiar+representante+legal'],
+      text: 'No CadÚnico:\n- **Família:** unidade composta por uma ou mais pessoas que contribuem para o rendimento ou têm as despesas atendidas por ele; **domicílio** é o local que serve de moradia à família (Decreto, art. 5º).\n- **Responsável familiar (RF):** pessoa da família que **mora no domicílio**, com **16 anos ou mais**, de **preferência mulher**. É ele(a) quem comparece e declara os dados de todos. Pode ser qualquer pessoa de 16+ que more e divida renda e despesas com a família.\n- **Representante legal (RL):** na falta do RF, atua quem for legalmente designado (tutor, curador, guardião); **não precisa morar** no domicílio. Nos casos de tomada de decisão apoiada homologada, registra-se a opção de curatela no formulário (Informe 95).\nO RF responde pelas informações: orientar a família a declarar com precisão evita bloqueios depois.',
+      base: 'Decreto 11.016/2022 (art. 5º, I, III e IV); Informe do Cadastro Único 95 (08/06/2026).',
+      actions: [], follow: ['Quais documentos levar para o CadÚnico?', 'O que é família unipessoal no CadÚnico?'] },
+
+    { id: 'cad-documentos', cat: 'Documentos',
+      keys: ['documentos para o cadunico', 'documentos para fazer o cadunico', 'documentos para se cadastrar no cadunico', 'documentos para inscricao no cadunico', 'documentos para atualizar o cadunico', 'cadunico+documentos', 'cadunico+documento', 'o que levar para o cadunico', 'o que levar para fazer o cadunico', 'cadunico+levar', 'cadunico+comprovante+de+residencia', 'cadunico+comprovante+de+endereco', 'cadunico+cpf', 'cadunico+declaracao+de+residencia', 'que documentos o cadunico pede'],
+      text: 'Para o cadastro, o **responsável familiar** leva:\n- **Documento com foto** (identidade ou carteira de trabalho);\n- **CPF**;\n- **Comprovante de residência**; se não tiver, pode fazer uma **declaração** informando onde mora.\nDas **demais pessoas** da família, leve **pelo menos um documento** de cada uma: **CPF** (o mais importante, levar sempre que tiver), certidão de nascimento ou de casamento, identidade, carteira de trabalho ou título de eleitor.\n- Na **Averiguação e na Revisão Cadastral de 2026**, a regularização pede o CPF do responsável e dos membros, documento com foto e comprovante de residência; **famílias unipessoais** levam documento com foto e **Termo de Responsabilidade**.\nQuem não tem algum documento não deve ser barrado na acolhida: o CRAS orienta como providenciar.',
+      base: 'Cartilha Noções básicas do Cadastro Único (MDS); Decreto 11.016/2022 (art. 7º, IV, b: identificação e documentação civil de cada membro); IN Conjunta 2/2026 (Averiguação e Revisão, ed. ago/2026).',
+      actions: [{ label: 'Ver Documentação Civil', cat: 'documentacao' }, { label: 'Ver CRAS', cat: 'social' }], follow: ['Como fazer o CadÚnico passo a passo?', 'Como funciona a entrevista do CadÚnico?'] },
+
+    { id: 'cad-passo-a-passo', cat: 'Como fazer',
+      keys: ['como fazer o cadunico', 'como faco o cadunico', 'como faco para fazer o cadunico', 'como faco para me cadastrar no cadunico', 'como me cadastro no cadunico', 'como fazer o cadastro no cadunico', 'como fazer cadunico', 'como me inscrever no cadunico', 'como se inscrever no cadunico', 'como se cadastrar no cadunico', 'como fazer a inscricao no cadunico', 'como entrar no cadunico', 'passo a passo do cadunico', 'cadunico+passo+a+passo', 'cadunico+inscricao', 'cadunico+inscrever'],
+      text: 'Passo a passo da **inscrição** (o fluxo de agendamento varia por município; confirme no CRAS):\n1. O **responsável familiar** procura o **CRAS** ou o posto de atendimento do CadÚnico, com os documentos.\n2. Faz a **entrevista**: declara os dados de todas as pessoas da família (domicílio, renda, trabalho, escola). Em algumas situações a entrevista é **no domicílio** (veja "entrevista").\n3. A equipe **registra** os dados no sistema e emite o comprovante.\n4. A família **consulta** a situação pelo aplicativo ou site do Cadastro Único.\n5. A **seleção para benefícios** é feita por cada programa, com base no cadastro: entrar no CadÚnico não dá benefício automático.\n- **Atualize** a cada 2 anos ou quando algo mudar.\nO cadastro é **gratuito**: ninguém deve cobrar para fazê-lo.',
+      base: 'Decreto 11.016/2022 (arts. 7º e 12); Cartilha Noções básicas do Cadastro Único (MDS).',
+      actions: [{ label: 'Ver CRAS', cat: 'social' }], follow: ['Quais documentos levar para o CadÚnico?', 'Como consultar o CadÚnico?'] },
+
+    { id: 'cad-entrevista', cat: 'Entrevista',
+      keys: ['entrevista do cadunico', 'entrevista no cadunico', 'cadunico+entrevista', 'entrevista domiciliar', 'cadastro domiciliar', 'cadastramento domiciliar', 'dispensa de entrevista', 'dispensa de entrevista domiciliar', 'visita do cadunico', 'cadunico+visita+domiciliar', 'cadunico+dispensa'],
+      text: 'Na **entrevista**, o responsável familiar declara os dados de todos; o entrevistador registra no sistema. Em certos casos a entrevista é **no domicílio**.\nA **IN SAGICAD/MDS 20/2026** (alterada pela IN 22/2026, de 4/8/2026) **dispensa a entrevista domiciliar** quando a família está em:\n- área de **violência** ou localidade de **difícil acesso**;\n- município em **calamidade, emergência ou desastre**;\n- programa de **proteção** ou com **medida protetiva**;\n- **situação de rua**, **domicílio coletivo**;\n- família **indígena** ou **quilombola**, ou de outro **grupo popular tradicional e específico (GPTE)**.\nEssas famílias se cadastram nos **postos** ou em **mutirões** da gestão local; o município registra a situação no campo próprio e **guarda relatório circunstanciado** (5 anos, segundo a IN Conjunta 2/2026). Os programas observam esse registro.\nSobre **família unipessoal**, veja o verbete próprio: o cronograma mudou.',
+      base: 'IN SAGICAD/MDS 20/2026, art. 1º, I a IX, e §3º (alterada pela IN 22/2026); IN Conjunta 2/2026 (ed. ago/2026).',
+      actions: [{ label: 'Ver CRAS', cat: 'social' }], follow: ['O que é família unipessoal no CadÚnico?', 'Como funciona o CadÚnico para indígenas e população em situação de rua?'] },
+
+    { id: 'cad-unipessoal', cat: 'Entrevista',
+      keys: ['familia unipessoal', 'familias unipessoais', 'unipessoal', 'unipessoais', 'cadunico+unipessoal', 'cadunico+mora+sozinho', 'cadunico+morar+sozinho', 'bpc+unipessoal', 'bolsa+familia+unipessoal', 'cadunico+uma+so+pessoa'],
+      text: '**Família unipessoal** é a composta por **uma só pessoa**. Pela **Lei 15.077/2024** e pelo cronograma da **Portaria MDS 1.145/2025** (alterada pela **Portaria 1.199/2026**, de 15/7/2026):\n- a **entrevista no domicílio** passa a ser exigida, **a partir de 1º/7/2027**, nas atualizações de unipessoais do **Bolsa Família** e na inclusão e atualização de requerentes e beneficiários do **BPC**, com **exceções** definidas pelo MDS;\n- até lá, o MDS permite a **atualização presencial em posto** para unipessoais beneficiárias na Revisão Cadastral 2026.\nPela **IN 20/2026** (alterada pela 22/2026): unipessoal que **não** participa de programa federal de transferência de renda **não precisa** de cadastro domiciliar; se a renda está **no limite de elegibilidade**, a entrevista domiciliar é **obrigatória** (nos prazos da Portaria 1.145). As exceções (rua, indígena, quilombola, violência, difícil acesso etc.) continuam.\nEste cronograma **já mudou mais de uma vez**: confirme no Informe do Cadastro Único mais recente.',
+      base: 'Lei 15.077/2024, art. 2º; Portaria MDS 1.145/2025, arts. 2º e 2º-A (redação da Portaria 1.199/2026); IN SAGICAD/MDS 20/2026, art. 1º, §§1º e 2º (alterada pela 22/2026).',
+      actions: [], follow: ['Como funciona a entrevista do CadÚnico?', 'Como fica o BPC e o CadÚnico?'] },
+
+    { id: 'cad-atualizacao', cat: 'Atualização',
+      keys: ['atualizar o cadunico', 'atualizacao do cadunico', 'atualizacao cadastral', 'atualizar o cadastro unico', 'cadunico+atualizar', 'cadunico+atualizacao', 'cadunico+desatualizado', 'cadunico+prazo', 'quando atualizar o cadunico', 'de quanto em quanto tempo atualizar o cadunico', 'cadunico+dois+anos', 'validade do cadunico', 'cadunico+vence', 'cadunico+venceu'],
+      text: 'O cadastro precisa ser **atualizado ou revalidado a cada 2 anos (24 meses)**, contados da inclusão ou da última atualização (Decreto, art. 12).\n- Atualize **antes**, sempre que algo mudar: **endereço, renda, trabalho, escola e quem mora na casa** (entrada ou saída de pessoas).\n- Quem atualiza é o **responsável familiar**, no CRAS ou posto, com os mesmos documentos.\n- **Cadastro desatualizado** pode levar ao **bloqueio e ao cancelamento** de benefícios (Bolsa Família, Tarifa Social, BPC).\n- Na Revisão Cadastral 2026, o cadastro **sem atualização por 48 meses** é **excluído** automaticamente.\nAtualizar **não é** abrir mão do benefício: é o que o mantém.',
+      base: 'Decreto 11.016/2022, arts. 9º-A, 11-A e 12; IN Conjunta 2/2026 (Averiguação e Revisão, ed. ago/2026); Cartilha Noções básicas do Cadastro Único (MDS).',
+      actions: [{ label: 'Ver CRAS', cat: 'social' }], follow: ['O que é Averiguação e Revisão Cadastral?', 'O que acontece se não atualizar o cadastro?'] },
+
+    { id: 'cad-averiguacao-revisao', cat: 'Atualização',
+      keys: ['averiguacao cadastral', 'revisao cadastral', 'cadunico+averiguacao', 'cadunico+revisao', 'ave26', 'rev26', 'ave 2026', 'rev 2026', 'qualificacao do cadunico', 'acao de qualificacao do cadunico', 'acao de qualificacao cadastral', 'cadunico+convocacao', 'familia convocada no cadunico', 'cadunico+qualificacao', 'listas da averiguacao', 'listas da revisao', 'o que e averiguacao'],
+      text: 'A **Ação de Qualificação do CadÚnico 2026** tem dois processos (IN Conjunta 2/2026, ed. ago/2026):\n- **Averiguação Cadastral (AVE26):** confere **inconsistências** (por exemplo, composição familiar ou renda divergente do CNIS). O público inicial reúne famílias **não beneficiárias** de Bolsa Família, BPC ou Tarifa Social, com renda de até meio salário mínimo per capita. A regularização exige entrevista domiciliar (com exceções).\n- **Revisão Cadastral (REV26):** atinge cadastros **sem atualização há mais de 24 meses** e os de beneficiários que ficariam desatualizados. São 16 públicos (15 de beneficiários, 1 de não beneficiários). A família regulariza **atualizando os dados depois da data de referência** do seu público.\nPapel do município e do CRAS: consultar **todo mês** as listas no **Portal de Gestão do Cadastro Único** ou no **SIGPBF** (e **salvar cópia**, pois só a última referência fica disponível), fazer as entrevistas e digitar antes do prazo, e orientar as famílias, que também recebem aviso por aplicativo, SMS, carta ou Caixa Tem.\nDúvidas dos técnicos: **Central 121** e chat do MDS para gestores.',
+      base: 'IN Conjunta 2/2026 (Averiguação e Revisão, Anexo I, ed. ago/2026); Decreto 11.016/2022, art. 11-A.',
+      actions: [{ label: 'Ver CRAS', cat: 'social' }], follow: ['O que acontece se não atualizar o cadastro?', 'Quais documentos levar para o CadÚnico?'] },
+
+    { id: 'cad-bloqueio', cat: 'Atualização',
+      keys: ['bloqueio por cadastro desatualizado', 'cadunico+bloqueio', 'cadunico+bloqueado', 'cadunico+cancelamento', 'cadunico+cancelado', 'cadunico+exclusao', 'cadunico+excluido', 'cadunico+exclusao+logica', 'exclusao logica', 'reversao de cancelamento', 'bolsa familia+cadastro+desatualizado', 'bolsa familia+bloqueado+cadastro', 'o que acontece se nao atualizar o cadastro', 'o que acontece se nao atualizar o cadunico', 'tarifa social+cadastro+desatualizado'],
+      text: 'Se a família **não regulariza** o cadastro até a data-limite da Averiguação ou da Revisão (IN Conjunta 2/2026):\n- **Bolsa Família:** o benefício é **bloqueado por até 3 meses** após o prazo e, depois, **cancelado**. A **reversão** pode ser feita em até **6 meses** após o cancelamento; a **exclusão lógica** do cadastro **impede a reversão** e exige **novo cadastramento**. O município aplica o desbloqueio ou a reversão no **Sibec**, nos prazos do calendário do PBF.\n- **Tarifa Social de Energia:** o desconto é **cancelado**; para voltar, a família **solicita de novo à distribuidora**.\n- **BPC:** o INSS **notifica**; sem atualização, o valor é **bloqueado**, pode ser **suspenso** e, depois, **cessado**, com direito a **recurso**.\nNa averiguação (AVE26), a exclusão lógica ocorre se a família não regularizar até **12/8/2027**.\nNa prática: **busca ativa** das famílias listadas antes do prazo, com acolhida e orientação, sem culpabilizar.',
+      base: 'IN Conjunta 2/2026 (Averiguação e Revisão, Anexo I, ed. ago/2026); Decreto 11.016/2022, art. 11-A.',
+      actions: [{ label: 'Ver CRAS', cat: 'social' }, { label: 'Notícias do MDS', cat: 'noticias' }], follow: ['O que é Averiguação e Revisão Cadastral?', 'Como funciona o Bolsa Família?'] },
+
+    { id: 'cad-bpc', cat: 'BPC',
+      keys: ['bpc+cadunico', 'cadunico+bpc', 'bpc+cadastro+unico', 'bpc+inscricao+no+cadunico', 'bpc+atualizar+cadastro', 'formulario de impossibilidade', 'formulario de impossibilidade do bpc', 'bpc+representante+legal', 'bpc+responsavel+familiar', 'bpc+prazo+atualizacao', 'bpc+cadastro+desatualizado'],
+      text: 'Pelo **Informe do Cadastro Único 95** (8/6/2026), com a **IN Conjunta SAGICAD/SNBA 1/2026**:\n- O **Formulário de Impossibilidade** foi **desativado em 13/5/2026**. Quem estava nele até 12/5/2026 precisa **se inscrever no CadÚnico até 31/12/2026**, sob risco de **indeferimento ou cessação** do BPC. Os registros podem ser consultados no **CECAD**.\n- **Busca ativa:** priorizar beneficiários do BPC que estavam no formulário e ainda não têm inscrição, e os cadastros desatualizados.\n- **RF x RL:** o responsável familiar mora e divide renda e despesas com o beneficiário; o representante legal (tutor, curador) **não precisa morar** na casa.\n- **Atualização a cada 24 meses:** o INSS notifica; o prazo para atualizar é de **45 dias** (municípios até 50 mil habitantes) ou **90 dias** (acima de 50 mil, caso de **Boa Vista**).\nFamília **unipessoal** no BPC: veja o verbete próprio (cronograma alterado pela Portaria 1.199/2026).',
+      base: 'Informe do Cadastro Único 95 (08/06/2026); IN Conjunta SAGICAD/SNBA 1/2026; LOAS, art. 20 (BPC exige inscrição no CadÚnico).',
+      actions: [{ label: 'Ver Previdência/INSS', cat: 'previdencia' }, { label: 'Ver CRAS', cat: 'social' }], follow: ['O que é família unipessoal no CadÚnico?', 'Quem tem direito ao BPC?'] },
+
+    { id: 'cad-gpte', cat: 'Povos e grupos específicos',
+      keys: ['grupos populacionais tradicionais e especificos', 'grupos tradicionais e especificos', 'gpte', 'cadunico+gpte', 'cadunico+indigena', 'cadunico+indigenas', 'cadunico+quilombola', 'cadunico+quilombolas', 'cadunico+situacao+de+rua', 'cadunico+ribeirinhos', 'cadunico+povos+tradicionais', 'cadunico+comunidades+tradicionais', 'cadunico+pessoa+em+situacao+de+rua', 'cadastrar indigenas no cadunico', 'cadastrar quilombolas no cadunico'],
+      text: 'O decreto define **grupos populacionais tradicionais e específicos (GPTE)** como grupos, organizados ou não, com características **socioculturais, econômicas ou conjunturais** que pedem **estratégias diferenciadas de cadastramento** (art. 5º, V); os procedimentos são definidos pelo MDS (art. 7º, §6º).\n- **Indígenas, quilombolas, população em situação de rua**, domicílios coletivos e outros GPTE estão entre as situações em que a **entrevista domiciliar é dispensada** (IN 20/2026); o cadastro se faz em **postos** ou **mutirões**.\n- Em **áreas de baixa densidade** (rurais, comunidades indígenas, calhas de rios), a Tipificação prevê **equipes volantes** ou **CRAS itinerantes**, que atendem e cadastram nas comunidades, inclusive **de barco** na Amazônia Legal.\n- Respeite a **organização social e a língua**; com famílias indígenas, conte com **intérprete ou liderança** quando a família quiser.\nOs marcadores de GPTE no cadastro importam: os programas federais os observam.',
+      base: 'Decreto 11.016/2022, art. 5º, V, e art. 7º, §6º; IN SAGICAD/MDS 20/2026, art. 1º (alterada pela 22/2026); Tipificação Nacional (Res. CNAS 109/2009); Trilhas do PAIF (MDS, 2024 e 2026).',
+      actions: [{ label: 'Ver CRAS', cat: 'social' }], follow: ['Como funciona o PAIF em território de baixa densidade?', 'Como funciona a entrevista do CadÚnico?'] },
+
+    { id: 'cad-programas', cat: 'Programas',
+      keys: ['programas que usam o cadunico', 'programas do cadunico', 'beneficios do cadunico', 'beneficios do cadastro unico', 'cadunico+programas', 'cadunico+beneficios', 'o que o cadunico da direito', 'o que da direito ter cadunico', 'quais beneficios o cadunico', 'cadunico+da+direito', 'para que usa o cadunico', 'programas+usam+cadastro+unico'],
+      text: 'O CadÚnico é usado por **vários programas** (a cartilha do MDS cita, entre outros):\n- **Bolsa Família** e **BPC**;\n- **Tarifa Social de Energia Elétrica**;\n- **Minha Casa, Minha Vida** (Faixa 1);\n- **Isenção de taxa** em concursos públicos e no **Enem**;\n- **Carteira do Idoso** e **ID Jovem**.\nPode haver também programas estaduais e municipais: o decreto permite o uso do CadÚnico em políticas de **todas as esferas**, desde que o órgão aceite o **termo de uso** (arts. 2º, §3º, e 11).\n**Atenção:** estar no cadastro **não dá acesso automático**. Cada programa tem a **sua renda de corte**, os seus documentos e a sua seleção. Para valores e prazos, veja as Notícias do MDS.',
+      base: 'Cartilha Noções básicas do Cadastro Único (MDS); Decreto 11.016/2022, arts. 2º e 11.',
+      actions: [{ label: 'Notícias do MDS', cat: 'noticias' }], follow: ['Como funciona o Bolsa Família?', 'Quem tem direito ao BPC?'] },
+
+    { id: 'cad-consulta', cat: 'Consulta',
+      keys: ['consultar o cadunico', 'consultar cadunico', 'consultar o cadastro unico', 'cadunico+consulta', 'cadunico+consultar', 'cadunico+aplicativo', 'cadunico+comprovante+de+inscricao', 'cadunico+nis', 'consulta simples do cadunico', 'consulta completa do cadunico', 'ver meu cadunico', 'como saber se estou no cadunico', 'saber se estou no cadunico', 'como saber se o cadunico esta atualizado', 'cadunico+situacao+cadastral'],
+      text: 'O cidadão consulta o próprio cadastro pelo **aplicativo Cadastro Único** ou pelo site **cadunico.dataprev.gov.br** (Dúvidas: **Central 121**, ligação gratuita).\n- **Consulta Simples:** sem login gov.br, informando **nome completo, data de nascimento, nome da mãe e UF/município**.\n- **Consulta Completa** (formulário, despesas, integrantes da família): exige **login gov.br** (nível Bronze, Prata ou Ouro).\n- Mostra **NIS, código familiar, situação cadastral e datas de atualização**, emite o **comprovante de inscrição** e localiza **postos de atendimento**.\nÓtimo para conferir se o cadastro está **em dia** antes de a família procurar o CRAS. A ficha do serviço está no diretório do app.',
+      base: 'Cartilha Noções básicas do Cadastro Único (MDS); ficha "Consultar CadÚnico" do diretório do app (serviço oficial do MDS).',
+      actions: [{ label: 'Abrir "Consultar CadÚnico"', search: 'Consultar CadÚnico' }], follow: ['Como atualizar o CadÚnico?', 'Quais documentos levar para o CadÚnico?'] },
+
+    { id: 'cad-gestao', cat: 'Gestão e papéis',
+      keys: ['quem faz o cadunico', 'quem e responsavel pelo cadunico', 'gestao do cadunico', 'gestao municipal do cadunico', 'cadunico+gestor+municipal', 'cadunico+competencia', 'cadunico+competencias', 'papel do cras no cadunico', 'papel do municipio no cadunico', 'papel do mds no cadunico', 'cadunico+gestao', 'cadunico+quem+cadastra', 'cadunico+entrevistador', 'cadunico+adesao'],
+      text: 'Quem faz o quê no CadÚnico (Decreto, arts. 6º e 7º):\n- **União (MDS):** gere o cadastro em âmbito nacional, **edita as normas**, qualifica os dados e define cronogramas (Averiguação, Revisão).\n- **Municípios que aderiram:** fazem o **cadastramento** (inclusão e atualização), no **CRAS** ou em postos, por **entrevistadores** capacitados. A gestão municipal organiza a agenda, as entrevistas domiciliares e a **busca ativa**.\n- **Programas** (Bolsa Família, BPC, Tarifa Social) **usam** os dados para a própria seleção e notificam as famílias sobre bloqueios (art. 11-A).\n- **Vigilância socioassistencial:** usa o cadastro para o **diagnóstico do território** (veja também PAIF e vigilância).\nApoio aos técnicos: **Central 121** e chat do MDS para gestores.',
+      base: 'Decreto 11.016/2022 (arts. 2º, 6º, 7º, 10 e 11-A); IN Conjunta 2/2026 (Averiguação e Revisão, ed. ago/2026).',
+      actions: [{ label: 'Ver CRAS', cat: 'social' }], follow: ['PAIF e vigilância socioassistencial', 'O que é Averiguação e Revisão Cadastral?'] },
+
+    { id: 'cad-sigilo', cat: 'Sigilo',
+      keys: ['sigilo do cadunico', 'cadunico+sigilo', 'cadunico+sigiloso', 'cadunico+sigilosos', 'cadunico+lgpd', 'dados do cadunico', 'cadunico+dados+sigilosos', 'quem pode ver o cadunico', 'quem pode ver os dados do cadunico', 'cadunico+acesso+aos+dados', 'cadunico+protecao+de+dados', 'compartilhar dados do cadunico', 'cadunico+privacidade', 'cadunico+cessao+de+dados'],
+      text: 'Os **dados de identificação** das famílias no CadÚnico são **sigilosos** (Decreto, art. 13).\n- Só podem ser usados na **gestão de políticas públicas** e em **estudos e pesquisas**.\n- Uso fora disso sujeita o responsável às penalidades da **Lei de Acesso à Informação** (12.527/2011) e da **LGPD** (13.709/2018).\n- Trate **apenas o mínimo necessário** e **não ceda dados a terceiros** fora das regras do próprio decreto (art. 13, §4º).\nNo Argo, a regra é a mesma: **dados de famílias não vão à IA** nem saem do aparelho; ao perguntar, não digite nome, CPF, NIS ou endereço de ninguém.',
+      base: 'Decreto 11.016/2022, art. 13 e §§1º, 2º e 4º; Lei 12.527/2011; Lei 13.709/2018.',
+      actions: [], follow: ['Como o app protege os dados?', 'Quem faz o CadÚnico?'] },
+
+    { id: 'cad-gas-do-povo', cat: 'Programas',
+      keys: ['gas do povo', 'programa gas do povo', 'vale gas', 'auxilio gas', 'gas do povo+cadunico', 'gas do povo+quem+tem+direito', 'gas do povo+como+funciona', 'botijao gratis', 'botijao gratuito', 'recarga gratuita de gas', 'gas do povo+recargas', 'gas do povo+revenda'],
+      text: 'O **Gás do Povo** dá **recarga gratuita do botijão de 13 kg** em revendas credenciadas e **substitui o Auxílio Gás** (pago em dinheiro).\n- **Quem tem direito:** família inscrita no **CadÚnico**, com **cadastro atualizado** e **renda por pessoa de até meio salário mínimo**; há **prioridade** para beneficiários do **Bolsa Família**.\n- **Beneficiário:** o vale sai em nome do **responsável familiar** do cadastro (preferencialmente a mulher, mas não é exclusivo).\n- **Quantidade:** família de **2 ou 3 pessoas**, até **4 recargas por ano** (cada vale vale 3 meses); de **4 ou mais**, até **6** (vale de 4 meses).\n- **Como retirar:** cartão do Bolsa Família, cartão de débito da Caixa, ou **CPF com código** no celular/aplicativo. A revenda **não pode cobrar** da família; vasilhame que a família não tem e frete, se houver, ficam fora da gratuidade.\n- **Atenção:** **CPF irregular** ou **inconsistência no cadastro** podem impedir a entrada ou a continuidade. Dúvidas: **121**.\nSe não há revenda credenciada no município, a família vai à cidade mais próxima que tenha.',
+      base: 'FAQ do Programa Gás do Povo (MME); Lei 14.237/2021, arts. 2º, 3º e 4º-A (redação dada pela MP 1.313/2025 e pela lei de conversão).',
+      actions: [{ label: 'Notícias do MDS', cat: 'noticias' }, { label: 'Ver CRAS', cat: 'social' }], follow: ['Como atualizar o CadÚnico?', 'Quais programas usam o CadÚnico?'] },
+
+    { id: 'cad-pe-de-meia', cat: 'Programas',
+      keys: ['pe de meia', 'pe-de-meia', 'programa pe de meia', 'pe de meia+cadunico', 'pe de meia+quem+tem+direito', 'pe de meia+valores', 'pe de meia+frequencia', 'pe de meia+requisitos', 'incentivo financeiro estudantil', 'poupanca do ensino medio'],
+      text: 'O **Pé-de-Meia** é um incentivo financeiro-educacional do **MEC** para estudantes do **ensino médio** público, que usa o **CadÚnico** para checar a **renda por pessoa de até meio salário mínimo** (Portaria MEC 169/2026, art. 4º).\n- **Matrícula:** parcela única anual de **R$ 200**.\n- **Frequência:** **R$ 200** por parcela, até **9 por ano** no ensino médio regular (na **EJA**, **R$ 225**, até 4 por semestre), com **frequência mínima de 80%**.\n- **Conclusão:** **R$ 1.000** por ano concluído com aprovação, até **R$ 3.000** no ensino médio.\n- **Enem:** **R$ 200** para o concluinte que fizer os **dois dias** da prova.\n- A verificação usa a base do CadÚnico de 2026; **não há pagamento retroativo** de parcelas anteriores à habilitação.\nOs **valores e regras mudam por portaria**: confira o MEC. **Cadastro desatualizado** no CadÚnico pode barrar a habilitação: oriente a família a atualizar.',
+      base: 'Portaria MEC 169/2026 (arts. 4º a 9º) e Lei 14.818/2024.',
+      actions: [{ label: 'Ver Educação', cat: 'educacao' }, { label: 'Notícias do MDS', cat: 'noticias' }], follow: ['Como atualizar o CadÚnico?', 'Quais programas usam o CadÚnico?'] },
+
+    { id: 'cad-tarifa-social', cat: 'Programas',
+      keys: ['tarifa social de energia', 'tarifa social', 'tarifa social+cadunico', 'tarifa social+quem+tem+direito', 'tarifa social+desconto', 'desconto na conta de luz', 'conta de luz+cadunico', 'energia gratuita', 'gratuidade de energia', 'tarifa social+80+kwh', 'luz do povo', 'tarifa social+distribuidora'],
+      text: 'A **Tarifa Social de Energia Elétrica (TSEE)** dá **desconto na conta de luz** a famílias de baixa renda **inscritas no CadÚnico** (e a beneficiários do BPC), e, desde **julho de 2025**, a **gratuidade de até 80 kWh por mês** para quem recebe a tarifa social (regulamentada pela **ANEEL**).\n- O benefício está **ligado à unidade consumidora** da distribuidora: confira se o **CadÚnico está atualizado** e com o **dado da conta de luz** correto.\n- Se o cadastro **não é regularizado** na Averiguação ou na Revisão Cadastral, o desconto é **cancelado**; para voltar, a família **solicita de novo à distribuidora**.\n- A **renda de corte**, as **faixas de consumo** e os procedimentos podem mudar: confirme com a **distribuidora** ou no site da ANEEL antes de orientar.',
+      base: 'ANEEL e MME (gratuidade de até 80 kWh mensais para a Tarifa Social, a partir de jul/2025); IN Conjunta 2/2026 (Averiguação e Revisão, ed. ago/2026).',
+      actions: [{ label: 'Notícias do MDS', cat: 'noticias' }], follow: ['O que acontece se não atualizar o cadastro?', 'Quais programas usam o CadÚnico?'] }
+
+  ];
+  CAD_BASE.forEach(function (e) {
+    e.cad = true;
+    // "cadunico" também vale como "cadastro unico" e "cad unico" (a pessoa escreve de várias formas)
+    var extra = [];
+    e.keys.forEach(function (k) {
+      if (k.indexOf('cadunico') < 0) return;
+      extra.push(k.replace(/cadunico/g, k.indexOf('+') > -1 ? 'cadastro+unico' : 'cadastro unico'));
+      extra.push(k.replace(/cadunico/g, k.indexOf('+') > -1 ? 'cad+unico' : 'cad unico'));
+    });
+    e.keys = e.keys.concat(extra);
+  });
+  var PSI_E_PAIF = PSI_BASE.concat(PAIF_BASE, CAD_BASE);
   var psiIndex = null;
   // Erro de digitação (comum no celular): se a pergunta não bateu em nenhum verbete, troca cada palavra desconhecida
   // pela palavra do vocabulário dos verbetes que está a 1 letra de distância (2 em palavras longas) e tenta de novo.
@@ -1228,8 +1367,8 @@
   }
   function composePsi(entry) {
     return {
-      reply: entry.text, mood: 'info', badge: (entry.paif ? 'Base PAIF · ' : 'Base do psicólogo no SUAS · ') + entry.cat,
-      note: 'Base: ' + entry.base + ' Conferido em ' + (entry.paif ? PAIF_REV : PSI_REV) + '; normas mudam, confirme a versão vigente.',
+      reply: entry.text, mood: 'info', badge: (entry.cad ? 'Base CadÚnico · ' : entry.paif ? 'Base PAIF · ' : 'Base do psicólogo no SUAS · ') + entry.cat,
+      note: 'Base: ' + entry.base + ' Conferido em ' + (entry.cad ? CAD_REV : entry.paif ? PAIF_REV : PSI_REV) + '; normas mudam, confirme a versão vigente.',
       quickActions: entry.actions || [], followups: (entry.follow || []).slice(0, 3), psiId: entry.id
     };
   }
@@ -2669,6 +2808,7 @@
       }
       return null;
     }
+    if (session.pendente === 'relato-bairro') { var rb = respostaBairroDoRelato(text); if (rb) session.pendente = ''; return rb; }
     if (session.pendente === 'creas-bairro') {
       var r = municipio('qual creas atende ' + text) || territory('qual creas atende ' + text);
       if (r && r.mood !== 'notfound' && r.mood !== 'info') { session.pendente = ''; return r; }
@@ -3714,7 +3854,7 @@
     var out = [], n = norm(text);
     try {
       var ps = psiScore(text);
-      if (ps.score >= 3 && ps.entry) out.push({ titulo: (ps.entry.paif ? 'Base PAIF (app): ' : 'Base do psicólogo no SUAS: ') + ps.entry.cat, texto: limpaMd(ps.entry.text), origem: ps.entry.base });
+      if (ps.score >= 3 && ps.entry) out.push({ titulo: (ps.entry.cad ? 'Base CadÚnico (app): ' : ps.entry.paif ? 'Base PAIF (app): ' : 'Base do psicólogo no SUAS: ') + ps.entry.cat, texto: limpaMd(ps.entry.text), origem: ps.entry.base });
       var gs = glossaryScore(text);
       if (gs.score >= 3 && gs.entry && out.length < 3) out.push({ titulo: 'Base SUAS (glossário do app)', texto: limpaMd(gs.entry.text), origem: gs.entry.base });
     } catch (e) { /* sem verbete */ }
@@ -3732,8 +3872,8 @@
     var man = manualBase(text);
     if (man.length) out = man.concat(out);
     var censo = censoBaseApp(text);
-    if (censo.length) return censo.concat(out).slice(0, 4);
-    return out.slice(0, 4);
+    // roteiros do app (partes da pergunta, ordem de trabalho de um caso) vêm primeiro: orientam a FORMA da resposta
+    return roteiroBase(text).concat(censo.length ? censo.concat(out) : out).slice(0, 4);
   }
 
   // Resposta direta da ficha (sem IA) para "requisitos / documentos / valor / como solicitar" de um serviço que o diretório identifica bem.
@@ -4278,15 +4418,24 @@
     // "qual CRAS atende o bairro X?": responde pela lista de cobertura das fichas
     var pend = seguimentoPendente(text);
     if (pend) return { kind: 'directory', result: pend, dir: { units: pend.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
-    if (session.pendente === 'violencia-crianca' || session.pendente === 'creas-bairro') session.pendente = '';
+    if (session.pendente === 'violencia-crianca' || session.pendente === 'creas-bairro' || session.pendente === 'relato-bairro') session.pendente = '';
     var seg = seguimentoTerr(text);
     if (seg) return { kind: 'directory', result: seg, dir: { units: seg.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
     // painel de Boa Vista: perfil do bairro, panorama por área, necessidades (parto, CadÚnico, EJA...) e dados que o diretório não tem
     // municípios de Roraima: população, indígenas, área, CadÚnico/PBF/BPC, comparação e ficha (assets/municipios-rr.json)
     var mr = rrAsk(text);
     if (mr) return { kind: 'directory', result: mr, dir: { units: mr.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
-    var pb = perfilBairro(text) || panoramaAreas(text) || necessidade(text) || semNumeros(text);
-    if (pb) return { kind: 'directory', result: pb, dir: { units: pb.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
+    // Dúvida de CONTEÚDO sobre o CadÚnico ("quem pode se cadastrar?", "de quanto em quanto tempo atualizar?"): o verbete curado responde antes
+    // das listas de unidades (que só servem para "onde fazer", telefone, endereço, bairro).
+    var psiCad = psiScore(text);
+    if (psiCad.entry && psiCad.entry.cad && psiCad.score >= 4 && !/\b(bairro|atende|perto|endereco|telefone|fone|horario|onde fica|localizacao)\b/.test(norm(text))) {
+      return { kind: 'psi', psi: psiCad, result: composePsi(psiCad.entry), dir: { units: [], confidence: 0 }, con: { score: 0 } };
+    }
+    var pb = perfilBairro(text) || panoramaAreas(text), listaNec = false;
+    if (!pb) { pb = necessidade(text); listaNec = !!pb; }
+    if (!pb) pb = semNumeros(text);
+    // lista: resposta que só LISTA unidades de um perfil (o app a desvia quando a pergunta é de caso: ver ehCaso)
+    if (pb) return { kind: 'directory', result: pb, dir: { units: pb.units || [], confidence: 1, mode: 'list' }, con: { score: 0 }, lista: listaNec };
     var pr = pbfOuRefsAsk(text);
     if (pr) return { kind: 'directory', result: pr, dir: { units: [], confidence: 1, mode: 'list' }, con: { score: 0 } };
     var mun = municipio(text);
@@ -4305,7 +4454,7 @@
     }
     var dir = directory(text, session, opts.tabCat);
     var enc = encaminhar(text, dir);
-    if (enc) return { kind: 'directory', result: enc, dir: { units: enc.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
+    if (enc) return { kind: 'directory', result: enc, dir: { units: enc.units || [], confidence: 1, mode: 'list' }, con: { score: 0 }, lista: true };
     var con = glossaryScore(text);
     var out = { kind: 'none', dir: dir, con: con };
     // Dúvida do psicólogo no SUAS (documentos, sigilo, Sistema de Justiça, violência...): verbete curado com a norma.
@@ -4322,6 +4471,7 @@
       if (!(con.score >= 6 && dir.confidence < 0.9)) {
         out.kind = 'directory';
         out.result = withUnits(composeDirectory(dir, session), dir);
+        out.lista = true;
         return out;
       }
     }
@@ -4426,6 +4576,210 @@
   }
 
   // ---------------------------------------------------------------------
+  // RACIOCÍNIO: o mascote lê a pergunta ANTES de responder.
+  // Quatro hábitos, todos locais (valem sem internet e antes de qualquer IA):
+  //  1) relato de violência contra criança/adolescente em fala natural ("o padrasto mexe com ele"): proteção em primeiro
+  //     lugar, montada com os verbetes JÁ curados (psi-comunicar e psi-inquirir); nenhum texto de lei é escrito aqui;
+  //  2) pergunta com várias partes ("qual CRAS atende o Caimbé e o que levo para o CadÚnico?"): cada parte é respondida
+  //     e o que não tem resposta pronta é DITO (nunca some em silêncio);
+  //  3) pergunta de caso ("como encaminho uma gestante em situação de rua?"): roteiro de trabalho em ordem (proteção,
+  //     direitos, serviço de referência, articulação, registro). Vai à IA como base e, sem IA, vira a resposta;
+  //  4) conferência da resposta da IA: parte da pergunta que ficou sem resposta vira botão para perguntar só ela.
+  // Para ajustar: palavras do relato em RE_ATO_*, forma das perguntas em RE_CASO_*, passos em METODO_CASO.
+  // Testes: npm run test:raciocinio
+  // ---------------------------------------------------------------------
+  function entradaPsi(id) {
+    for (var i = 0; i < PSI_E_PAIF.length; i++) if (PSI_E_PAIF[i].id === id) return PSI_E_PAIF[i];
+    return null;
+  }
+
+  // ---- 1) relato de violência contra criança ou adolescente ----
+  var RE_MENOR = /\b(crianca|criancas|bebe|menino|menina|meninos|meninas|menininho|menininha|filho|filha|filhos|filhas|enteado|enteada|neto|neta|sobrinho|sobrinha|adolescente|adolescentes|garoto|garota)\b/;
+  var RE_ATO_SEXUAL = /\b(mexe|mexeu|mexendo|mexia) com (ele|ela|o menino|a menina|a crianca|o garoto|a garota)\b|\b(passa|passou|passando|passava) a mao\b|\b(toca|tocou|tocando|tocava|apalpa|apalpou|apalpando) (nele|nela|no corpo|nas partes|a crianca)\b|\b(abusa|abusou|abusando|abusava|abusam|abusaram|abusado|abusada|estupr\w+|molest\w+|bolin\w+|violentou|violentando|violentad[oa]|pornografi\w+|aliciad\w+|aliciou|aliciando|exploracao sexual|violencia sexual|abuso sexual)\b|\bfotos? (nua|nu|pelad\w+|intim\w+)\b|\bnudes?\b/;
+  var RE_ATO_FISICO = /\b(bate|bateu|batendo|batia|batem|apanha|apanhou|apanhando|apanhava|espanca\w*|agride|agrediu|agredindo|agredid[oa]|surra\w*|queimou|queimad[oa]|machuca|machucou|machucad[oa]|hematomas?|marcas? (no corpo|roxas?|de cinto|de fio)|roxo|roxa)\b/;
+  // "abuso de álcool/drogas" é outro assunto (família com uso de substâncias), não relato de abuso
+  var RE_ABUSO_SUBST = /abus\w*\s+(de|com|do|da)\s+(alcool|drogas?|substancias?|poder|autoridade|medicamentos?|bebida)/g;
+  // "bate ponto", "bate papo", "bateu na porta": expressões, não agressão
+  var RE_IDIOMA_BATER = /\bbat\w+\s+(ponto|papo|bola|boca|cartao|na porta|a porta|o carro|de frente|palmas|o martelo|record\w*|meta)\b/g;
+  function idadesNoTexto(n) {
+    var out = [], re = /\b(\d{1,3})\s*(?:anos|ano)\b/g, m;
+    while ((m = re.exec(n))) out.push(parseInt(m[1], 10));
+    return out;
+  }
+  // Devolve { sexual, fisica } quando a pessoa DESCREVE uma situação (não quando pergunta o que é). Pura: não muda a conversa.
+  function relatoViolencia(text) {
+    var t = String(text == null ? '' : text);
+    if (t.length < 20 || t.length > 600) return null;
+    var n = norm(t);
+    if (/^(o que (e|sao|significa)|qual a diferenca|defina|conceito|tipos? de|formas? de|como funciona)\b/.test(n)) return null;
+    var idades = idadesNoTexto(n), menorPorIdade = idades.some(function (a) { return a < 18; });
+    // idade adulta e nenhuma de menor ("minha filha de 30 anos"): não é caso de criança/adolescente
+    if (idades.length && !menorPorIdade) return null;
+    if (!menorPorIdade && !RE_MENOR.test(n)) return null;
+    var sexual = RE_ATO_SEXUAL.test(n.replace(RE_ABUSO_SUBST, ' ')), fisico = RE_ATO_FISICO.test(n.replace(RE_IDIOMA_BATER, ' '));
+    if (!sexual && !fisico) return null;
+    // já existe verbete específico para a pergunta (tipos de violência, escuta, depoimento, perícia...): ele responde melhor
+    var ps = psiScore(t);
+    if (ps.score >= 4 && ps.entry && ps.entry.id !== 'psi-comunicar') return null;
+    return { publico: 'crianca', sexual: sexual, fisica: fisico && !sexual };
+  }
+  function planRelato(text) {
+    var rel = relatoViolencia(text);
+    if (!rel || crisis(text) || piiBlock(text)) return null;
+    var com = entradaPsi('psi-comunicar');
+    if (!com) return null;
+    var inq = entradaPsi('psi-inquirir'), pratica = '';
+    if (inq) { var m = String(inq.text).match(/Na prática:[^\n]*/); pratica = m ? m[0] : ''; }
+    var corpo = String(com.text).replace(/^Sim, é dever previsto em lei:/, 'A comunicação é um **dever previsto em lei**:');
+    var linhas = ['**Isto pede cuidado e proteção em primeiro lugar.** Se a criança ou o adolescente corre risco agora, ligue **190** (polícia) ou **192** (SAMU).', corpo];
+    if (pratica) linhas.push(pratica);
+    var units = [];
+    if (rel.sexual) {
+      units = porId(['cai-18-de-maio']).map(slim);
+      if (units.length) linhas.push('Em violência **sexual**, o **CAI 18 de Maio** atende crianças e adolescentes vítimas ou testemunhas (ficha abaixo).');
+    }
+    linhas.push('Diga o **bairro** da família que eu mostro o Conselho Tutelar e o CREAS de referência.');
+    session.pendente = 'relato-bairro';
+    return {
+      kind: 'psi',
+      result: {
+        reply: linhas.join('\n'), mood: 'info', badge: 'Proteção em primeiro lugar',
+        note: 'Base: ' + com.base + (inq ? ' ' + inq.base : '') + ' Conferido em ' + PSI_REV + '; normas mudam, confirme a versão vigente. Siga também o fluxo de proteção do seu município.',
+        quickActions: [{ label: 'Ver Conselho Tutelar', cat: 'conselho' }, { label: 'Ver CREAS', cat: 'social' }],
+        followups: rel.sexual ? ['Posso perguntar detalhes do abuso?', 'Qual a diferença entre escuta especializada e depoimento especial?'] : ['Quais são os tipos de violência?', 'Qual a diferença entre escuta especializada e depoimento especial?'],
+        units: units, unitsAll: units, psiId: com.id
+      },
+      relato: rel
+    };
+  }
+  // O bairro dito logo depois do relato ("Caimbé"): Conselho Tutelar e CREAS do território, juntos.
+  function respostaBairroDoRelato(text) {
+    var ct = municipio('qual conselho tutelar atende ' + text) || territory('qual conselho tutelar atende ' + text);
+    var cr = municipio('qual creas atende ' + text) || territory('qual creas atende ' + text);
+    var oks = [ct, cr].filter(function (r) { return r && r.mood !== 'notfound' && r.mood !== 'info'; });
+    if (!oks.length) return null;
+    var vistos = {}, units = [], todas = [];
+    oks.forEach(function (r) {
+      (r.units || []).forEach(function (u) { if (!vistos[u.id]) { vistos[u.id] = 1; units.push(u); } });
+      (r.unitsAll || r.units || []).forEach(function (u) { todas.push(u); });
+    });
+    return { reply: oks.map(function (r) { return r.reply; }).join('\n\n'), mood: oks[0].mood, badge: oks[0].badge, followups: oks[0].followups, units: units.slice(0, 6), unitsAll: todas };
+  }
+
+  // ---- 2) pergunta com várias partes ----
+  // Corta em "e" só quando o que vem depois é um novo pedido ("e o que levo...", "e como faço..."): "Álcool e Drogas" não se divide.
+  var RE_CORTE_E = /(?:\s*[,;])?\s+e\s+(?=(?:o que|oque|quais|qual|quanto|quantos|quantas|quando|onde|como|quem|preciso|devo|posso|levo|fa[cç]o|fazer)\b)/i;
+  function conteudo(s) { return tok(s).filter(function (t) { return !STOP[t] && t.length > 2; }); }
+  // Devolve as partes (cada uma já com "?") ou [] quando a pergunta é uma só. Cada parte precisa se sustentar sozinha
+  // (2+ palavras de conteúdo): "quando devo acionar o CT e quando o CREAS?" é uma comparação, não duas perguntas.
+  function dividirPartes(text) {
+    var t = String(text == null ? '' : text).replace(/\s+/g, ' ').trim();
+    if (t.length < 20 || t.length > 320) return [];
+    var cru = (t.match(/\?/g) || []).length >= 2 ? (t.match(/[^?]+\?*/g) || []) : t.split(RE_CORTE_E);
+    var partes = cru.map(function (p) { return p.replace(/^\s*(?:e|mas)\s+/i, '').replace(/[\s?!.;,]+$/, '').trim(); }).filter(Boolean);
+    if (partes.length < 2 || partes.length > 4) return [];
+    for (var i = 0; i < partes.length; i++) if (conteudo(partes[i]).length < 2) return [];
+    return partes.map(function (p) { return p + '?'; });
+  }
+  var KINDS_RESPONDEM = { directory: 1, concept: 1, psi: 1, ficha: 1, manual: 1 };
+  // Responde cada parte com o que o app já sabe (diretório, glossário, verbetes, ficha). Com IA, se alguma parte não tem
+  // resposta pronta, devolve null: a IA recebe a pergunta inteira e o roteiro das partes. Sem IA, entrega o que há e diz o que falta.
+  function planPartes(text, opts) {
+    var partes = dividirPartes(text);
+    if (partes.length < 2 || crisis(text) || piiBlock(text)) return null;
+    var pendente = session.pendente, blocos = [], faltou = [], units = [], todas = [], vistos = {}, seg = [], i;
+    try {
+      for (i = 0; i < partes.length; i++) {
+        var p = plan(partes[i], opts || {}), r = p && p.result;
+        if (!p || !KINDS_RESPONDEM[p.kind] || !r || !r.reply || r.mood === 'notfound') { faltou.push(partes[i]); continue; }
+        blocos.push('**' + tituloPedido(partes[i].replace(/\?$/, '')) + '**\n' + r.reply);
+        (r.units || []).slice(0, 3).forEach(function (u) { if (!vistos[u.id]) { vistos[u.id] = 1; units.push(u); } });
+        (r.unitsAll || r.units || []).forEach(function (u) { todas.push(u); });
+        (r.followups || []).forEach(function (f) { if (seg.length < 4 && seg.map(function (y) { return JSON.stringify(y); }).indexOf(JSON.stringify(f)) < 0) seg.push(f); });
+      }
+    } finally { session.pendente = pendente; }
+    if (!blocos.length || (faltou.length && aiOn())) return null;
+    var reply = 'Você fez ' + partes.length + ' perguntas numa só. Respondo cada uma:\n\n' + blocos.join('\n\n');
+    var acoes = [];
+    if (faltou.length) {
+      reply += '\n\n**Esta parte eu não tenho pronta:** ' + faltou.map(function (f) { return tituloPedido(f.replace(/\?$/, '')); }).join('; ') + '. Prefiro avisar a chutar.';
+    }
+    var result = { reply: reply, mood: 'info', followups: seg, badge: 'Perguntas em partes', units: units.slice(0, 6), unitsAll: todas, multi: true, quickActions: acoes };
+    return { kind: 'directory', result: result, dir: { units: units.slice(0, 6), confidence: 1, mode: 'list' }, con: { score: 0 }, multi: true, partes: partes, faltou: faltou };
+  }
+  // Depois da IA: partes da pergunta sem NENHUMA palavra de conteúdo na resposta. Conferência por palavras (radical de 5 letras),
+  // só para oferecer um botão "pergunte só isto"; não acusa a IA nem altera o texto.
+  function radical(t) { return t.length > 5 ? t.slice(0, 5) : t; }
+  function partesSemResposta(pergunta, resposta) {
+    var partes = dividirPartes(pergunta);
+    if (partes.length < 2) return [];
+    var alias = function (s) { return norm(s).replace(/cadastro unico/g, 'cadunico'); };
+    var vistas = asSet(alias(resposta).split(' ').map(radical));
+    return partes.filter(function (p) {
+      var cs = alias(p).split(' ').filter(function (t) { return t && !STOP[t] && t.length > 2; }).map(radical);
+      return cs.length >= 2 && !cs.some(function (c) { return vistas[c]; });
+    });
+  }
+
+  // ---- 3) pergunta de caso ----
+  var RE_CASO_SUJEITO = /\b(caso|casos|familia|familias|usuario|usuaria|gestante|gestantes|idoso|idosa|pessoa idosa|crianca|adolescente|mulher|homem|pessoa em situacao de rua|migrante|refugiad\w+|jovem|adulto|morador\w*|paciente)\b/;
+  var RE_CASO_VERBO = /\b(organiz\w+|conduz\w+|abord\w+|encaminh\w+|acompanh\w+|proceder|agir|atuar|por onde|comecar|o que fazer|o que faco|como faco|acionar|articul\w+|intervir|intervencao)\b/;
+  // programas e consultas objetivas têm base própria (ficha, verbete, território): não são "caso"
+  var RE_CASO_NAO = /\b(cadunico|cadastro unico|bolsa familia|bpc|beneficios?|passe livre|inss|telefone|fone|contato|endereco|horario|onde fica|localizacao|bairro|quantos|quantas|diferenca|qual (cras|creas|caps|ubs|conselho tutelar))\b/;
+  function ehCaso(text) {
+    var n = norm(text);
+    if (n.length < 20 || n.length > 400) return false;
+    if (/^(o que (e|sao|significa)|qual a diferenca|defina|conceito)\b/.test(n)) return false;
+    return RE_CASO_SUJEITO.test(n) && RE_CASO_VERBO.test(n) && !RE_CASO_NAO.test(n);
+  }
+  // Ordem de trabalho para organizar um caso. É MÉTODO, não norma: vem do próprio roteiro do Paulus (docs/PAULUS-PERSONALIDADE.md)
+  // e do verbete psi-sigilo-rede (contato prévio, ficha objetiva, contrarreferência combinada).
+  var METODO_CASO = [
+    ['Proteção e urgência', 'há risco imediato (vida, violência em curso, criança desprotegida)? Se houver, a segurança vem antes de tudo.'],
+    ['Direitos e documentos', 'o que falta para a pessoa acessar benefícios e serviços (documentos, CadÚnico).'],
+    ['Serviço de referência do território', 'qual CRAS, CREAS ou UBS atende o endereço, conforme as fichas do diretório.'],
+    ['Articulação', 'contato prévio com o serviço, ficha objetiva (motivo, o que foi feito, o que se espera) e contrarreferência combinada.'],
+    ['Registro e acompanhamento', 'o que foi feito, quando e com quem, e o retorno combinado.']
+  ];
+  function metodoCasoTexto() {
+    return 'Ordem de trabalho para organizar um caso (método de trabalho do app, não é norma). Siga esta ordem na resposta: ' +
+      METODO_CASO.map(function (p, i) { return (i + 1) + ') ' + p[0] + ': ' + p[1]; }).join(' ') +
+      ' Só indique serviços que estejam nas fichas; o que depende do município ou da equipe, diga que se confirma com a coordenação.';
+  }
+  // Resposta sem IA para pergunta de caso: o roteiro, com o que o diretório achou para o perfil logo abaixo.
+  function planCaso(text, anterior) {
+    var linhas = ['Para organizar um caso, este é o **roteiro de trabalho** que eu sigo, em ordem:'];
+    METODO_CASO.forEach(function (p, i) { linhas.push((i + 1) + '. **' + p[0] + ':** ' + p[1]); });
+    var r = anterior && anterior.result;
+    if (r && r.reply && r.mood !== 'notfound') linhas.push('\n**No diretório, para este perfil:**\n' + r.reply);
+    var units = r && r.units ? r.units : [];
+    return {
+      kind: 'caso',
+      result: {
+        reply: linhas.join('\n'), mood: 'info', badge: 'Roteiro de caso',
+        note: 'Roteiro geral de trabalho (não é norma). Confirme o fluxo local com a coordenação e a supervisão.',
+        quickActions: r && r.quickActions ? r.quickActions : [],
+        followups: ['O que é contrarreferência?', 'Como compartilhar informações com a rede?'],
+        units: units, unitsAll: r && r.unitsAll ? r.unitsAll : units
+      }
+    };
+  }
+  // O que acompanha a pergunta à IA: roteiro das partes e/ou roteiro de caso (entram antes dos verbetes: orientam a forma da resposta).
+  function roteiroBase(text) {
+    var out = [], partes = dividirPartes(text);
+    if (partes.length >= 2) {
+      out.push({
+        titulo: 'Roteiro de resposta do app: a pergunta tem ' + partes.length + ' partes',
+        texto: 'Responda TODAS, nesta ordem: ' + partes.map(function (p, i) { return (i + 1) + ') ' + p; }).join(' ') +
+          ' Para a parte que as fichas e as normas não sustentam, diga em uma frase que não consta, em vez de omiti-la.',
+        origem: 'organização da pergunta feita pelo app'
+      });
+    }
+    if (ehCaso(text)) out.push({ titulo: 'Roteiro de caso do app (ordem de trabalho)', texto: metodoCasoTexto(), origem: 'método de trabalho do Argo (não é norma)' });
+    return out;
+  }
+
+  // ---------------------------------------------------------------------
   function init(opts) {
     opts = opts || {};
     data = Array.isArray(opts.data) ? opts.data : [];
@@ -4440,7 +4794,9 @@
     interpretar: interpretar, init: init, setCid: setCid, setMunicipios: setMunicipios, setCensoSuas: setCensoSuas, psiCenso: psiCensoAsk, psiCensoDados: function () { return { mun: CP_MUN, perfil: CP_PERFIL_MUN, equipe: CP_EQUIPE_MUN, interior: CP_INTERIOR, bvEquipe: CP_BV_EQUIPE }; }, bvCenso: boaVistaCensoAsk, municipiosRR: rrAsk, cid: cidAsk, norm: norm, piiBlock: piiBlock, crisis: crisis, plan: plan, planMulti: planMulti, planSeguimento: planSeguimento, contagem: contagem,
     directory: function (t, tabCat) { return directory(t, session, tabCat); },
     glossary: glossaryScore, compose: { directory: composeDirectory, glossary: composeGlossary },
-    psi: psiScore, psiLista: PSI_E_PAIF, paifLista: PAIF_BASE, manual: manualAsk, manualLista: MANUAL, baseApp: baseApp, fichaAsk: fichaAsk, trechosDa: trechosDa, pbfPagamento: pbfPagamento,
+    psi: psiScore, psiLista: PSI_E_PAIF, paifLista: PAIF_BASE, cadLista: CAD_BASE, manual: manualAsk, manualLista: MANUAL, baseApp: baseApp, fichaAsk: fichaAsk, trechosDa: trechosDa, pbfPagamento: pbfPagamento,
+    relato: relatoViolencia, planRelato: planRelato, dividirPartes: dividirPartes, planPartes: planPartes, partesSemResposta: partesSemResposta,
+    ehCaso: ehCaso, planCaso: planCaso, metodoCaso: METODO_CASO,
     remember: remember, reset: reset, session: session, notar: notar, estado: estadoParaIA, deveEsclarecer: deveEsclarecer, historicoParaIA: historicoParaIA,
     aiOn: aiOn, aiGate: aiGate, seguimento: seguimento, buildPayload: buildPayload, streamAI: streamAI,
     verifyPhones: verifyPhones, panorama: panorama, isAmpla: isAmpla, cleanAI: cleanAI, separarSugestoes: separarSugestoes, ocultarSugestoes: ocultarSugestoes, mentionedUnits: mentionedUnits, telHref: telHref, slim: slim,
