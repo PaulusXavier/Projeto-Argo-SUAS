@@ -8,6 +8,7 @@
     "test:conversa": "node scripts/teste-conversa.mjs",
     "test:manual": "node scripts/teste-manual.mjs",
     "test:paif": "node scripts/teste-paif.mjs",
+    "test:seguimento": "node scripts/teste-seguimento.mjs",
     "build": "node scripts/build.mjs",
     "gerar:municipios": "node scripts/gerar-municipios-rr.mjs",
     "test:voz": "node scripts/teste-voz.mjs",
