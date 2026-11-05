@@ -28067,7 +28067,13 @@ function argoAssistantAskHybrid(rawText, meta) {
     (typeof B.psi === 'function' && B.psi(texto).score >= 3) ||
     // "continue", "tem certeza?", "de onde tirou isso?": o Paulus só trata esses pedidos com as palavras da pessoa; reescrever a pergunta os transformaria em assunto novo
     (typeof B.seguimento === 'function' && !!B.seguimento(texto)) ||
-    (typeof B.planMulti === 'function' && !!B.planMulti(texto, {}));   // duas partes de contato: o diretório responde as duas, sem a IA reescrever a pergunta
+    (typeof B.planMulti === 'function' && !!B.planMulti(texto, {})) ||   // duas partes de contato: o diretório responde as duas, sem a IA reescrever a pergunta
+    // relato de violência contra criança/adolescente: o protocolo sai com as palavras da pessoa (a reescrita não pode tocá-lo, e o relato nem precisa sair do aparelho)
+    (typeof B.relato === 'function' && !!B.relato(texto)) ||
+    // pergunta com várias partes: a reescrita devolve UMA pergunta e perderia uma delas
+    (typeof B.dividirPartes === 'function' && B.dividirPartes(texto).length >= 2) ||
+    // o bairro dito logo depois do relato ("Caimbé") responde ao que o mascote acabou de pedir
+    !!(B.session && B.session.pendente === 'relato-bairro');
   if (pular) return argoAssistantAskHybridCore(rawText, meta);
   const tab = argoActiveTabInfo();
   return B.interpretar(texto, { tabName: tab.name }).then(i => {
@@ -28135,6 +28141,13 @@ function argoAssistantAskHybridCore(rawText, meta) {
     if (retomada) return retomada;
   }
 
+  // Relato de violência contra criança ou adolescente em fala natural ("o padrasto mexe com ele"): proteção em primeiro lugar,
+  // com os verbetes curados (ECA, Lei 13.431), na hora e mesmo com a IA ligada. A IA fica a um toque, em "Aprofundar com a IA".
+  if (!meta.forceAI && !meta.regen && typeof B.planRelato === 'function') {
+    const rel = B.planRelato(rawText);
+    if (rel) return keep(argoAssistantToUi(rel.result, rawText, true), rel.result.units);
+  }
+
   // UBS com psicólogo por bairro: responde na hora com os dados do diretório (a IA entra só se a pessoa pedir).
   // Mensagem longa (mais de 300 caracteres: um caso descrito, um pedido de texto) vai à IA com as palavras da pessoa;
   // citar uma unidade ou um bairro no meio dela não pode virar resposta pronta do diretório.
@@ -28153,10 +28166,27 @@ function argoAssistantAskHybridCore(rawText, meta) {
     if (seg) return keep(argoAssistantToUi(seg.result, rawText, false), seg.result.units);
   }
 
+  // Pergunta com várias partes ("qual CRAS atende o Caimbé e o que levo para o CadÚnico?"): cada parte é respondida com o que o app já sabe,
+  // e o que não tem resposta pronta é dito. Com IA e alguma parte sem resposta pronta, a IA recebe a pergunta inteira com o roteiro das partes.
+  if (!meta.forceAI && !meta.regen && !longMsg && typeof B.planPartes === 'function') {
+    const pp = B.planPartes(rawText, { tabCat: tab.cat });
+    if (pp) return keep(argoAssistantToUi(pp.result, rawText, true), pp.result.units);
+  }
+
   let plan = { kind: 'none' };
   let local = null;
   if (!meta.forceAI && !meta.regen) {
     plan = B.plan(rawText, { tabCat: tab.cat });
+    // Pergunta de CASO ("como organizo o atendimento de um idoso negligenciado?") não se responde com uma lista de unidades:
+    // com IA, ela responde com o roteiro de caso e a lista fica de reserva; sem IA, vale o roteiro com a lista logo abaixo.
+    if (plan.lista && !longMsg && typeof B.ehCaso === 'function' && B.ehCaso(rawText)) {
+      if (B.aiOn()) {
+        const aiCaso = argoAskAI(rawText, tab, argoAssistantToUi(plan.result, rawText, false));
+        if (aiCaso) return aiCaso;
+      }
+      const pc = B.planCaso(rawText, plan);
+      return keep(argoAssistantToUi(pc.result, rawText, false), pc.result.units);
+    }
     // Socorro e consulta ao diretório (telefone, endereço, horário, bairro) continuam respondidos na hora, com os dados reais.
     if (plan.kind === 'crisis' || (plan.kind === 'directory' && !longMsg)) {
       return keep(argoAssistantToUi(plan.result, rawText, false), plan.result.units);
@@ -28188,6 +28218,11 @@ function argoAssistantAskHybridCore(rawText, meta) {
   if (iaOk && (meta.forceAI || meta.regen || !weak || questionLike)) {
     const ai = argoAskAI(rawText, tab, weak || conceito || local);
     if (ai) return ai;
+  }
+  // Pergunta de caso sem IA e sem resposta pronta que sirva: o roteiro de trabalho (com a lista aproximada do diretório, se houver).
+  if (!iaOk && !conceito && !longMsg && typeof B.ehCaso === 'function' && B.ehCaso(rawText) && (weak || plan.kind === 'none')) {
+    const pc = B.planCaso(rawText, weak ? plan : null);
+    return keep(argoAssistantToUi(pc.result, rawText, false), pc.result.units);
   }
   if (conceito) return keep(conceito, plan.result.units);
   if (weak) return keep(weak, plan.result.units);
@@ -28393,6 +28428,11 @@ function argoAskAI(rawText, tab, fallbackResult) {
           // Perguntas de continuação: as da IA primeiro; se ela citou unidade e não sugeriu nada, as de contato.
           const seguintes = (sugestoes || []).slice(0, 3);
           if (!seguintes.length && units.length) seguintes.push('Qual o telefone?', 'Qual o horário?');
+          // Parte da pergunta que a resposta nem tocou: botão para perguntar só ela. Não altera o texto da IA.
+          const faltou = typeof B.partesSemResposta === 'function' && !calculo ? B.partesSemResposta(rawText, txt) : [];
+          faltou.slice(0, 2).reverse().forEach(p => { if (seguintes.indexOf(p) < 0) seguintes.unshift(p); });
+          if (seguintes.length > 4) seguintes.length = 4;
+          if (faltou.length && !bad) note += ' Parece que ficou sem resposta: \"' + faltou[0].replace(/\?$/, '') + '\". Toque no botão para perguntar só isso.';
           return {
             text: txt,
             note,
