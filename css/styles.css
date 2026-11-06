@@ -8159,32 +8159,21 @@ header.hero .hero-stat-label { font-size: 0.66rem; line-height: 1.25; }
 .login-constellation .cute-shine { fill: none; stroke: #E8FFFF; stroke-width: 1.6; stroke-linecap: round; opacity: 0.45; }
 .login-constellation .cute-flag path { fill: rgba(255, 215, 106, 0.85); stroke: #FFE08A; stroke-width: 0.6; stroke-linejoin: round; transform-box: fill-box; transform-origin: left center; }
 .login-constellation .cute-flag circle { fill: #0A1B2E; }
-.login-constellation .cute-eye { transform-box: fill-box; transform-origin: center; }
-.login-constellation .eye-r { fill: #0A1B2E; stroke: #8FE6FF; stroke-width: 1.1; }
-.login-constellation .eye-i { fill: #29D3FF; opacity: 0.9; }
-.login-constellation .eye-h { fill: #FFFFFF; }
-.login-constellation .eye-h2 { fill: #E8FFFF; opacity: 0.8; }
-.login-constellation .cute-blush { fill: #FF9EC4; opacity: 0.5; }
-.login-constellation .cute-smile { fill: none; stroke: #E8FFFF; stroke-width: 1.7; stroke-linecap: round; }
-.login-constellation .cute-heart path:first-child { fill: #FF8FBE; stroke: #FFD0E4; stroke-width: 0.7; stroke-linejoin: round; transform-box: fill-box; transform-origin: center; }
-.login-constellation .heart-sig { fill: none; stroke: #8FE6FF; stroke-width: 1.1; stroke-linecap: round; opacity: 0.8; }
 .login-constellation .cute-leds circle { fill: #7DFFC8; opacity: 0.9; }
 @media (prefers-reduced-motion: no-preference) {
   .login-constellation .cute { animation: loginFade 1.4s ease 2.2s both; }
-  .login-constellation .cute-eye { animation: cuteBlink 5.2s ease-in-out 3.4s infinite; }
-  .login-constellation .cute-eye:nth-of-type(2) { animation-delay: 3.4s; }
   .login-constellation .cute-flag path { animation: cuteFlutter 2.4s ease-in-out infinite alternate; }
-  .login-constellation .cute-heart path:first-child { animation: cuteBeat 2.2s ease-in-out infinite; }
-  .login-constellation .heart-sig { animation: cuteSignal 2.2s ease-in-out infinite; }
   .login-constellation .cute-leds circle { animation: cuteLed 1.8s ease-in-out infinite; }
   .login-constellation .cute-leds circle:nth-child(2) { animation-delay: .3s; }
   .login-constellation .cute-leds circle:nth-child(3) { animation-delay: .6s; }
   .login-constellation .cute-leds circle:nth-child(4) { animation-delay: .9s; }
-  .login-constellation .cute-blush { animation: cuteBlush 4s ease-in-out infinite; }
 }
-@keyframes cuteBlink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.08); } }
 @keyframes cuteFlutter { from { transform: skewY(-6deg) scaleX(1); } to { transform: skewY(7deg) scaleX(0.9); } }
-@keyframes cuteBeat { 0%, 100% { transform: scale(1); } 15% { transform: scale(1.18); } 30% { transform: scale(1); } 45% { transform: scale(1.1); } }
-@keyframes cuteSignal { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.95; } }
 @keyframes cuteLed { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
-@keyframes cuteBlush { 0%, 100% { opacity: 0.38; } 50% { opacity: 0.62; } }
+
+/* ---- Barco mais transparente: o casco e as velas ficam discretos e as estrelas (vértices da constelação) ganham destaque ---- */
+.login-constellation .cl-g { opacity: 0.4; filter: drop-shadow(0 0 2px rgba(92, 225, 255, 0.25)); }
+.login-constellation .cute { opacity: 0.38; filter: none; }
+.login-constellation .pulses { opacity: 0.55; }
+.login-constellation .term { opacity: 0.5; }
+.login-constellation .cs { filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.85)); }
