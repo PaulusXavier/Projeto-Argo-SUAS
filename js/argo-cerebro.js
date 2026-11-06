@@ -273,6 +273,7 @@
     });
     var syn = [];
     SINONIMOS.forEach(function (r) { if (r[0].test(n)) syn = syn.concat(r[1]); });
+    syn = syn.concat(aprApelidos(strong));   // palavras que a pessoa usa e que o Argo aprendeu com o uso
     return {
       norm: n, all: all, strong: uniq(strong), soft: uniq(soft), syn: uniq(syn),
       fone: RE_FONE_Q.test(n), end: RE_END_Q.test(n), hora: RE_HORA_Q.test(n), serv: RE_SERV_Q.test(n)
@@ -314,8 +315,15 @@
       if (inBairro) s += 2.5;
       if (!rareHit) s *= 0.3;
       if (tabCat && u.d.cat && u.d.cat.indexOf(tabCat) > -1) s *= 1.2;
+      // aprendizado com o uso: o que a pessoa já confirmou (👍, ligou, abriu a ficha) sobe; o que ela recusou (👎) desce
+      var lb = 0;
+      if (aprAtivo()) {
+        var soma = aprSoma(q.strong, u.d.id);
+        if (s > 0) { lb = aprBonus(soma) + aprPopular(u.d.id); s = Math.max(s * 0.3, s + lb); }
+        else if (soma >= 3) { s = 2.6; lb = 2.6; }   // só pelo que aprendeu: entra na lista, sem ganhar de quem casa pelo nome
+      }
       var nameCov = q.strong.length ? Math.min(1, nameHits / q.strong.length) : 0;
-      if (s > 0) rows.push({ u: u, score: s, nameCov: nameCov, inBairro: !!inBairro });
+      if (s > 0) rows.push({ u: u, score: s, nameCov: nameCov, inBairro: !!inBairro, lb: lb });
     });
     rows.sort(function (a, b) {
       var ea = a.nameCov >= 0.99 ? 1 : 0, eb = b.nameCov >= 0.99 ? 1 : 0;
@@ -376,6 +384,7 @@
     res.units = picked.map(function (x) { return slim(x.u.d); });
     if (res.mode === 'list' && res.units.length === 1) res.mode = 'single';
     res.bairro = r.bairro;
+    res.aprendido = picked.some(function (x) { return x.lb >= 0.3; });   // a ordem veio, em parte, do que o uso ensinou
     return res;
   }
 
@@ -1410,7 +1419,7 @@
   // O que a conversa firmou envelhece: depois de alguns turnos sem ser reafirmado, deixa de ir à IA (a pessoa pode ter mudado de caso).
   var VALIDADE = { unidade: 12, bairro: 12, municipio: 12, assunto: 8, intencao: 4 };
   function firmar(campo, valor) { if (valor) { session.ctx[campo] = valor; session.ctx.t[campo] = session.turno; } }
-  function reset() { session.history = []; session.units = []; session.terrUlt = null; session.munUlt = null; session.pendente = ''; session.ctx = novoCtx(); session.aguardando = false; session.turno = 0; session.ultContato = null; }
+  function reset() { session.history = []; session.units = []; session.terrUlt = null; session.munUlt = null; session.pendente = ''; session.ctx = novoCtx(); session.aguardando = false; session.turno = 0; session.ultContato = null; session.ult = null; session.aprPend = null; }
   var MAX_HIST_LOCAL = 40;    // mensagens guardadas na página (só na memória; apagadas ao trancar o app)
   function campoCtx(v, max) {
     v = String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
@@ -1504,6 +1513,7 @@
     if (mc) session.ultContato = { palavra: mc[1], t: session.turno };
     if (units && units.length) session.units = units.slice(0, 5);
     atualizarCtx(userText, units);
+    try { aprNota(userText, units); } catch (e) { /* aprender é opcional */ }
   }
 
   // ---------------------------------------------------------------------
@@ -4790,7 +4800,207 @@
     if (opts.ia) for (var k in opts.ia) if (Object.prototype.hasOwnProperty.call(CFG, k)) CFG[k] = opts.ia[k];
   }
 
+
+  // ---------------------------------------------------------------------
+  // Aprendizado com o uso — só neste aparelho (localStorage), nada vai à nuvem.
+  // O Argo fica melhor com o uso de quatro jeitos:
+  //   1. Preferências: o que a pessoa confirma (👍, liga, abre a ficha, copia) reforça a ligação
+  //      "palavras da pergunta → unidade"; o 👎 enfraquece. Na próxima busca parecida, a unidade
+  //      confirmada sobe na lista e a recusada desce. Nunca esconde um acerto pelo nome.
+  //   2. Apelidos: palavra que ele não conhecia ("postinho do bairro", "assistente social do cras")
+  //      vira sinônimo quando a pessoa reformula e confirma a resposta.
+  //   3. Mais perguntadas: as perguntas que se repetem viram atalhos.
+  //   4. Transparência: "o que você aprendeu?" mostra tudo e "apagar" zera.
+  // Só guarda palavras que existem no diretório (nunca nomes de pessoas) e perguntas que passaram
+  // pelo filtro de dado pessoal. Os pesos envelhecem sozinhos (um erro antigo não vira regra).
+  // ---------------------------------------------------------------------
+  var APR_KEY = 'argo_aprendizado_v1';
+  var apr = null;
+  function aprVazio() { return { v: 1, t0: Date.now(), n: 0, up: 0, down: 0, tok: {}, uni: {}, alias: {}, freq: {} }; }
+  function aprStore() { try { return typeof localStorage !== 'undefined' ? localStorage : null; } catch (e) { return null; } }
+  function aprLoad() {
+    if (apr) return apr;
+    apr = aprVazio();
+    try {
+      var st = aprStore(), raw = st && st.getItem(APR_KEY), j = raw && JSON.parse(raw);
+      if (j && j.v === 1 && typeof j === 'object') {
+        ['tok', 'uni', 'alias', 'freq'].forEach(function (k) { if (j[k] && typeof j[k] === 'object') apr[k] = j[k]; });
+        ['n', 'up', 'down', 't0'].forEach(function (k) { if (isFinite(j[k])) apr[k] = j[k]; });
+      }
+    } catch (e) { /* arquivo corrompido: começa do zero */ }
+    return apr;
+  }
+  function aprSave() {
+    try { var st = aprStore(); if (st) st.setItem(APR_KEY, JSON.stringify(apr)); } catch (e) { /* sem espaço / modo privado: segue sem guardar */ }
+  }
+  function aprAtivo() { var L = aprLoad(); return L.n > 0 || Object.keys(L.alias).length > 0; }
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+  // soma dos pesos "palavra → unidade" para as palavras fortes da pergunta
+  function aprSoma(tokens, id) {
+    if (id == null) return 0;
+    var L = aprLoad(), t = 0;
+    for (var i = 0; i < tokens.length; i++) { var m = L.tok[tokens[i]]; if (m && m[id]) t += m[id]; }
+    return t;
+  }
+  function aprBonus(soma) {
+    if (!soma) return 0;
+    return soma > 0 ? Math.min(2, 0.7 * Math.log(1 + soma) / Math.LN2) : -Math.min(2.5, 0.8 * Math.log(1 - soma) / Math.LN2);
+  }
+  // quem a pessoa mais usa ganha um empurrãozinho de desempate
+  function aprPopular(id) {
+    var u = id != null && aprLoad().uni[id];
+    return u && u.u > 0 ? Math.min(0.4, 0.12 * Math.log(1 + u.u) / Math.LN2) : 0;
+  }
+  function aprApelidos(tokens) {
+    var L = aprLoad(), out = [];
+    tokens.forEach(function (t) {
+      var a = L.alias[t];
+      if (!a) return;
+      Object.keys(a).sort(function (x, y) { return a[y] - a[x]; }).slice(0, 3).forEach(function (w) { out.push(w); });
+    });
+    return out;
+  }
+
+  // palavras fortes que existem no diretório (nomes de pessoas não entram)
+  function aprTokens(q) {
+    ensureIndex();
+    return q.strong.filter(function (t) { return t.length >= 3 && !/^\d+$/.test(t) && vocab[t]; }).slice(0, 8);
+  }
+  // palavras que o Argo não conhece nem por aproximação: candidatas a apelido
+  function aprDesconhecidos(q) {
+    ensureIndex();
+    return q.strong.filter(function (t) {
+      return t.length >= 4 && t.length <= 24 && !/\d/.test(t) && !vocab[t] && !SMALLTALK[t] && !APP_WORDS[t] && !Object.keys(expand(t)).length;
+    }).slice(0, 3);
+  }
+
+  function aprPoda(L) {
+    var ks = Object.keys(L.tok);
+    if (ks.length > 300) {
+      ks.sort(function (a, b) { return aprPesoTotal(L.tok[a]) - aprPesoTotal(L.tok[b]); }).slice(0, ks.length - 300).forEach(function (k) { delete L.tok[k]; });
+    }
+    var us = Object.keys(L.uni);
+    if (us.length > 200) us.sort(function (a, b) { return L.uni[a].t - L.uni[b].t; }).slice(0, us.length - 200).forEach(function (k) { delete L.uni[k]; });
+    var fs = Object.keys(L.freq);
+    if (fs.length > 40) fs.sort(function (a, b) { return (L.freq[a].n - L.freq[b].n) || (L.freq[a].t - L.freq[b].t); }).slice(0, fs.length - 40).forEach(function (k) { delete L.freq[k]; });
+    var as = Object.keys(L.alias);
+    if (as.length > 60) as.slice(0, as.length - 60).forEach(function (k) { delete L.alias[k]; });
+  }
+  function aprPesoTotal(m) { var t = 0; for (var k in m) t += Math.abs(m[k]); return t; }
+  // a cada 40 interações os pesos encolhem 10%: o que não é reconfirmado vai sumindo
+  function aprEnvelhece(L) {
+    if (L.n % 40 !== 0) return;
+    Object.keys(L.tok).forEach(function (t) {
+      var m = L.tok[t];
+      Object.keys(m).forEach(function (id) { m[id] = Math.round(m[id] * 90) / 100; if (Math.abs(m[id]) < 0.3) delete m[id]; });
+      if (!Object.keys(m).length) delete L.tok[t];
+    });
+  }
+
+  function aprReforca(tokens, ids, peso) {
+    var L = aprLoad();
+    tokens.forEach(function (t) {
+      var m = L.tok[t] || (L.tok[t] = {});
+      ids.forEach(function (id) { m[id] = Math.round(clamp((m[id] || 0) + peso, -6, 14) * 100) / 100; if (!m[id]) delete m[id]; });
+      if (!Object.keys(m).length) delete L.tok[t];
+    });
+    ids.forEach(function (id) {
+      var u = L.uni[id] || (L.uni[id] = { u: 0, t: 0 });
+      if (peso > 0) u.u += 1; else u.u = Math.max(0, u.u - 1);
+      u.t = Date.now();
+    });
+  }
+  function aprConfirmaApelido(ult) {
+    if (!ult || !ult.alias || !ult.alias.length || !ult.tokens.length) return;
+    var L = aprLoad();
+    ult.alias.forEach(function (a) {
+      var m = L.alias[a] || (L.alias[a] = {});
+      ult.tokens.forEach(function (w) { m[w] = (m[w] || 0) + 1; });
+    });
+    ult.alias = [];   // uma confirmação por resposta
+  }
+
+  // chamado por remember(): guarda o que foi perguntado/respondido para o 👍/👎 e os toques saberem a quê se referem
+  function aprNota(userText, units) {
+    userText = String(userText || '').trim();
+    if (!userText || piiBlock(userText) || crisis(userText)) { session.ult = null; return; }
+    var q = parseQuery(userText), ids = [];
+    (units || []).forEach(function (u) { if (u && u.id != null) ids.push(u.id); });
+    var toks = aprTokens(q), desc = aprDesconhecidos(q), alias = [];
+    if (!ids.length) {
+      session.aprPend = desc.length ? { tokens: desc, turno: session.turno } : (session.aprPend && session.turno - session.aprPend.turno <= 3 ? session.aprPend : null);
+    } else if (session.aprPend && session.turno - session.aprPend.turno <= 3) {
+      alias = session.aprPend.tokens; session.aprPend = null;
+    }
+    var antes = session.ult, repetida = !!(antes && norm(antes.texto) === norm(userText) && Date.now() - antes.t < 120000);   // "Refazer" não conta como pergunta nova
+    session.ult = { texto: userText.slice(0, 80), tokens: toks, ids: ids.slice(0, 6), alias: alias, fb: '', usados: {}, t: Date.now() };
+    // "mais perguntadas": só perguntas curtas que o Argo conseguiu responder com unidades
+    if (!repetida && ids.length && toks.length && userText.length >= 6 && userText.length <= 70) {
+      var L = aprLoad(), key = q.strong.slice().sort().join(' ');
+      if (key) { var f = L.freq[key] || (L.freq[key] = { n: 0, t: 0, q: userText.slice(0, 70) }); f.n++; f.t = Date.now(); f.q = userText.slice(0, 70); aprPoda(L); aprSave(); }
+    }
+  }
+
+  function aprFeedback(sinal) {
+    var u = session.ult;
+    if (!u || u.fb || (sinal !== 'bom' && sinal !== 'ruim')) return false;
+    u.fb = sinal;
+    var L = aprLoad();
+    L.n++;
+    if (sinal === 'bom') {
+      L.up++;
+      if (u.ids.length && u.tokens.length) aprReforca(u.tokens, u.ids, 3);
+      aprConfirmaApelido(u);
+    } else {
+      L.down++;
+      if (u.ids.length && u.tokens.length) aprReforca(u.tokens, u.ids, -3);
+      Object.keys(L.freq).forEach(function (k) { if (norm(L.freq[k].q) === norm(u.texto)) L.freq[k].n = Math.max(0, L.freq[k].n - 2); });
+    }
+    aprEnvelhece(L); aprPoda(L); aprSave();
+    return true;
+  }
+  // a pessoa ligou, abriu a ficha, abriu o mapa ou copiou os dados de uma unidade: voto de confiança nela
+  function aprUsou(unit) {
+    var u = session.ult, id = unit && unit.id;
+    if (!u || id == null || u.ids.indexOf(id) < 0 || u.usados[id] || !u.tokens.length) return false;
+    u.usados[id] = 1;
+    var L = aprLoad();
+    L.n++;
+    aprReforca(u.tokens, [id], 2);
+    aprConfirmaApelido(u);
+    aprEnvelhece(L); aprPoda(L); aprSave();
+    return true;
+  }
+  function aprFrequentes(k) {
+    var L = aprLoad();
+    return Object.keys(L.freq).map(function (key) { return L.freq[key]; })
+      .filter(function (f) { return f.n >= 2; })
+      .sort(function (a, b) { return b.n - a.n || b.t - a.t; })
+      .slice(0, k || 3).map(function (f) { return { texto: f.q, vezes: f.n }; });
+  }
+  function aprResumo() {
+    var L = aprLoad(), pref = [];
+    var porUni = {};
+    Object.keys(L.tok).forEach(function (t) { Object.keys(L.tok[t]).forEach(function (id) { porUni[id] = (porUni[id] || 0) + L.tok[t][id]; }); });
+    Object.keys(porUni).filter(function (id) { return porUni[id] >= 2; }).sort(function (a, b) { return porUni[b] - porUni[a]; }).slice(0, 5).forEach(function (id) {
+      var d = data.filter(function (x) { return String(x.id) === String(id); })[0];
+      if (d) pref.push({ nome: d.name || d.fullName || String(id), peso: Math.round(porUni[id] * 10) / 10 });
+    });
+    var apel = Object.keys(L.alias).slice(0, 8).map(function (a) {
+      var m = L.alias[a];
+      return { de: a, para: Object.keys(m).sort(function (x, y) { return m[y] - m[x]; }).slice(0, 3) };
+    });
+    return { n: L.n, bons: L.up, ruins: L.down, desde: L.t0, preferidas: pref, apelidos: apel, frequentes: aprFrequentes(5) };
+  }
+  function aprApagar() {
+    apr = aprVazio();
+    try { var st = aprStore(); if (st) st.removeItem(APR_KEY); } catch (e) { /* ignora */ }
+    if (session) { session.ult = null; session.aprPend = null; }
+  }
+
   return {
+    aprender: { feedback: aprFeedback, usou: aprUsou, resumo: aprResumo, frequentes: aprFrequentes, apagar: aprApagar, ativo: aprAtivo },
     interpretar: interpretar, init: init, setCid: setCid, setMunicipios: setMunicipios, setCensoSuas: setCensoSuas, psiCenso: psiCensoAsk, psiCensoDados: function () { return { mun: CP_MUN, perfil: CP_PERFIL_MUN, equipe: CP_EQUIPE_MUN, interior: CP_INTERIOR, bvEquipe: CP_BV_EQUIPE }; }, bvCenso: boaVistaCensoAsk, municipiosRR: rrAsk, cid: cidAsk, norm: norm, piiBlock: piiBlock, crisis: crisis, plan: plan, planMulti: planMulti, planSeguimento: planSeguimento, contagem: contagem,
     directory: function (t, tabCat) { return directory(t, session, tabCat); },
     glossary: glossaryScore, compose: { directory: composeDirectory, glossary: composeGlossary },
