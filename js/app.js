@@ -28312,6 +28312,63 @@ const ARGO_ACOES_IA = [
   { id: 'appsext', cat: 'appsext', rotulo: 'Aplicativos', descricao: 'Outros aplicativos do autor' }
 ];
 
+// Abre UMA ferramenta da aba Ferramentas (renda per capita, prazos, NIS/CPF...): troca de aba, mostra só o cartão
+// (um cartão recolhido abre sozinho ao filtrar), rola até ele e põe o cursor no primeiro campo. Não preenche nada.
+function argoAssistantOpenTool(toolId) {
+  const entrada = typeof TOOLS_CATALOG === 'object' ? Object.entries(TOOLS_CATALOG).find(e => e[1].id === toolId) : null;
+  argoAssistantGoTo('ferramentas');
+  if (!entrada) return;
+  let tentativas = 0;
+  const ir = () => {
+    const busca = document.getElementById('toolsFind');
+    if (!busca) { if (++tentativas < 20) setTimeout(ir, 60); return; }   // a aba pode levar um instante para desenhar
+    const todas = document.querySelector('#toolsRoot .tools-fchip[data-tf="all"]');
+    if (todas) todas.click();
+    busca.value = entrada[0];
+    busca.dispatchEvent(new Event('input', { bubbles: true }));
+    const cartao = document.querySelector('#toolsRoot [data-tid="' + toolId + '"]');
+    if (!cartao) return;
+    try { cartao.scrollIntoView({ block: 'start', behavior: 'smooth' }); } catch (e) { cartao.scrollIntoView(); }
+    const campo = cartao.querySelector('input:not([type=hidden]), textarea, select');
+    if (campo) { try { campo.focus({ preventScroll: true }); } catch (e) { /* sem foco */ } }
+  };
+  ir();
+}
+
+// Uma ação por ferramenta, montada do próprio catálogo da aba Ferramentas (não fica desatualizada).
+function argoAcoesFerramentas() {
+  if (typeof TOOLS_CATALOG !== 'object') return [];
+  return Object.entries(TOOLS_CATALOG).map(([titulo, m]) => ({
+    id: 'ferr_' + m.id, tool: m.id, cat: 'ferramentas',
+    rotulo: titulo, descricao: 'Ferramenta: ' + titulo, kw: m.kw
+  }));
+}
+
+// O Paulus só leva 20 ações ao Worker (MAX_ACOES_ENVIADAS) e corta o resto em silêncio. Com abas + ferramentas são
+// ~49, então escolhe-se por pergunta: primeiro as que combinam com as palavras da pergunta/aba, depois as de sempre.
+// Função pura (testada em scripts/teste-acoes-ia.mjs).
+function argoEscolherAcoesIA(lista, texto, aba, max) {
+  const norm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const raiz = w => (w.length > 5 ? w.slice(0, 5) : w);               // "atendimentos" ~ "atendimento", "prazos" ~ "prazo"
+  const parar = new Set(['para', 'como', 'qual', 'quais', 'onde', 'quero', 'preciso', 'posso', 'fazer', 'sobre', 'esta', 'esse', 'essa', 'isso', 'voce', 'tenho', 'minha', 'meu', 'tem', 'uma', 'uns', 'umas', 'dos', 'das', 'que', 'com', 'por']);
+  const palavras = Array.from(new Set(norm(texto + ' ' + (aba || '')).split(/[^a-z0-9]+/).filter(w => w.length >= 3 && !parar.has(w)).map(raiz)));
+  const pontuadas = lista.map((a, i) => {
+    // casa por INÍCIO de palavra ("bom" não pega "bombeiros"); palavra de 3 letras (nis, cpf, pdf, zip) só se for igual
+    const toks = norm([a.rotulo, a.descricao, a.kw].join(' ')).split(/[^a-z0-9]+/).filter(Boolean);
+    let pts = 0;
+    palavras.forEach(w => { if (toks.some(t => (w.length >= 4 ? t.indexOf(w) === 0 : t === w))) pts += 1; });
+    return { a, i, pts };
+  });
+  const comPontos = pontuadas.filter(x => x.pts > 0).sort((x, y) => (y.pts - x.pts) || (x.i - y.i));
+  const escolhidas = comPontos.slice(0, max).map(x => x.a);
+  if (escolhidas.length < max) {
+    const ja = new Set(escolhidas.map(a => a.id));
+    // completa com as abas de sempre (a ordem da lista base é a de importância), nunca com ferramentas soltas
+    pontuadas.filter(x => !x.a.tool && !ja.has(x.a.id)).slice(0, max - escolhidas.length).forEach(x => escolhidas.push(x.a));
+  }
+  return escolhidas.slice(0, max);
+}
+
 function argoStreamIA(B, rawText, payload, hooks) {
   if (typeof Paulus === 'undefined' || !Paulus.perguntar) {
     return B.streamAI(payload, hooks).then(txt => {
@@ -28335,7 +28392,9 @@ function argoStreamIA(B, rawText, payload, hooks) {
     aba: payload.pagina,
     semAcoes: true,                 // "abrir/buscar" já foram tratados pelo Argo antes de chegar aqui
     // A IA pode PROPOR estas telas como botões (Paulus v0.4.0); nada abre sozinho.
-    acoes: ARGO_ACOES_IA.map(a => ({ id: a.id, rotulo: a.rotulo, descricao: a.descricao, executar: () => argoAssistantGoTo(a.cat) })),
+    // São ~49 (abas + ferramentas) e o Paulus só leva 20: escolhe as que combinam com a pergunta e a aba.
+    acoes: argoEscolherAcoesIA(ARGO_ACOES_IA.concat(argoAcoesFerramentas()), rawText, payload.pagina, 20)
+      .map(a => ({ id: a.id, rotulo: a.rotulo, descricao: a.descricao, executar: () => (a.tool ? argoAssistantOpenTool(a.tool) : argoAssistantGoTo(a.cat)) })),
     fichas: payload.contexto,
     baseApp: payload.base,          // verbetes conferidos, valores de referência e calendário PBF do próprio app
     panorama: payload.panorama,     // totais reais do diretório por grupo ("quantos CAPS?"); sem isso a IA contaria fichas soltas
