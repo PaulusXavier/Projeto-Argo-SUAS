@@ -8125,3 +8125,30 @@ header.hero .hero-stat-label { font-size: 0.66rem; line-height: 1.25; }
   #loginScreen::before, #loginScreen::after { animation: none; }
   #loginScreen::after { display: none; }
 }
+
+/* Chuva Matrix de caracteres: camada decorativa atrás do painel de login. */
+#loginScreen { background: #02070a; }
+.login-matrix {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: .82;
+}
+.login-shell { z-index: 2; }
+.login-story { position: relative; }
+#loginScreen::before, #loginScreen::after { z-index: 1; }
+#loginScreen::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 12%, rgba(0, 4, 8, .28) 75%, rgba(0, 3, 5, .7) 100%);
+}
+#loginScreen::after { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .login-matrix { opacity: .55; }
+}
