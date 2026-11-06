@@ -1123,6 +1123,8 @@
   //   ask: (texto, meta) => resultado | null | Promise<resultado>,
   //   defaultQuickActions: () => [{ label, run, reply, mood }, ...],
   //   onUnit: (unidade) => {},                           // botão "Ver ficha" dos cartões
+  //   onUnitUse: (unidade) => {},                        // ligou/abriu ficha/mapa/copiou: voto de confiança (aprendizado)
+  //   onFeedback: ('bom' | 'ruim') => {},                // 👍/👎 numa resposta (aprendizado)
   //   onReset: () => {},                                 // "Nova conversa"
   //   status: () => ({ text, level: 'ok' | 'warn' | 'off' })
   // })
@@ -1410,6 +1412,10 @@
       return b;
     }
 
+    // aprendizado com o uso: ligar, abrir a ficha/mapa ou copiar é um voto de confiança naquela unidade
+    function usedUnit(u) { try { if (typeof options.onUnitUse === 'function') options.onUnitUse(u); } catch (e) { /* aprender é opcional */ } }
+    function sendFeedback(sinal) { try { if (typeof options.onFeedback === 'function') options.onFeedback(sinal); } catch (e) { /* aprender é opcional */ } }
+
     function buildUnit(u) {
       var card = document.createElement('div');
       card.className = 'argo-assistant-unit';
@@ -1420,15 +1426,16 @@
       var row = document.createElement('div'); row.className = 'argo-assistant-unit-actions';
       (u.phoneLinks || []).slice(0, 2).forEach(function (p) {
         if (!p || !p.href) return;
-        var l = document.createElement('a'); l.className = 'argo-assistant-mini'; l.href = p.href; l.textContent = '📞 ' + p.label; row.appendChild(l);
+        var l = document.createElement('a'); l.className = 'argo-assistant-mini'; l.href = p.href; l.textContent = '📞 ' + p.label; l.addEventListener('click', function () { usedUnit(u); }); row.appendChild(l);
       });
       if (u.address) {
         var m = document.createElement('a'); m.className = 'argo-assistant-mini'; m.target = '_blank'; m.rel = 'noopener noreferrer';
         m.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(u.address.replace(/<[^>]*>/g, ' ') + ' Boa Vista RR');
-        m.textContent = '🗺️ Mapa'; row.appendChild(m);
+        m.textContent = '🗺️ Mapa'; m.addEventListener('click', function () { usedUnit(u); }); row.appendChild(m);
       }
-      if (typeof options.onUnit === 'function') row.appendChild(tinyBtn('📄 Ver ficha', '', function () { try { options.onUnit(u); } catch (e) { /* ação do app - ignora */ } }));
+      if (typeof options.onUnit === 'function') row.appendChild(tinyBtn('📄 Ver ficha', '', function () { usedUnit(u); try { options.onUnit(u); } catch (e) { /* ação do app - ignora */ } }));
       row.appendChild(tinyBtn('Copiar', '', function (ev) {
+        usedUnit(u);
         copyText([u.name, u.address, u.hours ? 'Horário: ' + u.hours : '', (u.phones || []).join(' · ')].filter(Boolean).join('\n'), ev.currentTarget);
       }));
       card.appendChild(row);
@@ -1475,16 +1482,23 @@
         }));
       }
       if (plain && plain.length > 60 && !result.crisis) acts.appendChild(tinyBtn('Copiar', 'argo-assistant-mini-ghost', function (ev) { copyText(plain, ev.currentTarget); if (result.badge === 'IA') rate('copiou'); }));
-      if (result.badge === 'IA') {
-        acts.appendChild(tinyBtn('Refazer', 'argo-assistant-mini-ghost', function () { if (!busy && lastQuestion) ask(lastQuestion, { regen: true, silent: true }); }));
+      var isIA = result.badge === 'IA', rid = runId;   // rid: o 👍/👎 só vale para a resposta mais recente
+      var hasUnits = !!(result.units && result.units.length && !result.crisis);
+      if (isIA || hasUnits) {
+        if (isIA) acts.appendChild(tinyBtn('Refazer', 'argo-assistant-mini-ghost', function () { if (!busy && lastQuestion) ask(lastQuestion, { regen: true, silent: true }); }));
         var up = tinyBtn('👍', 'argo-assistant-mini-ghost', function () {
-          up.disabled = down.disabled = true; up.classList.add('is-on'); rate('bom');
+          up.disabled = down.disabled = true; up.classList.add('is-on'); if (isIA) rate('bom'); if (rid === runId) sendFeedback('bom');
           poke(root.querySelector('#argoAssistantMascot svg.argo-mascot-icon'), 'love');
-          announce('Que bom que ajudou!');
+          announce(isIA ? 'Que bom que ajudou!' : 'Anotado! Vou lembrar disso nas próximas buscas.');
         });
         up.setAttribute('aria-label', 'Resposta útil');
         var down = tinyBtn('👎', 'argo-assistant-mini-ghost', function () {
-          up.disabled = down.disabled = true; down.classList.add('is-on'); rate('ruim');
+          up.disabled = down.disabled = true; down.classList.add('is-on'); if (isIA) rate('ruim'); if (rid === runId) sendFeedback('ruim');
+          if (!isIA) {
+            addMsg('Anotado, obrigado por avisar! Vou dar menos peso a essa resposta nas próximas buscas parecidas. Se puder, diga o bairro ou o tipo de serviço que ajudo a achar a certa.', 'bot', 'notfound');
+            renderQuick(defaultQuick());
+            return;
+          }
           addMsg('Obrigado por avisar! Posso tentar de outro jeito. Quanto mais específica a pergunta (unidade, bairro, público), melhor a resposta.', 'bot', 'notfound');
           renderQuick([
             { label: 'Explicar de outro jeito', ask: 'Explique de outro jeito, mais simples e com um exemplo.', force: true, signal: 'outro_jeito' },
@@ -1494,6 +1508,7 @@
           ]);
         });
         down.setAttribute('aria-label', 'Resposta não ajudou');
+        up.title = 'Útil: o Argo aprende com isso'; down.title = 'Não ajudou: o Argo aprende com isso';
         acts.appendChild(up); acts.appendChild(down);
       }
       if (acts.firstChild) b.col.appendChild(acts);
