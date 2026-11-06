@@ -20,17 +20,18 @@
       [0.13,.27],[.22,.19],[.31,.32],[.42,.22],[.53,.35],[.64,.25],[.73,.39],[.84,.29],[.91,.43],
       [.18,.52],[.30,.58],[.44,.49],[.57,.61],[.69,.53],[.81,.65],[.25,.78],[.39,.73],[.54,.82],[.72,.77],[.88,.85]
     ].map(([x,y],i) => ({x:x*width,y:y*height,phase:i*1.7,size:i%5===0?2:1.25}));
-    falling = Array.from({length: Math.max(18, Math.min(48, Math.round(width / 28)))}, () => makeFalling(true));
+    falling = Array.from({length: Math.max(24, Math.min(64, Math.round(width / 24)))}, () => makeFalling(true));
     draw(true);
   };
+  // Pequenos pontos de luz que caem devagar e piscam. A maioria é azul-gelo; alguns são dourados.
   const makeFalling = (initial = false) => ({
     x: Math.random() * width,
-    y: initial ? Math.random() * height : -8 - Math.random() * 50,
-    speed: 0.35 + Math.random() * 1.05,
-    drift: -0.12 + Math.random() * 0.24,
-    size: 0.7 + Math.random() * 1.5,
+    y: initial ? Math.random() * height : -6 - Math.random() * 40,
+    speed: 0.3 + Math.random() * 0.9,
+    drift: -0.1 + Math.random() * 0.2,
+    size: 0.6 + Math.random() * 1.1,
     phase: Math.random() * Math.PI * 2,
-    trail: 8 + Math.random() * 22
+    gold: Math.random() < 0.18
   });
   const draw = (still = false) => {
     ctx.clearRect(0, 0, width, height);
@@ -51,18 +52,14 @@
     ctx.shadowBlur = 0;
     if (!still) falling.forEach((s) => {
       s.y += s.speed; s.x += s.drift;
-      const twinkle = .42 + .58 * (0.5 + 0.5 * Math.sin(frame * .08 + s.phase));
-      const tailX = s.x - s.drift * s.trail * 2;
-      const tailY = s.y - s.trail;
-      const grad = ctx.createLinearGradient(s.x,s.y,tailX,tailY);
-      grad.addColorStop(0, `rgba(240,252,255,${twinkle})`);
-      grad.addColorStop(.22, `rgba(105,218,255,${twinkle*.58})`);
-      grad.addColorStop(1, 'rgba(45,150,255,0)');
-      ctx.strokeStyle = grad; ctx.lineWidth = s.size; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(s.x,s.y); ctx.lineTo(tailX,tailY); ctx.stroke();
-      ctx.beginPath(); ctx.arc(s.x,s.y,s.size*.85,0,Math.PI*2);
-      ctx.fillStyle = `rgba(238,251,255,${twinkle})`; ctx.shadowColor = '#65dfff'; ctx.shadowBlur = 11; ctx.fill();
-      if (s.y > height + s.trail || s.x < -20 || s.x > width + 20) Object.assign(s, makeFalling());
+      const twinkle = .45 + .55 * (0.5 + 0.5 * Math.sin(frame * .08 + s.phase));
+      const core = s.gold ? '255,224,138' : '226,248,255';
+      const halo = s.gold ? '255,200,70' : '83,217,255';
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${core},${twinkle})`;
+      ctx.shadowColor = `rgba(${halo},.9)`; ctx.shadowBlur = 6 + s.size * 2;
+      ctx.fill();
+      if (s.y > height + 10 || s.x < -20 || s.x > width + 20) Object.assign(s, makeFalling());
     });
     ctx.shadowBlur = 0;
   };
