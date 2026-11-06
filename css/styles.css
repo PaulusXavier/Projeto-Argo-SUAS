@@ -8059,3 +8059,52 @@ header.hero .hero-stat-label { font-size: 0.66rem; line-height: 1.25; }
   .login-panel { padding-top: 2.2rem; padding-bottom: 1.6rem; }
   .login-sub { margin-bottom: 1.2rem; }
 }
+
+
+/* Fundo tecnológico animado do login: grade holográfica, halos e uma varredura
+   discreta. As camadas são decorativas e não interceptam interações. */
+#loginScreen { isolation: isolate; }
+#loginScreen::before,
+#loginScreen::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+#loginScreen::before {
+  display: block;
+  opacity: 0.44;
+  background-image:
+    linear-gradient(rgba(91, 190, 220, 0.075) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(91, 190, 220, 0.075) 1px, transparent 1px),
+    radial-gradient(circle at 18% 28%, rgba(30, 188, 226, 0.18), transparent 23%),
+    radial-gradient(circle at 83% 74%, rgba(25, 217, 160, 0.12), transparent 25%);
+  background-size: 48px 48px, 48px 48px, 100% 100%, 100% 100%;
+  mask-image: linear-gradient(115deg, #000 0%, rgba(0,0,0,.72) 45%, transparent 92%);
+}
+#loginScreen::after {
+  display: block;
+  inset: -35% 0;
+  opacity: 0;
+  background: linear-gradient(180deg, transparent 43%, rgba(64, 205, 238, 0.08) 49%, rgba(122, 237, 255, 0.28) 50%, rgba(64, 205, 238, 0.08) 51%, transparent 57%);
+  transform: translateY(-45%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  #loginScreen::before { animation: loginGridDrift 34s linear infinite; }
+  #loginScreen::after { animation: loginBackgroundScan 11s ease-in-out 1s infinite; }
+}
+@keyframes loginGridDrift {
+  from { background-position: 0 0, 0 0, 0 0, 0 0; }
+  to { background-position: 48px 48px, 48px 48px, 0 0, 0 0; }
+}
+@keyframes loginBackgroundScan {
+  0%, 12% { opacity: 0; transform: translateY(-45%); }
+  18% { opacity: 0.75; }
+  52% { opacity: 0.38; }
+  75%, 100% { opacity: 0; transform: translateY(45%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #loginScreen::before, #loginScreen::after { animation: none; }
+  #loginScreen::after { display: none; }
+}
