@@ -507,7 +507,7 @@ function initAuth() {
       if (pwField) {
         pwField.disabled = false;
         pwField.setAttribute('aria-invalid', 'false');
-        pwField.focus();
+        pwField.focus({ preventScroll: true });
       }
       if (submitBtn) submitBtn.disabled = false;
       return;
@@ -581,7 +581,7 @@ function initAuth() {
       const value = (pwField.value || '').trim();
       if (!value) {
         showError('Digite a senha da equipe para entrar.', { quiet: true });
-        pwField.focus();
+        pwField.focus({ preventScroll: true });
         return;
       }
 
@@ -608,7 +608,7 @@ function initAuth() {
       if (technicalFailure) {
         setLoading(false);
         showError('Não foi possível verificar a senha agora. Recarregue a página; se continuar, avise quem administra o Argo SUAS.', { quiet: true });
-        pwField.focus();
+        pwField.focus({ preventScroll: true });
         return;
       }
 
@@ -673,7 +673,7 @@ function initAuth() {
             : 'Senha incorreta. Tente novamente.');
         }
         pwField.value = '';
-        pwField.focus();
+        pwField.focus({ preventScroll: true });
       }
     });
   }
@@ -1238,6 +1238,12 @@ function argoRenderHeroToday() {
     if (next && next.date.getFullYear() === AGENDA_YEAR) {
       const nm = ARGO_AGENDA_LABEL_NAMES[next.info.label] || next.info.label;
       html += chip('ht-next', 'Próximo: ' + escapeHtml(nm) + ' · ' + (next.days === 1 ? 'amanhã' : 'em ' + next.days + ' dias'), '', 'Próximo marco: ' + nm + ', ' + (next.days === 1 ? 'amanhã' : 'em ' + next.days + ' dias'));
+    }
+    const soon = (typeof agendaMdsSoon === 'function') ? agendaMdsSoon(7) : [];
+    if (soon.length) {
+      const s0 = soon[0], more = soon.filter(x => x.key === s0.key).length - 1;
+      const txt = 'MDS: ' + agendaMdsText(s0.it) + (more > 0 ? ' (+' + more + ')' : '') + ' · ' + agendaWhenWord(s0.days);
+      html += chip('ht-mds' + (s0.days <= 3 ? ' is-urgent' : ''), escapeHtml(txt), '', 'Prazo do MDS: ' + txt + '. Abrir a agenda');
     }
     el.innerHTML = html;
     el.hidden = false;
@@ -17425,6 +17431,35 @@ function agendaComputeYear(year) {
 const AGENDA_DATA_ESTIMATED = !AGENDA_DATA_BY_YEAR[AGENDA_YEAR];
 const AGENDA_DATA_INFO = AGENDA_DATA_BY_YEAR[AGENDA_YEAR] || agendaComputeYear(AGENDA_YEAR);
 
+// Datas do CRAS conforme o MDS (js/datas-cras-mds.js → window.ARGO_MDS).
+// Camada À PARTE de AGENDA_DATA_INFO: um dia pode ter feriado/pagamento E prazo
+// do MDS. Só entram as do ano exibido; entrada inválida é ignorada (um erro de
+// digitação no arquivo nunca derruba a agenda).
+const AGENDA_MDS_META = (typeof window !== 'undefined' && window.ARGO_MDS) || { datas: [], categorias: {}, fontes: {}, atualizadoEm: '' };
+const AGENDA_MDS_BY_DAY = (function () {
+  const out = {};
+  (Array.isArray(AGENDA_MDS_META.datas) ? AGENDA_MDS_META.datas : []).forEach(it => {
+    if (!it || typeof it.d !== 'string' || typeof it.t !== 'string') return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(it.d) || it.d.slice(0, 4) !== String(AGENDA_YEAR)) return;
+    (out[it.d] = out[it.d] || []).push(it);
+  });
+  return out;
+})();
+function agendaMdsCatName(it) { return (AGENDA_MDS_META.categorias && AGENDA_MDS_META.categorias[it.cat]) || 'MDS'; }
+function agendaMdsText(it) { return (it.prev ? '~ ' : '') + it.t; }
+// Prazos do MDS de hoje até daqui a "maxDias" dias (hoje conta), em ordem de data.
+function agendaMdsSoon(maxDias) {
+  const now = new Date(), today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const out = [];
+  Object.keys(AGENDA_MDS_BY_DAY).sort().forEach(k => {
+    const p = k.split('-').map(Number), days = Math.round((new Date(p[0], p[1] - 1, p[2]) - today) / 86400000);
+    if (days >= 0 && days <= maxDias) AGENDA_MDS_BY_DAY[k].forEach(it => out.push({ key: k, days: days, it: it }));
+  });
+  return out;
+}
+function agendaWhenWord(days) { return days === 0 ? 'hoje' : (days === 1 ? 'amanhã' : 'em ' + days + ' dias'); }
+function agendaMdsCount() { return Object.keys(AGENDA_MDS_BY_DAY).reduce((n, k) => n + AGENDA_MDS_BY_DAY[k].length, 0); }
+
 // Config do projeto Firebase "agenda-boa-vista" (Firestore em modo de teste,
 // regra liberando leitura/escrita em agendas/{codigo}/notes/{data} — o
 // código de sincronização funciona como senha compartilhada entre aparelhos).
@@ -19183,6 +19218,17 @@ function renderAgendaCard() {
         .agenda-item-facultativo .agenda-item-dot { background: var(--amber-ink); }
         .agenda-item-pagamento .agenda-item-dot { background: var(--green-ink); }
         .agenda-item-extra .agenda-item-dot { background: var(--blue-ink); }
+        .agenda-item-mds .agenda-item-dot { background: #6b4fa3; }
+        .agenda-mds-mark { margin-top: 2px; font-size: 9px; font-weight: 800; letter-spacing: 0.3px; text-align: center; color: #fff; background: #6b4fa3; border-radius: 3px; padding: 1px 3px; line-height: 1.3; }
+        .agenda-mds-box { margin: 8px 0 4px; padding: 8px 10px; border-left: 3px solid #6b4fa3; background: rgba(107,79,163,0.09); border-radius: 6px; font-size: 13px; }
+        .agenda-mds-box h4 { margin: 0 0 4px; font-size: 11px; letter-spacing: 0.4px; text-transform: uppercase; color: #6b4fa3; }
+        .agenda-mds-box ul { margin: 0; padding-left: 16px; }
+        .agenda-mds-box li { margin: 2px 0; }
+        .agenda-mds-box small { display: block; color: var(--ink-muted); }
+        .agenda-mds-box a { color: inherit; }
+        .agenda-mds-strip { border-left: 3px solid #6b4fa3; background: rgba(107,79,163,0.10) !important; }
+        .agenda-mds-strip em { font-style: normal; font-weight: 700; color: #6b4fa3; }
+        .agenda-mds-strip .agenda-next-btn.is-urgent { color: var(--red-ink); }
         .agenda-item-note { font-family: 'Caveat', cursive; font-size: 19px; font-weight: 700; line-height: 1.1; color: var(--blue-ink); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line; }
         .agenda-item-when { font-size: 12px; color: var(--ink-muted); white-space: nowrap; padding-top: 3px; }
         .agenda-item.is-past .agenda-item-title { font-weight: 600; color: var(--ink-muted); }
@@ -19296,6 +19342,7 @@ function renderAgendaCard() {
         .agenda-year-dots .d-facultativo { background: var(--amber-bg); box-shadow: inset 0 0 0 1px var(--amber-ink); }
         .agenda-year-dots .d-pagamento { background: var(--green-ink); }
         .agenda-year-dots .d-extra { background: var(--blue-ink); }
+        .agenda-year-dots .d-mds { background: #6b4fa3; }
         .agenda-year-dots .d-nota { background: transparent; box-shadow: inset 0 0 0 1.5px var(--blue-ink); }
         .agenda-year-btn.is-current .agenda-year-dots .d-nota { box-shadow: inset 0 0 0 1.5px #fff; }
 
@@ -19626,6 +19673,7 @@ function renderAgendaCard() {
           <div id="agendaTodayStatus" class="agenda-today-status" role="status" aria-live="polite" hidden></div>
 
           <div id="agendaNextStrip" class="agenda-next-strip" role="status"></div>
+          <div id="agendaMdsStrip" class="agenda-next-strip agenda-mds-strip" role="status"></div>
 
           <div id="agendaArgoRow" class="agenda-argo-row" role="group" aria-label="Perguntar ao Argo sobre a agenda">
             <span class="agenda-argo-icon" aria-hidden="true"></span>
@@ -19694,6 +19742,7 @@ function renderAgendaCard() {
               <button type="button" class="agenda-legend-btn" data-kind="facultativo" aria-pressed="true" onclick="agendaToggleKind('facultativo')"><span class="agenda-dot" style="background:var(--amber-bg); box-shadow: inset 0 0 0 1px var(--amber-ink)"></span>Facultativo <b></b></button>
               <button type="button" class="agenda-legend-btn" data-kind="pagamento" aria-pressed="true" onclick="agendaToggleKind('pagamento')"><span class="agenda-dot" style="background:var(--green-ink)"></span>Pagamento <b></b></button>
               <button type="button" class="agenda-legend-btn" data-kind="extra" aria-pressed="true" onclick="agendaToggleKind('extra')"><span class="agenda-dot" style="background:var(--blue-ink)"></span>13º salário <b></b></button>
+              <button type="button" class="agenda-legend-btn" data-kind="mds" aria-pressed="true" onclick="agendaToggleKind('mds')" title="Prazos do CRAS conforme o MDS (revisão cadastral, condicionalidades, Censo SUAS…)"><span class="agenda-dot" style="background:#6b4fa3"></span>MDS/CRAS <b></b></button>
             </div>
             <div class="agenda-creator-info">
               Criado por <span class="agenda-creator-name">Paulo Xavier — CRP-20/09816</span>
@@ -20111,6 +20160,11 @@ function agendaRenderCalendar() {
         html += '<div class="agenda-badge-status ' + info.type + '" title="' + escapeHtml(agendaDayTitle(key)) + '"><span class="lbl-short">' + escapeHtml(info.label === '13º SAL.' ? '13º' : info.label) + '</span><span class="lbl-full">' + escapeHtml(full) + '</span></div>';
       }
 
+      const mdsL = agendaHiddenKinds.has('mds') ? null : AGENDA_MDS_BY_DAY[key];
+      if (mdsL) {
+        html += '<div class="agenda-mds-mark" title="' + escapeHtml(mdsL.map(agendaMdsText).join(' • ')) + '">MDS' + (mdsL.length > 1 ? ' ×' + mdsL.length : '') + '</div>';
+      }
+
       cell.innerHTML = html;
       cell.dataset.day = String(d);
       cell.setAttribute('role', 'button');
@@ -20118,6 +20172,7 @@ function agendaRenderCalendar() {
       if (isToday) cell.setAttribute('aria-current', 'date');
       let ariaLabel = agendaLongDate(date);
       if (info) ariaLabel += ', ' + agendaDayTitle(key);
+      if (mdsL) ariaLabel += ', MDS: ' + mdsL.map(agendaMdsText).join('; ');
       if (note) ariaLabel += (cell.classList.contains('agenda-has-late') ? ', pendência atrasada' : '') + ', com anotação: ' + note;
       cell.setAttribute('aria-label', ariaLabel);
       cell.addEventListener('click', (ev) => {
@@ -20160,6 +20215,7 @@ function agendaRenderCalendar() {
   agendaRenderMonthList();
   agendaRenderTodayStatus();
   agendaRenderNextStrip();
+  agendaRenderMdsStrip();
   agendaRenderYearStrip();
   agendaRenderUpcoming();
   agendaRenderPending();
@@ -20747,6 +20803,7 @@ function agendaPrintMonth() {
       tr += '<td style="border:1px solid #888;vertical-align:top;padding:4px 5px;height:2.6cm;' + (weekend ? 'background:#f3f3f3;' : '') + '">' +
         '<div style="font-size:15px;font-weight:700;' + (c === 0 || kind === 'feriado' ? 'color:#b3413a;' : '') + '">' + d + '</div>' +
         (info ? '<div style="margin-top:3px;font-size:10.5px;font-weight:700;line-height:1.2;color:' + colors[kind] + ';">' + escapeHtml(agendaDayTitle(key)) + '</div>' : '') +
+        (AGENDA_MDS_BY_DAY[key] ? AGENDA_MDS_BY_DAY[key].map(x => '<div style="margin-top:3px;font-size:9.5px;line-height:1.2;color:#6b4fa3;"><strong>MDS:</strong> ' + escapeHtml(agendaMdsText(x)) + '</div>').join('') : '') +
         '</td>';
     }
     rows += '<tr>' + tr + '</tr>';
@@ -20756,6 +20813,8 @@ function agendaPrintMonth() {
   const list = marked.length
     ? marked.map(k => '<li><strong>' + agendaDateFromKey(k).getDate() + '</strong> — ' + escapeHtml(agendaDayTitle(k)) + ' <span style="color:#666;">(' + escapeHtml(argoAgKindWord(argoAgendaKind(AGENDA_DATA_INFO[k])).toLowerCase()) + ')</span></li>').join('')
     : '<li>Nenhuma data oficial marcada neste mês.</li>';
+  const mdsMonth = Object.keys(AGENDA_MDS_BY_DAY).filter(k => k.indexOf(prefix) === 0).sort();
+  const mdsList = mdsMonth.map(k => AGENDA_MDS_BY_DAY[k].map(x => '<li><strong>' + agendaDateFromKey(k).getDate() + '</strong> — <span style="color:#6b4fa3;">MDS:</span> ' + escapeHtml(agendaMdsText(x)) + '</li>').join('')).join('');
   const biz = Object.keys(AGENDA_DATA_INFO).length ? ' · ' + agendaBusinessDays(m) + ' dias úteis' : '';
   const printArea = document.getElementById('print-area');
   if (!printArea) { window.print(); return; }
@@ -20765,8 +20824,8 @@ function agendaPrintMonth() {
         '<h1 style="margin:0;font-size:26px;font-style:italic;">' + AGENDA_MONTH_NAMES[m] + ' de ' + AGENDA_YEAR + '</h1>' +
         '<span style="font-size:12px;color:#555;">Agenda Argo' + biz + '</span></div>' +
       '<table style="width:100%;border-collapse:collapse;table-layout:fixed;">' + rows + '</table>' +
-      '<ul style="margin:10px 0 0;padding-left:18px;font-size:12px;columns:2;line-height:1.5;">' + list + '</ul>' +
-      '<div style="margin-top:8px;font-size:10px;color:#777;">Feriados, pontos facultativos e pagamentos oficiais · Argo SUAS · Impresso em ' + new Date().toLocaleDateString('pt-BR') + '</div>' +
+      '<ul style="margin:10px 0 0;padding-left:18px;font-size:12px;columns:2;line-height:1.5;">' + list + mdsList + '</ul>' +
+      '<div style="margin-top:8px;font-size:10px;color:#777;">Feriados, pontos facultativos, pagamentos e datas do CRAS conforme o MDS · Argo SUAS · Impresso em ' + new Date().toLocaleDateString('pt-BR') + '</div>' +
     '</div>';
   setTempPageOrientation('A4 landscape', '0.8cm');
   window.addEventListener('afterprint', function done() {
@@ -20788,6 +20847,7 @@ function agendaRenderYearStrip() {
     const m = Number(k.slice(5, 7)) - 1;
     if (m >= 0 && m < 12) kinds[m][argoAgendaKind(AGENDA_DATA_INFO[k])] = true;
   });
+  Object.keys(AGENDA_MDS_BY_DAY).forEach(k => { const m = Number(k.slice(5, 7)) - 1; if (m >= 0 && m < 12) kinds[m].mds = true; });
   Object.keys(agendaNotesCache).forEach(k => {
     if (k.slice(0, 4) !== String(AGENDA_YEAR)) return;
     const e = agendaNotesCache[k];
@@ -20796,7 +20856,7 @@ function agendaRenderYearStrip() {
   });
   const hadFocus = el.contains(document.activeElement);
   el.innerHTML = AGENDA_MONTH_NAMES.map((name, i) => {
-    const dots = ['feriado', 'facultativo', 'pagamento', 'extra', 'nota']
+    const dots = ['feriado', 'facultativo', 'pagamento', 'extra', 'mds', 'nota']
       .filter(k => kinds[i][k] && !agendaHiddenKinds.has(k))
       .map(k => '<i class="d-' + k + '"></i>').join('');
     return '<button type="button" class="agenda-year-btn' + (i === agendaCurrentMonth ? ' is-current' : '') + (i === nowMonth ? ' is-now' : '') + '"' +
@@ -20818,15 +20878,17 @@ function agendaRenderUpcoming() {
   const now = new Date();
   if (now.getFullYear() !== AGENDA_YEAR) { box.hidden = true; return; }
   const todayKey = agendaIsoKey(now);
-  const keys = Object.keys(AGENDA_DATA_INFO).sort()
-    .filter(k => k >= todayKey && Number(k.slice(5, 7)) - 1 !== agendaCurrentMonth && !agendaHiddenKinds.has(argoAgendaKind(AGENDA_DATA_INFO[k])))
+  const keys = Array.from(new Set(Object.keys(AGENDA_DATA_INFO).filter(k => !agendaHiddenKinds.has(argoAgendaKind(AGENDA_DATA_INFO[k])))
+    .concat(agendaHiddenKinds.has('mds') ? [] : Object.keys(AGENDA_MDS_BY_DAY)))).sort()
+    .filter(k => k >= todayKey && Number(k.slice(5, 7)) - 1 !== agendaCurrentMonth)
     .slice(0, 8);
   if (!keys.length) { box.hidden = true; return; }
   list.innerHTML = keys.map(key => {
     const date = agendaDateFromKey(key);
-    const kind = argoAgendaKind(AGENDA_DATA_INFO[key]);
+    const kind = AGENDA_DATA_INFO[key] ? argoAgendaKind(AGENDA_DATA_INFO[key]) : 'mds';
     const when = agendaRelativeLabel(key) || AGENDA_WEEKDAY_ABBR[date.getDay()].toLowerCase();
-    const title = agendaDayTitle(key);
+    const mdsU = agendaHiddenKinds.has('mds') ? null : AGENDA_MDS_BY_DAY[key];
+    const title = [agendaDayTitle(key)].concat(mdsU ? mdsU.map(agendaMdsText) : []).filter(Boolean).join(' • ');
     return '<button type="button" class="agenda-item agenda-item-' + kind + (key === todayKey ? ' is-today' : '') + '" data-jump="' + key + '"' +
       ' aria-label="' + escapeHtml(agendaLongDate(date) + ', ' + title) + '">' +
       '<span class="agenda-item-date"><b>' + date.getDate() + '</b><small>' + AGENDA_MONTH_NAMES[date.getMonth()].slice(0, 3).toLowerCase() + '</small></span>' +
@@ -20852,9 +20914,10 @@ function agendaToggleKind(kind) {
 }
 
 function agendaUpdateLegend() {
-  const counts = { feriado: 0, facultativo: 0, pagamento: 0, extra: 0 };
+  const counts = { feriado: 0, facultativo: 0, pagamento: 0, extra: 0, mds: 0 };
   const prefix = AGENDA_YEAR + '-' + String(agendaCurrentMonth + 1).padStart(2, '0') + '-';
   Object.keys(AGENDA_DATA_INFO).forEach(k => { if (k.indexOf(prefix) === 0) counts[argoAgendaKind(AGENDA_DATA_INFO[k])]++; });
+  Object.keys(AGENDA_MDS_BY_DAY).forEach(k => { if (k.indexOf(prefix) === 0) counts.mds += AGENDA_MDS_BY_DAY[k].length; });
   document.querySelectorAll('.agenda-legend-btn').forEach(btn => {
     const k = btn.dataset.kind;
     btn.setAttribute('aria-pressed', agendaHiddenKinds.has(k) ? 'false' : 'true');
@@ -20873,6 +20936,27 @@ function agendaRenderNextStrip() {
   const when = next.days === 1 ? 'amanhã' : 'em ' + next.days + ' dias';
   el.innerHTML = 'Próximo marco: <strong>' + escapeHtml(name) + '</strong> <button type="button" class="agenda-next-btn" onclick="agendaJumpTo(' + next.date.getMonth() + ')">' + String(next.date.getDate()).padStart(2, '0') + '/' + String(next.date.getMonth() + 1).padStart(2, '0') + '</button><span class="agenda-next-days">' + when + '</span>';
   el.classList.add('on');
+}
+// Faixa de aviso: prazos do MDS nos próximos 14 dias (até 3), com contagem de dias.
+function agendaRenderMdsStrip() {
+  const el = document.getElementById('agendaMdsStrip');
+  if (!el) return;
+  if (agendaHiddenKinds.has('mds')) { el.classList.remove('on'); return; }
+  const soon = agendaMdsSoon(14);
+  if (!soon.length) { el.classList.remove('on'); return; }
+  const shown = soon.slice(0, 3);
+  el.innerHTML = '<strong>Prazos do MDS:</strong> ' + shown.map(x => {
+    const dt = agendaDateFromKey(x.key);
+    return '<button type="button" class="agenda-next-btn' + (x.days <= 3 ? ' is-urgent' : '') + '" onclick="agendaJumpToDay(\'' + x.key + '\')" title="' + escapeHtml(agendaMdsText(x.it)) + '">' +
+      String(dt.getDate()).padStart(2, '0') + '/' + String(dt.getMonth() + 1).padStart(2, '0') + ' · ' + escapeHtml(agendaWhenWord(x.days)) + '</button> ' +
+      '<span>' + escapeHtml(agendaMdsText(x.it).length > 60 ? agendaMdsText(x.it).slice(0, 58) + '…' : agendaMdsText(x.it)) + '</span>';
+  }).join(' · ') + (soon.length > 3 ? ' <em>+' + (soon.length - 3) + '</em>' : '');
+  el.classList.add('on');
+}
+function agendaJumpToDay(key) {
+  const d = agendaDateFromKey(key);
+  agendaCurrentMonth = d.getMonth(); agendaFocusDay = d.getDate();
+  agendaRenderCalendar(); agendaOpenNoteModal(key);
 }
 function agendaJumpTo(month) { agendaCurrentMonth = month; agendaFocusDay = 0; agendaRenderCalendar(); }
 
@@ -20913,24 +20997,25 @@ function agendaClearSearch() {
 // (sem diferenciar acento/maiúscula), em ordem de data.
 function agendaRenderSearchResults(list, summary) {
   const q = argoNorm(agendaSearchQuery);
-  const keys = new Set(Object.keys(AGENDA_DATA_INFO));
+  const keys = new Set(Object.keys(AGENDA_DATA_INFO).concat(Object.keys(AGENDA_MDS_BY_DAY)));
   Object.keys(agendaNotesCache).forEach(k => { if (k.slice(0, 4) === String(AGENDA_YEAR) && agendaNotesCache[k] && agendaNotesCache[k].length) keys.add(k); });
   const todayKey = agendaIsoKey(new Date());
   let html = '', found = 0;
   Array.from(keys).sort().forEach(key => {
     const info = AGENDA_DATA_INFO[key];
-    const title = info ? agendaDayTitle(key) : '';
+    const mdsS = AGENDA_MDS_BY_DAY[key] || [];
+    const title = [info ? agendaDayTitle(key) : ''].concat(mdsS.map(agendaMdsText)).filter(Boolean).join(' • ');
     const entries = agendaNotesCache[key] || [];
     const noteText = entries.map(e => e.text).join(' · ');
-    if (argoNorm(title + ' ' + noteText).indexOf(q) === -1) return;
+    if (argoNorm(title + ' ' + mdsS.map(x => agendaMdsCatName(x)).join(' ') + ' ' + noteText).indexOf(q) === -1) return;
     found++;
     const date = agendaDateFromKey(key);
-    const kind = info ? argoAgendaKind(info) : 'nota';
+    const kind = info ? argoAgendaKind(info) : (mdsS.length ? 'mds' : 'nota');
     const note = agendaEntriesPreview(entries);
     html += '<button type="button" class="agenda-item agenda-item-' + kind + (key === todayKey ? ' is-today' : '') + (key < todayKey ? ' is-past' : '') + '" data-key="' + key + '" aria-label="' + escapeHtml(agendaLongDate(date) + (title ? ', ' + title : '') + (note ? ', anotação: ' + note : '')) + '">' +
       '<span class="agenda-item-date"><b>' + date.getDate() + '</b><small>' + AGENDA_MONTH_NAMES[date.getMonth()].slice(0, 3).toLowerCase() + '</small></span>' +
       '<span class="agenda-item-main">' +
-        (info ? '<span class="agenda-item-title"><i class="agenda-item-dot"></i><span>' + escapeHtml(title) + '</span></span>' : '') +
+        ((info || mdsS.length) ? '<span class="agenda-item-title"><i class="agenda-item-dot"></i><span>' + escapeHtml(title) + '</span></span>' : '') +
         (note ? '<span class="agenda-item-note">' + escapeHtml(note) + '</span>' : '') +
       '</span><span class="agenda-item-when">' + escapeHtml(agendaRelativeLabel(key)) + '</span></button>';
   });
@@ -20961,7 +21046,7 @@ function agendaRenderMonthList() {
   const count = agendaDaysInMonth(m);
   const now = new Date();
   const todayKey = now.getFullYear() === AGENDA_YEAR ? agendaKeyFor(now.getMonth(), now.getDate()) : '';
-  const counts = { feriado: 0, facultativo: 0, pagamento: 0, extra: 0 };
+  const counts = { feriado: 0, facultativo: 0, pagamento: 0, extra: 0, mds: 0 };
   let notes = 0;
   let html = '';
 
@@ -20971,13 +21056,15 @@ function agendaRenderMonthList() {
     const info = (infoAll && !agendaHiddenKinds.has(argoAgendaKind(infoAll))) ? infoAll : null;
     const entries = agendaNotesCache[key];
     const note = agendaEntriesPreview(entries);
+    const mdsL = agendaHiddenKinds.has('mds') ? null : AGENDA_MDS_BY_DAY[key];
     if (agendaOnlyPending) { if (!note) continue; }
-    else if (!info && !note) continue;
+    else if (!info && !note && !mdsL) continue;
     if (info) counts[argoAgendaKind(info)]++;
+    if (mdsL) counts.mds += mdsL.length;
     if (entries && entries.length) notes += entries.length;
 
     const date = new Date(AGENDA_YEAR, m, d);
-    const kind = info ? argoAgendaKind(info) : 'nota';
+    const kind = info ? argoAgendaKind(info) : (mdsL ? 'mds' : 'nota');
     const title = agendaDayTitle(key);
     const rel = agendaRelativeLabel(key);
     const isToday = key === todayKey;
@@ -20985,11 +21072,13 @@ function agendaRenderMonthList() {
     let label = agendaLongDate(date);
     if (title) label += ', ' + title;
     if (note) label += ', anotação: ' + note;
+    if (mdsL) label += ', MDS: ' + mdsL.map(agendaMdsText).join('; ');
 
     html += '<button type="button" class="agenda-item agenda-item-' + kind + (isToday ? ' is-today' : '') + (isPast ? ' is-past' : '') + '" data-key="' + key + '" aria-label="' + escapeHtml(label) + '">' +
       '<span class="agenda-item-date"><b>' + d + '</b><small>' + AGENDA_WEEKDAY_ABBR[date.getDay()].toLowerCase() + '</small></span>' +
       '<span class="agenda-item-main">' +
         (info ? '<span class="agenda-item-title"><i class="agenda-item-dot"></i><span>' + escapeHtml(title) + '</span></span>' : '') +
+        (mdsL ? mdsL.map(x => '<span class="agenda-item-title"><i class="agenda-item-dot" style="background:#6b4fa3"></i><span>' + escapeHtml(agendaMdsText(x)) + '</span></span>').join('') : '') +
         (note ? '<span class="agenda-item-note">' + escapeHtml(note) + '</span>' : '') +
       '</span>' +
       '<span class="agenda-item-when">' + rel + '</span>' +
@@ -21015,6 +21104,7 @@ function agendaRenderMonthList() {
     if (counts.facultativo) parts.push(counts.facultativo + (counts.facultativo === 1 ? ' ponto facultativo' : ' pontos facultativos'));
     if (counts.pagamento) parts.push(counts.pagamento + (counts.pagamento === 1 ? ' pagamento' : ' pagamentos'));
     if (counts.extra) parts.push(counts.extra + (counts.extra === 1 ? ' outra data' : ' outras datas'));
+    if (counts.mds) parts.push(counts.mds + (counts.mds === 1 ? ' data do MDS' : ' datas do MDS'));
     if (notes) parts.push(notes + (notes === 1 ? ' anotação' : ' anotações'));
     let pend = 0;
     for (let d = 1; d <= count; d++) pend += (agendaNotesCache[agendaKeyFor(m, d)] || []).filter(e => e && !e.done).length;
@@ -21086,7 +21176,8 @@ function agendaBusinessDays(m) {
 // entram: ficam só na agenda e na sincronização.
 function agendaExportIcs() {
   const keys = Object.keys(AGENDA_DATA_INFO).sort();
-  if (!keys.length) {
+  const mdsKeys = Object.keys(AGENDA_MDS_BY_DAY).sort();
+  if (!keys.length && !mdsKeys.length) {
     agendaToast('As datas oficiais de ' + AGENDA_YEAR + ' ainda não foram cadastradas.', 'warn');
     return;
   }
@@ -21105,6 +21196,20 @@ function agendaExportIcs() {
       'TRANSP:TRANSPARENT',
       'END:VEVENT');
   });
+  mdsKeys.forEach((k) => {
+    const next = agendaDateFromKey(k); next.setDate(next.getDate() + 1);
+    AGENDA_MDS_BY_DAY[k].forEach((it, i) => {
+      lines.push('BEGIN:VEVENT',
+        'UID:mds-' + k + '-' + i + '@argo-suas',
+        'DTSTAMP:' + stamp,
+        'DTSTART;VALUE=DATE:' + compact(k),
+        'DTEND;VALUE=DATE:' + compact(agendaIsoKey(next)),
+        'SUMMARY:' + esc('MDS: ' + agendaMdsText(it)),
+        'DESCRIPTION:' + esc(agendaMdsCatName(it) + (it.prev ? ' (data prevista, sujeita a alteração)' : '') + (it.obs ? '. ' + it.obs : '')),
+        'TRANSP:TRANSPARENT',
+        'END:VEVENT');
+    });
+  });
   lines.push('END:VCALENDAR');
   const blob = new Blob([lines.join('\r\n') + '\r\n'], { type: 'text/calendar;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -21112,7 +21217,7 @@ function agendaExportIcs() {
   a.href = url; a.download = 'agenda-argo-' + AGENDA_YEAR + '.ics';
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1500);
-  agendaToast('Datas de ' + AGENDA_YEAR + ' baixadas (' + keys.length + ' eventos)' + (AGENDA_DATA_ESTIMATED ? '. Atenção: só os feriados calculados; sem pagamentos.' : '.'), 'ok');
+  agendaToast('Datas de ' + AGENDA_YEAR + ' baixadas (' + (keys.length + agendaMdsCount()) + ' eventos)' + (AGENDA_DATA_ESTIMATED ? '. Atenção: só os feriados calculados; sem pagamentos.' : '.'), 'ok');
 }
 
 // As setas param em janeiro e dezembro (a agenda cobre um ano só), em vez de
@@ -21214,6 +21319,7 @@ function agendaEnsureModals() {
           <div>
             <h3 id="agendaModalDate" class="agenda-modal-title">Data</h3>
             <div id="agendaModalChip" class="agenda-modal-chip" hidden></div>
+            <div id="agendaMdsBox" class="agenda-mds-box" hidden></div>
           </div>
           <button type="button" class="agenda-modal-x" onclick="agendaCloseNoteModal()" aria-label="Fechar">&times;</button>
         </div>
@@ -21539,6 +21645,21 @@ async function agendaToggleDone(idx, box) {
   }
 }
 
+function agendaRenderMdsBox(key) {
+  const box = document.getElementById('agendaMdsBox');
+  if (!box) return;
+  const l = AGENDA_MDS_BY_DAY[key];
+  if (!l || !l.length) { box.hidden = true; box.innerHTML = ''; return; }
+  const fontes = AGENDA_MDS_META.fontes || {};
+  box.innerHTML = '<h4>Datas do CRAS conforme o MDS</h4><ul>' + l.map(it => {
+    const f = it.f && fontes[it.f];
+    const src = (f && f.nome) ? '<small>Fonte: ' + (/^https:\/\//.test(f.url || '') ? '<a href="' + escapeHtml(f.url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(f.nome) + '</a>' : escapeHtml(f.nome)) + '</small>' : '';
+    return '<li><strong>' + escapeHtml(agendaMdsText(it)) + '</strong> <small>' + escapeHtml(agendaMdsCatName(it)) + (it.prev ? ' · data prevista, sujeita a alteração' : '') + '</small>' +
+      (it.obs ? '<small>' + escapeHtml(it.obs) + '</small>' : '') + src + '</li>';
+  }).join('') + '</ul>' + (AGENDA_MDS_META.atualizadoEm ? '<small>Conferido em ' + escapeHtml(AGENDA_MDS_META.atualizadoEm.split('-').reverse().join('/')) + '. Confirme sempre nos informes do MDS.</small>' : '');
+  box.hidden = false;
+}
+
 function agendaOpenNoteModal(key) {
   agendaEnsureModals();
   agendaSelectedKey = key;
@@ -21562,6 +21683,7 @@ function agendaOpenNoteModal(key) {
   }
 
   agendaRenderEntriesList(key);
+  agendaRenderMdsBox(key);
 
   // A caixa começa sempre vazia: ela é só para escrever uma anotação NOVA,
   // as que já existem ficam na lista acima (não são carregadas aqui).
