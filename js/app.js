@@ -19955,9 +19955,36 @@ function agendaQuickParse(raw) {
   const now = new Date();
   const inYear = now.getFullYear() === AGENDA_YEAR;
   let date = inYear ? new Date(now.getFullYear(), now.getMonth(), now.getDate()) : null;
-  let time = '', dateWord = false, bad = false;
+  let time = '', dateWord = false, bad = false, rec = null;
   for (let guard = 0; guard < 4; guard++) {
     let m;
+    // Repetição: "toda segunda", "toda semana", "quinzenal", "todo mês", "todo dia 10" (até dezembro).
+    if (!rec && (m = /^(?:toda|todas as|todo|todos os)\s+(segunda|ter[çc]a|quarta|quinta|sexta|s[áa]bado|domingo)s?(?:-feiras?)?(?=\s|$)/i.exec(text))) {
+      const wd = AGENDA_QUICK_WD[m[1].toLowerCase()];
+      const base = inYear ? now : new Date(AGENDA_YEAR, agendaCurrentMonth, 1);
+      const add = (wd - base.getDay() + 7) % 7;   // hoje conta, se for o dia da semana pedido
+      date = new Date(base.getFullYear(), base.getMonth(), base.getDate() + add);
+      rec = { type: 'weekly', step: 7 }; dateWord = true; text = text.slice(m[0].length).trim(); continue;
+    }
+    if (!rec && (m = /^(?:toda semana|todas as semanas)(?=\s|$)/i.exec(text))) {
+      rec = { type: 'weekly', step: 7 }; dateWord = true; text = text.slice(m[0].length).trim(); continue;
+    }
+    if (!rec && (m = /^(?:quinzenal(?:mente)?|a cada (?:2|duas) semanas|a cada quinze dias)(?=\s|$)/i.exec(text))) {
+      rec = { type: 'weekly', step: 14 }; dateWord = true; text = text.slice(m[0].length).trim(); continue;
+    }
+    if (!rec && (m = /^todo m[eê]s(?=\s|$)/i.exec(text))) {
+      rec = { type: 'monthly', day: 0 }; dateWord = true; text = text.slice(m[0].length).trim(); continue;
+    }
+    if (!rec && (m = /^todo dia (\d{1,2})(?=\s|$)/i.exec(text))) {
+      const dayN = Number(m[1]);
+      if (dayN >= 1 && dayN <= 31) {
+        const base = inYear ? now : new Date(AGENDA_YEAR, 0, 1);
+        const dim = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+        let cand = new Date(base.getFullYear(), base.getMonth(), Math.min(dayN, dim));
+        if (inYear && cand < new Date(now.getFullYear(), now.getMonth(), now.getDate())) cand = new Date(base.getFullYear(), base.getMonth() + 1, Math.min(dayN, new Date(base.getFullYear(), base.getMonth() + 2, 0).getDate()));
+        date = cand; rec = { type: 'monthly', day: dayN }; dateWord = true; text = text.slice(m[0].length).trim(); continue;
+      }
+    }
     if ((m = /^(depois de amanh[ãa]|amanh[ãa]|hoje)(?=\s|$)/i.exec(text))) {
       const w = m[1].toLowerCase();
       const base = inYear ? now : new Date(AGENDA_YEAR, agendaCurrentMonth, 1);
@@ -19987,7 +20014,33 @@ function agendaQuickParse(raw) {
   }
   if (!date && !bad) date = new Date(AGENDA_YEAR, agendaCurrentMonth, agendaFocusDay >= 1 ? agendaFocusDay : 1);
   const key = (date && date.getFullYear() === AGENDA_YEAR) ? agendaIsoKey(date) : null;
-  return { text, cat, time: agendaCleanTime(time), key, date: key ? date : null, dateWord, bad: bad || !key };
+  let recOut = null;
+  if (rec && key) {
+    const dates = agendaQuickRecurDates(rec, date);
+    if (dates.length > 1) recOut = { type: rec.type, step: rec.step || 0, dates };
+  }
+  return { text, cat, time: agendaCleanTime(time), key, date: key ? date : null, dateWord, rec: recOut, bad: bad || !key };
+}
+// Datas de uma anotação que se repete, da primeira até 31/12 do ano da agenda (no máximo 60).
+function agendaQuickRecurDates(rec, start) {
+  const out = [], end = new Date(AGENDA_YEAR, 11, 31);
+  const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  if (rec.type === 'weekly') {
+    for (let d = startDay; d <= end && out.length < 60; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + rec.step)) out.push(d);
+  } else {
+    const day = rec.day || startDay.getDate();
+    for (let mo = startDay.getMonth(); mo < 12 && out.length < 12; mo++) {
+      const dim = new Date(AGENDA_YEAR, mo + 1, 0).getDate();
+      const d = new Date(AGENDA_YEAR, mo, Math.min(day, dim));
+      if (d >= startDay) out.push(d);
+    }
+  }
+  return out;
+}
+function agendaRecurLabel(rec) {
+  const n = rec.dates.length;
+  const what = rec.type === 'monthly' ? 'todo mês' : (rec.step === 14 ? 'a cada 2 semanas' : 'toda semana');
+  return what + ' · ' + n + ' vezes até ' + agendaQuickDateLabel(rec.dates[n - 1]);
 }
 function agendaQuickDateLabel(d) {
   return AGENDA_WEEKDAY_ABBR[d.getDay()].toLowerCase() + ', ' + d.getDate() + ' ' + AGENDA_MONTH_NAMES[d.getMonth()].slice(0, 3).toLowerCase();
@@ -20001,7 +20054,8 @@ function agendaQuickHintUpdate() {
   const now = new Date();
   const isToday = now.getFullYear() === AGENDA_YEAR && agendaIsoKey(now) === p.key;
   hint.innerHTML = 'Vai para <b>' + (isToday ? 'hoje' : escapeHtml(when)) + '</b>' + (isToday ? ' (' + escapeHtml(when) + ')' : '') + (p.time ? ' · <b>' + p.time + '</b>' : '') + (p.cat ? ' · ' + agendaCatBadge(p.cat) : '') +
-    (input.value.trim() ? '' : ' · tente <i>amanhã 9h visita #visita</i> ou <i>sex 14:30 reunião #reuniao</i>');
+    (p.rec ? ' · <b>🔁 ' + escapeHtml(agendaRecurLabel(p.rec)) + '</b>' : '') +
+    (input.value.trim() ? '' : ' · tente <i>amanhã 9h visita #visita</i>, <i>sex 14:30 reunião #reuniao</i> ou <i>toda seg 9h grupo #grupo</i>');
 }
 async function agendaQuickSubmit(ev) {
   if (ev && ev.preventDefault) ev.preventDefault();
@@ -20019,6 +20073,18 @@ async function agendaQuickSubmit(ev) {
   if (!agendaDb) { agendaToast('Conectando à nuvem. Tente de novo em alguns segundos.'); return false; }
   agendaBusy = true;
   if (btn) btn.disabled = true;
+  if (p.rec) {
+    try { await agendaSaveSeries(p, input); }
+    catch (e) {
+      console.error(e);
+      agendaToast('Não foi possível guardar a série na nuvem. Verifique a internet e tente de novo.', 'error');
+    } finally {
+      agendaBusy = false;
+      if (btn) btn.disabled = false;
+      input.focus({ preventScroll: true });
+    }
+    return false;
+  }
   const base = agendaNotesCache[p.key] || [];
   const entry = Object.assign({ text: p.text.slice(0, 500), createdAt: Date.now() }, p.time ? { time: p.time } : {}, p.cat ? { cat: p.cat } : {});
   const newEntries = base.concat([entry]);
@@ -21423,6 +21489,10 @@ function agendaEnsureModals() {
       .agenda-entry-del { background:none; border:none; cursor:pointer; color:#6f6551; font-size:12px; font-weight:700; padding:2px 7px; border-radius:6px; line-height:1.4; flex-shrink:0; }
       .agenda-entry-del:hover { background:#efe4cb; color:#8f2d27; }
       .agenda-entry-del.armed { background:#b3413a; color:#fff; }
+      .agenda-entry-delser { background:none; border:none; cursor:pointer; color:#6f6551; font-size:12px; font-weight:700; padding:2px 7px; border-radius:6px; line-height:1.4; flex-shrink:0; }
+      .agenda-entry-delser:hover { background:#efe4cb; color:#8f2d27; }
+      .agenda-entry-delser.armed { background:#b3413a; color:#fff; }
+      .agenda-entry-rec { font-size:12px; margin-left:2px; }
       .agenda-entry-check { display:inline-flex; align-items:center; gap:7px; cursor:pointer; }
       .agenda-entry-check input { width:17px; height:17px; accent-color:#1f3d33; cursor:pointer; margin:0; }
       .agenda-entry-actions { display:inline-flex; gap:2px; flex-shrink:0; }
@@ -21462,6 +21532,8 @@ function agendaEnsureModals() {
     entriesList.addEventListener('click', (ev) => {
       const edit = ev.target.closest ? ev.target.closest('.agenda-entry-edit') : null;
       if (edit) { agendaStartEdit(Number(edit.dataset.idx)); return; }
+      const ser = ev.target.closest ? ev.target.closest('.agenda-entry-delser') : null;
+      if (ser) { agendaDeleteSeries(Number(ser.dataset.idx)); return; }
       const btn = ev.target.closest ? ev.target.closest('.agenda-entry-del') : null;
       if (btn) agendaDeleteEntry(Number(btn.dataset.idx));
     });
@@ -21530,7 +21602,9 @@ function agendaResetEntryDelete() {
   agendaDeleteArmed = -1;
   clearTimeout(agendaDeleteTimer);
   const list = document.getElementById('agendaEntriesList');
+  agendaSeriesArmed = -1;
   if (list) list.querySelectorAll('.agenda-entry-del.armed').forEach(b => { b.classList.remove('armed'); b.textContent = 'Apagar'; });
+  if (list) list.querySelectorAll('.agenda-entry-delser.armed').forEach(b => { b.classList.remove('armed'); b.textContent = 'Série'; });
 }
 
 // Desenha a lista de anotações já guardadas neste dia (da mais antiga para
@@ -21551,9 +21625,11 @@ function agendaRenderEntriesList(key) {
       '<div class="agenda-entry-meta">' +
         '<label class="agenda-entry-check"><input type="checkbox" class="agenda-entry-done" data-idx="' + idx + '"' + (e.done ? ' checked' : '') + ' aria-label="Marcar como feita">' +
           (when ? '<span class="agenda-entry-at">🕒 ' + when + '</span>' : '') + agendaCatBadge(e.cat) +
+          (e.series ? '<span class="agenda-entry-rec" title="Faz parte de uma série que se repete">🔁</span>' : '') +
           '<span class="agenda-entry-time">' + escapeHtml(label || (e.done ? 'feita' : (when ? '' : 'pendente'))) + '</span></label>' +
         '<span class="agenda-entry-actions">' +
           '<button type="button" class="agenda-entry-edit" data-idx="' + idx + '" aria-label="Editar esta anotação">Editar</button>' +
+          (e.series ? '<button type="button" class="agenda-entry-delser" data-idx="' + idx + '" aria-label="Apagar esta anotação e as próximas da série">Série</button>' : '') +
           '<button type="button" class="agenda-entry-del" data-idx="' + idx + '" aria-label="Apagar esta anotação">Apagar</button>' +
         '</span>' +
       '</div>' +
@@ -21759,6 +21835,85 @@ async function agendaCommitEntries(key, entries) {
     new Promise(resolve => setTimeout(() => resolve('slow'), 7000))
   ]);
   return outcome;
+}
+
+// Grava vários dias de uma vez, numa única operação (tudo ou nada). Cada item: { key, entries };
+// lista vazia apaga o dia. Mesma cifragem de agendaCommitEntries.
+async function agendaCommitBatch(updates) {
+  if (updates.some(u => u.entries && u.entries.length) && !sessionEncKey) throw new Error('app-trancado');
+  const batch = agendaDb.batch();
+  const col = agendaDb.collection('agendas').doc(agendaSyncCode).collection('notes');
+  updates.forEach((u) => {
+    const ref = col.doc(u.key);
+    if (u.entries && u.entries.length) batch.set(ref, { entries: u.entries.map(e => Object.assign({}, e, { text: encryptForStorage(e.text) })) });
+    else batch.delete(ref);
+  });
+  const op = batch.commit();
+  op.catch(() => { /* tratado abaixo ou depois do prazo */ });
+  return Promise.race([op.then(() => 'ok'), new Promise(resolve => setTimeout(() => resolve('slow'), 9000))]);
+}
+
+// Anotação que se repete ("toda segunda 9h grupo"): uma entrada em cada data, todas com o mesmo
+// código de série (entry.series) para dar para apagar "esta e as próximas" de uma vez.
+async function agendaSaveSeries(p, input) {
+  const stamp = Date.now();
+  const series = 's' + stamp.toString(36);
+  const updates = [];
+  let skipped = 0;
+  p.rec.dates.forEach((d) => {
+    const key = agendaIsoKey(d);
+    if (agendaUndecryptableDays.has(key)) { skipped++; return; }   // dia com notas de outra senha: não mexe
+    const entry = Object.assign({ text: p.text.slice(0, 500), createdAt: stamp, series }, p.time ? { time: p.time } : {}, p.cat ? { cat: p.cat } : {});
+    updates.push({ key, entries: (agendaNotesCache[key] || []).concat([entry]) });
+  });
+  if (!updates.length) { agendaToast('Nenhum dia pôde receber a anotação.', 'error'); return; }
+  const outcome = await agendaCommitBatch(updates);
+  updates.forEach((u) => { agendaNotesCache[u.key] = u.entries; });
+  input.value = '';
+  const first = p.rec.dates[0];
+  if (first.getMonth() !== agendaCurrentMonth) { agendaCurrentMonth = first.getMonth(); agendaFocusDay = first.getDate(); }
+  agendaRenderCalendar();
+  agendaQuickHintUpdate();
+  const msg = 'Anotado ' + agendaRecurLabel(p.rec) + (p.time ? ' às ' + p.time : '') + '.' + (skipped ? ' ' + skipped + ' dia(s) ficaram de fora.' : '');
+  if (outcome === 'ok') agendaToast(msg);
+  else agendaToast('Sem resposta do servidor. A série já aparece aqui e será enviada quando a conexão voltar; mantenha o app aberto.', 'error');
+}
+
+let agendaSeriesArmed = -1;
+// Apaga esta anotação e as próximas da mesma série (as de dias já passados ficam, para não apagar o histórico).
+async function agendaDeleteSeries(idx) {
+  if (agendaBusy) return;
+  if (!agendaSyncCode || !agendaDb) { agendaToast('Ainda conectando à nuvem. Tente de novo em alguns segundos.'); return; }
+  const key = agendaSelectedKey;
+  const e0 = (agendaNotesCache[key] || [])[idx];
+  if (!e0 || !e0.series) return;
+  const mine = Object.keys(agendaNotesCache).filter(k => k >= key && (agendaNotesCache[k] || []).some(e => e && e.series === e0.series));
+  const btn = document.querySelector('#agendaEntriesList .agenda-entry-delser[data-idx="' + idx + '"]');
+  if (agendaSeriesArmed !== idx) {
+    agendaResetEntryDelete();
+    agendaSeriesArmed = idx;
+    if (btn) { btn.textContent = 'Apagar ' + mine.length + (mine.length === 1 ? ' dia?' : ' dias?'); btn.classList.add('armed'); }
+    clearTimeout(agendaDeleteTimer);
+    agendaDeleteTimer = setTimeout(agendaResetEntryDelete, 4500);
+    return;
+  }
+  agendaBusy = true;
+  agendaResetEntryDelete();
+  const updates = mine.map(k => ({ key: k, entries: (agendaNotesCache[k] || []).filter(e => !(e && e.series === e0.series)) }));
+  try {
+    const outcome = await agendaCommitBatch(updates);
+    updates.forEach((u) => { if (u.entries.length) agendaNotesCache[u.key] = u.entries; else delete agendaNotesCache[u.key]; });
+    if (agendaEditingIdx >= 0) agendaCancelEdit();
+    agendaRenderEntriesList(key);
+    agendaRenderCalendar();
+    if (outcome === 'ok') agendaToast('Série apagada (' + updates.length + (updates.length === 1 ? ' dia).' : ' dias).'));
+    else agendaToast('Sem resposta do servidor. A exclusão será enviada quando a conexão voltar; mantenha o app aberto.', 'error');
+  } catch (e) {
+    console.error(e);
+    agendaToast('Não foi possível apagar na nuvem. Verifique a internet e tente de novo.', 'error');
+  } finally {
+    agendaBusy = false;
+  }
 }
 
 // Acrescenta a anotação escrita na caixa como uma NOVA entrada do dia — as
