@@ -20270,7 +20270,9 @@ function agendaComputeStats(scope) {
   const prefix = scope === 'month' ? mPrefix : yPrefix;
   const st = { total: 0, done: 0, pending: 0, late: 0, daysWithNotes: 0, withTime: 0,
     byWeekday: [0, 0, 0, 0, 0, 0, 0], byPeriod: { manha: 0, tarde: 0, noite: 0, sem: 0 },
+    byCat: { sem: 0 }, byDay: {}, monthRate: [],
     series: [], busiest: null };
+  Object.keys(AGENDA_CATS).forEach(k => { st.byCat[k] = 0; });
   const nBuckets = scope === 'month' ? agendaDaysInMonth(agendaCurrentMonth) : 12;
   for (let i = 0; i < nBuckets; i++) st.series.push({ done: 0, pending: 0, late: 0 });
   Object.keys(agendaNotesCache).forEach(key => {
@@ -20278,10 +20280,13 @@ function agendaComputeStats(scope) {
     const entries = (agendaNotesCache[key] || []).filter(e => e && e.text);
     if (!entries.length) return;
     st.daysWithNotes++;
+    st.byDay[key] = entries.length;
     const wd = agendaDateFromKey(key).getDay();
     const bucket = st.series[scope === 'month' ? Number(key.slice(8)) - 1 : Number(key.slice(5, 7)) - 1];
     entries.forEach(e => {
       st.total++; st.byWeekday[wd]++;
+      const cat = agendaCleanCat(e.cat) || 'sem';
+      st.byCat[cat]++;
       const t = agendaCleanTime(e.time);
       if (t) { st.withTime++; const h = Number(t.slice(0, 2)); st.byPeriod[h < 12 ? 'manha' : (h < 18 ? 'tarde' : 'noite')]++; }
       else st.byPeriod.sem++;
@@ -20292,14 +20297,42 @@ function agendaComputeStats(scope) {
     if (!st.busiest || entries.length > st.busiest.n) st.busiest = { key, n: entries.length };
   });
   st.rate = st.total ? Math.round(st.done / st.total * 100) : 0;
+  // Taxa de conclusão por mês (só no ano todo): feitas / total de cada mês.
+  if (scope !== 'month') st.monthRate = st.series.map(b => { const t = b.done + b.pending + b.late; return t ? { rate: Math.round(b.done / t * 100), total: t, done: b.done } : null; });
   return st;
 }
 
-// Barras empilhadas (feitas / a fazer / atrasadas) em SVG; os números ficam
-// também em texto (title + tabela escondida para leitor de tela).
+// ---- Gráficos do painel de estatísticas (SVG/HTML puros, sem biblioteca) ----
+// Cada marca tem data-tip="texto": uma única dica flutuante (agendaStatsTipInit)
+// mostra o valor ao passar o mouse ou tocar. Os mesmos números ficam numa tabela
+// escondida (.agenda-sr-only) para leitor de tela.
+const AGENDA_STATS_LABEL = { done: 'concluída(s)', pending: 'a fazer', late: 'atrasada(s)' };
+
+// Anel: concluídas / a fazer / atrasadas, com a taxa no centro.
+function agendaStatsDonut(st) {
+  const R = 52, C = 2 * Math.PI * R, parts = [['done', st.done], ['pending', st.pending - st.late], ['late', st.late]];
+  let off = 0, g = '<circle cx="70" cy="70" r="' + R + '" class="ast-ring-bg"/>';
+  parts.forEach(([k, n]) => {
+    if (!n) return;
+    const len = n / st.total * C, gap = parts.filter(p => p[1]).length > 1 ? 2 : 0;
+    g += '<circle cx="70" cy="70" r="' + R + '" class="ast-seg ast-s-' + k + '" data-tip="' + escapeHtml(n + ' ' + AGENDA_STATS_LABEL[k] + ' (' + Math.round(n / st.total * 100) + '%)') + '" ' +
+      'stroke-dasharray="' + Math.max(0, len - gap).toFixed(2) + ' ' + (C - Math.max(0, len - gap)).toFixed(2) + '" stroke-dashoffset="' + (-off).toFixed(2) + '" style="--len:' + len.toFixed(2) + '"/>';
+    off += len;
+  });
+  const svg = '<svg viewBox="0 0 140 140" class="ast-donut" role="img" aria-label="Anel: ' + st.rate + '% concluídas, ' + (st.pending - st.late) + ' a fazer, ' + st.late + ' atrasadas">' +
+    '<g transform="rotate(-90 70 70)">' + g + '</g>' +
+    '<text x="70" y="70" text-anchor="middle" class="ast-donut-num">' + st.rate + '%</text>' +
+    '<text x="70" y="88" text-anchor="middle" class="ast-donut-sub">concluídas</text></svg>';
+  const row = (k, n, l) => '<li><i class="ast-' + k + '"></i><span>' + l + '</span><b>' + n + '</b><small>' + (st.total ? Math.round(n / st.total * 100) : 0) + '%</small></li>';
+  return '<div class="ast-donut-wrap">' + svg + '<ul class="ast-donut-leg">' +
+    row('done', st.done, 'Concluídas') + row('pending', st.pending - st.late, 'A fazer') + row('late', st.late, 'Atrasadas') + '</ul></div>';
+}
+
+// Barras empilhadas (feitas / a fazer / atrasadas), com linha de referência da média.
 function agendaStatsBarsSvg(series, labels, titles) {
-  const W = 560, H = 200, padL = 28, padB = 26, padT = 8;
-  const max = Math.max(1, ...series.map(b => b.done + b.pending + b.late));
+  const W = 560, H = 200, padL = 28, padB = 26, padT = 10;
+  const totals = series.map(b => b.done + b.pending + b.late);
+  const max = Math.max(1, ...totals);
   const step = Math.max(1, Math.ceil(max / 4));
   const top = Math.ceil(max / step) * step;
   const iw = W - padL - 6, ih = H - padB - padT;
@@ -20310,28 +20343,124 @@ function agendaStatsBarsSvg(series, labels, titles) {
     g += '<line x1="' + padL + '" x2="' + (W - 6) + '" y1="' + y + '" y2="' + y + '" class="ast-grid"/><text x="' + (padL - 5) + '" y="' + (y + 3.5) + '" text-anchor="end" class="ast-axis">' + v + '</text>';
   }
   series.forEach((b, i) => {
-    const x = padL + i * bw + bw * 0.16, w = bw * 0.68;
-    let y = padT + ih;
+    const x = padL + i * bw + bw * 0.14, w = bw * 0.72, tot = totals[i];
+    const tip = tot ? (titles || labels)[i] + ': ' + tot + (tot === 1 ? ' anotação' : ' anotações') +
+      ' — ' + b.done + ' concluída(s), ' + (b.pending) + ' a fazer, ' + b.late + ' atrasada(s)' : '';
+    let y = padT + ih, inner = '';
     [['done', b.done], ['pending', b.pending], ['late', b.late]].forEach(([k, n]) => {
       if (!n) return;
       const h = (n / top) * ih; y -= h;
-      g += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="2" class="ast-' + k + '"><title>' + escapeHtml((titles || labels)[i]) + ': ' + n + ' ' + ({ done: 'feita(s)', pending: 'a fazer', late: 'atrasada(s)' })[k] + '</title></rect>';
+      inner += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + Math.max(h, 1).toFixed(1) + '" rx="2" class="ast-' + k + '"/>';
     });
+    if (tot) g += '<g class="ast-bar" style="--i:' + i + '" data-tip="' + escapeHtml(tip) + '">' + inner +
+      '<rect x="' + (padL + i * bw).toFixed(1) + '" y="' + padT + '" width="' + bw.toFixed(1) + '" height="' + ih + '" class="ast-hit"/></g>';
     const showLabel = series.length <= 12 || (i + 1) % 5 === 0 || i === 0;
     if (showLabel) g += '<text x="' + (padL + i * bw + bw / 2).toFixed(1) + '" y="' + (H - 7) + '" text-anchor="middle" class="ast-axis">' + escapeHtml(labels[i]) + '</text>';
   });
+  const avg = totals.reduce((a, n) => a + n, 0) / series.length;
+  if (avg > 0) { const ay = padT + ih - (avg / top) * ih; g += '<line x1="' + padL + '" x2="' + (W - 6) + '" y1="' + ay.toFixed(1) + '" y2="' + ay.toFixed(1) + '" class="ast-avg"/>'; }
   return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Gráfico de barras: anotações por ' + (series.length === 12 ? 'mês' : 'dia') + '" class="ast-svg">' + g + '</svg>';
 }
 
-function agendaStatsHBars(rows, max) {
-  return rows.map(r => '<div class="ast-hrow"><span class="ast-hlabel">' + escapeHtml(r.label) + '</span>' +
-    '<span class="ast-htrack"><i style="width:' + (max ? Math.max(r.n ? 3 : 0, Math.round(r.n / max * 100)) : 0) + '%"></i></span>' +
+// Linha: taxa de conclusão de cada mês (só meses com anotações).
+function agendaStatsRateLine(monthRate) {
+  const W = 560, H = 150, padL = 42, padB = 24, padT = 12, iw = W - padL - 12, ih = H - padB - padT, bw = iw / 12;
+  let g = '';
+  [0, 50, 100].forEach(v => {
+    const y = padT + ih - v / 100 * ih;
+    g += '<line x1="' + padL + '" x2="' + (W - 12) + '" y1="' + y + '" y2="' + y + '" class="ast-grid"/><text x="' + (padL - 5) + '" y="' + (y + 3.5) + '" text-anchor="end" class="ast-axis">' + v + '%</text>';
+  });
+  let pts = '';
+  monthRate.forEach((m, i) => {
+    const x = padL + i * bw + bw / 2;
+    g += '<text x="' + x.toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" class="ast-axis">' + AGENDA_MONTH_NAMES[i].slice(0, 3).toLowerCase() + '</text>';
+    if (!m) return;
+    const y = padT + ih - m.rate / 100 * ih;
+    pts += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="4.5" class="ast-dot" data-tip="' + escapeHtml(AGENDA_MONTH_NAMES[i] + ': ' + m.rate + '% concluídas (' + m.done + ' de ' + m.total + ')') + '"/>' +
+      '<text x="' + x.toFixed(1) + '" y="' + (y - 8).toFixed(1) + '" text-anchor="middle" class="ast-pt">' + m.rate + '</text>';
+  });
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Linha: taxa de conclusão por mês" class="ast-svg"><path d="' + monthLinePath(monthRate, padL, bw, padT, ih) + '" class="ast-line"/>' + g + pts + '</svg>';
+}
+function monthLinePath(monthRate, padL, bw, padT, ih) {
+  let d = '', pen = false;
+  monthRate.forEach((m, i) => {
+    if (!m) { pen = false; return; }
+    d += (pen ? ' L' : ' M') + (padL + i * bw + bw / 2).toFixed(1) + ' ' + (padT + ih - m.rate / 100 * ih).toFixed(1);
+    pen = true;
+  });
+  return d.trim();
+}
+
+// Mapa de calor: ano = 53 colunas (semanas) x 7 linhas; mês = grade de calendário.
+function agendaHeatLevel(n) { return n <= 0 ? 0 : (n === 1 ? 1 : (n === 2 ? 2 : (n <= 4 ? 3 : 4))); }
+function agendaHeatTip(key, n) {
+  const d = agendaDateFromKey(key);
+  return d.getDate() + ' de ' + AGENDA_MONTH_NAMES[d.getMonth()].toLowerCase() + ' (' + AGENDA_WEEKDAY_ABBR[d.getDay()].toLowerCase() + '): ' + (n ? n + (n === 1 ? ' anotação' : ' anotações') : 'sem anotações');
+}
+function agendaStatsHeatYear(byDay) {
+  const cell = 11, gap = 3, step = cell + gap, padL = 24, padT = 16;
+  const jan1 = new Date(AGENDA_YEAR, 0, 1), startOffset = jan1.getDay();
+  const days = (new Date(AGENDA_YEAR, 11, 31) - jan1) / 86400000 + 1;
+  const cols = Math.ceil((startOffset + days) / 7);
+  let g = '', lastMonth = -1;
+  ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].forEach((l, r) => { if (r % 2) g += '<text x="' + (padL - 7) + '" y="' + (padT + r * step + cell - 1) + '" text-anchor="end" class="ast-axis ast-axis-sm">' + l + '</text>'; });
+  for (let i = 0; i < days; i++) {
+    const d = new Date(AGENDA_YEAR, 0, 1 + i), idx = startOffset + i, c = Math.floor(idx / 7), r = idx % 7;
+    const key = agendaIsoKey(d), n = byDay[key] || 0;
+    if (d.getMonth() !== lastMonth && (d.getDate() <= 7)) { lastMonth = d.getMonth(); g += '<text x="' + (padL + c * step) + '" y="10" class="ast-axis ast-axis-sm">' + AGENDA_MONTH_NAMES[lastMonth].slice(0, 3).toLowerCase() + '</text>'; }
+    g += '<rect x="' + (padL + c * step) + '" y="' + (padT + r * step) + '" width="' + cell + '" height="' + cell + '" rx="2.5" class="ast-h' + agendaHeatLevel(n) + '" data-tip="' + escapeHtml(agendaHeatTip(key, n)) + '"/>';
+  }
+  const W = padL + cols * step, H = padT + 7 * step;
+  return '<div class="ast-scroll"><svg viewBox="0 0 ' + W + ' ' + H + '" style="min-width:' + Math.min(W, 520) + 'px" class="ast-svg" role="img" aria-label="Mapa de calor: anotações por dia do ano">' + g + '</svg></div>';
+}
+function agendaStatsHeatMonth(byDay) {
+  const first = new Date(AGENDA_YEAR, agendaCurrentMonth, 1), n = agendaDaysInMonth(agendaCurrentMonth);
+  let h = '<div class="ast-mgrid" role="img" aria-label="Mapa de calor do mês">' + AGENDA_WEEKDAY_ABBR.map(w => '<span class="ast-mwd">' + w.slice(0, 1) + '</span>').join('');
+  for (let i = 0; i < first.getDay(); i++) h += '<span></span>';
+  for (let d = 1; d <= n; d++) {
+    const key = AGENDA_YEAR + '-' + String(agendaCurrentMonth + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0'), c = byDay[key] || 0;
+    h += '<span class="ast-mcell ast-h' + agendaHeatLevel(c) + '" data-tip="' + escapeHtml(agendaHeatTip(key, c)) + '">' + d + '</span>';
+  }
+  return h + '</div>';
+}
+function agendaStatsHeatLegend() {
+  return '<div class="ast-heatleg">menos <i class="ast-h0"></i><i class="ast-h1"></i><i class="ast-h2"></i><i class="ast-h3"></i><i class="ast-h4"></i> mais</div>';
+}
+
+function agendaStatsHBars(rows, max, colorFn) {
+  return rows.map((r, i) => '<div class="ast-hrow" data-tip="' + escapeHtml(r.label + ': ' + r.n) + '"><span class="ast-hlabel">' + escapeHtml(r.label) + '</span>' +
+    '<span class="ast-htrack"><i style="width:' + (max ? Math.max(r.n ? 3 : 0, Math.round(r.n / max * 100)) : 0) + '%;' + (r.color ? 'background:' + r.color : '') + '"></i></span>' +
     '<b class="ast-hval">' + r.n + '</b></div>').join('');
+}
+
+// Dica flutuante única (mouse e toque). Delegação no corpo do painel.
+function agendaStatsTipInit(body) {
+  if (body._tipReady) return;
+  body._tipReady = true;
+  const tip = document.createElement('div');
+  tip.className = 'ast-tip'; tip.setAttribute('aria-hidden', 'true'); tip.hidden = true;
+  body.parentNode.appendChild(tip);
+  const hide = () => { tip.hidden = true; };
+  const show = (el, ev) => {
+    const text = el.getAttribute('data-tip');
+    if (!text) return hide();
+    tip.textContent = text; tip.hidden = false;
+    const box = body.parentNode.getBoundingClientRect(), r = el.getBoundingClientRect();
+    let x = r.left + r.width / 2 - box.left, y = r.top - box.top + body.parentNode.scrollTop - 8;
+    const w = tip.offsetWidth;
+    x = Math.max(w / 2 + 6, Math.min(box.width - w / 2 - 6, x));
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  };
+  body.addEventListener('pointerover', e => { const el = e.target.closest && e.target.closest('[data-tip]'); if (el) show(el, e); else hide(); });
+  body.addEventListener('pointerleave', hide);
+  body.addEventListener('click', e => { const el = e.target.closest && e.target.closest('[data-tip]'); if (el) show(el, e); else hide(); });
+  body.parentNode.addEventListener('scroll', hide, { passive: true });
 }
 
 function agendaRenderStats() {
   const body = document.getElementById('agendaStatsBody');
   if (!body) return;
+  agendaStatsTipInit(body);
   const st = agendaComputeStats(agendaStatsScope);
   document.querySelectorAll('#agendaStatsModal .ast-scope button').forEach(b => b.setAttribute('aria-pressed', b.dataset.scope === agendaStatsScope ? 'true' : 'false'));
   const scopeName = agendaStatsScope === 'month' ? AGENDA_MONTH_NAMES[agendaCurrentMonth].toLowerCase() + ' de ' + AGENDA_YEAR : String(AGENDA_YEAR);
@@ -20340,12 +20469,15 @@ function agendaRenderStats() {
     return;
   }
   const tile = (n, l, cls) => '<div class="ast-tile ' + (cls || '') + '"><b>' + n + '</b><span>' + l + '</span></div>';
-  const labels = agendaStatsScope === 'month'
-    ? st.series.map((_, i) => String(i + 1))
-    : AGENDA_MONTH_NAMES.map(m => m.slice(0, 3).toLowerCase());
+  const isMonth = agendaStatsScope === 'month';
+  const labels = isMonth ? st.series.map((_, i) => String(i + 1)) : AGENDA_MONTH_NAMES.map(m => m.slice(0, 3).toLowerCase());
+  const titles = isMonth ? labels.map(l => 'Dia ' + l) : AGENDA_MONTH_NAMES;
   const wdMax = Math.max(...st.byWeekday);
   const wdOrder = [1, 2, 3, 4, 5, 6, 0];
   const per = st.byPeriod, perMax = Math.max(per.manha, per.tarde, per.noite, per.sem);
+  const catRows = Object.keys(AGENDA_CATS).map(k => ({ label: AGENDA_CATS[k].label, n: st.byCat[k], color: AGENDA_CATS[k].color }))
+    .concat([{ label: 'Sem tipo', n: st.byCat.sem, color: '#9a8f78' }]).filter(r => r.n).sort((a, b) => b.n - a.n);
+  const catMax = Math.max(1, ...catRows.map(r => r.n));
   let insight = '';
   if (st.busiest && st.busiest.n > 1) {
     const d = agendaDateFromKey(st.busiest.key);
@@ -20353,20 +20485,28 @@ function agendaRenderStats() {
   }
   const topWd = st.byWeekday.indexOf(wdMax);
   if (wdMax > 0) insight += 'Dia da semana mais movimentado: <b>' + ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'][topWd] + '</b>.';
+  const hasRate = !isMonth && st.monthRate.filter(Boolean).length >= 2;
+  // Tabela só para leitor de tela (mesmos números dos gráficos).
+  const srRows = st.series.map((b, i) => '<tr><th scope="row">' + escapeHtml(titles[i]) + '</th><td>' + b.done + '</td><td>' + b.pending + '</td><td>' + b.late + '</td></tr>').join('');
   body.innerHTML =
     '<div class="ast-tiles">' +
-      tile(st.total, 'anotações') + tile(st.done, 'concluídas', 'is-done') + tile(st.pending, 'a fazer', 'is-pend') + tile(st.late, 'atrasadas', st.late ? 'is-late' : '') +
+      tile(st.total, 'anotações') + tile(st.done, 'concluídas', 'is-done') + tile(st.pending - st.late, 'a fazer', 'is-pend') + tile(st.late, 'atrasadas', st.late ? 'is-late' : '') +
     '</div>' +
-    '<div class="ast-rate" role="img" aria-label="Taxa de conclusão: ' + st.rate + '%"><div class="ast-rate-top"><span>Taxa de conclusão</span><b>' + st.rate + '%</b></div><div class="ast-rate-track"><i style="width:' + st.rate + '%"></i></div></div>' +
-    '<h4 class="ast-h">' + (agendaStatsScope === 'month' ? 'Por dia — ' : 'Por mês — ') + escapeHtml(scopeName) + '</h4>' +
-    agendaStatsBarsSvg(st.series, labels, agendaStatsScope === 'month' ? labels.map(l => 'dia ' + l) : AGENDA_MONTH_NAMES) +
-    '<div class="ast-legend"><span><i class="ast-done"></i>Concluídas</span><span><i class="ast-pending"></i>A fazer</span><span><i class="ast-late"></i>Atrasadas</span></div>' +
+    '<div class="ast-card">' + agendaStatsDonut(st) + '</div>' +
+    '<h4 class="ast-h">' + (isMonth ? 'Por dia — ' : 'Por mês — ') + escapeHtml(scopeName) + '</h4>' +
+    '<div class="ast-card">' + agendaStatsBarsSvg(st.series, labels, titles) +
+    '<div class="ast-legend"><span><i class="ast-done"></i>Concluídas</span><span><i class="ast-pending"></i>A fazer</span><span><i class="ast-late"></i>Atrasadas</span><span><i class="ast-avgkey"></i>Média</span></div></div>' +
+    (hasRate ? '<h4 class="ast-h">Taxa de conclusão por mês</h4><div class="ast-card">' + agendaStatsRateLine(st.monthRate) + '</div>' : '') +
+    '<h4 class="ast-h">' + (isMonth ? 'Calendário de calor do mês' : 'Mapa de calor do ano') + '</h4>' +
+    '<div class="ast-card">' + (isMonth ? agendaStatsHeatMonth(st.byDay) : agendaStatsHeatYear(st.byDay)) + agendaStatsHeatLegend() + '</div>' +
     '<div class="ast-two">' +
+      '<div><h4 class="ast-h">Por tipo de anotação</h4>' + agendaStatsHBars(catRows, catMax) + '</div>' +
       '<div><h4 class="ast-h">Por dia da semana</h4>' + agendaStatsHBars(wdOrder.map(i => ({ label: AGENDA_WEEKDAY_ABBR[i], n: st.byWeekday[i] })), wdMax) + '</div>' +
-      '<div><h4 class="ast-h">Por período do dia</h4>' + agendaStatsHBars([
-        { label: 'Manhã', n: per.manha }, { label: 'Tarde', n: per.tarde }, { label: 'Noite', n: per.noite }, { label: 'Sem horário', n: per.sem }], perMax) + '</div>' +
     '</div>' +
-    '<p class="ast-note">' + (insight || '') + (insight ? ' ' : '') + 'Em ' + st.daysWithNotes + (st.daysWithNotes === 1 ? ' dia' : ' dias') + ' com anotações. Os números contam as anotações no dia a que pertencem; "atrasadas" são as não concluídas de dias que já passaram. Calculado neste aparelho.</p>';
+    '<h4 class="ast-h">Por período do dia</h4>' + agendaStatsHBars([
+        { label: 'Manhã', n: per.manha }, { label: 'Tarde', n: per.tarde }, { label: 'Noite', n: per.noite }, { label: 'Sem horário', n: per.sem }], perMax) +
+    '<table class="agenda-sr-only"><caption>Anotações por ' + (isMonth ? 'dia' : 'mês') + '</caption><thead><tr><th>Período</th><th>Concluídas</th><th>A fazer</th><th>Atrasadas</th></tr></thead><tbody>' + srRows + '</tbody></table>' +
+    '<p class="ast-note">' + (insight || '') + (insight ? ' ' : '') + 'Em ' + st.daysWithNotes + (st.daysWithNotes === 1 ? ' dia' : ' dias') + ' com anotações. Os números contam as anotações no dia a que pertencem; "atrasadas" são as não concluídas de dias que já passaram. Toque ou passe o mouse nos gráficos para ver os valores. Calculado neste aparelho.</p>';
 }
 
 function agendaSetStatsScope(scope) { agendaStatsScope = scope; agendaRenderStats(); }
@@ -20393,7 +20533,7 @@ function agendaOpenStats() {
     </div>
     <style>
       #agendaStatsModal { z-index: 1000; }
-      .ast-box { max-width: 640px !important; }
+      .ast-box { max-width: 640px !important; position:relative; }
       .ast-scope { display:inline-flex; gap:2px; padding:3px; margin-bottom:12px; background:#efe4cb; border:1px solid #d3c495; border-radius:999px; }
       .ast-scope button { font:inherit; font-size:14px; font-weight:700; padding:6px 14px; border:0; border-radius:999px; background:transparent; color:#6f6551; cursor:pointer; min-height:34px; }
       .ast-scope button[aria-pressed="true"] { background:#1f3d33; color:#f8f2e4; }
@@ -20402,10 +20542,44 @@ function agendaOpenStats() {
       .ast-tile b { display:block; font-size:26px; line-height:1.1; color:#2c2620; }
       .ast-tile span { font-size:12px; font-weight:700; color:#6f6551; }
       .ast-tile.is-done b { color:#3f7d55; } .ast-tile.is-pend b { color:#2f5d8a; } .ast-tile.is-late b { color:#b3413a; }
-      .ast-rate { margin:4px 0 10px; }
-      .ast-rate-top { display:flex; justify-content:space-between; font-size:14px; font-weight:700; margin-bottom:4px; }
-      .ast-rate-track { height:12px; border-radius:999px; background:#e0d3ac; overflow:hidden; }
-      .ast-rate-track i { display:block; height:100%; background:#3f7d55; border-radius:999px; }
+      .ast-card { background:rgba(255,255,255,0.45); border:1px solid #d3c495; border-radius:12px; padding:10px 10px 8px; }
+      .ast-donut-wrap { display:flex; align-items:center; gap:18px; flex-wrap:wrap; justify-content:center; }
+      .ast-donut { width:150px; height:150px; flex:none; }
+      .ast-ring-bg { fill:none; stroke:#e0d3ac; stroke-width:17; }
+      .ast-seg { fill:none; stroke-width:17; cursor:pointer; transition:stroke-width .15s; animation:ast-ring .9s cubic-bezier(.2,.7,.2,1) both; }
+      .ast-seg:hover { stroke-width:20; }
+      .ast-s-done { stroke:#3f7d55; } .ast-s-pending { stroke:#2f5d8a; } .ast-s-late { stroke:#b3413a; }
+      .ast-donut-num { font:800 28px 'Times New Roman', Times, serif; fill:#2c2620; }
+      .ast-donut-sub { font:700 11px 'Times New Roman', Times, serif; fill:#6f6551; }
+      .ast-donut-leg { list-style:none; margin:0; padding:0; display:grid; gap:7px; min-width:170px; }
+      .ast-donut-leg li { display:grid; grid-template-columns:12px 1fr auto 38px; align-items:center; gap:8px; font-size:14px; font-weight:700; color:#2c2620; }
+      .ast-donut-leg i { width:12px; height:12px; border-radius:4px; }
+      .ast-donut-leg small { color:#6f6551; text-align:right; font-size:12.5px; }
+      .ast-bar { cursor:pointer; transform-box:fill-box; transform-origin:bottom; animation:ast-grow .55s cubic-bezier(.2,.7,.2,1) both; animation-delay:calc(var(--i) * 18ms); }
+      .ast-bar:hover rect:not(.ast-hit) { filter:brightness(1.12); }
+      .ast-hit { fill:transparent; }
+      .ast-avg { stroke:#6f6551; stroke-width:1.2; stroke-dasharray:5 4; }
+      .ast-avgkey { background:transparent !important; border-top:2px dashed #6f6551; height:0 !important; border-radius:0 !important; width:14px !important; vertical-align:3px !important; }
+      .ast-line { fill:none; stroke:#3f7d55; stroke-width:2.5; stroke-linejoin:round; stroke-linecap:round; }
+      .ast-dot { fill:#f8f2e4; stroke:#3f7d55; stroke-width:2.5; cursor:pointer; }
+      .ast-dot:hover { fill:#3f7d55; }
+      .ast-pt { font:700 11px 'Times New Roman', Times, serif; fill:#2c2620; pointer-events:none; }
+      .ast-axis-sm { font-size:10px; }
+      .ast-scroll { overflow-x:auto; padding-bottom:4px; }
+      .ast-h0 { fill:#e6dbb8; background:#e6dbb8; } .ast-h1 { fill:#b9d6b0; background:#b9d6b0; } .ast-h2 { fill:#7fb78f; background:#7fb78f; } .ast-h3 { fill:#4a9264; background:#4a9264; } .ast-h4 { fill:#1f6b46; background:#1f6b46; }
+      .ast-scroll rect[data-tip] { cursor:pointer; } .ast-scroll rect[data-tip]:hover { stroke:#2c2620; stroke-width:1; }
+      .ast-heatleg { display:flex; align-items:center; justify-content:flex-end; gap:4px; font-size:12px; font-weight:700; color:#6f6551; margin-top:6px; }
+      .ast-heatleg i { width:12px; height:12px; border-radius:3px; display:inline-block; }
+      .ast-mgrid { display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:4px; max-width:420px; margin:0 auto; }
+      .ast-mwd { text-align:center; font-size:12px; font-weight:800; color:#6f6551; }
+      .ast-mcell { aspect-ratio:1; display:flex; align-items:center; justify-content:center; border-radius:7px; font-size:13px; font-weight:700; color:#2c2620; cursor:pointer; }
+      .ast-mcell.ast-h3, .ast-mcell.ast-h4 { color:#fff; }
+      .ast-tip { position:absolute; z-index:5; transform:translate(-50%,-100%); background:#2c2620; color:#f8f2e4; font:600 12.5px/1.35 system-ui, sans-serif; padding:6px 9px; border-radius:8px; max-width:260px; text-align:center; pointer-events:none; box-shadow:0 4px 14px rgba(0,0,0,.25); }
+      .ast-tip[hidden] { display:none; }
+      .ast-hrow { cursor:default; }
+      @keyframes ast-grow { from { transform:scaleY(0); } to { transform:scaleY(1); } }
+      @keyframes ast-ring { from { stroke-dasharray:0 999; } }
+      @media (prefers-reduced-motion: reduce) { .ast-bar, .ast-seg { animation:none; } }
       .ast-h { margin:14px 0 6px; font-size:15px; font-style:italic; font-weight:800; color:#2c2620; }
       .ast-svg { width:100%; height:auto; display:block; }
       .ast-grid { stroke:#d3c495; stroke-width:1; stroke-dasharray:2 3; }
