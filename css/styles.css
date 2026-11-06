@@ -8153,27 +8153,15 @@ header.hero .hero-stat-label { font-size: 0.66rem; line-height: 1.25; }
   .login-matrix { opacity: .55; }
 }
 
-/* ---- Barquinho do card: carinha fofa + detalhes tecnológicos (bandeirinha holográfica, coração com sinal, LEDs) ---- */
-.login-constellation .cute { filter: drop-shadow(0 0 4px rgba(92, 225, 255, 0.45)); }
-.login-constellation .cute-hull { fill: rgba(92, 225, 255, 0.16); stroke: #8FE6FF; stroke-width: 1.3; stroke-linejoin: round; }
-.login-constellation .cute-shine { fill: none; stroke: #E8FFFF; stroke-width: 1.6; stroke-linecap: round; opacity: 0.45; }
-.login-constellation .cute-flag path { fill: rgba(255, 215, 106, 0.85); stroke: #FFE08A; stroke-width: 0.6; stroke-linejoin: round; transform-box: fill-box; transform-origin: left center; }
-.login-constellation .cute-flag circle { fill: #0A1B2E; }
-.login-constellation .cute-leds circle { fill: #7DFFC8; opacity: 0.9; }
-@media (prefers-reduced-motion: no-preference) {
-  .login-constellation .cute { animation: loginFade 1.4s ease 2.2s both; }
-  .login-constellation .cute-flag path { animation: cuteFlutter 2.4s ease-in-out infinite alternate; }
-  .login-constellation .cute-leds circle { animation: cuteLed 1.8s ease-in-out infinite; }
-  .login-constellation .cute-leds circle:nth-child(2) { animation-delay: .3s; }
-  .login-constellation .cute-leds circle:nth-child(3) { animation-delay: .6s; }
-  .login-constellation .cute-leds circle:nth-child(4) { animation-delay: .9s; }
-}
-@keyframes cuteFlutter { from { transform: skewY(-6deg) scaleX(1); } to { transform: skewY(7deg) scaleX(0.9); } }
-@keyframes cuteLed { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
 
 /* ---- Barco mais transparente: o casco e as velas ficam discretos e as estrelas (vértices da constelação) ganham destaque ---- */
 .login-constellation .cl-g { opacity: 0.4; filter: drop-shadow(0 0 2px rgba(92, 225, 255, 0.25)); }
-.login-constellation .cute { opacity: 0.38; filter: none; }
 .login-constellation .pulses { opacity: 0.55; }
 .login-constellation .term { opacity: 0.5; }
 .login-constellation .cs { filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.85)); }
+
+/* ---- Barco do mascote em constelação: linhas finas e discretas, estrelas em destaque ---- */
+.login-constellation .rig.sh { opacity: 0.9; stroke: #8FE6FF; stroke-width: 0.8; stroke-dasharray: 2 3; }
+.login-constellation .cl { stroke-width: 1.1; }
+.login-constellation .cl-g { opacity: 0.55; }
+.login-constellation .cs { filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.9)); }
