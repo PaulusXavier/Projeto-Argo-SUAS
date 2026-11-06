@@ -7852,3 +7852,161 @@ header.hero .hero-stat-label { font-size: 0.66rem; line-height: 1.25; }
   header.hero .hero-stat-unit .hero-stat-value { font-size: 1.05rem; }
   header.hero .hero-stat-label { font-size: 0.62rem; white-space: nowrap; }
 }
+
+
+/* =====================================================================
+   Tela de login — redesenho (fica por último para vencer as regras acima)
+   Ideia única: o painel da esquerda é o céu noturno de Roraima e a
+   constelação Argo Navis se desenha sozinha na abertura. O resto é quieto:
+   o botão Entrar é a única ação em destaque. O navio gigante do fundo, o
+   medalhão e a foto do painel foram retirados — eram o mesmo navio três vezes.
+   ===================================================================== */
+#loginScreen::after { display: none; }
+.login-story-historic, .login-story-emblem, .login-story-glow { display: none; }
+
+#loginScreen {
+  background:
+    radial-gradient(900px 520px at 12% -8%, rgba(0, 145, 194, 0.16), transparent 62%),
+    radial-gradient(760px 480px at 100% 110%, rgba(0, 151, 57, 0.12), transparent 62%),
+    linear-gradient(165deg, #070D1B 0%, #0B1424 52%, #081A1C 100%);
+}
+.login-shell { max-width: 980px; grid-template-columns: 0.95fr 1.05fr; border-radius: 28px; }
+
+/* ---- Painel esquerdo: céu e constelação ---- */
+.login-story {
+  min-height: 560px;
+  padding: 2.75rem 2.5rem 2.6rem;
+  background:
+    radial-gradient(420px 300px at 50% 22%, rgba(41, 171, 226, 0.16), transparent 70%),
+    linear-gradient(180deg, #0A1230 0%, #0C1E36 50%, #0A2A27 100%);
+}
+.login-sky { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.login-sky circle { fill: #DCE9F7; opacity: 0.55; }
+.login-sky .tw { animation: loginTwinkle var(--d, 4s) ease-in-out var(--l, 0s) infinite; }
+@keyframes loginTwinkle { 0%, 100% { opacity: 0.2; } 50% { opacity: 0.95; } }
+
+.login-constellation {
+  position: absolute;
+  left: 4%; right: 4%; top: 6.5%;
+  width: 92%; height: auto;
+  pointer-events: none;
+  overflow: visible;
+}
+.login-constellation .cl,
+.login-constellation .cw {
+  fill: none;
+  stroke: #7FB8D6;
+  stroke-width: 1.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.55;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+.login-constellation .cw { stroke: #29ABE2; opacity: 0.4; stroke-dasharray: 2 5; stroke-dashoffset: 0; }
+.login-constellation .cs { fill: #F4F8FD; }
+.login-constellation .cs.gold { fill: #FFD76A; }
+@media (prefers-reduced-motion: no-preference) {
+  .login-constellation .cl {
+    animation: loginDraw 1.5s cubic-bezier(0.5, 0, 0.2, 1) calc(0.35s + var(--i) * 0.45s) both;
+  }
+  .login-constellation .cw { animation: loginFade 1.2s ease 2.4s both; }
+  .login-constellation .cs {
+    transform-box: fill-box; transform-origin: center;
+    animation: loginStarOn 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.4) calc(0.2s + var(--i) * 0.16s) both,
+               loginStarPulse 5s ease-in-out calc(2.6s + var(--i) * 0.3s) infinite;
+  }
+}
+@keyframes loginDraw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes loginFade { from { opacity: 0; } }
+@keyframes loginStarOn { from { opacity: 0; transform: scale(0.2); } to { opacity: 1; transform: scale(1); } }
+@keyframes loginStarPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+.login-story-content { max-width: 24rem; }
+.login-story-brand { font-size: 3rem; margin-bottom: 0.6rem; }
+.login-story-tagline { font-size: 0.9rem; color: #9ADFCB; margin-bottom: 0; }
+.login-story-list { margin-top: 1.5rem; padding-top: 1.35rem; border-top: 1px solid rgba(255, 255, 255, 0.12); gap: 0.7rem; }
+.login-story-list li { font-size: 0.88rem; color: #C9D6E6; }
+
+/* ---- Painel direito: um caminho só, até o botão ---- */
+.login-panel { padding: 3.4rem 3.2rem 2.2rem; }
+.login-title { font-size: clamp(1.7rem, 1.3rem + 1vw, 2.05rem); letter-spacing: -0.015em; margin-bottom: 0.55rem; }
+.login-river { margin-bottom: 1rem; }
+.login-sub { margin-bottom: 1.9rem; font-size: 0.92rem; max-width: 30ch; }
+.login-field label { font-size: 0.85rem; margin-bottom: 0.5rem; }
+#loginPassword {
+  min-height: 56px;
+  padding-left: 3rem;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-main) 70%, var(--bg-card));
+  letter-spacing: 0.02em;
+}
+#loginPassword:focus {
+  background: var(--bg-card);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-primary) 18%, transparent), 0 6px 18px -10px color-mix(in srgb, var(--brand-primary) 60%, transparent);
+}
+.login-input-wrapper > svg:first-child { left: 1.05rem; }
+
+.login-options-row { margin-top: 0.15rem; margin-bottom: 0.6rem; }
+.login-forgot-link { font-size: 0.82rem; font-weight: 600; text-decoration: none; }
+.login-forgot-link:hover { text-decoration: underline; }
+
+.login-submit {
+  min-height: 56px;
+  border-radius: 14px;
+  font-size: 1rem;
+  letter-spacing: 0.005em;
+  background: linear-gradient(180deg, #1BA3DC 0%, #0083B3 100%);
+  box-shadow: 0 14px 26px -12px rgba(0, 131, 179, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+.login-submit-icon { transition: transform 0.2s ease; }
+.login-submit:hover:not(:disabled) .login-submit-icon { transform: translateX(3px); }
+.login-submit:hover:not(:disabled) { box-shadow: 0 18px 30px -12px rgba(0, 131, 179, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.25); }
+.login-trust-note { justify-content: flex-start; margin-top: 0.85rem; font-size: 0.76rem; }
+
+/* Site do autor: vira um rodapé discreto, sem competir com o botão Entrar */
+.login-vita {
+  margin-top: 1.7rem;
+  padding: 1rem 0 0;
+  gap: 0.7rem;
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--border-ui);
+  border-radius: 0;
+}
+.login-vita:hover, .login-vita:focus-visible { transform: none; background: none; box-shadow: none; }
+.login-vita:hover .login-vita-title { text-decoration: underline; text-underline-offset: 3px; }
+.login-vita-mark { width: 2rem; height: 2rem; border-radius: 8px; font-size: 1.2rem; }
+.login-vita-eyebrow { font-size: 0.72rem; font-weight: 500; }
+.login-vita-title { font-size: 0.85rem; font-weight: 600; }
+.login-vita-arrow { font-size: 1rem; color: var(--text-muted); }
+
+.login-details { margin-top: 0.9rem; }
+.login-status { margin-top: 0.9rem; justify-content: flex-start; }
+
+/* ---- Celular: cabeçalho compacto com a constelação ao fundo; o Argo desce para o fim da página ---- */
+@media (max-width: 760px) {
+  #loginScreen { flex-direction: column; padding: 0.9rem 0.9rem calc(1rem + env(safe-area-inset-bottom)); }
+  .login-shell { grid-template-columns: 1fr; max-width: 440px; border-radius: 22px; flex: 0 0 auto; margin: auto auto 0; }
+  .login-story { flex: 0 0 auto; }
+  .login-story { min-height: 0; padding: 1.35rem 1.4rem 1.25rem; }
+  .login-story-brand { font-size: 1.7rem; margin: 0; }
+  .login-story-tagline { font-size: 0.72rem; margin-top: 0.15rem; }
+  .login-constellation { left: auto; right: -2%; top: 50%; width: 62%; transform: translateY(-50%); opacity: 0.55; }
+  .login-panel { padding: 1.7rem 1.45rem 1.5rem; }
+  .login-sub { max-width: none; margin-bottom: 1.4rem; }
+  .login-mascot {
+    position: relative; left: auto; bottom: auto;
+    margin: 0.9rem auto 0;
+    flex: 0 0 auto;
+  }
+  .login-mascot.is-open { align-items: center; }
+  .login-mascot.is-open .login-mascot-bubble::before { left: 50%; margin-left: -7px; }
+  .login-waves { display: none; }
+}
+@media (max-width: 380px) { .login-panel { padding: 1.5rem 1.1rem 1.3rem; } }
+@media (max-height: 700px) and (min-width: 761px) {
+  .login-story { min-height: 0; }
+  .login-panel { padding-top: 2.2rem; padding-bottom: 1.6rem; }
+  .login-sub { margin-bottom: 1.2rem; }
+}
