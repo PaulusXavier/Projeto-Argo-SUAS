@@ -18315,7 +18315,19 @@ function argoAssistantDefaultQuickActions() {
       freq.reverse().forEach(q => list.unshift({ label: '↺ ' + (q.length > 34 ? q.slice(0, 33) + '…' : q), run: () => argoAssistantAskInline(q) }));
     }
   } catch (e) { /* sem memória: segue com os atalhos padrão */ }
-  return list.slice(0, cat === 'all' ? 7 : 6);
+  // Aprendizado do Argo (diretório): as buscas que a pessoa repete e o atalho para ver/apagar o que ele aprendeu
+  try {
+    const A = argoAprender();
+    if (A && A.ativo()) {
+      const seen = new Set(list.map(x => argoNorm(String(x.label).replace(/^↺\s*/, ''))));
+      (A.frequentes(2) || []).map(x => x && x.texto).filter(Boolean).reverse().forEach(q => {
+        if (seen.has(argoNorm(q.length > 34 ? q.slice(0, 33) + '…' : q))) return;
+        list.unshift({ label: '↺ ' + (q.length > 34 ? q.slice(0, 33) + '…' : q), run: () => argoAssistantAskInline(q) });
+      });
+      list.push({ label: '🧠 O que você aprendeu?', run: () => argoAssistantAskInline('o que você aprendeu') });
+    }
+  } catch (e) { /* aprendizado é opcional */ }
+  return list.slice(0, cat === 'all' ? 8 : 7);
 }
 
 /* ============================================================
@@ -18807,6 +18819,8 @@ function initArgoAssistant() {
     ask: argoAssistantAskHybrid,
     defaultQuickActions: argoAssistantDefaultQuickActions,
     onUnit: argoAssistantOpenUnit,
+    onUnitUse: unit => { const A = argoAprender(); if (A) A.usou(unit); },
+    onFeedback: sinal => { const A = argoAprender(); if (A) A.feedback(sinal); },
     onReset: () => { if (typeof ArgoCerebro !== 'undefined') ArgoCerebro.reset(); },
     status: argoAssistantStatus
   });
@@ -28497,6 +28511,57 @@ function argoUnitsForUi(units) {
   }));
 }
 
+// ============================================================
+// APRENDIZADO DO ARGO — o mascote melhora com o uso, só neste aparelho.
+// 👍/👎, ligar/abrir ficha/mapa/copiar e as perguntas repetidas ajustam a ordem das unidades,
+// ensinam apelidos de palavras novas e viram atalhos (ArgoCerebro.aprender, js/argo-cerebro.js).
+// Aqui: o pedido "o que você aprendeu?" (mostra) e "apague o que aprendeu" (zera, com confirmação).
+// ============================================================
+function argoAprender() {
+  const B = argoBrain();
+  return B && B.aprender ? B.aprender : null;
+}
+function argoAprendizadoKind(rawText) {
+  const n = argoNorm(rawText);
+  if (!n || n.length > 90) return '';
+  if (/\b(apag|esquec|limp|zer|delet|remov|reinici|resetar|reset)\w*\b.*\b(aprendi|aprendeu|aprendizado|que aprendeu|memoria de uso)\b/.test(n)) return 'apagar';
+  if (/\bo que (voce|vc|tu|o argo|argo|paulus) (ja )?(aprendeu|sabe de mim|aprendeu comigo|aprendeu de mim)\b|\b(seu|teu) aprendizado\b|\bcomo (voce|vc|o argo) aprende\b|\bvoce aprende\b/.test(n)) return 'ver';
+  return '';
+}
+function argoAprendizadoAsk(rawText) {
+  const kind = argoAprendizadoKind(rawText);
+  if (!kind) return null;
+  const A = argoAprender();
+  if (!A) return null;
+  const apagar = {
+    label: 'Sim, apagar tudo',
+    run: () => A.apagar(),
+    reply: 'Pronto, apaguei tudo o que aprendi neste aparelho. Começo do zero a partir de agora.',
+    mood: 'success'
+  };
+  if (kind === 'apagar') {
+    return {
+      reply: 'Posso apagar tudo o que aprendi com o uso neste aparelho: unidades preferidas, apelidos de palavras e perguntas repetidas. As fichas do diretório não mudam. Quer apagar?',
+      mood: 'info',
+      quickActions: [apagar, { label: 'Não, manter', run: () => {}, reply: 'Tudo bem, mantive o que aprendi.', mood: 'success' }]
+    };
+  }
+  const r = A.resumo();
+  const comoFunciona = 'Como eu aprendo: quando você toca em 👍, liga, abre a ficha, o mapa ou copia os dados de uma unidade, eu passo a mostrar essa unidade mais para cima em buscas parecidas; o 👎 faz o contrário. Quando você usa uma palavra que eu não conheço e depois confirma a resposta, guardo a palavra como apelido. Tudo fica só neste aparelho, sem nomes de pessoas, e nada vai para a internet.';
+  if (!r.n && !r.apelidos.length && !r.frequentes.length) {
+    return {
+      reply: 'Ainda não aprendi nada com você neste aparelho. Depois de uma busca, toque em 👍 ou 👎 na resposta, ou ligue/abra a ficha da unidade certa, e eu vou ajustando.\n\n' + comoFunciona,
+      mood: 'info', quickActions: []
+    };
+  }
+  const linhas = ['Até agora aprendi com ' + r.n + (r.n === 1 ? ' avaliação' : ' avaliações') + ' (' + r.bons + ' positivas, ' + r.ruins + ' negativas).'];
+  if (r.preferidas.length) linhas.push('Unidades que você mais confirma: ' + r.preferidas.map(x => x.nome).join('; ') + '.');
+  if (r.apelidos.length) linhas.push('Palavras que aprendi: ' + r.apelidos.map(x => '"' + x.de + '" → ' + x.para.join(', ')).join('; ') + '.');
+  if (r.frequentes.length) linhas.push('Perguntas que você repete: ' + r.frequentes.map(x => '"' + x.texto + '" (' + x.vezes + '×)').join('; ') + '.');
+  linhas.push(comoFunciona);
+  return { reply: linhas.join('\n\n'), mood: 'info', quickActions: [{ label: 'Apagar o que aprendi', run: () => {}, ask: 'apague o que você aprendeu' }] };
+}
+
 // Ponto de entrada do mascote: primeiro a IA INTERPRETA a pergunta (lê a conversa, completa o que ficou
 // subentendido, corrige a digitação e a põe na forma que o app sabe consultar com dados reais); depois as
 // consultas locais e a resposta seguem como sempre, já com a pergunta bem entendida. Fica de fora, direto
@@ -28514,7 +28579,7 @@ function argoAssistantAskHybrid(rawText, meta) {
   const aguardando = !!(B && B.session && B.session.aguardando);
   if (B && B.session) B.session.aguardando = false;
   const pular = !B || typeof B.interpretar !== 'function' || !B.aiOn() || meta.forceAI || meta.regen || meta.semInterpretar ||
-    (texto.length < 4 && !aguardando) || texto.length > 300 || _ubsPsiAguarda || B.crisis(texto) || B.piiBlock(texto) || argoAgendaAsk(texto) || argoThemeAsk(texto) || argoOpenTabAsk(texto) ||
+    (texto.length < 4 && !aguardando) || texto.length > 300 || _ubsPsiAguarda || B.crisis(texto) || B.piiBlock(texto) || !!argoAprendizadoKind(texto) || argoAgendaAsk(texto) || argoThemeAsk(texto) || argoOpenTabAsk(texto) ||
     (typeof B.psi === 'function' && B.psi(texto).score >= 3) ||
     // "continue", "tem certeza?", "de onde tirou isso?": o Paulus só trata esses pedidos com as palavras da pessoa; reescrever a pergunta os transformaria em assunto novo
     (typeof B.seguimento === 'function' && !!B.seguimento(texto)) ||
@@ -28574,6 +28639,10 @@ function argoAssistantAskHybridCore(rawText, meta) {
   // nem entram na memória da conversa (podem citar anotações pessoais).
   const agendaAnswer = argoAgendaAsk(rawText);
   if (agendaAnswer) return agendaAnswer;
+
+  // "O que você aprendeu?" / "apague o que aprendeu": resposta local, sobre o aprendizado deste aparelho.
+  const aprAnswer = argoAprendizadoAsk(rawText);
+  if (aprAnswer) return aprAnswer;
 
   // Pedido para trocar o tema ("modo escuro"): troca na hora, sem passar pela IA.
   const themeAnswer = argoThemeAsk(rawText);
