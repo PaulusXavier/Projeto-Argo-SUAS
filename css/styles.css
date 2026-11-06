@@ -7686,6 +7686,8 @@ header.hero { padding: 2.1rem 0 1.9rem; min-height: 0; }
 .ht-chip.ht-late { background: rgba(237, 28, 36, 0.22); border-color: rgba(255, 123, 114, 0.7); color: #ffd9d5; }
 .ht-chip.ht-late:hover { background: rgba(237, 28, 36, 0.34); }
 .ht-chip.ht-next { color: var(--hero-neutral, #C7DED8); font-weight: 600; }
+.ht-chip.ht-mds { background: rgba(142, 110, 214, 0.28); border-color: rgba(196, 176, 240, 0.7); color: #f1ebff; max-width: 100%; text-align: left; }
+.ht-chip.ht-mds.is-urgent { background: rgba(237, 28, 36, 0.24); border-color: rgba(255, 123, 114, 0.75); color: #ffe1de; }
 @media (prefers-reduced-motion: reduce) { .ht-chip { transition: none; } .ht-chip:hover { transform: none; } }
 
 @media (max-width: 640px) {
@@ -7922,6 +7924,53 @@ header.hero .hero-stat-label { font-size: 0.66rem; line-height: 1.25; }
 @keyframes loginStarOn { from { opacity: 0; transform: scale(0.2); } to { opacity: 1; transform: scale(1); } }
 @keyframes loginStarPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
 
+/* ---- Constelação do navio Argo (versão tecnológica): velas holográficas com varredura, casco angular com hidrofólio, trilhas de circuito com pulsos de dados e painel de mira ---- */
+.login-constellation { top: 4.5%; }
+.login-constellation .cl-g { filter: drop-shadow(0 0 3px rgba(92, 225, 255, 0.5)); }
+.login-constellation .cl { stroke: #8FE6FF; stroke-width: 1.2; opacity: 0.85; stroke-linejoin: miter; stroke-linecap: square; }
+.login-constellation .rig { fill: none; stroke: #7FD8F0; stroke-width: 0.6; opacity: 0.3; }
+.login-constellation .mesh { stroke-width: 0.5; opacity: 0.32; }
+.login-constellation .sail { stroke: none; }
+.login-constellation .trace { fill: none; stroke: #5CE1FF; stroke-width: 0.9; opacity: 0.5; stroke-linejoin: round; }
+.login-constellation .term { fill: #0A1B2E; stroke: #5CE1FF; stroke-width: 0.9; opacity: 0.85; }
+.login-constellation .pulse { fill: none; stroke: #E8FFFF; stroke-width: 1.6; stroke-linecap: round; stroke-dasharray: 5 95; stroke-dashoffset: 5; opacity: 0; }
+.login-constellation .scan { opacity: 0; }
+.login-constellation .refl { opacity: 0.18; }
+.login-constellation .cw { fill: none; stroke-width: 1.3; stroke-dasharray: 3 6; opacity: 0.55; }
+.login-constellation .cw2 { opacity: 0.32; stroke-dasharray: 2 7; }
+.login-constellation .ring { fill: none; stroke: #5CE1FF; stroke-width: 0.6; opacity: 0.22; }
+.login-constellation .r1 { stroke-dasharray: 2 6; transform-origin: 205px 112px; }
+.login-constellation .r2 { stroke-dasharray: 38 12 6 12; opacity: 0.16; transform-origin: 205px 112px; }
+.login-constellation .brk { fill: none; stroke: #5CE1FF; stroke-width: 1; opacity: 0.4; }
+.login-constellation .hud { font: 600 7.5px/1 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; letter-spacing: 0.6px; fill: #7FD8F0; opacity: 0.55; }
+.login-constellation .hud-r { text-anchor: end; }
+.login-constellation .halo { transform-box: fill-box; transform-origin: center; }
+.login-constellation .ret { fill: none; stroke: #FFD76A; stroke-width: 0.8; stroke-dasharray: 3 3; opacity: 0.8; transform-box: fill-box; transform-origin: center; }
+.login-constellation .retx { fill: none; stroke: #FFD76A; stroke-width: 0.9; opacity: 0.8; }
+.login-constellation .cs { fill: #FFFFFF; }
+.login-constellation .cs.gold { fill: #FFE08A; }
+.login-constellation .shoot { opacity: 0; }
+@media (max-width: 760px) { .login-constellation .hud { display: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  .login-constellation .sail, .login-constellation .rig, .login-constellation .neb, .login-constellation .trace, .login-constellation .ring, .login-constellation .brk { animation: loginFade 1.6s ease 1.8s both; }
+  .login-constellation .halo { animation: loginHalo 5.5s ease-in-out calc(1.6s + var(--i) * 0.35s) infinite; }
+  .login-constellation .ret { animation: loginSpin 9s linear infinite; }
+  .login-constellation .r1 { animation: loginFade 1.6s ease 1.8s both, loginSpin 80s linear infinite; }
+  .login-constellation .r2 { animation: loginFade 1.6s ease 1.8s both, loginSpin 55s linear infinite reverse; }
+  .login-constellation .pulse { animation: loginPulse 3.6s linear calc(2.6s + var(--p) * 0.7s) infinite; }
+  .login-constellation .scan { animation: loginScan 4.2s ease-in-out 2.4s infinite; }
+  .login-constellation .cw { animation: loginFade 1.2s ease 2.4s both, loginWaveFlow 14s linear 3.6s infinite; }
+  .login-constellation .cw2 { animation: loginFade 1.2s ease 2.8s both, loginWaveFlow 20s linear 4s infinite reverse; }
+  .login-constellation .refl { animation: loginFade 1.6s ease 3s both; }
+  .login-constellation .shoot { animation: loginShoot 12s ease-in 5s infinite; }
+}
+@keyframes loginHalo { 0%, 100% { opacity: 0.55; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.15); } }
+@keyframes loginSpin { to { transform: rotate(360deg); } }
+@keyframes loginPulse { 0% { opacity: 0; stroke-dashoffset: 5; } 8% { opacity: 1; } 92% { opacity: 1; } 100% { opacity: 0; stroke-dashoffset: -100; } }
+@keyframes loginScan { 0% { opacity: 0; transform: translateY(0); } 15% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; transform: translateY(118px); } }
+@keyframes loginWaveFlow { to { stroke-dashoffset: -90; } }
+@keyframes loginShoot { 0%, 90% { opacity: 0; transform: translate(0, 0); } 92% { opacity: 1; } 100% { opacity: 0; transform: translate(-110px, 55px); } }
+
 .login-story-content { max-width: 24rem; }
 .login-story-brand { font-size: 3rem; margin-bottom: 0.6rem; }
 .login-story-tagline { font-size: 0.9rem; color: #9ADFCB; margin-bottom: 0; }
@@ -7986,7 +8035,7 @@ header.hero .hero-stat-label { font-size: 0.66rem; line-height: 1.25; }
 
 /* ---- Celular: cabeçalho compacto com a constelação ao fundo; o Argo desce para o fim da página ---- */
 @media (max-width: 760px) {
-  #loginScreen { flex-direction: column; padding: 0.9rem 0.9rem calc(1rem + env(safe-area-inset-bottom)); }
+  #loginScreen { flex-direction: column; justify-content: flex-start; padding: 0.9rem 0.9rem calc(1rem + env(safe-area-inset-bottom)); }
   .login-shell { grid-template-columns: 1fr; max-width: 440px; border-radius: 22px; flex: 0 0 auto; margin: auto auto 0; }
   .login-story { flex: 0 0 auto; }
   .login-story { min-height: 0; padding: 1.35rem 1.4rem 1.25rem; }
