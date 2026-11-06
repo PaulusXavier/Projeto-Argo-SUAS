@@ -15,7 +15,8 @@
     "test:voz": "node scripts/teste-voz.mjs",
     "test:zip": "node scripts/teste-zip.mjs",
     "test:office": "node scripts/teste-office.mjs",
-    "test:acoes": "node scripts/teste-acoes-ia.mjs"
+    "test:acoes": "node scripts/teste-acoes-ia.mjs",
+    "test:aprendizado": "node scripts/teste-aprendizado.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.24.0"
