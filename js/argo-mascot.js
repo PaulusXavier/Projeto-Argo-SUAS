@@ -1442,6 +1442,26 @@
       return card;
     }
 
+    // SVG de fora (o esquema da rota do Paulus) -> elemento seguro, ou null. Nada de script, foreignObject, evento ou link externo.
+    function safeSvg(src) {
+      try {
+        var doc = new DOMParser().parseFromString(String(src), 'image/svg+xml');
+        var root = doc.documentElement;
+        if (!root || String(root.nodeName).toLowerCase() !== 'svg' || doc.getElementsByTagName('parsererror').length) return null;
+        Array.prototype.slice.call(root.querySelectorAll('script, foreignObject, iframe, object, embed, use, image, a')).forEach(function (x) { x.remove(); });
+        [root].concat(Array.prototype.slice.call(root.querySelectorAll('*'))).forEach(function (el) {
+          Array.prototype.slice.call(el.attributes).forEach(function (at) {
+            if (/^on/i.test(at.name) || /javascript:/i.test(at.value)) el.removeAttribute(at.name);
+          });
+        });
+        var out = document.importNode(root, true);
+        out.setAttribute('role', 'img');
+        if (!out.getAttribute('aria-label')) out.setAttribute('aria-label', 'Esquema da rota');
+        out.style.maxWidth = '100%'; out.style.height = 'auto';
+        return out;
+      } catch (e) { return null; }
+    }
+
     // badge, nota, cartões e ações de uma resposta do Argo
     var lastRate = null; // avisa o Paulus (👍/👎/mais curto/copiar) sobre a última resposta da IA
     function rate(sinal) { try { if (lastRate) lastRate(sinal); } catch (e) { /* aprender é opcional */ } }
@@ -1455,6 +1475,15 @@
       }
       if (result.skills && result.skills.length) { var sk = document.createElement('div'); sk.className = 'argo-assistant-note'; sk.textContent = '📋 Segui o roteiro: ' + result.skills.join(' · ') + '. É um apoio de escrita; revise antes de usar.'; b.col.appendChild(sk); }
       if (result.note) { var n = document.createElement('div'); n.className = 'argo-assistant-note'; n.textContent = result.note; b.col.appendChild(n); }
+      // Esquema da rota (SVG montado pelo Paulus): lido como XML, sem script nem atributos de evento, dentro de um bloco que abre e fecha
+      if (result.svg) {
+        var sv = safeSvg(result.svg);
+        if (sv) {
+          var dsv = document.createElement('details'); dsv.className = 'argo-assistant-src argo-assistant-route';
+          var ssm = document.createElement('summary'); ssm.textContent = 'Ver o esquema da rota';
+          dsv.appendChild(ssm); dsv.appendChild(sv); b.col.appendChild(dsv);
+        }
+      }
       var srcs = [], seen = {};
       (result.sources || []).forEach(function (f) {
         var nm = [f && f.documento, f && f.referencia].filter(Boolean).join(', ');
