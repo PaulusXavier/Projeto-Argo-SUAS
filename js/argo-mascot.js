@@ -1147,6 +1147,8 @@
     var lines = String(text == null ? '' : text).replace(/\r/g, '').split('\n');
     var list = null, listType = '';
     function inline(parent, str) {
+      // [texto](url) vira "texto (url)" e `código` perde as crases: a IA escreve assim e aqui nada vira link nem HTML
+      str = str.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '$1 ($2)').replace(/`+/g, '');
       var parts = str.split(/(\*\*[^*]+\*\*)/);
       for (var i = 0; i < parts.length; i++) {
         var p = parts[i];
@@ -1156,16 +1158,29 @@
       }
     }
     function endList() { list = null; listType = ''; }
-    lines.forEach(function (ln) {
-      var m = ln.match(/^\s*(?:[-•]\s+|(\d{1,2})[.)]\s+)(.*)$/);
+    lines.forEach(function (ln, idx) {
+      var m = ln.match(/^\s*(?:[-•*]\s+|(\d{1,2})[.)]\s+)(.*)$/);
       if (m && m[2].trim()) {
         var type = m[1] ? 'ol' : 'ul';
-        if (!list || listType !== type) { list = document.createElement(type); listType = type; target.appendChild(list); }
+        if (!list || listType !== type) {
+          list = document.createElement(type); listType = type; target.appendChild(list);
+          // "1. a / texto / 2. b": a segunda lista continua do 2, não recomeça do 1
+          if (m[1] && Number(m[1]) > 1) list.setAttribute('start', String(Number(m[1])));
+        }
         var li = document.createElement('li'); inline(li, m[2].trim()); list.appendChild(li);
         return;
       }
+      if (!ln.trim()) {
+        // linha em branco entre itens da mesma lista ("1. a\n\n2. b") não quebra a lista
+        var prox = lines.slice(idx + 1).find(function (x) { return x.trim(); });
+        var segue = prox && list && (listType === 'ol' ? /^\s*\d{1,2}[.)]\s+\S/.test(prox) : /^\s*[-•*]\s+\S/.test(prox));
+        if (!segue) endList();
+        return;
+      }
       endList();
-      if (!ln.trim()) return;
+      var h = ln.match(/^\s*#{1,6}\s+(.+?)\s*#*\s*$/);          // "## Título" que escapou da limpeza: linha em negrito, sem "#" aparecendo
+      if (h) { var ph = document.createElement('p'); var sb = document.createElement('strong'); sb.textContent = h[1].replace(/\*\*/g, ''); ph.appendChild(sb); target.appendChild(ph); return; }
+      if (/^\s*(?:[-*_]\s*){3,}$/.test(ln)) return;              // linha horizontal
       var p = document.createElement('p'); inline(p, ln.trim()); target.appendChild(p);
     });
     if (!target.firstChild) target.textContent = String(text || '');
