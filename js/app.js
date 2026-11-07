@@ -28582,6 +28582,8 @@ function argoAssistantAskHybrid(rawText, meta) {
   if (B && B.session) B.session.aguardando = false;
   const pular = !B || typeof B.interpretar !== 'function' || !B.aiOn() || meta.forceAI || meta.regen || meta.semInterpretar ||
     (texto.length < 4 && !aguardando) || texto.length > 300 || _ubsPsiAguarda || B.crisis(texto) || B.piiBlock(texto) || !!argoAprendizadoKind(texto) || argoAgendaAsk(texto) || argoThemeAsk(texto) || argoOpenTabAsk(texto) ||
+    // pedido de rota ("traçar rota saindo do CRAS X: A, B e C"): o Paulus lê com as palavras da pessoa; reescrever a pergunta perderia paradas
+    (typeof Paulus !== 'undefined' && Paulus.rota && typeof Paulus.rota.ler === 'function' && !!Paulus.rota.ler(texto)) ||
     (typeof B.psi === 'function' && B.psi(texto).score >= 3) ||
     // "continue", "tem certeza?", "de onde tirou isso?": o Paulus só trata esses pedidos com as palavras da pessoa; reescrever a pergunta os transformaria em assunto novo
     (typeof B.seguimento === 'function' && !!B.seguimento(texto)) ||
@@ -28636,6 +28638,10 @@ function argoAssistantAskHybridCore(rawText, meta) {
     const aviso = B.piiBlock(rawText);
     if (aviso) return { reply: aviso, mood: 'notfound', quickActions: [] };
   }
+
+  // Pedido de rota entre unidades: ordem, km e tempo calculados no aparelho (Paulus v0.12.0), sem IA e sem rede.
+  const rotaAnswer = argoRotaAsk(rawText);
+  if (rotaAnswer) return rotaAnswer;
 
   // Perguntas sobre a Agenda são respondidas aqui, com os dados do aparelho: nunca vão à IA
   // nem entram na memória da conversa (podem citar anotações pessoais).
@@ -28891,6 +28897,127 @@ function argoEscolherAcoesIA(lista, texto, aba, max) {
   return escolhidas.slice(0, max);
 }
 
+/* ---------- Rotas (Paulus v0.12.0) ----------
+   O Paulus ordena as paradas, mede km e tempo e monta o link do mapa NO APARELHO, sem IA e sem rede.
+   O Argo só diz onde ficam as unidades (só unidades PÚBLICAS: nunca endereço de família) e de onde a pessoa sai. */
+function argoRotaPontos() {
+  const norm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
+  const vistos = new Set();
+  const pontos = [];
+  const add = (nome, lat, lng, endereco, apelidos) => {
+    lat = Number(lat); lng = Number(lng);
+    const k = norm(nome);
+    if (!k || vistos.has(k) || !isFinite(lat) || !isFinite(lng)) return;
+    vistos.add(k);
+    pontos.push({ nome, lat, lng, endereco: endereco || '', apelidos: (apelidos || []).filter(a => a && norm(a) !== k) });
+  };
+  // 1) CRAS/CREAS de Boa Vista: coordenadas conferidas à mão (UNITS_CRAS_CREAS)
+  if (typeof UNITS_CRAS_CREAS === 'object' && UNITS_CRAS_CREAS) {
+    Object.keys(UNITS_CRAS_CREAS).forEach(g => (UNITS_CRAS_CREAS[g] || []).forEach(u => add(u.name, u.lat, u.lng, u.address)));
+  }
+  // 2) Demais equipamentos do diretório que já foram localizados neste aparelho (mapa). Coordenada "aproximada" fica de fora:
+  //    um pino errado vira rota errada.
+  try {
+    const cache = typeof getGeocodeCache === 'function' ? getGeocodeCache() : {};
+    (typeof DATA !== 'undefined' ? DATA : []).forEach(it => {
+      const c = it && it.id && cache[it.id];
+      if (c && !c.approx) add(it.name, c.lat, c.lon, it.address, [it.fullName]);
+    });
+  } catch (e) { /* sem cache: ficam só as unidades de CRAS/CREAS */ }
+  return pontos;
+}
+
+// Posição de quem pergunta ("saindo daqui"): só se a pessoa já ligou o "perto de mim" no app. O Paulus nunca pede o GPS.
+function argoRotaAparelho() {
+  return proximityState && proximityState.active && isFinite(proximityState.lat) && isFinite(proximityState.lon)
+    ? { lat: proximityState.lat, lng: proximityState.lon } : null;
+}
+
+// "Fazer a pé / de carro / de moto": o mesmo pedido, trocando só o modo. É uma pergunta nova com o texto completo,
+// então segue o mesmo caminho do pedido original (nada fica guardado entre uma rota e outra).
+const ARGO_ROTA_MODOS = [['moto', 'de moto', /\bde moto(?:cicleta)?\b/gi], ['carro', 'de carro', /\bde carro\b/gi], ['a pé', 'a pé', /\ba pe\b|\ba pé\b|\bandando\b/gi], ['bicicleta', 'de bicicleta', /\bde bicicleta\b|\bde bike\b/gi]];
+function argoRotaOutrosModos(rawText) {
+  const texto = String(rawText || '');
+  const atual = ARGO_ROTA_MODOS.find(m => { m[2].lastIndex = 0; return m[2].test(texto); });
+  let base = texto;
+  ARGO_ROTA_MODOS.forEach(m => { base = base.replace(m[2], ' '); });
+  base = base.replace(/\s+,/g, ',').replace(/,\s*,/g, ',').replace(/\s+/g, ' ').replace(/[,\s]+$/, '').trim();
+  return ARGO_ROTA_MODOS.filter(m => m !== atual && m[0] !== 'bicicleta').slice(0, 2)
+    .map(m => ({ label: 'Fazer ' + m[1], ask: base + ', ' + m[1] }));
+}
+
+// Resposta que citou duas ou mais unidades do diretório: atalho para a melhor ordem de visita entre elas.
+function argoRotaChipUnidades(units) {
+  try {
+    if (typeof Paulus === 'undefined' || !Paulus.rota) return null;
+    const norm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+    const pontos = argoRotaPontos();
+    const achados = [];
+    (units || []).forEach(u => {
+      const nome = u && (u.name || u.fullName);
+      const p = nome && pontos.find(x => norm(x.nome) === norm(nome) || (x.apelidos || []).some(a => norm(a) === norm(nome)));
+      if (p && !achados.includes(p.nome)) achados.push(p.nome);
+    });
+    if (achados.length < 2) return null;
+    const lista = achados.slice(0, 5);
+    return { label: '🗺️ Melhor ordem para visitar', ask: 'Melhor ordem para visitar ' + lista.slice(0, -1).join(', ') + ' e ' + lista[lista.length - 1] };
+  } catch (e) { return null; }
+}
+
+// Paradas que ainda não têm pino neste aparelho: acha o equipamento no diretório (só se for UM só, para não pôr o pino na unidade errada),
+// localiza o endereço (Nominatim, ~1 por segundo, só quando a pessoa toca) e refaz o mesmo pedido, agora com km e tempo.
+function argoRotaChipLocalizar(rawText, paradas) {
+  try {
+    if (typeof DATA === 'undefined' || typeof ensureGeocodedFor !== 'function') return null;
+    const norm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+    const conhecidos = argoRotaPontos().reduce((m, p) => { [p.nome].concat(p.apelidos || []).forEach(n => m.add(norm(n))); return m; }, new Set());
+    const itens = [];
+    (paradas || []).forEach(nome => {
+      const n = norm(nome);
+      if (n.length < 4 || conhecidos.has(n)) return;
+      const casam = DATA.filter(it => it && it.id && it.address && (norm(it.name) === n || norm(it.fullName) === n || norm(it.name).includes(n) || (n.length >= 8 && norm(it.fullName).includes(n))));
+      if (casam.length === 1 && !itens.includes(casam[0])) itens.push(casam[0]);
+    });
+    if (!itens.length) return null;
+    return {
+      label: '📍 Localizar ' + (itens.length === 1 ? 'a unidade' : itens.length + ' unidades') + ' e refazer',
+      run: async () => {
+        if (navigator.onLine === false) { argoAviso('Sem internet agora. Conecte-se para localizar os endereços.', 'error'); return; }
+        argoAviso('Localizando ' + itens.map(i => i.name).slice(0, 3).join(', ') + '… (cerca de 1 segundo por unidade)', 'info');
+        try { await ensureGeocodedFor(itens); } catch (e) { /* o refazer abaixo diz o que faltou */ }
+        const cache = getGeocodeCache();
+        const achou = itens.some(i => cache[i.id] && !cache[i.id].approx);
+        if (!achou) { argoAviso('Não consegui localizar o endereço pelo serviço de mapas. A rota segue só como link.', 'error'); return; }
+        argoAssistantAskInline(rawText);
+      }
+    };
+  } catch (e) { return null; }
+}
+
+// Pedido de rota para o mascote. Devolve o resultado no formato da interface do mascote ou null (a pergunta segue o fluxo normal).
+// Só assume pedido com duas paradas ou mais, ou recusa de endereço de residência; "como chegar ao CRAS X" continua com o cartão do diretório.
+function argoRotaAsk(rawText) {
+  if (typeof Paulus === 'undefined' || !Paulus.rota || typeof Paulus.rota.responder !== 'function') return null;
+  let r = null;
+  try { r = Paulus.rota.responder(rawText, { pontos: argoRotaPontos(), aparelho: argoRotaAparelho(), cidade: 'Boa Vista, RR' }); } catch (e) { return null; }
+  if (!r || !r.texto) return null;
+  if (!r.bloqueio && (r.paradas || []).length < 2) return null;
+  const B = argoBrain();
+  if (B && typeof B.remember === 'function') B.remember(rawText, r.texto, []);
+  const abrir = url => { try { window.open(url, '_blank', 'noopener'); } catch (e) { /* bloqueio de pop-up: o link segue no botão */ } };
+  return {
+    reply: r.texto,
+    mood: r.bloqueio ? 'notfound' : 'success',
+    badge: r.bloqueio ? undefined : 'Rota',
+    note: r.bloqueio ? '' : (r.estimativa ? 'Estimativa feita no aparelho, sem IA e sem trânsito. Confira no app de mapas.' : 'Sem coordenadas de alguma unidade: o link do mapa segue a ordem que você escreveu e não estimei km nem tempo.'),
+    svg: r.svg || '',
+    quickActions: (r.links || []).slice(0, 2).map(l => ({ label: '🗺️ ' + l.rotulo, run: () => abrir(l.url), reply: 'Abri o app de mapas em outra aba.', mood: 'success' }))
+      .concat(r.bloqueio ? [] : argoRotaOutrosModos(rawText))
+      .concat(!r.bloqueio && !r.estimativa ? [argoRotaChipLocalizar(rawText, r.paradas)].filter(Boolean) : []),
+    followups: r.bloqueio ? [] : ['Qual o horário dessas unidades?']
+  };
+}
+
 function argoStreamIA(B, rawText, payload, hooks) {
   if (typeof Paulus === 'undefined' || !Paulus.perguntar) {
     return B.streamAI(payload, hooks).then(txt => {
@@ -29030,7 +29157,12 @@ function argoAskAI(rawText, tab, fallbackResult) {
             quickActions: offline
               ? [{ label: '↻ Tentar com a IA de novo', ask: rawText, force: true }]
               // Telas propostas pela IA: botão "Abrir ..." (o mascote confirma com uma frase curta)
-              : ((acoes || []).length ? acoes.map(a => ({ label: 'Abrir ' + a.rotulo, run: a.executar, reply: 'Abri: ' + a.rotulo + '.', mood: 'success' })) : undefined)
+              : (() => {
+                  const botoes = (acoes || []).map(a => ({ label: 'Abrir ' + a.rotulo, run: a.executar, reply: 'Abri: ' + a.rotulo + '.', mood: 'success' }));
+                  const rotaChip = argoRotaChipUnidades(units);
+                  if (rotaChip) botoes.push(rotaChip);
+                  return botoes.length ? botoes : undefined;
+                })()
           };
         }, err => { if (err && err.partial) B.remember(rawText, err.partial, []); throw err; });
       })
