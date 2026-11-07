@@ -8294,3 +8294,29 @@ header.hero .hero-stat-label { font-size: 0.78rem; letter-spacing: 0; text-trans
   .card-top { padding: 1rem 1rem 0.85rem; }
   .card-body { padding: 1rem; }
 }
+
+/* =====================================================================
+   Camada de design — rodada 3: modo foco e rótulos das abas
+   ===================================================================== */
+/* Modo foco: sem o vão de ~55px entre a barra e o conteúdo */
+body.tab-focus .content-area > div:not(.tab-focus-bar):not(.equipment-grid):not(#gridSentinel):empty { margin-top: 0; }
+body.tab-focus .content-area > .equipment-grid { padding-top: 0.9rem; }
+body.tab-focus .tab-focus-bar { padding-top: calc(0.5rem + env(safe-area-inset-top)); padding-bottom: 0.5rem; }
+.tab-focus-close { min-height: 40px; padding: 0 0.95rem; }
+@media (max-width: 640px) {
+  body.tab-focus .tab-focus-bar { gap: 0.4rem 0.6rem; }
+  .tab-focus-close { min-height: 36px; padding: 0 0.75rem; font-size: 0.8rem; }
+}
+
+/* Rótulos das abas: frase normal em vez de caixa-alta (o texto já vem escrito certo) */
+.footer-col-brand .footer-tagline,
+.mapa-rede-field > span, .mapa-rede-field-seg > span,
+.tradutor-pane-head > span, .tradutor-pane-tools .tradutor-speak-btn,
+.pdftools-filename-field > label,
+.appsext-toolbar .appsext-toolbar-label, h3.appsext-group,
+.noticias-controls .noticias-ctrl-label, .noticias-filters-body .noticias-ctrl-label,
+.cras-group .cras-group-header, .cas-group .cas-group-header,
+.team-role-badge, .team-subcard-note strong,
+.user-data-field > label, table th {
+  text-transform: none; letter-spacing: 0;
+}
