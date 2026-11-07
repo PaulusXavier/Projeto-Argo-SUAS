@@ -10796,6 +10796,7 @@ function renderPdfToolsCard() {
           <span class="pdftools-jump-label">Ir para:</span>
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolEdit')">Editar</button>
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolMerge')">Unir</button>
+          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolOrganize')">Organizar</button>
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolSplit')">Dividir</button>
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolRemove')">Excluir</button>
           <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolRotate')">Girar</button>
@@ -10972,6 +10973,9 @@ function renderPdfToolsCard() {
           <div class="pdftools-result" id="pdftoolsMergeResult" hidden></div>
         </div>
 
+        <div class="pdftools-grid pdftools-grid-single" style="margin-bottom:1.1rem;">
+${extra.organize}
+        </div>
         <div class="pdftools-grid" style="margin-bottom:1.4rem;">
 ${extra.split}
 ${extra.remove}
@@ -11133,6 +11137,20 @@ function pdftoolsExtraToolsHtml() {
               <div class="pdftools-chips" role="group" aria-label="Atalhos de páginas"><button type="button" class="pdftools-chip" onclick="pdftoolsSetRange('pdftoolsSplitRange', 'ímpares')">Ímpares</button><button type="button" class="pdftools-chip" onclick="pdftoolsSetRange('pdftoolsSplitRange', 'pares')">Pares</button><button type="button" class="pdftools-chip" onclick="pdftoolsSetRange('pdftoolsSplitRange', 'primeira')">Primeira</button><button type="button" class="pdftools-chip" onclick="pdftoolsSetRange('pdftoolsSplitRange', 'última')">Última</button></div>
             </div>
             ${tail('Split', ICONS.layers + ' Dividir e baixar', 'pdftoolsRunSplit')}
+          </div>
+`,
+    organize: `
+          <div class="pdftools-tool" id="pdftoolsToolOrganize">
+            <div class="pdftools-tool-header">
+              <span class="pdftools-tool-icon">${ICONS.layers}</span>
+              <div>
+                <div class="pdftools-tool-title">Reorganizar páginas</div>
+                <div class="pdftools-tool-limit">Um PDF · até 60 MB</div>
+              </div>
+            </div>
+            <p class="pdftools-tool-desc">Veja todas as páginas e arrume tudo de uma vez: mude a ordem (arraste ou use as setas), gire, duplique ou tire páginas. O texto original é mantido.</p>
+            ${drop('Organize', 'pdftoolsOrganizeInput', 'Escolher um PDF', 'para reordenar, girar ou excluir páginas')}
+            ${tail('Organize', ICONS.layers + ' Baixar PDF reorganizado', 'pdftoolsRunOrganize')}
           </div>
 `,
     compress: `
@@ -22450,7 +22468,18 @@ function pdftoolsLoadScript(url) {
   return pdftoolsScriptPromises[url];
 }
 async function ensurePdfLib() {
-  if (!window.PDFLib) await pdftoolsLoadScript(PDFTOOLS_CDN.pdfLib);
+  if (!window.PDFLib) {
+    try {
+      await pdftoolsLoadScript(PDFTOOLS_CDN.pdfLib);
+    } catch (e) {
+      // Sem internet (e sem a biblioteca no cache): usa a cópia guardada no app,
+      // que é a própria pdf-lib com criptografia. Assim as ferramentas de PDF
+      // continuam funcionando offline.
+      await ensurePdfLibEncrypt();
+      if (!window.PDFLib) window.PDFLib = window.__pdfLibEnc;
+      if (!window.PDFLib) throw e;
+    }
+  }
   return window.PDFLib;
 }
 async function ensurePdfJs() {
@@ -22484,7 +22513,15 @@ async function ensureMammoth() {
   return window.mammoth;
 }
 
+// Último arquivo gerado: depois de uma ferramenta terminar com sucesso, a
+// mensagem ganha o botão "Baixar de novo" (ver pdftoolsSetStatus), para quando
+// o navegador bloqueia ou a pessoa não acha o download.
+let pdftoolsLastOut = null;
 function pdftoolsDownloadBlob(blob, filename) {
+  pdftoolsLastOut = { blob, name: filename, t: Date.now(), used: false };
+  pdftoolsTriggerDownload(blob, filename);
+}
+function pdftoolsTriggerDownload(blob, filename) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = filename;
@@ -22499,6 +22536,18 @@ function pdftoolsSetStatus(id, message, kind) {
   if (!el) return;
   el.className = 'pdftools-status' + (kind ? ' is-' + kind : ' is-info');
   el.textContent = message || '';
+  const out = pdftoolsLastOut;
+  if (kind === 'success' && out && !out.used && Date.now() - out.t < 6000 && !/Merge/.test(id)) {
+    out.used = true;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'pdftools-again';
+    b.textContent = '↓ Baixar de novo (' + pdftoolsFormatBytes(out.blob.size) + ')';
+    b.title = 'Baixa ' + out.name + ' outra vez';
+    b.onclick = () => pdftoolsTriggerDownload(out.blob, out.name);
+    el.appendChild(document.createTextNode(' '));
+    el.appendChild(b);
+  }
 }
 
 function pdftoolsSetProgress(prefix, current, total) {
@@ -22528,7 +22577,7 @@ function pdftoolsHandleDrop(event, kind) {
   if (kind === 'wordpdf') { pdftoolsRunWordToPdf(files[0]); return; }
   if (kind === 'pdfjpg') { pdftoolsRunPdfToJpg(files[0]); return; }
   if (kind === 'Edit') { pdftoolsEditPick(files[0]); return; }
-  if (['Split', 'Compress', 'Number', 'Rotate', 'Remove', 'Mark', 'Meta', 'Text', 'Protect'].includes(kind)) { pdftoolsExtraPick(kind, files[0]); return; }
+  if (['Split', 'Compress', 'Number', 'Rotate', 'Remove', 'Mark', 'Meta', 'Text', 'Protect', 'Organize'].includes(kind)) { pdftoolsExtraPick(kind, files[0]); return; }
 }
 
 // Limite para os conversores de um arquivo só (PDF→Word, Word→PDF, PDF→JPG):
@@ -23467,7 +23516,7 @@ async function pdftoolsRunPdfToJpg(file, inputEl) {
 
 
 /* ---------- Dividir / reduzir / numerar (um PDF por vez) ---------- */
-const pdftoolsExtra = { Split: null, Compress: null, Number: null, Rotate: null, Remove: null, Mark: null, Meta: null, Text: null, Protect: null, busy: false };
+const pdftoolsExtra = { Split: null, Compress: null, Number: null, Rotate: null, Remove: null, Mark: null, Meta: null, Text: null, Protect: null, Organize: null, busy: false };
 
 function pdftoolsExtraSetBusy(kind, busy) {
   pdftoolsExtra.busy = busy;
@@ -23494,6 +23543,7 @@ async function pdftoolsExtraPick(kind, file, inputEl) {
     pdftoolsSetStatus(statusId, 'Arquivo pronto. Ajuste as opções e toque no botão.', 'info');
     pdftoolsExtraSetBusy(kind, false);
     if (PDFTOOLS_PICKER_INPUT[kind]) pdftoolsRenderPagePicker(kind);
+    if (kind === 'Organize') pdftoolsOrgStart();
   } catch (e) {
     const info = document.getElementById('pdftools' + kind + 'Info');
     if (info) info.textContent = '';
@@ -23531,6 +23581,7 @@ function pdftoolsPickerPaint(kind) {
 }
 
 function pdftoolsPickerHide(kind) {
+  if (kind === 'Organize') { pdftoolsOrgReset(); return; }
   if (!pdftoolsPickers[kind]) return;
   pdftoolsPickers[kind].tok++;
   pdftoolsPickers[kind].sel = new Set();
@@ -23760,6 +23811,199 @@ async function pdftoolsRunNumber() {
   } finally {
     pdftoolsSetProgress('Number', 0, 0);
     pdftoolsExtraSetBusy('Number', false);
+  }
+}
+
+/* ---------- Reorganizar páginas (ordem, giro, duplicar, excluir) ----------
+   Cada item é uma "página de saída": { id, src (índice no PDF original), rot (giro extra) }.
+   As miniaturas são desenhadas uma vez por página original e guardadas em cache;
+   mudar a ordem só refaz a lista de itens. Só ao baixar o PDF é montado, com a pdf-lib. */
+const pdftoolsOrg = { items: [], thumbs: {}, tok: 0, nextId: 1, drag: null, focus: null, bound: null };
+const PDFTOOLS_ORG_THUMBS_MAX = 80;
+
+function pdftoolsOrgReset() {
+  pdftoolsOrg.tok++;
+  pdftoolsOrg.items = [];
+  pdftoolsOrg.thumbs = {};
+  pdftoolsOrg.drag = null;
+  const box = document.getElementById('pdftoolsOrganizePages');
+  if (box) { box.hidden = true; box.innerHTML = ''; }
+}
+
+function pdftoolsOrgChanged() {
+  const st = pdftoolsExtra.Organize;
+  if (!st) return false;
+  const it = pdftoolsOrg.items;
+  return it.length !== st.pages || it.some((x, k) => x.src !== k || x.rot);
+}
+
+function pdftoolsOrgRender() {
+  const st = pdftoolsExtra.Organize;
+  const box = document.getElementById('pdftoolsOrganizePages');
+  if (!st || !box) return;
+  const items = pdftoolsOrg.items;
+  const rotated = items.filter(x => x.rot).length;
+  const n = items.length;
+  const summary = n + (n === 1 ? ' página' : ' páginas') + ' no resultado' + (n !== st.pages ? ' (o original tem ' + st.pages + ')' : '') + (rotated ? ' · ' + rotated + (rotated === 1 ? ' girada' : ' giradas') : '');
+  let html = '<div class="pdftools-pages-head"><span>Arraste as páginas ou use os botões de cada uma</span><span class="pdftools-pages-count" aria-live="polite">' + summary + '</span></div>'
+    + '<div class="pdforg-bar"><button type="button" class="pdftools-btn-ghost pdfedit-mini" data-bar="reverse">⇅ Inverter ordem</button>'
+    + '<button type="button" class="pdftools-btn-ghost pdfedit-mini" data-bar="reset"' + (pdftoolsOrgChanged() ? '' : ' disabled') + '>↺ Voltar ao original</button></div>'
+    + '<div class="pdforg-grid">';
+  items.forEach((it, k) => {
+    const th = pdftoolsOrg.thumbs[it.src];
+    const img = th ? '<img alt="" src="' + th + '" style="transform:rotate(' + it.rot + 'deg)' + ((it.rot % 180) ? ';max-width:84px;max-height:84px' : '') + '">' : '<span class="pdforg-ph">' + (it.src + 1) + '</span>';
+    html += '<div class="pdforg-card" draggable="true" data-k="' + k + '" data-id="' + it.id + '">'
+      + '<div class="pdforg-thumb">' + img + '</div>'
+      + '<div class="pdforg-label">' + (k + 1) + (it.src !== k ? '<small> (era ' + (it.src + 1) + ')</small>' : '') + (it.rot ? '<small> ↻' + it.rot + '°</small>' : '') + '</div>'
+      + '<div class="pdforg-btns">'
+      + '<button type="button" data-act="left" aria-label="Mover a página ' + (k + 1) + ' para antes" title="Mover para antes"' + (k === 0 ? ' disabled' : '') + '>◀</button>'
+      + '<button type="button" data-act="right" aria-label="Mover a página ' + (k + 1) + ' para depois" title="Mover para depois"' + (k === n - 1 ? ' disabled' : '') + '>▶</button>'
+      + '<button type="button" data-act="rot" aria-label="Girar a página ' + (k + 1) + '" title="Girar 90° à direita">↻</button>'
+      + '<button type="button" data-act="dup" aria-label="Duplicar a página ' + (k + 1) + '" title="Duplicar"' + (n >= 500 ? ' disabled' : '') + '>⧉</button>'
+      + '<button type="button" data-act="del" aria-label="Excluir a página ' + (k + 1) + '" title="Excluir"' + (n === 1 ? ' disabled' : '') + '>✕</button>'
+      + '</div></div>';
+  });
+  box.innerHTML = html + '</div>';
+  box.hidden = false;
+  const btn = document.getElementById('pdftoolsOrganizeBtn');
+  if (btn) btn.disabled = pdftoolsExtra.busy || !pdftoolsExtra.Organize;
+  const f = pdftoolsOrg.focus;
+  pdftoolsOrg.focus = null;
+  if (f) {
+    let el = box.querySelector('.pdforg-card[data-id="' + f.id + '"] [data-act="' + f.act + '"]');
+    if (!el || el.disabled) el = box.querySelector('.pdforg-card[data-id="' + f.id + '"] button:not([disabled])');
+    if (el) el.focus({ preventScroll: true });
+  }
+}
+
+function pdftoolsOrgMove(from, to) {
+  const a = pdftoolsOrg.items;
+  if (from === to || from < 0 || to < 0 || from >= a.length || to >= a.length) return;
+  a.splice(to, 0, a.splice(from, 1)[0]);
+}
+
+function pdftoolsOrgBind(box) {
+  if (pdftoolsOrg.bound === box) return;
+  pdftoolsOrg.bound = box;
+  const clearOver = () => box.querySelectorAll('.pdforg-card.over, .pdforg-card.dragging').forEach(c => c.classList.remove('over', 'dragging'));
+  box.addEventListener('click', e => {
+    if (pdftoolsExtra.busy) return;
+    const bar = e.target.closest('[data-bar]');
+    if (bar) {
+      if (bar.dataset.bar === 'reverse') pdftoolsOrg.items.reverse();
+      else if (bar.dataset.bar === 'reset') pdftoolsOrg.items = Array.from({ length: pdftoolsExtra.Organize.pages }, (_, i) => ({ id: pdftoolsOrg.nextId++, src: i, rot: 0 }));
+      pdftoolsOrgRender();
+      return;
+    }
+    const b = e.target.closest('button[data-act]');
+    const card = b && b.closest('.pdforg-card');
+    if (!b || !card || b.disabled) return;
+    const k = Number(card.dataset.k), id = Number(card.dataset.id), it = pdftoolsOrg.items[k];
+    pdftoolsOrg.focus = { id, act: b.dataset.act };
+    if (b.dataset.act === 'left') pdftoolsOrgMove(k, k - 1);
+    else if (b.dataset.act === 'right') pdftoolsOrgMove(k, k + 1);
+    else if (b.dataset.act === 'rot') it.rot = (it.rot + 90) % 360;
+    else if (b.dataset.act === 'dup') { pdftoolsOrg.items.splice(k + 1, 0, { id: pdftoolsOrg.nextId++, src: it.src, rot: it.rot }); }
+    else if (b.dataset.act === 'del') {
+      if (pdftoolsOrg.items.length <= 1) return;
+      pdftoolsOrg.items.splice(k, 1);
+      const nx = pdftoolsOrg.items[Math.min(k, pdftoolsOrg.items.length - 1)];
+      pdftoolsOrg.focus = { id: nx.id, act: 'del' };
+    }
+    pdftoolsOrgRender();
+  });
+  box.addEventListener('dragstart', e => {
+    const c = e.target.closest && e.target.closest('.pdforg-card');
+    if (!c || pdftoolsExtra.busy) return;
+    pdftoolsOrg.drag = Number(c.dataset.k);
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', String(pdftoolsOrg.drag)); } catch (_) {}
+    c.classList.add('dragging');
+  });
+  box.addEventListener('dragover', e => {
+    const c = e.target.closest && e.target.closest('.pdforg-card');
+    if (!c || pdftoolsOrg.drag == null) return;
+    e.preventDefault();
+    box.querySelectorAll('.pdforg-card.over').forEach(x => { if (x !== c) x.classList.remove('over'); });
+    c.classList.add('over');
+  });
+  box.addEventListener('drop', e => {
+    const c = e.target.closest && e.target.closest('.pdforg-card');
+    if (!c || pdftoolsOrg.drag == null) return;
+    e.preventDefault();
+    const from = pdftoolsOrg.drag, to = Number(c.dataset.k);
+    pdftoolsOrg.drag = null;
+    const moved = pdftoolsOrg.items[from];
+    pdftoolsOrgMove(from, to);
+    if (moved) pdftoolsOrg.focus = { id: moved.id, act: 'rot' };
+    pdftoolsOrgRender();
+  });
+  box.addEventListener('dragend', () => { pdftoolsOrg.drag = null; clearOver(); });
+}
+
+async function pdftoolsOrgStart() {
+  const st = pdftoolsExtra.Organize;
+  const box = document.getElementById('pdftoolsOrganizePages');
+  if (!st || !box) return;
+  const tok = ++pdftoolsOrg.tok;
+  pdftoolsOrg.thumbs = {};
+  pdftoolsOrg.items = Array.from({ length: st.pages }, (_, i) => ({ id: pdftoolsOrg.nextId++, src: i, rot: 0 }));
+  pdftoolsOrgBind(box);
+  pdftoolsOrgRender();
+  try {
+    const pdfjs = await ensurePdfJs();
+    const doc = await pdfjs.getDocument({ data: new Uint8Array(st.bytes.slice(0)) }).promise;
+    const H = 84;
+    const n = Math.min(st.pages, PDFTOOLS_ORG_THUMBS_MAX);
+    for (let i = 0; i < n; i++) {
+      if (pdftoolsOrg.tok !== tok) break; // outro arquivo foi escolhido (ou "Limpar")
+      const page = await doc.getPage(i + 1);
+      const base = page.getViewport({ scale: 1 });
+      const vp = page.getViewport({ scale: H / Math.max(base.width, base.height) });
+      const c = document.createElement('canvas'); c.width = Math.ceil(vp.width); c.height = Math.ceil(vp.height);
+      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+      await page.render({ canvasContext: g, viewport: vp }).promise;
+      pdftoolsOrg.thumbs[i] = c.toDataURL('image/jpeg', 0.6);
+      // coloca a miniatura em todos os cards dessa página sem refazer a grade (não atrapalha um arraste em andamento)
+      box.querySelectorAll('.pdforg-card').forEach(card => {
+        const it = pdftoolsOrg.items[Number(card.dataset.k)];
+        const th = card.querySelector('.pdforg-thumb');
+        if (it && it.src === i && th && !th.querySelector('img')) {
+          th.innerHTML = '<img alt="" src="' + pdftoolsOrg.thumbs[i] + '" style="transform:rotate(' + it.rot + 'deg)' + ((it.rot % 180) ? ';max-width:84px;max-height:84px' : '') + '">';
+        }
+      });
+    }
+    doc.destroy && doc.destroy();
+  } catch (e) { /* sem miniaturas: os cards continuam funcionando só com os números */ }
+}
+
+async function pdftoolsRunOrganize() {
+  const st = pdftoolsExtra.Organize;
+  if (!st || pdftoolsExtra.busy) return;
+  const id = 'pdftoolsOrganizeStatus';
+  const items = pdftoolsOrg.items.slice();
+  if (!items.length) { pdftoolsSetStatus(id, 'Deixe ao menos uma página.', 'error'); return; }
+  if (!pdftoolsOrgChanged()) { pdftoolsSetStatus(id, 'Nada mudou ainda: reordene, gire, duplique ou exclua alguma página.', 'warn'); return; }
+  pdftoolsExtraSetBusy('Organize', true);
+  pdftoolsSetProgress('Organize', 0, 0);
+  pdftoolsSetStatus(id, 'Montando o PDF...', 'info');
+  try {
+    const PDFLib = await ensurePdfLib();
+    const src = await PDFLib.PDFDocument.load(st.bytes);
+    const out = await PDFLib.PDFDocument.create();
+    // uma cópia por página de saída (copiar o mesmo índice mais de uma vez é permitido)
+    const copied = await out.copyPages(src, items.map(x => x.src));
+    copied.forEach((pg, k) => {
+      if (items[k].rot) pg.setRotation(PDFLib.degrees((((pg.getRotation().angle % 360) + 360) % 360 + items[k].rot) % 360));
+      out.addPage(pg);
+    });
+    const blob = new Blob([await out.save()], { type: 'application/pdf' });
+    pdftoolsDownloadBlob(blob, pdftoolsBaseName(st.file) + '-organizado.pdf');
+    pdftoolsSetStatus(id, items.length + (items.length === 1 ? ' página' : ' páginas') + ' no novo PDF · ' + pdftoolsFormatBytes(blob.size) + '.', 'success');
+  } catch (e) {
+    pdftoolsSetStatus(id, 'Não foi possível reorganizar este PDF.', 'error');
+  } finally {
+    pdftoolsExtraSetBusy('Organize', false);
   }
 }
 
