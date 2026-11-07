@@ -4864,8 +4864,14 @@
     var cru = (t.match(/\?/g) || []).length >= 2 ? (t.match(/[^?]+\?*/g) || []) : t.split(RE_CORTE_E);
     var partes = cru.map(function (p) { return p.replace(/^\s*(?:e|mas)\s+/i, '').replace(/[\s?!.;,]+$/, '').trim(); }).filter(Boolean);
     if (partes.length < 2 || partes.length > 4) return [];
-    for (var i = 0; i < partes.length; i++) if (conteudo(partes[i]).length < 2) return [];
+    // Cada parte precisa se sustentar sozinha. Exceção: a parte que PEDE algo claro ("quais documentos ela precisa?", "qual o prazo?")
+    // já é uma pergunta, mesmo com uma só palavra de conteúdo (as demais são vazias: "quais", "ela", "precisa").
+    for (var i = 0; i < partes.length; i++) if (conteudo(partes[i]).length < 2 && !(i > 0 && conteudo(partes[i]).length >= 1 && pedeAlgoClaro(partes[i]))) return [];
     return partes.map(function (p) { return p + '?'; });
+  }
+  function pedeAlgoClaro(parte) {
+    var n = norm(parte);
+    return PEDIDOS.some(function (p) { return (p.id === 'documentos' || p.id === 'prazo' || p.id === 'direito') && p.re.test(n); });
   }
   var KINDS_RESPONDEM = { directory: 1, concept: 1, psi: 1, ficha: 1, manual: 1 };
   // Responde cada parte com o que o app já sabe (diretório, glossário, verbetes, ficha). Com IA, se alguma parte não tem
@@ -4911,7 +4917,7 @@
   var RE_CASO_SUJEITO = /\b(caso|casos|familia|familias|usuario|usuaria|gestante|gestantes|idoso|idosa|pessoa idosa|crianca|adolescente|mulher|homem|pessoa em situacao de rua|migrante|refugiad\w+|jovem|adulto|morador\w*|paciente)\b/;
   var RE_CASO_VERBO = /\b(organiz\w+|conduz\w+|abord\w+|encaminh\w+|acompanh\w+|proceder|agir|atuar|por onde|comecar|o que fazer|o que faco|como faco|acionar|articul\w+|intervir|intervencao)\b/;
   // programas e consultas objetivas têm base própria (ficha, verbete, território): não são "caso"
-  var RE_CASO_NAO = /\b(cadunico|cadastro unico|bolsa familia|bpc|beneficios?|passe livre|inss|telefone|fone|contato|endereco|horario|onde fica|localizacao|bairro|quantos|quantas|diferenca|qual (cras|creas|caps|ubs|conselho tutelar))\b/;
+  var RE_CASO_NAO = /\b(cadunico|cadastro unico|bolsa familia|bpc|nis|beneficios?|passe livre|inss|telefone|fone|contato|endereco|horario|onde fica|localizacao|bairro|quantos|quantas|diferenca|qual (cras|creas|caps|ubs|conselho tutelar))\b/;
   function ehCaso(text) {
     var n = norm(text);
     if (n.length < 20 || n.length > 400) return false;
@@ -4950,19 +4956,122 @@
       }
     };
   }
-  // O que acompanha a pergunta à IA: roteiro das partes e/ou roteiro de caso (entram antes dos verbetes: orientam a forma da resposta).
+  // ---- 4) leitura da pergunta ----
+  // O app lê a pergunta com regras fixas ANTES de a IA responder e entrega a leitura junto: o que a pessoa PEDE (documentos,
+  // quem tem direito, passo a passo, prazo/valor, onde, diferença), de que PROGRAMA, para que PÚBLICO e em que SITUAÇÃO.
+  // Modelo pequeno tende a responder o ASSUNTO (a definição do BPC) em vez do PEDIDO (os documentos do BPC); a leitura aponta
+  // o pedido, o que conferir e quando a regra depende do público. É leitura, não resposta: não acrescenta nenhum fato.
+  // As diretrizes são MÉTODO de resposta. Fato continua vindo só das fichas, das normas e dos verbetes.
+  var PEDIDOS = [
+    { id: 'documentos', rotulo: 'a lista de documentos', re: /\b(documentos?|documentacao|papeis|laudos?|comprovantes?|o que (?:eu )?(?:preciso )?levar|o que levo)\b/,
+      cobre: /\b(documento|laudo|rg|cpf|identidade|comprovante|certidao|carteira de trabalho)\w*/,
+      diretriz: 'Liste os DOCUMENTOS em itens curtos, separando o que é da pessoa e o que é da família quando a base separar. Se a base não trouxer a lista, diga que não consta e indique onde confirmar; não monte a lista de memória.' },
+    { id: 'prazo', rotulo: 'o prazo ou o valor', re: /\b(quanto tempo|prazo|demora|demorar|quando (?:sai|cai|libera|paga|comeca|termina)|valor|quanto (?:paga|recebe|custa|e o))\b/,
+      cobre: /\b(prazo|dias|meses|mensal|valor|salario minimo|calendario|cronograma|reais)\b|r\$/,
+      diretriz: 'Dê prazo, data ou valor SÓ se vier da base, da ficha ou dos valores de referência do app. Se não vier, diga que muda e que se confere no normativo vigente ou no órgão.' },
+    { id: 'direito', rotulo: 'a regra de quem pode', re: /\b(quem (?:pode|tem direito|recebe|consegue|se enquadra)|tem direito|tenho direito|(?:pode|podem|posso|consegue|conseguem) (?:receber|ter|solicitar|pedir|acessar|entrar|se cadastrar|participar|fazer|tirar|se inscrever)|criterios?|requisitos?|elegiv\w+|se enquadra)\b/,
+      cobre: /\b(renda|pode|podem|direito|criterio|requisito|idade|anos|exige|elegiv\w+|precisa)\w*/,
+      diretriz: 'Abra com a resposta (sim, não ou depende) e só depois o critério principal e o que confirmar. Se a base não disser, a resposta é que não consta.' },
+    { id: 'como', rotulo: 'o passo a passo', re: /\b(como (?:eu )?(?:faco|fazer|pedir|solicitar|dar entrada|requerer|conseguir|acessar|se inscrever|inscrever|tirar|regularizar|resolver)|passo a passo|por onde (?:comeco|comecar|iniciar))\b/,
+      cobre: /\b(passo|procur\w+|solicit\w+|pedido|inscri\w+|cadastr\w+|leve|agende|atendimento|ligue|acesse|encaminh\w+|acion\w+)/,
+      diretriz: 'Dê os PASSOS em ordem: por onde começar, o que levar, quem faz o quê e o que acontece depois.' },
+    { id: 'onde', rotulo: 'o serviço de referência', re: /\b(onde|aonde|qual (?:unidade|servico|orgao|lugar)|a quem (?:recorrer|procurar|encaminhar)|quem atende)\b/,
+      diretriz: 'Indique o serviço de referência SÓ pelas fichas e pelo bairro; sem ficha, diga que não consta.' },
+    { id: 'diferenca', rotulo: 'a comparação', re: /\b(diferenca|diferentes?|e o mesmo que|mesma coisa)\b/,
+      diretriz: 'Compare lado a lado: o que cada um é, para quem e quando acionar.' }
+  ];
+  var PUBLICOS = [
+    { id: 'crianca', rotulo: 'criança ou adolescente', re: /\b(crianca|criancas|menino|menina|adolescentes?|bebe|recem nascido|menor de idade)\b/ },
+    { id: 'idoso', rotulo: 'pessoa idosa', re: /\b(idos[oa]s?|terceira idade|velhinh[oa])\b/ },
+    { id: 'gestante', rotulo: 'gestante', re: /\b(gestantes?|gravida|gravidez|puerpera)\b/ },
+    { id: 'mulher', rotulo: 'mulher', re: /\b(mulher|mulheres)\b/ },
+    { id: 'pcd', rotulo: 'pessoa com deficiência ou TEA', re: /\b(autis\w*|tea|deficien\w+|pcd|cadeirante|down|surd[oa]s?|cego|cega|paralisia|tdah)\b/, cobre: /\b(deficien|autis|tea|pcd)\w*/ },
+    { id: 'migrante', rotulo: 'migrantes e refugiados', re: /\b(venezuelan\w*|migrantes?|imigrantes?|refugiad\w+|estrangeir\w+|haitian\w*|apatrida|warao)\b/, cobre: /\b(migrant|imigrant|refugiad|estrangeir|venezuel)\w*/ },
+    { id: 'indigena', rotulo: 'povos indígenas', re: /\b(indigenas?|aldeia|aldeado\w*|macuxi|yanomami|wapichana|taurepang|warao|povos? originarios?)\b/, cobre: /\b(indigen|aldeia)\w*/ },
+    { id: 'rua', rotulo: 'pessoa em situação de rua', re: /\b(situacao de rua|moradora? de rua|moradores de rua|sem teto)\b/ }
+  ];
+  var SITUACOES = [
+    { id: 'violencia', rotulo: 'violência', re: /\b(violencia|agred\w+|abus\w+ (?:sexual|fisic\w+|psicolog\w+|infantil)|maus tratos|espanc\w+|estupr\w+|ameac\w+|tortur\w+|exploracao sexual|trabalho infantil|bat(?:e|eu|endo|em|i)(?! (?:ponto|papo|boca|o carro|o cartao|o ponto))|apanh\w+|surr[ao]\w*|machuc\w+|empurr\w+|chut\w+|hematoma\w*|marcas? roxas?|mexe com (?:ele|ela|a crianca|o menino|a menina))\b/ },
+    { id: 'negligencia', rotulo: 'negligência ou abandono', re: /\b(negligenc\w+|abandon\w+|desprotegid\w+)\b/ },
+    { id: 'drogas', rotulo: 'uso de álcool ou outras drogas', re: /\b(drogas?|alcool|alcoolis\w+|dependencia quimica|crack|maconha)\b/ },
+    { id: 'documento', rotulo: 'documento perdido ou ausente', re: /\b(perdeu|perdi|perdemos|extraviou|nao tem|sem|falta)\b.{0,25}\b(documentos?|rg|cpf|nis|certidao|identidade|comprovante)\b/ },
+    { id: 'desastre', rotulo: 'desastre ou perda da moradia', re: /\b(enchente|alagou|incendio|desabrig\w+|desastre|calamidade|perdeu a casa|perderam a casa|deslizamento|casa caiu)\b/ },
+    { id: 'fome', rotulo: 'falta de alimento', re: /\b(fome|sem comida|inseguranca alimentar|cesta basica)\b/ },
+    { id: 'renda', rotulo: 'falta de renda ou trabalho', re: /\b(desempregad\w+|sem trabalho|sem renda|sem emprego)\b/ }
+  ];
+  var PROGRAMAS = [
+    ['BPC', /\b(bpc|beneficio de prestacao continuada)\b/], ['Bolsa Família', /\b(bolsa familia|pbf)\b/],
+    ['CadÚnico', /\b(cadunico|cad unico|cadastro unico|nis)\b/], ['Passe Livre', /\bpasse livre\b/],
+    ['Tarifa Social de Energia', /\btarifa social\b/], ['Minha Casa, Minha Vida', /\bminha casa minha vida\b/],
+    ['benefícios eventuais', /\b(beneficios? eventua\w+|aluguel social|auxilio natalidade|auxilio funeral)\b/],
+    ['PAIF', /\bpaif\b/], ['PAEFI', /\bpaefi\b/], ['SCFV', /\bscfv\b/], ['Pé-de-Meia', /\bpe de meia\b/]
+  ];
+  function acha(lista, n) { return lista.filter(function (x) { return x.re.test(n); }); }
+  // Devolve { pedidos, publicos, situacoes, programas }; todos vazios quando a pergunta não traz nada reconhecível.
+  function lerPergunta(text) {
+    var n = norm(text);
+    return {
+      pedidos: acha(PEDIDOS, n),
+      publicos: acha(PUBLICOS, n),
+      situacoes: acha(SITUACOES, n),
+      programas: PROGRAMAS.filter(function (p) { return p[1].test(n); }).map(function (p) { return p[0]; })
+    };
+  }
+  // A resposta pronta (verbete, glossário) deixou de fora o que a pessoa pediu? Compara o PEDIDO e o PÚBLICO da pergunta com a resposta.
+  // Devolve o rótulo do que falta ('a lista de documentos', 'a regra para migrantes e refugiados') ou ''.
+  function facetaNaoCoberta(text, resposta) {
+    var lei = lerPergunta(text), r = norm(resposta), i;
+    for (i = 0; i < lei.pedidos.length; i++) if (lei.pedidos[i].cobre && !lei.pedidos[i].cobre.test(r)) return lei.pedidos[i].rotulo;
+    for (i = 0; i < lei.publicos.length; i++) if (lei.publicos[i].cobre && !lei.publicos[i].cobre.test(r)) return 'a regra para ' + lei.publicos[i].rotulo;
+    return '';
+  }
+  // Pergunta que só se entende com a anterior ("isso vale para indígena também?", "e para idoso?"). Sem conversa anterior não há do que falar.
+  var RE_REFERENCIAL = /^(?:e |mas |entao )?(?:isso|isto|esse|essa|esses|essas|nesse caso|nessa situacao|disso|nisso|ele|ela|eles|elas|tambem|vale|e se|e para|e pra|e quando|e no caso)\b/;
+  function referencial(text) {
+    var n = norm(text);
+    if (!n || n.split(' ').length > 9 || !RE_REFERENCIAL.test(n)) return false;
+    var lei = lerPergunta(text);
+    return !lei.programas.length && !lei.situacoes.length;   // "ela tem direito ao BPC?" e "ela apanha todo dia" trazem o próprio assunto
+  }
+  function juntaRotulos(l) { return l.map(function (x) { return x.rotulo; }).join(', '); }
+  // O trecho de leitura que vai à IA. Só sai quando a pergunta trouxe algo reconhecível (senão não acrescenta nada).
+  function leituraTexto(text) {
+    var lei = lerPergunta(text), out = [], dir = [], pedidos = lei.pedidos.slice(0, 2);
+    // só o nome de um programa não ensina nada à IA (e tomaria o lugar do verbete): a leitura precisa de pedido, público ou situação
+    if (!pedidos.length && !lei.publicos.length && !lei.situacoes.length) return '';
+    var lido = [];
+    if (pedidos.length) lido.push('o pedido é ' + juntaRotulos(pedidos));
+    if (lei.programas.length) lido.push('programa ou serviço: ' + lei.programas.join(', '));
+    if (lei.publicos.length) lido.push('público: ' + juntaRotulos(lei.publicos));
+    if (lei.situacoes.length) lido.push('situação: ' + juntaRotulos(lei.situacoes));
+    out.push('Leitura da pergunta feita pelo app (' + lido.join('; ') + ').');
+    pedidos.forEach(function (p) { dir.push(p.diretriz); });
+    if (pedidos.length) dir.push('Responda ao PEDIDO primeiro; não responda só com a definição do programa.');
+    var viol = lei.situacoes.some(function (s) { return s.id === 'violencia' || s.id === 'negligencia'; });
+    if (viol) dir.push('Há violência ou negligência: a proteção vem antes de tudo (risco imediato: 190, 192 ou 193; depois a rede de proteção e a comunicação cabível para esse público).');
+    if (lei.situacoes.some(function (s) { return s.id === 'desastre' || s.id === 'fome'; })) dir.push('Comece pela necessidade imediata (abrigo, alimento) e pelo que a rede oferece; cite só serviços das fichas.');
+    if (lei.situacoes.some(function (s) { return s.id === 'documento'; })) dir.push('Foque em como regularizar o documento e em qual serviço do território ajuda; cite só o que as fichas e as normas sustentam.');
+    var espec = lei.publicos.filter(function (p) { return p.cobre; });
+    if (espec.length) dir.push('A pergunta é sobre ' + juntaRotulos(espec) + ': diga se a regra para esse público consta na base; se não constar, diga que não consta e quem confirma. Não conclua por analogia com outro público.');
+    // premissa só quando há território em jogo (serviço de referência ou uma situação a encaminhar); em pergunta de regra, não
+    if (pedidos.some(function (p) { return p.id === 'onde'; }) || lei.situacoes.length) dir.push('Se faltar o bairro ou o município e uma suposição razoável resolver, assuma Boa Vista, diga a premissa em uma frase e responda.');
+    return out.concat(dir).join(' ');
+  }
+  // O que acompanha a pergunta à IA, num ÚNICO item de base (o Paulus leva no máximo 4 itens; assim sobram vagas para os verbetes):
+  // leitura da pergunta, roteiro das partes e/ou roteiro de caso. Entra antes dos verbetes: orienta a FORMA e o FOCO da resposta.
   function roteiroBase(text) {
-    var out = [], partes = dividirPartes(text);
+    var blocos = [], titulos = [], partes = dividirPartes(text), leitura = leituraTexto(text);
+    if (leitura) { blocos.push(leitura); titulos.push('leitura da pergunta'); }
     if (partes.length >= 2) {
-      out.push({
-        titulo: 'Roteiro de resposta do app: a pergunta tem ' + partes.length + ' partes',
-        texto: 'Responda TODAS, nesta ordem: ' + partes.map(function (p, i) { return (i + 1) + ') ' + p; }).join(' ') +
-          ' Para a parte que as fichas e as normas não sustentam, diga em uma frase que não consta, em vez de omiti-la.',
-        origem: 'organização da pergunta feita pelo app'
-      });
+      blocos.push('A pergunta tem ' + partes.length + ' partes. Responda TODAS, nesta ordem: ' + partes.map(function (p, i) { return (i + 1) + ') ' + p; }).join(' ') +
+        ' Para a parte que as fichas e as normas não sustentam, diga em uma frase que não consta, em vez de omiti-la.');
+      titulos.push('partes');
     }
-    if (ehCaso(text)) out.push({ titulo: 'Roteiro de caso do app (ordem de trabalho)', texto: metodoCasoTexto(), origem: 'método de trabalho do Argo (não é norma)' });
-    return out;
+    if (ehCaso(text)) { blocos.push(metodoCasoTexto()); titulos.push('caso'); }
+    if (!blocos.length) return [];
+    var texto = blocos.join(' ');
+    if (texto.length > 1480) texto = texto.slice(0, 1480).replace(/\s+\S*$/, '') + '…';
+    return [{ titulo: 'Roteiro do app: ' + titulos.join(', '), texto: texto, origem: 'leitura e organização da pergunta feitas pelo app (método, não é norma)' }];
   }
 
   // ---------------------------------------------------------------------
@@ -5182,7 +5291,7 @@
     glossary: glossaryScore, compose: { directory: composeDirectory, glossary: composeGlossary },
     psi: psiScore, psiLista: PSI_E_PAIF, paifLista: PAIF_BASE, cadLista: CAD_BASE, manual: manualAsk, manualLista: MANUAL, baseApp: baseApp, fichaAsk: fichaAsk, trechosDa: trechosDa, pbfPagamento: pbfPagamento,
     relato: relatoViolencia, planRelato: planRelato, dividirPartes: dividirPartes, planPartes: planPartes, partesSemResposta: partesSemResposta,
-    ehCaso: ehCaso, planCaso: planCaso, metodoCaso: METODO_CASO,
+    ehCaso: ehCaso, planCaso: planCaso, metodoCaso: METODO_CASO, lerPergunta: lerPergunta, facetaNaoCoberta: facetaNaoCoberta, referencial: referencial, roteiroBase: roteiroBase,
     remember: remember, reset: reset, session: session, notar: notar, estado: estadoParaIA, deveEsclarecer: deveEsclarecer, historicoParaIA: historicoParaIA,
     aiOn: aiOn, aiGate: aiGate, seguimento: seguimento, buildPayload: buildPayload, streamAI: streamAI,
     verifyPhones: verifyPhones, panorama: panorama, isAmpla: isAmpla, cleanAI: cleanAI, cleanPartial: cleanPartial, conferir: conferir, unidadesDesconhecidas: unidadesDesconhecidas, avisosFatos: avisosFatos, separarSugestoes: separarSugestoes, ocultarSugestoes: ocultarSugestoes, mentionedUnits: mentionedUnits, telHref: telHref, slim: slim,
