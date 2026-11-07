@@ -8964,6 +8964,8 @@ function render() {
   }
 
   document.getElementById('counter').textContent = filtered.length;
+  const counterLabelEl = document.getElementById('counterLabel');
+  if (counterLabelEl) counterLabelEl.textContent = filtered.length === 1 ? 'registro localizado' : 'registros localizados';
 
   if (filtered.length === 0) {
     // Busca sem resultado nesta aba: avisa se ela acharia algo nas demais.
@@ -9122,7 +9124,7 @@ function render() {
           ${isInterior ? `<span class="interior-badge">${ICONS.home}</span>` : ''}
           <h2>${argoHighlight(i.name, activeQuery)}</h2>
         </div>
-        <span class="subtitle">${argoHighlight(i.fullName, activeQuery)}</span>
+        ${String(i.fullName || '').trim().toLowerCase() !== String(i.name || '').trim().toLowerCase() ? `<span class="subtitle">${argoHighlight(i.fullName, activeQuery)}</span>` : ''}
         ${isPolice && i.group ? `<span class="police-group-tag">${ICONS.shield} ${i.group}</span>` : ''}
         ${isInterior && i.group ? `<span class="interior-group-tag">${ICONS.home} Município: ${i.group}</span>` : ''}
         ${renderDistanceBadge(i.id)}
