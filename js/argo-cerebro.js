@@ -1753,17 +1753,191 @@
     });
     return bad;
   }
+  // ---------------------------------------------------------------------
+  // ACABAMENTO DA RESPOSTA DA IA
+  // Modelos pequenos escrevem marcação demais, repetem frases, abrem com enrolação ("Claro! Ótima pergunta!"),
+  // fecham com fórmula pronta e, quando batem no limite de tokens, param no meio da frase. cleanAI conserta isso
+  // sem mexer no conteúdo: só marcação, repetição, enrolação e ponta cortada. É idempotente (limpar duas vezes dá o mesmo).
+  // A linha "SUGESTÕES: a | b | c" fica intacta no fim (quem a separa é separarSugestoes).
+  // ---------------------------------------------------------------------
+  var MAX_RESPOSTA = 2400;
+  var RE_PICTO = /[\uD83C-\uD83E][\uDC00-\uDFFF]|[☀-➿⭐⭕️‍⃣]/g;
+  var RE_ABERTURA = /^(?:claro|certo|certamente|com certeza|(?:[óo]tima|boa|excelente|interessante) pergunta|entendi|entendido|perfeito|[óo]timo|ok|okay|sem problemas?|pois n[ãa]o|ol[áa]|oi)\s*[!.,:;]+\s*/i;
+  var RE_FECHO = /^(?:espero (?:ter )?ajudado|espero que (?:isso|essa resposta|esta resposta|tenha)[^.!?\n]{0,60}|(?:se|caso) (?:precisar|tiver|quiser|houver)[^.!?\n]{0,90}(?:perguntar|chamar|avisar|falar|ajudar|ajudo)[^.!?\n]{0,30}|fico [àa] disposi[çc][ãa]o[^.!?\n]{0,40}|estou [àa] disposi[çc][ãa]o[^.!?\n]{0,40}|qualquer d[úu]vida[^.!?\n]{0,60}|[ée] s[óo] (?:perguntar|chamar|avisar)[^.!?\n]{0,40})\s*[.!]*\s*(?:[\uD83C-\uD83E][\uDC00-\uDFFF]|[☀-➿])?\s*$/iu;
+  var RE_PONTA_SOLTA = /(?:[,;(\-–—/]|\b(?:de|da|do|das|dos|e|ou|a|o|as|os|em|no|na|nos|nas|para|pra|por|com|sem|que|se|um|uma|ao|aos|à|às|como|ao|pelo|pela|entre|sobre|seu|sua|seus|suas|mais|muito|ser|foi|são|é|também|quando|onde|qual)) *$/i;
+
+  function sentencasDe(linha) { return linha.match(/[^.!?]+[.!?]+["”)]*\s*|[^.!?]+$/g) || [linha]; }
+  function chaveFrase(x) { return norm(x).replace(/\s+/g, ' ').trim(); }
+
   function cleanAI(text) {
-    return String(text || '')
-      .replace(/^\s*(argo|resposta)\s*:\s*/i, '')
-      .replace(/<\/?(fichas|normas|panorama|pergunta|historico)>/gi, '')
-      .replace(/^#{1,6}\s*/gm, '')
-      .replace(/^\s*\*\s+/gm, '- ')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim().slice(0, 2400);
+    var t = String(text == null ? '' : text).replace(/\r/g, '');
+    // a linha de sugestões (SUGESTÕES: a | b | c) sai antes e volta intacta no fim
+    var tail = '', ms = t.match(/(?:^|\n)[ \t]*(?:\*\*)?sugest(?:õ|o)es(?:\*\*)?[ \t]*:/i);
+    if (ms) { tail = t.slice(ms.index).replace(/^\n+/, ''); t = t.slice(0, ms.index); }
+
+    // raciocínio vazado e rótulos de contexto
+    t = t.replace(/<(think|thinking|reasoning|raciocinio|reflexao)>[\s\S]*?<\/\1>/gi, '')
+      .replace(/<(think|thinking|reasoning)>[\s\S]*$/i, '');
+    var fecha = t.search(/<\/(think|thinking|reasoning)>/i);
+    if (fecha > -1) t = t.slice(t.indexOf('>', fecha) + 1);
+    t = t.replace(/<\/?(?:fichas?|normas?|panorama|pergunta|historico|resposta|contexto|base|argo|paulus|assistant|answer)>/gi, '')
+      .replace(/^\s*(?:argo|paulus|resposta|assistente)\s*:\s*/i, '')
+      .replace(/^```[a-z]*\s*$/gim, '').replace(/`+/g, '');
+
+    // emoji de enfeite (o tom do Paulus é sem emoji; o aviso ⚠ é mantido)
+    t = t.replace(/⚠️?/g, '\u0001').replace(RE_PICTO, '').replace(/\u0001/g, '⚠️');
+
+    var linhas = t.split('\n').map(function (ln) { return ln.replace(/[ \t]+$/, ''); });
+    var out = [];
+    linhas.forEach(function (ln) {
+      if (/^\s*(?:[-*_=]\s*){3,}$/.test(ln)) return;                                   // linha horizontal
+      if (/^\s*\|?[\s:|-]*-[\s:|-]*\|?\s*$/.test(ln) && ln.indexOf('|') > -1) return;      // |---|---|
+      var tb = ln.match(/^\s*\|(.+)\|?\s*$/);                                          // | a | b | → - a — b
+      if (tb) { var cel = tb[1].split('|').map(function (c) { return c.trim(); }).filter(Boolean); if (!cel.length) return; ln = '- ' + cel.join(' — '); }
+      var h = ln.match(/^\s*#{1,6}\s*(.+?)\s*#*\s*$/);                                 // título vira linha em negrito
+      if (h) { var ht = h[1].replace(/\*\*/g, '').replace(/[:：]\s*$/, ''); ln = ht.length <= 80 ? '**' + ht + '**' : ht; }
+      ln = ln.replace(/^\s*[•·▪◦‣–*+]\s+(?!\*)/, '- ').replace(/^\s+(?=-\s)/, '')       // marcadores variados → "- "
+        .replace(/^\s*[—]\s+(?=\S)/, '- ')
+        .replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g, '$1 ($2)')                  // [texto](url) → texto (url)
+        .replace(/__([^_\n]+)__/g, '**$1**')
+        .replace(/(^|[^*\w])\*([^*\s][^*\n]*?[^*\s]|[^*\s])\*(?![*\w])/g, '$1$2');       // *itálico* → texto
+      var n = (ln.match(/\*\*/g) || []).length;                                        // negrito aberto e não fechado
+      if (n % 2) { var k = ln.lastIndexOf('**'); ln = ln.slice(0, k) + ln.slice(k + 2); }
+      out.push(ln);
+    });
+    t = out.join('\n').replace(/[ \t]{3,}/g, '  ').replace(/\n{3,}/g, '\n\n').trim();
+
+    // enrolação de abertura: só sai se a resposta tiver conteúdo depois dela
+    var ab = t.match(RE_ABERTURA);
+    if (ab && t.length - ab[0].length >= 40) t = t.slice(ab[0].length).replace(/^./, function (c) { return c.toUpperCase(); });
+    // fecho de fórmula ("Espero ter ajudado!", "Se precisar, é só perguntar"): só sai se sobrar resposta
+    var ls = t.split('\n');
+    while (ls.length > 1 && !ls[ls.length - 1].trim()) ls.pop();
+    if (ls.length > 1 && RE_FECHO.test(ls[ls.length - 1].trim()) && ls.slice(0, -1).join('\n').length >= 120) ls.pop();
+    else if (ls.length >= 1) {                                                         // fecho na mesma linha, depois de um ponto
+      var ult = ls[ls.length - 1], fr = sentencasDe(ult);
+      if (fr.length > 1 && RE_FECHO.test(fr[fr.length - 1].trim()) && ls.join('\n').length - fr[fr.length - 1].length >= 120) ls[ls.length - 1] = fr.slice(0, -1).join('').trim();
+    }
+    t = ls.join('\n').trim();
+
+    // repetição (laço do modelo): linha ou frase igual a uma já escrita, quando tem 30+ caracteres
+    var vistas = {};
+    t = t.split('\n').map(function (ln) {
+      if (/^\s*(?:-|\d{1,2}[.)])\s/.test(ln)) {                                         // item de lista: compara o item inteiro
+        var ki = chaveFrase(ln); if (ki.length >= 30) { if (vistas[ki]) return null; vistas[ki] = 1; }
+        return ln;
+      }
+      var keep = sentencasDe(ln).filter(function (f) {
+        var kf = chaveFrase(f); if (kf.length < 30) return true;
+        if (vistas[kf]) return false; vistas[kf] = 1; return true;
+      }).join('').trim();
+      return keep;
+    }).filter(function (ln, i, a) { return ln !== null && !(ln === '' && (i === 0 || a[i - 1] === '')); }).join('\n').trim();
+
+    // limite de tamanho: corta no fim de um parágrafo ou frase, nunca no meio de uma palavra
+    if (t.length > MAX_RESPOSTA) {
+      var corte = t.slice(0, MAX_RESPOSTA), par = corte.lastIndexOf('\n'), fim = Math.max(corte.lastIndexOf('. '), corte.lastIndexOf('! '), corte.lastIndexOf('? '));
+      var pos = Math.max(par, fim + 1);
+      t = (pos >= MAX_RESPOSTA * 0.5 ? corte.slice(0, pos) : corte.replace(/\s+\S*$/, '') + '…').trim();
+    }
+    // ponta cortada pelo limite de tokens: some a frase pela metade (só com sinal forte, para não comer resposta completa)
+    var lns = t.split('\n'), ultima = lns[lns.length - 1] || '';
+    var abre = (ultima.match(/\(/g) || []).length > (ultima.match(/\)/g) || []).length;
+    var sinal = t.length >= 80 && !/[.!?:…)”"»\]]\**$/.test(ultima) && (RE_PONTA_SOLTA.test(ultima) || abre || (t.length >= MAX_RESPOSTA - 150 && /[a-zà-ú]$/.test(ultima)));
+    if (sinal) {
+      var tm = ultima.match(/^([\s\S]*[.!?])["”)]*\s/), antes = lns.slice(0, -1).join('\n');
+      var resto = tm ? (antes ? antes + '\n' : '') + tm[1] : antes;
+      if (resto.trim().length >= 40) t = resto.trim();
+    }
+    return (t + (tail ? '\n' + tail.trim() : '')).trim();
   }
+  // Texto PARCIAL durante o streaming: esconde o que o final vai tirar (sugestões, raciocínio) e a marcação que ainda
+  // não faz sentido (# no começo, "* " de lista, ``` ), para o texto não "pular" quando a resposta termina.
+  function cleanPartial(text) {
+    var t = ocultarSugestoes(String(text == null ? '' : text).replace(/\r/g, ''));
+    t = t.replace(/<(think|thinking|reasoning)>[\s\S]*?<\/\1>/gi, '').replace(/<(think|thinking|reasoning)>[\s\S]*$/i, '');
+    var fecha = t.search(/<\/(think|thinking|reasoning)>/i);
+    if (fecha > -1) t = t.slice(t.indexOf('>', fecha) + 1);
+    t = t.replace(/<\/?[a-z]{2,10}>/gi, '').replace(/`+/g, '')
+      .replace(/^\s*#{1,6}\s*/gm, '').replace(/^\s*[•·▪◦‣*+]\s+(?!\*)/gm, '- ')
+      .replace(/^\s*[-*_=]{3,}\s*$/gm, '').replace(RE_PICTO, function (m) { return m === '⚠' ? m : ''; });
+    // negrito aberto na última linha (ainda sendo escrito): some o "**" solto até fechar
+    var nl = t.lastIndexOf('\n'), ult = t.slice(nl + 1);
+    if ((ult.match(/\*\*/g) || []).length % 2) { var k = ult.lastIndexOf('**'); t = t.slice(0, nl + 1) + ult.slice(0, k) + ult.slice(k + 2); }
+    return t.replace(/^\s+/, '');
+  }
+
+  // ---------------------------------------------------------------------
+  // CONFERÊNCIA DA RESPOSTA DA IA (contra invenção)
+  // verifyPhones já pegava telefone que não está no diretório. Aqui entram: nome de CRAS/CREAS/UBS/CAPS que não
+  // existe no diretório e fatos de Boa Vista que a IA costuma errar. É aviso suave (a pessoa confere), nunca bloqueio.
+  // ---------------------------------------------------------------------
+  var nomesUnidIdx = null;
+  var UNID_GENERICAS = asSet(('referencia territorio territorial basica saude social especializado especializada municipal estadual ' +
+    'federal publica publico mais proximo proxima responsavel local regional itinerante volante conveniada geral infantil adulto ' +
+    'adulta mulher idoso crianca adolescente unidade servico equipe equipamento equipamentos').split(' '));
+  function indiceNomesUnidades() {
+    if (nomesUnidIdx) return nomesUnidIdx;
+    nomesUnidIdx = { CRAS: [], CREAS: [], UBS: [], CAPS: [] };
+    data.forEach(function (d) {
+      [d.name, d.fullName].forEach(function (nm) {
+        var n = norm(nm || ''), m = n.match(/^(cras|creas|ubs|caps)\b\s*(.*)$/);
+        if (!m) return;
+        var toks = m[2].split(' ').filter(function (x) { return x && !STOP[x] && !/^(dr|dra|prof|profa|enf|sr|sra)$/.test(x); });
+        nomesUnidIdx[m[1].toUpperCase()].push(asSet(toks));
+      });
+    });
+    return nomesUnidIdx;
+  }
+  function unidadesDesconhecidas(text) {
+    var idx = indiceNomesUnidades(), achados = [];
+    var re = /\b(CRAS|CREAS|UBS|CAPS)\b((?:\s+(?:AD|III|II|I|IV|i|ad)\b)*)((?:\s+(?:(?:d[aeo]s?)\s+)?[A-ZÁÉÍÓÚÂÊÔÃÕÇ0-9][\wÀ-ÿ.'º-]*){1,4})/g, m;
+    var s = String(text || ''), ABREV = /^(dr|dra|prof|profa|enf|sr|sra)$/;
+    while ((m = re.exec(s))) {
+      var tipo = m[1], toks = [], bruto = [];
+      var palavras = m[3].trim().split(/\s+/);
+      for (var i = 0; i < palavras.length; i++) {
+        var w = palavras[i], fim = /[.,;:!?]+$/.test(w), limpa = w.replace(/[.,;:!?]+$/, ''), nw = norm(limpa);
+        if (/^(atende|fica|funciona|oferece|presta|realiza|possui|tem|esta|sao|foi|era)$/.test(nw)) break;
+        bruto.push(limpa);
+        if (nw && !STOP[nw] && !ABREV.test(nw) && !UNID_GENERICAS[nw]) toks.push(nw);
+        // ponto final de frase encerra a menção; "Dr." / "Prof." não
+        if (fim && !(ABREV.test(nw) && /\.$/.test(w)) && !/^(?:[A-Za-zÀ-ÿ]\.)+$/.test(w)) break;
+      }
+      if (!toks.length) continue;
+      var lista = idx[tipo] || [];
+      var subconjunto = lista.some(function (set) { return toks.every(function (x) { return set[x]; }); });
+      if (subconjunto) continue;
+      var primeiro = lista.some(function (set) { return set[toks[0]]; });
+      // nome todo desconhecido, ou nome curto (1-2 palavras) que nenhuma unidade tem por inteiro; nome longo com sobra só se a 1ª palavra não existe
+      if (!primeiro || toks.length <= 2) achados.push((tipo + ' ' + bruto.join(' ')).trim());
+    }
+    return uniq(achados).slice(0, 3);
+  }
+  // fatos de Boa Vista que a IA costuma errar (conferidos no prompt do Paulus: docs/PAULUS-PERSONALIDADE.md)
+  var AVISOS_FATOS = [
+    { id: 'upa', re: /\bUPAs?\b/, nega: /(?:^|[^\wÀ-ÿ])(?:n[ãa]o (?:h[áa]|existe|tem|funciona|est[áa])|sem|nenhuma|ainda n[ãa]o|inexistente|autorizad[ao]|prevista?)(?![\wÀ-ÿ])/i,
+      nota: 'Em Boa Vista não há UPA em funcionamento: para urgência, o HGRR (urgência 24h) e o SAMU (192) são a referência.' },
+    { id: 'capsi', re: /\bCAPS\s*i\b(?!\w)|\bCAPS\s+infantil\b|\bCAPSi\b/, nega: /(?:^|[^\wÀ-ÿ])(?:n[ãa]o (?:h[áa]|existe|tem)|sem|nenhum|inexistente)(?![\wÀ-ÿ])/i,
+      nota: 'Em Boa Vista não há CAPS infantil (CAPS i): o CAPS II atende crianças a partir de 4 anos.' }
+  ];
+  function avisosFatos(text) {
+    var s = String(text || ''), out = [];
+    AVISOS_FATOS.forEach(function (f) {
+      var m = f.re.exec(s);
+      if (!m) return;
+      var ao = s.slice(Math.max(0, m.index - 90), m.index + 90);
+      if (!f.nega.test(ao)) out.push(f.nota);
+    });
+    return out;
+  }
+  // Resultado único para a interface: { fone: telefone fora do diretório, unidades: nomes que não constam, fatos: avisos }
+  function conferir(text) {
+    return { fone: verifyPhones(text), unidades: unidadesDesconhecidas(text), fatos: avisosFatos(text) };
+  }
+
   // A IA termina a resposta com "SUGESTÕES: a | b | c". Isso vira botões e não aparece no texto.
-  var RE_SUG = /\n?[ \t]*(?:\*\*)?sugest(?:õ|o)es(?:\*\*)?[ \t]*:[ \t]*([\s\S]*)$/i;
+  var RE_SUG = /(?:^|\n)[ \t]*(?:\*\*)?sugest(?:õ|o)es(?:\*\*)?[ \t]*:[ \t]*([\s\S]*)$/i;
   function separarSugestoes(text) {
     var t = String(text || ''), m = t.match(RE_SUG);
     if (!m) return { texto: t.trim(), sugestoes: [] };
@@ -1773,7 +1947,7 @@
   }
   // durante o streaming: esconde o rótulo "SUGESTÕES:" (inclusive parcial, como "SUGEST") no fim
   function ocultarSugestoes(full) {
-    var t = String(full || ''), i = t.search(/\n?[ \t]*(?:\*\*)?sugest/i);
+    var t = String(full || ''), i = t.search(/(?:^|\n)[ \t]*(?:\*\*)?sugest/i);
     if (i > -1) return t.slice(0, i).replace(/\s+$/, '');
     // rótulo ainda incompleto na última linha ("SUG", "**Suges"): também fica escondido
     var nl = t.lastIndexOf('\n'), ult = nl > -1 ? t.slice(nl + 1) : '';
@@ -1805,7 +1979,7 @@
     var idleTimer = null;
     function bump() { clearTimeout(idleTimer); idleTimer = setTimeout(function () { ctl.abort(); }, CFG.idleMs); }
     var full = '';
-    function emit(t) { if (!t) return; full += t; if (hooks.onDelta) hooks.onDelta(t, full); }
+    function emit(t) { if (!t) return; full += t; if (hooks.onDelta) hooks.onDelta(t, cleanPartial(full)); }
     function done() { clearTimeout(firstTimer); clearTimeout(idleTimer); }
 
     session.lastAi = Date.now(); session.aiTimes.push(session.lastAi);
@@ -5011,7 +5185,7 @@
     ehCaso: ehCaso, planCaso: planCaso, metodoCaso: METODO_CASO,
     remember: remember, reset: reset, session: session, notar: notar, estado: estadoParaIA, deveEsclarecer: deveEsclarecer, historicoParaIA: historicoParaIA,
     aiOn: aiOn, aiGate: aiGate, seguimento: seguimento, buildPayload: buildPayload, streamAI: streamAI,
-    verifyPhones: verifyPhones, panorama: panorama, isAmpla: isAmpla, cleanAI: cleanAI, separarSugestoes: separarSugestoes, ocultarSugestoes: ocultarSugestoes, mentionedUnits: mentionedUnits, telHref: telHref, slim: slim,
+    verifyPhones: verifyPhones, panorama: panorama, isAmpla: isAmpla, cleanAI: cleanAI, cleanPartial: cleanPartial, conferir: conferir, unidadesDesconhecidas: unidadesDesconhecidas, avisosFatos: avisosFatos, separarSugestoes: separarSugestoes, ocultarSugestoes: ocultarSugestoes, mentionedUnits: mentionedUnits, telHref: telHref, slim: slim,
     config: CFG, emergencia: EMERGENCIA, glossarioLista: GLOSSARIO
   };
 });
