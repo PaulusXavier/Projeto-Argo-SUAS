@@ -29051,7 +29051,7 @@ function argoStreamIA(B, rawText, payload, hooks) {
     semPerguntar: hooks.semPerguntar === true,   // segunda tentativa: responde com a premissa mais provável
     estado: payload.estado,         // unidade, bairro, município e assunto já firmados na conversa (Paulus v0.8.0)
     sinal: hooks.signal,
-    onToken: (pedaco, tudo) => { acc = tudo; if (hooks.onDelta) hooks.onDelta(pedaco, tudo); },
+    onToken: (pedaco, tudo) => { acc = tudo; if (hooks.onDelta) hooks.onDelta(pedaco, B.cleanPartial ? B.cleanPartial(tudo) : tudo); },
     onFontes: f => {
       fontes = f;
       const n = new Set((f || []).map(x => x && x.documento).filter(Boolean)).size;
@@ -29126,13 +29126,17 @@ function argoAskAI(rawText, tab, fallbackResult) {
         return final.then(({ txt, fontes, avisos, offline, sugestoes, acoes, calculo, paulusResult, skills }) => {
           const units = B.mentionedUnits(txt, ctxNames);
           B.remember(rawText, txt, units);
-          const bad = B.verifyPhones(txt);
+          const conf = !offline && !calculo && typeof B.conferir === 'function' ? B.conferir(txt) : { fone: B.verifyPhones(txt), unidades: [], fatos: [] };
+          const bad = conf.fone;
           let note = 'Posso errar: confira os dados com a unidade antes de encaminhar.';
           if (offline) note = (avisos && avisos[0]) || 'Estou sem IA agora, mas achei um trecho na minha base SUAS. Confira a fonte e o ano citados.';
           // Nota da IA: avisos de conferência do Paulus (artigo, lei ou valor citado que não estava nas normas lidas)
           if (!offline && !calculo && avisos && avisos[0]) note = avisos[0] + ' Confira antes de usar.';
           if (calculo) note = (avisos && avisos[0]) || 'Conta feita no aparelho, sem IA. Confira os números.';
           if (bad) note = '⚠️ Citei um número que não consta no diretório. Confirme com a unidade antes de usar.';
+          // Nome de CRAS/CREAS/UBS/CAPS que não existe no diretório e fatos de Boa Vista que a IA costuma errar: aviso suave, sem trocar o texto.
+          else if (conf.unidades.length) note = '⚠️ Citei ' + conf.unidades.map(x => '"' + x + '"').join(', ') + ', que não encontrei no diretório. Confirme o nome com a unidade antes de usar.' + (!offline && !calculo && avisos && avisos[0] ? ' ' + avisos[0] : '');
+          if (conf.fatos.length) note += ' ' + conf.fatos[0];
           // Perguntas de continuação: as da IA primeiro; se ela citou unidade e não sugeriu nada, as de contato.
           const seguintes = (sugestoes || []).slice(0, 3);
           if (!seguintes.length && units.length) seguintes.push('Qual o telefone?', 'Qual o horário?');
