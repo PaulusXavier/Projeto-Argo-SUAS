@@ -14415,6 +14415,7 @@ function mapaRedeRenderDetail(d) {
     ${chips}
     <div class="mapa-rede-detail-actions">
       <a class="btn-tech btn-primary btn-link" href="${routeHref}" target="_blank" rel="noopener noreferrer">${ICONS.map} Traçar rota</a>
+      ${hasCoords ? `<a class="btn-tech btn-secondary btn-link" href="https://waze.com/ul?ll=${d.lat},${d.lon}&navigate=yes" target="_blank" rel="noopener noreferrer" title="Abrir a rota no Waze">${ICONS.car} Rota no Waze</a>` : ''}
       <div class="mapa-rede-detail-actions-row">
         <button type="button" class="btn-tech btn-secondary" onclick="mapaRedeCopyDetail()">${ICONS.copy} Copiar</button>
         <button type="button" class="btn-tech btn-whatsapp" onclick="mapaRedeShareDetail()">${ICONS.whatsapp} WhatsApp</button>
@@ -14532,13 +14533,63 @@ function mapaRedeSetBase(key) {
   if (c) c.classList.toggle('is-satellite', key === 'satelite');
 }
 
+// Sem o mapa (sem internet e sem o Leaflet no cache), ainda dá para consultar
+// as unidades: CRAS, CREAS e abrigos de Boa Vista (coordenadas já no app) e
+// os equipamentos com pino guardado neste aparelho, com telefone, endereço e
+// distância (se a localização estiver ativa).
+function mapaRedeRenderOfflineList() {
+  const host = document.getElementById('mapaRedeMapContainer');
+  if (!host) return;
+  const cache = getGeocodeCache();
+  const rows = [];
+  [['CRAS', UNITS_CRAS_CREAS.cras], ['CREAS', UNITS_CRAS_CREAS.creas]].forEach(([tipo, list]) => {
+    list.forEach(u => rows.push({ name: u.name, tag: tipo, address: u.address, phone: u.phone, lat: u.lat, lon: u.lng }));
+  });
+  DATA.forEach(i => {
+    const c = cache[i.id];
+    if (!i.address || !c || i.cat.includes('cas') || i.cat.includes('cras')) return;
+    rows.push({ name: i.fullName || i.name || '', tag: '', address: mapaRedeCleanText(i.address), phone: (i.phones || [])[0], lat: c.lat, lon: c.lon });
+  });
+  const compute = () => {
+    rows.forEach(r => { r.km = proximityState.active ? haversineKm(proximityState.lat, proximityState.lon, r.lat, r.lon) : null; });
+    rows.sort((a, b) => proximityState.active ? a.km - b.km : a.name.localeCompare(b.name, 'pt-BR'));
+  };
+  const draw = filter => {
+    compute();
+    const f = argoNorm(filter || '');
+    const list = rows.filter(r => !f || argoNorm(r.name + ' ' + r.address).includes(f)).slice(0, 60);
+    host.innerHTML = '<div class="mapa-rede-offline">'
+      + '<p class="mapa-rede-hint"><strong>Sem o mapa agora.</strong> Esta lista funciona sem internet' + (proximityState.active ? ', ordenada da mais próxima para a mais distante.' : '. Toque em "Minha localização" para ordenar por distância.') + '</p>'
+      + '<input type="search" class="tools-input" id="mapaRedeOfflineSearch" placeholder="Filtrar por nome ou endereço…" aria-label="Filtrar unidades" autocomplete="off" value="' + escapeHtml(filter || '') + '">'
+      + (list.length ? list.map(r => {
+          const tel = String(r.phone || '').replace(/[^\d+]/g, '');
+          return '<div class="mapa-rede-offline-row"><div><strong>' + escapeHtml(r.name) + '</strong>'
+            + '<small>' + [r.tag, r.km != null ? mapaRedeFmtKm(r.km) : '', escapeHtml(mapaRedeCleanText(r.address))].filter(Boolean).join(' · ') + '</small></div>'
+            + (tel && tel.toUpperCase() !== 'N/A' ? '<a class="mapa-rede-detail-link" href="tel:' + tel + '">' + ICONS.phone + '<span>' + escapeHtml(r.phone) + '</span></a>' : '') + '</div>';
+        }).join('') : '<p class="mapa-rede-hint">Nenhuma unidade encontrada.</p>')
+      + '</div>';
+    const inp = document.getElementById('mapaRedeOfflineSearch');
+    if (inp) {
+      inp.oninput = () => { const pos = inp.selectionStart; draw(inp.value); const n = document.getElementById('mapaRedeOfflineSearch'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (_) {} } };
+    }
+  };
+  draw('');
+  // Ao obter a localização, reordena a lista por distância.
+  const btn = document.getElementById('mapaRedeLocateBtn');
+  if (btn && !btn.dataset.offlineBound) {
+    btn.dataset.offlineBound = '1';
+    btn.addEventListener('click', () => { let n = 0; const t = setInterval(() => { if (proximityState.active || ++n > 20) { clearInterval(t); if (!window.L) draw((document.getElementById('mapaRedeOfflineSearch') || {}).value || ''); } }, 800); });
+  }
+}
+
 async function initMapPanel() {
   mapaRedeSetStatus('Carregando mapa…');
   let L;
   try {
     L = await ensureLeaflet();
   } catch (e) {
-    mapaRedeSetStatus('Não foi possível carregar o mapa. Verifique sua conexão com a internet e tente novamente.');
+    mapaRedeSetStatus('Não foi possível carregar o mapa. Verifique sua conexão com a internet e tente novamente. Enquanto isso, veja a lista de unidades abaixo.');
+    mapaRedeRenderOfflineList();
     return;
   }
 
