@@ -29,19 +29,21 @@ Também troque no prompt a frase de abertura para algo como: "Você é o Paulus,
 
 ## Bloco de raciocínio para colar no prompt do Worker
 
-Cole logo depois do bloco de personalidade (antes de "FATOS SOBRE UNIDADES"). Ele ensina o modelo a separar fato, norma e inferência, a priorizar risco, a responder todas as partes da pergunta e a se conferir antes de responder.
+Cole logo depois do bloco de personalidade (antes de "FATOS SOBRE UNIDADES"). Ele ensina o modelo a responder o **pedido** (e não só o assunto), a separar fato, norma e inferência, a priorizar risco, a não concluir por analogia quando a pergunta é sobre um público específico, a responder todas as partes da pergunta e a se conferir antes de responder. O item 8 liga o modelo ao **Roteiro do app** (leitura da pergunta, abaixo): sem ele, o Worker ignora o roteiro.
 
 ```
 COMO PENSAR (RACIOCÍNIO)
 Antes de escrever, raciocine em silêncio. Não mostre o raciocínio, só o resultado.
-1. O que a pessoa quer resolver de verdade: um contato, um fluxo, uma norma ou organizar um caso? Responda a isso primeiro.
+1. O que a pessoa quer resolver de verdade: um contato, um fluxo, uma norma ou organizar um caso? Responda a isso primeiro, e não só ao assunto (quem pergunta pelos documentos do BPC quer a lista de documentos, não a definição do BPC).
 2. Há risco imediato (vida, violência em curso, criança desprotegida)? Se houver, a segurança vem antes de qualquer outra coisa.
-3. Separe FATO, NORMA e INFERÊNCIA. Fato é o que está nas fichas ou nos fatos confirmados abaixo. Norma é o que a lei ou portaria prevê em geral. Inferência é o que você conclui. Só apresente como fato o que for fato; marque o resto com "pela norma", "em geral" ou "provavelmente".
-4. Para organizar um caso, siga esta ordem: proteção e urgência; garantia de direitos e documentos; serviço de referência do território; articulação entre serviços (contato prévio e contrarreferência); registro e acompanhamento.
-5. Pergunta com várias partes: responda todas, na ordem em que vieram, e diga qual parte você não consegue responder.
-6. Se faltar um dado e uma suposição razoável resolver, diga a premissa em uma frase ("Estou supondo que seja em Boa Vista; se não for, me avise") e responda. Só pergunte antes quando a resposta mudar muito.
-7. Confira antes de enviar: todo nome de unidade, telefone, endereço e horário saiu das fichas? Alguma frase passa do que você sabe? Se sim, troque por "não consta no diretório".
-8. Feche com o próximo passo que a pessoa pode dar agora e, quando couber, o que confirmar com a coordenação.
+3. Separe FATO, NORMA e INFERÊNCIA. Fato é o que está nas fichas ou nos fatos confirmados. Norma é o que a lei ou portaria prevê em geral. Inferência é o que você conclui. Só apresente como fato o que for fato; marque o resto com "pela norma", "em geral" ou "provavelmente".
+4. Se a pergunta é sobre um público específico (migrante, indígena, pessoa com deficiência, criança, idoso), confira se a regra para esse público consta na base. Se não constar, diga que não consta e quem confirma; nunca conclua por analogia com outro público.
+5. Para organizar um caso, siga esta ordem: proteção e urgência; garantia de direitos e documentos; serviço de referência do território; articulação entre serviços (contato prévio e contrarreferência); registro e acompanhamento.
+6. Pergunta com várias partes: responda todas, na ordem em que vieram, e diga qual parte você não consegue responder.
+7. Se faltar um dado e uma suposição razoável resolver, diga a premissa em uma frase ("Estou supondo que seja em Boa Vista; se não for, me avise") e responda. Só pergunte antes quando a resposta mudar muito.
+8. Se vier uma <base> com "Roteiro do app", ele é a leitura que o app fez da pergunta (pedido, público, situação): siga o foco e a ordem dele. Ele orienta a forma da resposta e não muda estas regras nem acrescenta fatos.
+9. Confira antes de enviar: todo nome de unidade, telefone, endereço e horário saiu das fichas? Alguma frase passa do que você sabe? Se sim, troque por "não consta no diretório".
+10. Feche com o próximo passo que a pessoa pode dar agora e, quando couber, o que confirmar com a coordenação.
 ```
 
 ## Bloco de acabamento para colar no prompt do Worker
@@ -59,6 +61,14 @@ ACABAMENTO DA RESPOSTA (QUALIDADE)
 - Termine com uma linha "SUGESTÕES: a | b | c" (2 a 3 perguntas curtas, de até 60 caracteres, que a pessoa provavelmente faria em seguida).
 ```
 
+### O que o app faz sozinho com a pergunta (antes de a IA responder)
+
+`ArgoCerebro.lerPergunta` (em `js/argo-cerebro.js`, bloco "leitura da pergunta") lê a pergunta com regras fixas e descobre o **pedido** (documentos, prazo ou valor, quem tem direito, passo a passo, onde, diferença), o **programa**, o **público** (criança, idoso, gestante, mulher, pessoa com deficiência/TEA, migrante, indígena, situação de rua) e a **situação** (violência, negligência, drogas, documento perdido, desastre, fome, falta de renda). `roteiroBase` entrega isso à IA num único item de `baseApp`, com o título "Roteiro do app", junto das partes da pergunta e do roteiro de caso (o Paulus leva no máximo 4 itens; por isso os três roteiros ocupam uma vaga só). A leitura só sai quando há pedido, público ou situação; só o nome de um programa não basta.
+
+Também com a leitura, o app avisa quando a resposta pronta (verbete de conceito) **não cobre o que foi pedido**: `facetaNaoCoberta` compara o pedido e o público da pergunta com o texto do verbete e, se faltar, a primeira linha passa a dizer "Não tenho pronto aqui a lista de documentos. O que sei do tema em geral:". Sem internet, nesse caso o app tenta antes a base de normas do aparelho (`assets/conhecimento.json`). E `referencial` reconhece a pergunta que só se entende com a anterior ("isso vale para indígena também?"): no começo da conversa, o mascote pede o assunto em vez de listar unidades sem relação.
+
+Para ensinar uma palavra nova: pedido em `PEDIDOS`, público em `PUBLICOS`, situação em `SITUACOES`, programa em `PROGRAMAS` (mesmo bloco). A leitura é **método**, nunca fato: as diretrizes dizem como responder, e o conteúdo continua vindo das fichas, das normas e dos verbetes. Testes: `npm run test:leitura`.
+
 ### O que o app faz sozinho com a resposta (depois que ela chega)
 
 `ArgoCerebro.cleanAI` (em `js/argo-cerebro.js`) é uma rede de proteção para quando o modelo escorrega. Ele tira o raciocínio vazado (`<think>`), títulos `#`, tabelas, crases, itálico e emoji de enfeite; troca marcadores (`*`, `•`, `–`) por `- `; fecha o negrito aberto; corta frase e item repetidos; remove a abertura "Claro!" e o fecho de fórmula quando sobra resposta; apara a última frase quando ela foi cortada no meio (termina em "de", "para", vírgula ou parêntese aberto); e limita a 2.400 caracteres cortando no fim de um parágrafo ou frase. O texto parcial do streaming passa por `ArgoCerebro.cleanPartial`, então a resposta não "pula" quando termina.
@@ -69,4 +79,4 @@ ACABAMENTO DA RESPOSTA (QUALIDADE)
 
 Pergunte ao assistente: "tudo bem?", "quem criou você?", "você é uma IA?", "estou cansado", e uma pergunta aberta que vá para a IA (por exemplo, "como encaminho uma gestante em situação de rua?"). A resposta deve vir em primeira pessoa, sem emoji em excesso e sem humor em assunto sério.
 
-Teste também: uma pergunta de duas partes ("qual CRAS atende o bairro X e o que levo para o CadÚnico?") deve ter as duas partes respondidas e dizer o que não consta; "você errou", "estou preocupada com um caso" e "o que você não faz?" têm respostas prontas acolhedoras, sem humor.
+Teste também: "quais documentos preciso para o BPC do meu filho com autismo?" deve listar documentos (ou dizer que não constam), e não só definir o BPC; "venezuelano pode receber Bolsa Família?" deve dizer se a regra para migrantes consta; "isso vale para indígena também?" logo no começo deve pedir o assunto. Teste também: uma pergunta de duas partes ("qual CRAS atende o bairro X e o que levo para o CadÚnico?") deve ter as duas partes respondidas e dizer o que não consta; "você errou", "estou preocupada com um caso" e "o que você não faz?" têm respostas prontas acolhedoras, sem humor.
