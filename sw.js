@@ -25,6 +25,7 @@ const ASSETS = [
   './js/equipe-cras-cristiana.js',
   './js/data.js',
   './js/datas-cras-mds.js',
+  './js/login-matrix.js',
   './js/app.js',
   './js/auth-config.js',
   './js/argo-mascot.js',
