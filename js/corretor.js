@@ -140,22 +140,26 @@
     return st;
   }
   function posicionar(st) {
-    const el = st.el, m = st.m;
+    const el = st.el, m = st.m, s = m.style;
     if (!el.isConnected) { descartar(st); return; }
-    if (el.offsetParent === null && getComputedStyle(el).position !== 'fixed') { m.style.display = 'none'; return; }
+    if (el.offsetParent === null && getComputedStyle(el).position !== 'fixed') { s.display = 'none'; return; }
     const cs = getComputedStyle(el);
-    const key = [el.offsetLeft, el.offsetTop, el.offsetWidth, el.offsetHeight, el.clientWidth, cs.font, cs.letterSpacing, cs.padding, cs.borderWidth, cs.textAlign, cs.lineHeight, cs.textIndent, cs.wordSpacing, cs.direction].join('|');
-    if (key === st.key && m.style.display !== 'none') return;
-    st.key = key;
-    const bl = parseFloat(cs.borderLeftWidth) || 0, br = parseFloat(cs.borderRightWidth) || 0;
-    const sb = el.tagName === 'TEXTAREA' ? Math.max(0, el.offsetWidth - el.clientWidth - bl - br) : 0;   // barra de rolagem
-    const s = m.style;
-    s.display = ''; s.left = el.offsetLeft + 'px'; s.top = el.offsetTop + 'px'; s.width = el.offsetWidth + 'px'; s.height = el.offsetHeight + 'px';
-    s.font = cs.font; s.letterSpacing = cs.letterSpacing; s.wordSpacing = cs.wordSpacing; s.textAlign = cs.textAlign; s.textIndent = cs.textIndent; s.lineHeight = cs.lineHeight; s.direction = cs.direction; s.textTransform = cs.textTransform;
-    s.padding = cs.paddingTop + ' ' + (parseFloat(cs.paddingRight) + sb) + 'px ' + cs.paddingBottom + ' ' + cs.paddingLeft;
-    s.borderWidth = cs.borderTopWidth + ' ' + cs.borderRightWidth + ' ' + cs.borderBottomWidth + ' ' + cs.borderLeftWidth;
-    s.borderRadius = cs.borderRadius;
-    m.dataset.single = el.tagName === 'INPUT' ? '1' : '';
+    const key = [el.offsetWidth, el.offsetHeight, el.clientWidth, cs.font, cs.letterSpacing, cs.padding, cs.borderWidth, cs.textAlign, cs.lineHeight, cs.textIndent, cs.wordSpacing, cs.direction].join('|');
+    if (key !== st.key || s.display === 'none') {
+      st.key = key;
+      const bl = parseFloat(cs.borderLeftWidth) || 0, br = parseFloat(cs.borderRightWidth) || 0;
+      const sb = el.tagName === 'TEXTAREA' ? Math.max(0, el.offsetWidth - el.clientWidth - bl - br) : 0;   // barra de rolagem
+      s.display = ''; s.width = el.offsetWidth + 'px'; s.height = el.offsetHeight + 'px';
+      s.font = cs.font; s.letterSpacing = cs.letterSpacing; s.wordSpacing = cs.wordSpacing; s.textAlign = cs.textAlign; s.textIndent = cs.textIndent; s.lineHeight = cs.lineHeight; s.direction = cs.direction; s.textTransform = cs.textTransform;
+      s.padding = cs.paddingTop + ' ' + (parseFloat(cs.paddingRight) + sb) + 'px ' + cs.paddingBottom + ' ' + cs.paddingLeft;
+      s.borderWidth = cs.borderTopWidth + ' ' + cs.borderRightWidth + ' ' + cs.borderBottomWidth + ' ' + cs.borderLeftWidth;
+      s.borderRadius = cs.borderRadius;
+      m.dataset.single = el.tagName === 'INPUT' ? '1' : '';
+    }
+    // posição: mede a origem da camada (0,0 do bloco que a contém, seja td, modal ou página) e a desloca até o campo
+    s.left = '0px'; s.top = '0px';
+    const mr = m.getBoundingClientRect(), er = el.getBoundingClientRect();
+    s.left = (er.left - mr.left) + 'px'; s.top = (er.top - mr.top) + 'px';
     sincRolagem(st);
   }
   function sincRolagem(st) { st.m.scrollTop = st.el.scrollTop; st.m.scrollLeft = st.el.scrollLeft; }
