@@ -8409,3 +8409,19 @@ body.tab-focus .tab-focus-bar { padding-top: calc(0.5rem + env(safe-area-inset-t
 .ac-it.ac-b { font-weight: 700; }
 .ac-it.ac-dis, .ac-it:disabled { opacity: 0.6; cursor: default; background: transparent; }
 .ac-sep { height: 1px; margin: 3px 4px; background: var(--border-ui); }
+
+/* Mapa da Rede: lista de unidades quando o mapa não carrega (sem internet). */
+.mapa-rede-offline { padding: 0.8rem; max-height: 420px; overflow-y: auto; background: var(--bg-card); }
+.mapa-rede-offline .tools-input { width: 100%; margin: 0.4rem 0 0.6rem; }
+.mapa-rede-offline-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.55rem 0;
+  border-top: 1px solid var(--border-ui);
+}
+.mapa-rede-offline-row > div { min-width: 0; flex: 1 1 220px; }
+.mapa-rede-offline-row strong { display: block; font-size: 0.88rem; line-height: 1.25; }
+.mapa-rede-offline-row small { display: block; font-size: 0.76rem; color: var(--text-muted); line-height: 1.35; }
