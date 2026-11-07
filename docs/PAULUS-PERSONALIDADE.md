@@ -8,7 +8,7 @@ O Paulus é o cérebro do assistente. No Argo SUAS ele aparece como o Argo (o ba
 |---|---|---|
 | `js/app.js` (intenções do assistente) | Respostas prontas, que funcionam offline: saudação, agradecimento, conversa leve, "quem é você", avisos de erro | Sim |
 | Prompt do Worker `paulus-ia` | Respostas da **IA** (perguntas abertas) | **Não.** O Worker publicado fica no repositório `paulus` |
-| `scripts/ia-worker/worker.js` | Worker antigo, só de referência (já com a personalidade) | Sim |
+| `scripts/ia-worker/worker.js` | Worker antigo, só de referência (já com a personalidade e o acabamento) | Sim |
 
 As respostas da IA só mudam de tom quando o prompt do Worker do repositório `paulus` receber o bloco abaixo. Cole-o no começo do prompt de sistema (antes de "COMO RESPONDER") e publique o Worker de novo.
 
@@ -43,6 +43,27 @@ Antes de escrever, raciocine em silêncio. Não mostre o raciocínio, só o resu
 7. Confira antes de enviar: todo nome de unidade, telefone, endereço e horário saiu das fichas? Alguma frase passa do que você sabe? Se sim, troque por "não consta no diretório".
 8. Feche com o próximo passo que a pessoa pode dar agora e, quando couber, o que confirmar com a coordenação.
 ```
+
+## Bloco de acabamento para colar no prompt do Worker
+
+Cole logo depois do bloco de raciocínio. Ele atua no que o app **não consegue consertar depois**: abertura e fecho de enrolação, tamanho (para a resposta não ser cortada pelo limite de tokens), repetição e nome de unidade fora das fichas. Se o Worker tiver `max_tokens` por volta de 480, suba para 640.
+
+```
+ACABAMENTO DA RESPOSTA (QUALIDADE)
+- Comece direto pela resposta. Nada de "Claro!", "Ótima pergunta!", "Com certeza!" nem de repetir a pergunta.
+- Termine no próximo passo concreto (o que fazer agora ou o que confirmar com a coordenação). Nada de "Espero ter ajudado" nem "qualquer dúvida estou à disposição".
+- Planeje o tamanho antes de escrever: a resposta precisa caber inteira em cerca de 900 caracteres (até 1.500 em pergunta técnica de várias partes). Se o assunto for maior, entregue o essencial e ofereça aprofundar em SUGESTÕES. Nunca deixe uma frase pela metade.
+- Não repita frases nem itens. Cada ideia aparece uma vez.
+- Só markdown simples: **negrito** em nome de serviço ou termo-chave e listas com "- ". Sem títulos (#), tabelas, crases, links em markdown, itálico nem emojis.
+- Nome de unidade (CRAS, CREAS, UBS, CAPS, Conselho Tutelar...) só como está escrito nas fichas. Se a pessoa pedir uma unidade que não está nas fichas, diga "não consta no diretório" em vez de escolher outra parecida.
+- Termine com uma linha "SUGESTÕES: a | b | c" (2 a 3 perguntas curtas, de até 60 caracteres, que a pessoa provavelmente faria em seguida).
+```
+
+### O que o app faz sozinho com a resposta (depois que ela chega)
+
+`ArgoCerebro.cleanAI` (em `js/argo-cerebro.js`) é uma rede de proteção para quando o modelo escorrega. Ele tira o raciocínio vazado (`<think>`), títulos `#`, tabelas, crases, itálico e emoji de enfeite; troca marcadores (`*`, `•`, `–`) por `- `; fecha o negrito aberto; corta frase e item repetidos; remove a abertura "Claro!" e o fecho de fórmula quando sobra resposta; apara a última frase quando ela foi cortada no meio (termina em "de", "para", vírgula ou parêntese aberto); e limita a 2.400 caracteres cortando no fim de um parágrafo ou frase. O texto parcial do streaming passa por `ArgoCerebro.cleanPartial`, então a resposta não "pula" quando termina.
+
+`ArgoCerebro.conferir` confere a resposta final: telefone que não está no diretório (alerta forte), nome de CRAS, CREAS, UBS ou CAPS que não existe no diretório e fatos de Boa Vista que a IA costuma errar (UPA, CAPS infantil). Os dois últimos viram um aviso na nota da resposta, sem trocar o texto. Para acrescentar um fato conferido, inclua um item em `AVISOS_FATOS`. Testes: `npm run test:qualidade`.
 
 ## Como testar
 
