@@ -8320,3 +8320,21 @@ body.tab-focus .tab-focus-bar { padding-top: calc(0.5rem + env(safe-area-inset-t
 .user-data-field > label, table th {
   text-transform: none; letter-spacing: 0;
 }
+
+/* ===== Corretor ortográfico (js/corretor.js) ===== */
+.ac-mirror { position: absolute; z-index: 1; margin: 0; box-sizing: border-box; border-style: solid; border-color: transparent; background: transparent; color: transparent; pointer-events: none; user-select: none; -webkit-user-select: none; overflow: hidden; white-space: pre-wrap; overflow-wrap: break-word; word-wrap: break-word; }
+.ac-mirror[data-single="1"] { white-space: pre; overflow-wrap: normal; }
+.ac-mirror span { color: transparent; background: transparent; }
+.ac-mirror .ac-s { text-decoration: underline wavy #d93025; text-decoration-skip-ink: none; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+.ac-mirror .ac-g { text-decoration: underline double #2b79c9; text-decoration-skip-ink: none; text-underline-offset: 2px; }
+@media print { .ac-mirror, .ac-chip, .ac-menu { display: none !important; } }
+.ac-chip { position: fixed; z-index: 9990; min-width: 24px; height: 24px; padding: 0 6px; box-sizing: border-box; border-radius: 12px; border: 1px solid var(--border-ui); background: var(--bg-main); color: #2b79c9; font: 700 0.7rem/1 inherit; font-family: inherit; cursor: pointer; opacity: 0.8; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18); }
+.ac-chip:hover, .ac-chip:focus-visible { opacity: 1; }
+.ac-chip[data-s="err"] { color: #fff; background: #d93025; border-color: #d93025; }
+.ac-chip[data-s="off"], .ac-chip[data-s="load"] { color: var(--text-muted, #8a8f98); }
+.ac-menu { position: fixed; z-index: 10001; min-width: 190px; max-width: min(320px, calc(100vw - 12px)); padding: 4px; border-radius: 10px; border: 1px solid var(--border-ui); background: var(--bg-main); color: var(--text-main); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28); display: flex; flex-direction: column; font-size: 0.88rem; }
+.ac-it { display: block; width: 100%; text-align: left; padding: 0.5rem 0.7rem; border: 0; border-radius: 7px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.ac-it:hover, .ac-it:focus-visible { background: rgba(0, 145, 194, 0.14); outline: none; }
+.ac-it.ac-b { font-weight: 700; }
+.ac-it.ac-dis, .ac-it:disabled { opacity: 0.6; cursor: default; background: transparent; }
+.ac-sep { height: 1px; margin: 3px 4px; background: var(--border-ui); }
