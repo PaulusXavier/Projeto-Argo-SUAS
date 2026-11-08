@@ -96,72 +96,117 @@
     top: 1rem;
   }
 
-  /* Plano de fundo temático: uma trilha de ondas (duas camadas, tons
-     azul/dourado da marca) repetida em mosaico (background-repeat: repeat)
-     por todo o plano de fundo do aplicativo, em vez de uma única cópia
-     grande esticada (cover) — assim as ondas ficam espalhadas pela página
-     inteira, não concentradas no meio. O mesmo traçado de onda mais largo
-     usado aqui no modo escuro (ver bloco "dark" abaixo) é o mesmo usado como
-     detalhe na tela de login (#loginScreen::before, mais abaixo) — por isso
-     os dois fundos combinam. O emblema do navio fica no rodapé
-     (footer.site-footer), onde tem fundo escuro contínuo e fica sempre
-     visível — em vez de depender das margens ao redor do container, que
-     somem na maior parte das larguras de tela. */
+/* ===================== Plano de fundo do aplicativo =====================
+     Três camadas, todas leves e sem imagens pesadas:
+     1) body: "aurora" suave (brilhos azul e dourado nos cantos) sobre um degradê;
+     2) body::before: constelações (assets/img/argo-bg-stars.svg usado como
+        máscara, colorido pelo tema) que esmaecem de cima para baixo;
+     3) body::after: faixa de ondas no rodapé da janela (argo-bg-waves.svg).
+     As camadas ficam fixas e atrás do conteúdo (z-index -1); os cartões brancos
+     cobrem o desenho, que aparece só nas margens e entre os cartões. */
+  :root {
+    --argo-bg-image:
+      radial-gradient(900px 520px at 92% -6%, rgba(0, 145, 194, 0.13), transparent 70%),
+      radial-gradient(760px 520px at -6% 12%, rgba(232, 172, 61, 0.10), transparent 70%),
+      linear-gradient(180deg, #F7FAFC 0%, #EDF3F7 100%);
+    --argo-star-color: #0B6E8F;
+    --argo-star-opacity: 0.2;
+    --argo-wave-opacity: 0.13;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --argo-bg-image:
+        radial-gradient(900px 520px at 92% -6%, rgba(41, 171, 226, 0.16), transparent 70%),
+        radial-gradient(760px 520px at -6% 12%, rgba(232, 172, 61, 0.10), transparent 70%),
+        linear-gradient(180deg, #08101F 0%, #050912 100%);
+      --argo-star-color: #A9DDF2;
+      --argo-star-opacity: 0.26;
+      --argo-wave-opacity: 0.22;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --argo-bg-image:
+      radial-gradient(900px 520px at 92% -6%, rgba(41, 171, 226, 0.16), transparent 70%),
+      radial-gradient(760px 520px at -6% 12%, rgba(232, 172, 61, 0.10), transparent 70%),
+      linear-gradient(180deg, #08101F 0%, #050912 100%);
+    --argo-star-color: #A9DDF2;
+    --argo-star-opacity: 0.26;
+    --argo-wave-opacity: 0.22;
+  }
+
   body {
     margin: 0;
     background-color: var(--bg-main);
-    background-image:
-      radial-gradient(120% 60% at 50% 0%, rgba(15, 74, 65, 0.07) 0%, rgba(15, 74, 65, 0) 62%),
-      url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20480%2096%22%20width%3D%22480%22%20height%3D%2296%22%3E%0A%3Cpath%20d%3D%22M0%2062%20C30%2042%2030%2082%2060%2062%20C90%2042%2090%2082%20120%2062%20C150%2042%20150%2082%20180%2062%20C210%2042%20210%2082%20240%2062%20C270%2042%20270%2082%20300%2062%20C330%2042%20330%2082%20360%2062%20C390%2042%20390%2082%20420%2062%20C450%2042%20450%2082%20480%2062%22%20fill%3D%22none%22%20stroke%3D%22%230091C2%22%20stroke-width%3D%222.2%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.24%22%2F%3E%0A%3Cpath%20d%3D%22M0%2038%20C30%2022%2030%2054%2060%2038%20C90%2022%2090%2054%20120%2038%20C150%2022%20150%2054%20180%2038%20C210%2022%20210%2054%20240%2038%20C270%2022%20270%2054%20300%2038%20C330%2022%20330%2054%20360%2038%20C390%2022%20390%2054%20420%2038%20C450%2022%20450%2054%20480%2038%22%20fill%3D%22none%22%20stroke%3D%22%23E8AC3D%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.18%22%2F%3E%0A%3C%2Fsvg%3E"),
-      url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgNDgiIHdpZHRoPSIyNDAiIGhlaWdodD0iNDgiPgo8cGF0aCBkPSJNMCwzMCBDMTUsMjEgMTUsMzkgMzAsMzAgQzQ1LDM5IDQ1LDIxIDYwLDMwIEM3NSwyMSA3NSwzOSA5MCwzMCBDMTA1LDM5IDEwNSwyMSAxMjAsMzAgQzEzNSwyMSAxMzUsMzkgMTUwLDMwIEMxNjUsMzkgMTY1LDIxIDE4MCwzMCBDMTk1LDIxIDE5NSwzOSAyMTAsMzAgQzIyNSwzOSAyMjUsMjEgMjQwLDMwIiBmaWxsPSJub25lIiBzdHJva2U9IiMwMDkxQzIiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuMDkiLz4KPHBhdGggZD0iTTAsMTQgQzE1LDggMTUsMjAgMzAsMTQgQzQ1LDIwIDQ1LDggNjAsMTQgQzc1LDggNzUsMjAgOTAsMTQgQzEwNSwyMCAxMDUsOCAxMjAsMTQgQzEzNSw4IDEzNSwyMCAxNTAsMTQgQzE2NSwyMCAxNjUsOCAxODAsMTQgQzE5NSw4IDE5NSwyMCAyMTAsMTQgQzIyNSwyMCAyMjUsOCAyNDAsMTQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0U4QUMzRCIgc3Ryb2tlLXdpZHRoPSIxLjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4xMCIvPgo8L3N2Zz4=');
-    background-repeat: no-repeat, repeat, repeat;
-    background-position: top center, top left, top left;
-    background-size: 100% 480px, 340px 244px, 240px 48px;
-    background-attachment: scroll, scroll, scroll;
+    background-image: var(--argo-bg-image);
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    background-attachment: fixed;
     color: var(--text-main);
     font-family: var(--font-sans);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
   }
 
-  /* background-attachment: fixed cria uma camada extra que o navegador
-     precisa repintar a cada evento de rolagem — em celulares isso é uma
-     causa conhecida de scroll travado/lento. Por isso o fundo é "scroll"
-     por padrão (acompanha a página normalmente) e só vira "fixed" (efeito
-     parallax sutil) em telas grandes com mouse, onde o custo é desprezível. */
-  @media (min-width: 900px) and (pointer: fine) {
-    body { background-attachment: fixed, fixed, fixed; }
+  /* background-attachment: fixed repinta a cada rolagem e trava celulares:
+     lá o degradê rola com a página (as camadas ::before/::after já são fixas
+     e leves, pois só têm opacidade/máscara estáticas). */
+  @media (max-width: 899px), (pointer: coarse) {
+    body { background-attachment: scroll; background-size: 100% 100vh; }
   }
 
-  /* Modo escuro: a onda larga aqui (viewBox 720x150, 3 traçados) é o MESMO
-     arquivo usado em #loginScreen::before — usar o mesmo traçado nos dois
-     lugares é o que faz o fundo do app (escuro) e o da tela de login
-     parecerem a mesma peça, só que um espalhado em mosaico e o outro como
-     detalhe único no canto. Antes desta camada era a constelação de estrelas
-     (argo-constellation-bg.svg); trocada por onda para manter só o motivo de
-     ondas em todo o app, sem estrelas. */
-  @media (prefers-color-scheme: dark) {
-    html:not([data-theme="light"]) body {
-      background-image:
-        radial-gradient(120% 55% at 50% 0%, rgba(232, 172, 61, 0.09) 0%, rgba(232, 172, 61, 0) 60%),
-        url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20720%20150%22%20width%3D%22720%22%20height%3D%22150%22%3E%3Cpath%20d%3D%22M0%20102%20C45%2072%2045%20132%2090%20102%20C135%2072%20135%20132%20180%20102%20C225%2072%20225%20132%20270%20102%20C315%2072%20315%20132%20360%20102%20C405%2072%20405%20132%20450%20102%20C495%2072%20495%20132%20540%20102%20C585%2072%20585%20132%20630%20102%20C675%2072%20675%20132%20720%20102%22%20fill%3D%22none%22%20stroke%3D%22%2329ABE2%22%20stroke-width%3D%222.4%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.25%22%2F%3E%3Cpath%20d%3D%22M0%2070%20C45%2042%2045%2096%2090%2070%20C135%2042%20135%2096%20180%2070%20C225%2042%20225%2096%20270%2070%20C315%2042%20315%2096%20360%2070%20C405%2042%20405%2096%20450%2070%20C495%2042%20495%2096%20540%2070%20C585%2042%20585%2096%20630%2070%20C675%2042%20675%2096%20720%2070%22%20fill%3D%22none%22%20stroke%3D%22%230091C2%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.18%22%2F%3E%3Cpath%20d%3D%22M0%20126%20C45%20108%2045%20142%2090%20126%20C135%20108%20135%20142%20180%20126%20C225%20108%20225%20142%20270%20126%20C315%20108%20315%20142%20360%20126%20C405%20108%20405%20142%20450%20126%20C495%20108%20495%20142%20540%20126%20C585%20108%20585%20142%20630%20126%20C675%20108%20675%20142%20720%20126%22%20fill%3D%22none%22%20stroke%3D%22%23E8AC3D%22%20stroke-width%3D%221.3%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.1%22%2F%3E%3C%2Fsvg%3E"),
-        url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgNDgiIHdpZHRoPSIyNDAiIGhlaWdodD0iNDgiPgo8cGF0aCBkPSJNMCwzMCBDMTUsMjEgMTUsMzkgMzAsMzAgQzQ1LDM5IDQ1LDIxIDYwLDMwIEM3NSwyMSA3NSwzOSA5MCwzMCBDMTA1LDM5IDEwNSwyMSAxMjAsMzAgQzEzNSwyMSAxMzUsMzkgMTUwLDMwIEMxNjUsMzkgMTY1LDIxIDE4MCwzMCBDMTk1LDIxIDE5NSwzOSAyMTAsMzAgQzIyNSwzOSAyMjUsMjEgMjQwLDMwIiBmaWxsPSJub25lIiBzdHJva2U9IiMyOUFCRTIiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuMTQiLz4KPHBhdGggZD0iTTAsMTQgQzE1LDggMTUsMjAgMzAsMTQgQzQ1LDIwIDQ1LDggNjAsMTQgQzc1LDggNzUsMjAgOTAsMTQgQzEwNSwyMCAxMDUsOCAxMjAsMTQgQzEzNSw4IDEzNSwyMCAxNTAsMTQgQzE2NSwyMCAxNjUsOCAxODAsMTQgQzE5NSw4IDE5NSwyMCAyMTAsMTQgQzIyNSwyMCAyMjUsOCAyNDAsMTQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0U4QUMzRCIgc3Ryb2tlLXdpZHRoPSIxLjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4xMiIvPgo8L3N2Zz4=');
-      background-repeat: no-repeat, repeat, repeat;
-      background-position: top center, top left, top left;
-      background-size: 100% 560px, 480px 100px, 240px 48px;
-    }
+  body::before,
+  body::after {
+    content: "";
+    position: fixed;
+    pointer-events: none;
+    z-index: -1;
   }
 
-  html[data-theme="dark"] body {
-    background-image:
-      radial-gradient(120% 55% at 50% 0%, rgba(232, 172, 61, 0.09) 0%, rgba(232, 172, 61, 0) 60%),
-      url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20720%20150%22%20width%3D%22720%22%20height%3D%22150%22%3E%3Cpath%20d%3D%22M0%20102%20C45%2072%2045%20132%2090%20102%20C135%2072%20135%20132%20180%20102%20C225%2072%20225%20132%20270%20102%20C315%2072%20315%20132%20360%20102%20C405%2072%20405%20132%20450%20102%20C495%2072%20495%20132%20540%20102%20C585%2072%20585%20132%20630%20102%20C675%2072%20675%20132%20720%20102%22%20fill%3D%22none%22%20stroke%3D%22%2329ABE2%22%20stroke-width%3D%222.4%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.25%22%2F%3E%3Cpath%20d%3D%22M0%2070%20C45%2042%2045%2096%2090%2070%20C135%2042%20135%2096%20180%2070%20C225%2042%20225%2096%20270%2070%20C315%2042%20315%2096%20360%2070%20C405%2042%20405%2096%20450%2070%20C495%2042%20495%2096%20540%2070%20C585%2042%20585%2096%20630%2070%20C675%2042%20675%2096%20720%2070%22%20fill%3D%22none%22%20stroke%3D%22%230091C2%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.18%22%2F%3E%3Cpath%20d%3D%22M0%20126%20C45%20108%2045%20142%2090%20126%20C135%20108%20135%20142%20180%20126%20C225%20108%20225%20142%20270%20126%20C315%20108%20315%20142%20360%20126%20C405%20108%20405%20142%20450%20126%20C495%20108%20495%20142%20540%20126%20C585%20108%20585%20142%20630%20126%20C675%20108%20675%20142%20720%20126%22%20fill%3D%22none%22%20stroke%3D%22%23E8AC3D%22%20stroke-width%3D%221.3%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.1%22%2F%3E%3C%2Fsvg%3E"),
-      url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgNDgiIHdpZHRoPSIyNDAiIGhlaWdodD0iNDgiPgo8cGF0aCBkPSJNMCwzMCBDMTUsMjEgMTUsMzkgMzAsMzAgQzQ1LDM5IDQ1LDIxIDYwLDMwIEM3NSwyMSA3NSwzOSA5MCwzMCBDMTA1LDM5IDEwNSwyMSAxMjAsMzAgQzEzNSwyMSAxMzUsMzkgMTUwLDMwIEMxNjUsMzkgMTY1LDIxIDE4MCwzMCBDMTk1LDIxIDE5NSwzOSAyMTAsMzAgQzIyNSwzOSAyMjUsMjEgMjQwLDMwIiBmaWxsPSJub25lIiBzdHJva2U9IiMyOUFCRTIiIHN0cm9rZS13aWR0aD0iMS42IiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuMTQiLz4KPHBhdGggZD0iTTAsMTQgQzE1LDggMTUsMjAgMzAsMTQgQzQ1LDIwIDQ1LDggNjAsMTQgQzc1LDggNzUsMjAgOTAsMTQgQzEwNSwyMCAxMDUsOCAxMjAsMTQgQzEzNSw4IDEzNSwyMCAxNTAsMTQgQzE2NSwyMCAxNjUsOCAxODAsMTQgQzE5NSw4IDE5NSwyMCAyMTAsMTQgQzIyNSwyMCAyMjUsOCAyNDAsMTQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0U4QUMzRCIgc3Ryb2tlLXdpZHRoPSIxLjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4xMiIvPgo8L3N2Zz4=');
-    background-repeat: no-repeat, repeat, repeat;
-    background-position: top center, top left, top left;
-    background-size: 100% 560px, 480px 100px, 240px 48px;
+  /* Constelações: máscara repetida; a segunda máscara faz sumir para baixo. */
+  body::before {
+    inset: 0;
+    background: var(--argo-star-color);
+    opacity: var(--argo-star-opacity);
+    -webkit-mask-image: url('../assets/img/argo-bg-stars.svg'), linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.25) 100%);
+    mask-image: url('../assets/img/argo-bg-stars.svg'), linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.25) 100%);
+    -webkit-mask-size: 720px 720px, 100% 100%;
+    mask-size: 720px 720px, 100% 100%;
+    -webkit-mask-repeat: repeat, no-repeat;
+    mask-repeat: repeat, no-repeat;
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
   }
 
+  /* Ondas no pé da janela, em degradê azul → dourado → azul. */
+  body::after {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 120px;
+    background: linear-gradient(90deg, #0091C2 0%, #E8AC3D 50%, #0091C2 100%);
+    opacity: var(--argo-wave-opacity);
+    -webkit-mask-image: url('../assets/img/argo-bg-waves.svg'), linear-gradient(180deg, transparent 0%, #000 70%);
+    mask-image: url('../assets/img/argo-bg-waves.svg'), linear-gradient(180deg, transparent 0%, #000 70%);
+    -webkit-mask-size: 600px 120px, 100% 100%;
+    mask-size: 600px 120px, 100% 100%;
+    -webkit-mask-repeat: repeat-x, no-repeat;
+    mask-repeat: repeat-x, no-repeat;
+    -webkit-mask-position: left bottom, 0 0;
+    mask-position: left bottom, 0 0;
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+  }
+
+  @media (max-width: 760px) {
+    body::before { -webkit-mask-size: 520px 520px, 100% 100%; mask-size: 520px 520px, 100% 100%; }
+    body::after { height: 84px; -webkit-mask-size: 420px 84px, 100% 100%; mask-size: 420px 84px, 100% 100%; }
+  }
+
+  @media print {
+    body::before, body::after { display: none; }
+  }
 
 
   .tech-card {
@@ -6395,45 +6440,9 @@
     z-index: 0;
   }
 
-  /* --- Aplicativo: camada fixa atrás de todo o conteúdo (z-index negativo) --- */
-  body::after {
-    content: "";
-    position: fixed;
-    right: -2vw;
-    bottom: -2vh;
-    width: min(56vw, 680px);
-    aspect-ratio: 900 / 714;
-    background: url('../assets/img/argo-navis-historico.jpg') no-repeat center / contain;
-    -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 52%, transparent 100%);
-    mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 52%, transparent 100%);
-    /* Tema claro: "multiply" faz o azul-marinho da imagem virar uma marca
-       d'água suave sobre o fundo claro. */
-    opacity: 0.2;
-    mix-blend-mode: multiply;
-    pointer-events: none;
-    z-index: -1;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    html:not([data-theme="light"]) body::after {
-      opacity: 0.55;
-      mix-blend-mode: screen;
-    }
-  }
-
-  html[data-theme="dark"] body::after {
-    opacity: 0.55;
-    mix-blend-mode: screen;
-  }
-
-  /* Celular: navio um pouco maior em relação à tela e mais discreto */
+  /* Celular: navio da tela de login maior em relação à tela e mais discreto */
   @media (max-width: 760px) {
     #loginScreen::after { width: min(78vw, 360px); top: -3vh; right: -10vw; opacity: 0.6; }
-    body::after { width: min(120vw, 520px); right: -14vw; bottom: 0; opacity: 0.16; }
-    @media (prefers-color-scheme: dark) {
-      html:not([data-theme="light"]) body::after { opacity: 0.4; }
-    }
-    html[data-theme="dark"] body::after { opacity: 0.4; }
   }
 
   @media print {
@@ -8425,3 +8434,130 @@ body.tab-focus .tab-focus-bar { padding-top: calc(0.5rem + env(safe-area-inset-t
 .mapa-rede-offline-row > div { min-width: 0; flex: 1 1 220px; }
 .mapa-rede-offline-row strong { display: block; font-size: 0.88rem; line-height: 1.25; }
 .mapa-rede-offline-row small { display: block; font-size: 0.76rem; color: var(--text-muted); line-height: 1.35; }
+
+
+/* =====================================================================
+   Cabeçalho (hero) — acabamento v2
+   - Fundo: aurora dourada/azul sobre o verde-petróleo, constelações em
+     máscara (mesmo desenho do fundo do app) e a foto do Argo Navis à esquerda,
+     esmaecendo para a direita, para não brigar com o painel "Seu dia".
+   - Linha dourada luminosa na base; cartões de números em vidro.
+   Fica por último de propósito: vence os ajustes antigos do cabeçalho.
+   ===================================================================== */
+header.hero {
+  background:
+    radial-gradient(50% 120% at 94% -14%, rgba(232, 172, 61, 0.13) 0%, rgba(232, 172, 61, 0) 60%),
+    radial-gradient(48% 110% at 0% 105%, rgba(41, 171, 226, 0.16) 0%, rgba(41, 171, 226, 0) 66%),
+    linear-gradient(158deg, #14604F 0%, #0B3C35 46%, #04201B 100%);
+  border-bottom: 0;
+  box-shadow: inset 0 -1px 0 rgba(242, 203, 126, 0.35);
+}
+
+/* Foto do navio: lado esquerdo, com esmaecimento lateral e inferior. */
+header.hero .hero-ship-photo {
+  right: auto;
+  width: min(56%, 760px);
+  background-position: center 34%;
+  opacity: 0.26;
+  mix-blend-mode: luminosity;
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, rgba(0, 0, 0, 0.7) 45%, transparent 100%), linear-gradient(180deg, #000 55%, transparent 100%);
+  mask-image: linear-gradient(90deg, #000 0%, rgba(0, 0, 0, 0.7) 45%, transparent 100%), linear-gradient(180deg, #000 55%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+@media (max-width: 760px) {
+  header.hero .hero-ship-photo { width: 100%; opacity: 0.2; }
+}
+
+/* Constelações douradas (substitui os pontinhos de radial-gradient). */
+header.hero::before {
+  opacity: 0.32;
+  background: #F2CB7E;
+  background-image: none;
+  -webkit-mask-image: url('../assets/img/argo-bg-stars.svg'), linear-gradient(90deg, transparent 18%, #000 78%);
+  mask-image: url('../assets/img/argo-bg-stars.svg'), linear-gradient(90deg, transparent 18%, #000 78%);
+  -webkit-mask-size: 520px 520px, 100% 100%;
+  mask-size: 520px 520px, 100% 100%;
+  -webkit-mask-repeat: repeat, no-repeat;
+  mask-repeat: repeat, no-repeat;
+  -webkit-mask-position: 40px 10px, 0 0;
+  mask-position: 40px 10px, 0 0;
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+
+/* Brilho dourado na base, ligando o cabeçalho à faixa de bandeira. */
+header.hero::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 2px;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(232, 172, 61, 0) 0%, #E8AC3D 25%, #FBE3A6 50%, #E8AC3D 75%, rgba(232, 172, 61, 0) 100%);
+  box-shadow: 0 0 18px 2px rgba(232, 172, 61, 0.35);
+}
+
+/* Título: leve brilho dourado e "SUAS" em vidro. */
+header.hero h1 { text-shadow: 0 2px 22px rgba(0, 0, 0, 0.4), 0 0 40px rgba(232, 172, 61, 0.12); }
+header.hero .brand-mark-suas {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(207, 227, 221, 0.5);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+header.hero .hero-eyebrow {
+  color: var(--hero-gold-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+/* Painel "Seu dia" em vidro, acompanhando o tom dos cartões de números. */
+@media (min-width: 1000px) {
+  header.hero > .container > .hero-today:not([hidden]) {
+    padding: 1.1rem 1.25rem;
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.03) 100%);
+    border: 1px solid rgba(242, 203, 126, 0.26);
+    border-radius: 18px;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 18px 40px -22px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* Cartões de números: vidro mais nítido, com número em dourado. */
+header.hero .hero-stats {
+  background: rgba(3, 24, 20, 0.5);
+  border: 1px solid rgba(242, 203, 126, 0.2);
+  box-shadow: 0 14px 30px -18px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+}
+header.hero .hero-stat { border-radius: 10px; transition: background 0.2s ease; }
+header.hero .hero-stat:hover { background: rgba(255, 255, 255, 0.07); transform: none; }
+header.hero .hero-stat-value { text-shadow: 0 0 18px rgba(242, 203, 126, 0.25); }
+
+/* Celular: cartões em grade 2×2 (antes a faixa cortava o texto na lateral). */
+@media (max-width: 640px) {
+  header.hero .hero-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.25rem;
+    width: 100%;
+    max-width: 100%;
+    margin: 0.8rem 0 0;
+    padding: 0.25rem;
+    overflow: visible;
+  }
+  header.hero .hero-eyebrow { text-transform: none; letter-spacing: 0; font-size: 0.72rem; flex-wrap: wrap; white-space: normal; }
+  header.hero .hero-stat { min-width: 0; padding: 0.45rem 0.6rem; }
+  header.hero .hero-stat-value { font-size: 1.35rem; }
+  header.hero .hero-stat-metric .hero-stat-value { font-size: 1.55rem; }
+  header.hero .hero-stat-label { font-size: 0.7rem; line-height: 1.25; white-space: normal; }
+  header.hero::before { -webkit-mask-size: 400px 400px, 100% 100%; mask-size: 400px 400px, 100% 100%; }
+}
+
+@media print {
+  header.hero::before, header.hero::after, header.hero .hero-ship-photo { display: none; }
+}
