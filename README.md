@@ -56,6 +56,7 @@ Um diretório técnico instalável (PWA) dos equipamentos socioassistenciais e d
 │   ├── corretor.js             Corretor ortográfico dos campos de texto (usa assets/spell/)
 │   ├── argo-mascot.js          Mascote e painel de conversa do Argo
 │   ├── argo-cerebro.js         Cérebro do assistente (diretório, base SUAS, memória da conversa)
+│   ├── argo-habilidades.js     Mascote: calcula, mede distância e traduz (sem IA; npm run test:habilidades)
 │   ├── paulus.v1.js            Cliente do Paulus (cópia gerada no repositório "paulus": ida à IA, filtro de dados pessoais e base de normas)
 │   └── auth-config.js          Configuração da senha (ver "Senha forte")
 ├── assets/
