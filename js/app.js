@@ -4355,6 +4355,23 @@ const toolsFmtSw = ms => {
 };
 
 // ---- Cronômetro
+// Mantém a tela acesa enquanto o cronômetro ou o temporizador estão rodando (se o aparelho permitir).
+const TOOLS_WAKE = { lock: null, failed: false };
+async function toolsWakeSync() {
+  if (!(navigator.wakeLock && navigator.wakeLock.request)) return;
+  const need = !!(TOOLS_STATE.tm.running || TOOLS_STATE.sw.running);
+  try {
+    if (need && !TOOLS_WAKE.lock && !TOOLS_WAKE.failed && document.visibilityState === 'visible') {
+      const lock = await navigator.wakeLock.request('screen');
+      TOOLS_WAKE.lock = lock;
+      lock.addEventListener('release', () => { if (TOOLS_WAKE.lock === lock) TOOLS_WAKE.lock = null; });
+    } else if (!need) {
+      TOOLS_WAKE.failed = false;
+      if (TOOLS_WAKE.lock) { const l = TOOLS_WAKE.lock; TOOLS_WAKE.lock = null; await l.release(); }
+    }
+  } catch (e) { TOOLS_WAKE.lock = null; TOOLS_WAKE.failed = true; /* sem permissão: segue sem manter a tela acesa */ }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') toolsWakeSync(); });
 function toolsSwElapsed() { const s = TOOLS_STATE.sw; return s.base + (s.running ? Date.now() - s.start : 0); }
 function toolsSwPaint() {
   const d = document.getElementById('toolSwDisp');
@@ -4382,6 +4399,7 @@ function toolsSwRender() {
     const p = parts[i], cls = p === best ? ' is-best' : p === worst ? ' is-worst' : '';
     return '<li class="tools-lap' + cls + '"><span>Volta ' + (i + 1) + '</span><strong>' + toolsFmtSw(p) + '</strong><span class="tools-lap-total">' + toolsFmtSw(t) + '</span></li>';
   }).reverse().join('');
+  toolsWakeSync();
 }
 
 // ---- Temporizador (continua valendo e avisa mesmo com outra aba aberta)
@@ -4412,6 +4430,7 @@ function toolsTmTick() {
     toolsBeep();
     toolsToast('⏰ Temporizador: o tempo acabou.');
     toolsNotify('Temporizador', 'O tempo acabou.');
+    toolsWakeSync();
   }
   toolsTmPaint();
 }
@@ -4423,6 +4442,7 @@ function toolsTmStart() {
   tm.done = false; tm.running = true; tm.end = Date.now() + tm.left;
   clearInterval(tm.timer); tm.timer = setInterval(toolsTmTick, 250);
   toolsTmPaint();
+  toolsWakeSync();
 }
 function toolsTmPause() {
   const tm = TOOLS_STATE.tm;
@@ -4430,6 +4450,7 @@ function toolsTmPause() {
   tm.left = Math.max(0, tm.end - Date.now()); tm.running = false;
   clearInterval(tm.timer); tm.timer = null;
   toolsTmPaint();
+  toolsWakeSync();
 }
 // "+1 min": soma ao tempo que está rodando ou ao que está definido (limite de 600 min).
 function toolsTmAdd(min) {
@@ -4441,13 +4462,15 @@ function toolsTmAdd(min) {
   toolsTmPaint();
   return true;
 }
-function toolsTmSet(min) {
+// Define o tempo em minutos e/ou segundos (de 1 segundo até 600 minutos).
+function toolsTmSet(min, sec) {
   const tm = TOOLS_STATE.tm;
-  const m = Math.round(Number(min));
-  if (!m || m < 1 || m > 600) return false;
+  const total = Math.round(Number(min) || 0) * 60 + Math.round(Number(sec) || 0);
+  if (!(total >= 1) || total > 600 * 60) return false;
   clearInterval(tm.timer); tm.timer = null;
-  tm.running = false; tm.done = false; tm.total = m * 60000; tm.left = tm.total;
+  tm.running = false; tm.done = false; tm.total = total * 1000; tm.left = tm.total;
   toolsTmPaint();
+  toolsWakeSync();
   return true;
 }
 
@@ -7654,7 +7677,8 @@ function renderToolsCard() {
     '<button type="button" role="tab" class="tools-tab" data-tt="' + t[0] + '" id="toolTab-' + t[0] + '" aria-controls="toolPane-' + t[0] + '">' + t[1] + '</button>').join('');
   const zoneSaved = toolsZoneSaved();
   const zoneOpts = TOOLS_ZONES.map(z => '<option value="' + z[0] + '"' + (z[0] === zoneSaved ? ' selected' : '') + '>' + z[1] + '</option>').join('');
-  const presets = [5, 10, 15, 30, 45, 60].map(m => '<button type="button" class="tools-chip" data-min="' + m + '">' + m + ' min</button>').join('');
+  const presets = [[30, '30 s'], [60, '1 min'], [120, '2 min'], [300, '5 min'], [600, '10 min'], [900, '15 min'], [1800, '30 min'], [2700, '45 min'], [3600, '60 min']]
+    .map(p => '<button type="button" class="tools-chip" data-sec="' + p[0] + '">' + p[1] + '</button>').join('');
   return '<div id="toolsRoot" class="tools-wrap">'
     + toolsNavHtml()
     + toolsAcompHtml()
@@ -7684,7 +7708,8 @@ function renderToolsCard() {
     +   '<div id="toolTmDisp" class="tools-time tools-time-sm" role="timer" aria-live="off">00:00</div>'
     +   '<div class="tools-progress" aria-hidden="true"><span id="toolTmBar"></span></div>'
     +   '<div class="tools-chips" aria-label="Tempos prontos">' + presets + '</div>'
-    +   '<div class="tools-row"><label class="tools-lbl">Outro tempo (min) <input id="toolTmMin" class="tools-input" type="number" min="1" max="600" inputmode="numeric" placeholder="ex.: 20"></label>'
+    +   '<div class="tools-row"><label class="tools-lbl">Minutos <input id="toolTmMin" class="tools-input" type="number" min="0" max="600" inputmode="numeric" placeholder="ex.: 20"></label>'
+    +   '<label class="tools-lbl">Segundos <input id="toolTmSec" class="tools-input" type="number" min="0" max="59" inputmode="numeric" placeholder="ex.: 30"></label>'
     +   '<button type="button" class="btn-tech btn-secondary" id="toolTmSet">Definir</button></div>'
     +   '<div class="tools-row"><button type="button" class="btn-tech btn-primary" id="toolTmGo">Iniciar</button>'
     +   '<button type="button" class="btn-tech btn-secondary" id="toolTmAdd" title="Somar 1 minuto ao tempo">+1 min</button>'
@@ -8020,30 +8045,31 @@ function initToolsPanel() {
   });
 
   // ---- Temporizador
-  document.querySelector('.tools-chips').addEventListener('click', e => {
-    const b = e.target.closest('[data-min]'); if (!b) return;
-    toolsTmSet(b.dataset.min);
-    document.querySelectorAll('.tools-chip').forEach(c => c.classList.toggle('is-active', c === b));
+  document.querySelector('#toolPane-tm .tools-chips').addEventListener('click', e => {
+    const b = e.target.closest('[data-sec]'); if (!b) return;
+    toolsTmSet(0, b.dataset.sec);
+    document.querySelectorAll('#toolPane-tm .tools-chip').forEach(c => c.classList.toggle('is-active', c === b));
     $('toolTmGo').focus();
   });
   const setCustom = () => {
     const inp = $('toolTmMin');
-    if (!toolsTmSet(inp.value)) { inp.focus(); toolsToast('Informe um tempo entre 1 e 600 minutos.', 3500); return; }
-    document.querySelectorAll('.tools-chip').forEach(c => c.classList.remove('is-active'));
+    if (!toolsTmSet(inp.value, $('toolTmSec').value)) { inp.focus(); toolsToast('Informe um tempo entre 1 segundo e 600 minutos.', 3500); return; }
+    document.querySelectorAll('#toolPane-tm .tools-chip').forEach(c => c.classList.remove('is-active'));
     $('toolTmGo').focus();
   };
   $('toolTmSet').addEventListener('click', setCustom);
-  $('toolTmMin').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); setCustom(); } });
+  ['toolTmMin', 'toolTmSec'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); setCustom(); } }));
   $('toolTmGo').addEventListener('click', () => { TOOLS_STATE.tm.running ? toolsTmPause() : toolsTmStart(); });
   $('toolTmAdd').addEventListener('click', () => {
     if (!toolsTmAdd(1)) toolsToast('O limite do temporizador é 600 minutos.', 3500);
-    document.querySelectorAll('.tools-chip').forEach(c => c.classList.remove('is-active'));
+    document.querySelectorAll('#toolPane-tm .tools-chip').forEach(c => c.classList.remove('is-active'));
   });
   $('toolTmReset').addEventListener('click', () => {
     const tm = TOOLS_STATE.tm;
     clearInterval(tm.timer); tm.timer = null;
     tm.running = false; tm.done = false; tm.left = tm.total;
     toolsTmPaint();
+    toolsWakeSync();
   });
 
   // ---- Alarme (horário de Boa Vista; toca enquanto o app estiver aberto)
@@ -28984,7 +29010,8 @@ function toolsAcompHtml() {
       </details>
     </div>
     <datalist id="acSitList"></datalist>
-    <p class="tools-hint">Por padrão nada fica salvo: os dados ficam só na memória até fechar o app. Com “Lembrar neste aparelho”, ficam guardados cifrados com a senha do app, entram no backup e somem em “Apagar dados salvos”. Baixar .xlsx ou .csv gera arquivo sem cifra. A conferência de NIS/CPF vê formato e dígito verificador, não se o número existe no CadÚnico. “Prazo” e renda per capita são contas de apoio: a decisão é sempre da análise oficial.</p>
+    <p class="tools-hint ac-privacy-short"><strong>Nada fica salvo por padrão:</strong> os dados ficam só na memória até fechar o app.</p>
+    <details class="ac-privacy"><summary>Saber mais sobre dados salvos e limites desta conta</summary><p class="tools-hint">    Por padrão nada fica salvo: os dados ficam só na memória até fechar o app. Com “Lembrar neste aparelho”, ficam guardados cifrados com a senha do app, entram no backup e somem em “Apagar dados salvos”. Baixar .xlsx ou .csv gera arquivo sem cifra. A conferência de NIS/CPF vê formato e dígito verificador, não se o número existe no CadÚnico. “Prazo” e renda per capita são contas de apoio: a decisão é sempre da análise oficial.</p></details>
   </section>`;
 }
 
