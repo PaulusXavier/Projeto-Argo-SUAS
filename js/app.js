@@ -10821,7 +10821,7 @@ function renderPdfToolsCard() {
                 <button type="button" class="pdfedit-tool" data-tool="form" aria-pressed="false" onclick="pdftoolsEditSetTool('form')" title="Preencher os campos de formulário do próprio PDF">☑ Formulário</button>
                 <button type="button" class="pdfedit-tool" data-tool="pen" aria-pressed="false" onclick="pdftoolsEditSetTool('pen')" title="Desenhar à mão livre">✎ Caneta</button>
                 <button type="button" class="pdfedit-tool" data-tool="hl" aria-pressed="false" onclick="pdftoolsEditSetTool('hl')" title="Realçar um trecho">▭ Realçar</button>
-                <button type="button" class="pdfedit-tool" data-tool="cover" aria-pressed="false" onclick="pdftoolsEditSetTool('cover')" title="Cobrir um trecho com uma caixa de cor">■ Cobrir</button>
+                <button type="button" class="pdfedit-tool" data-tool="cover" aria-pressed="false" onclick="pdftoolsEditSetTool('cover')" title="Cobrir um trecho com uma caixa de cor (só esconde: o texto continua no arquivo)">■ Cobrir</button>
                 <button type="button" class="pdfedit-tool" data-tool="box" aria-pressed="false" onclick="pdftoolsEditSetTool('box')" title="Desenhar uma caixa (só o contorno)">▢ Caixa</button>
                 <button type="button" class="pdfedit-tool" data-tool="line" aria-pressed="false" onclick="pdftoolsEditSetTool('line')" title="Desenhar uma linha reta">╱ Linha</button>
                 <button type="button" class="pdfedit-tool" data-tool="stamp" aria-pressed="false" onclick="pdftoolsEditSetTool('stamp')" title="Carimbos prontos: certo, errado, bolinha e data de hoje">✓ Carimbo</button>
@@ -22648,6 +22648,58 @@ function pdftoolsFormatBytes(bytes) {
   return (bytes / 1024 / 1024).toFixed(1) + ' MB';
 }
 
+// Nome de arquivo seguro: tira caracteres proibidos/de controle, pontos e espaços
+// nas pontas e limita o tamanho (nomes longos são cortados por alguns sistemas).
+function pdftoolsSafeName(text, fallback) {
+  const limpo = String(text == null ? '' : text)
+    .replace(/[\u0000-\u001f\u007f\\/:*?"<>|]+/g, '')
+    .replace(/^[\s.]+|[\s.]+$/g, '')
+    .replace(/\.(pdf|docx?|jpe?g|zip)$/i, '')
+    .replace(/^[\s.]+|[\s.]+$/g, '')
+    .slice(0, 100)
+    .trim();
+  return limpo || fallback;
+}
+
+// pdf.js avisa com PasswordException quando o PDF tem senha; antes todo erro virava
+// "não foi possível converter", sem dizer o motivo nem o que fazer.
+function pdftoolsPdfErrorMsg(e, fallback) {
+  const nome = e && (e.name || '');
+  if (nome === 'PasswordException' || /password/i.test(String(e && e.message))) {
+    return 'Este PDF está protegido por senha. Abra-o, salve uma cópia sem senha e tente de novo.';
+  }
+  if (nome === 'InvalidPDFException') return 'Este arquivo não é um PDF válido ou está danificado.';
+  return fallback;
+}
+
+// canvas.toBlob devolve null quando o navegador não consegue (página enorme,
+// pouca memória). Antes isso virava um erro obscuro mais adiante.
+function pdftoolsCanvasToBlob(canvas, type, quality) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(b => b ? resolve(b) : reject(new Error('canvas vazio')), type, quality);
+  });
+}
+
+// Navegadores de celular limitam o tamanho do canvas (iOS ~16,7 milhões de pontos);
+// acima disso a página sai em branco ou dá erro. Reduz a escala só quando preciso.
+const PDFTOOLS_CANVAS_MAX_PIXELS = 12 * 1024 * 1024;
+function pdftoolsSafeScale(page, wanted) {
+  const v = page.getViewport({ scale: 1 });
+  const maxByArea = Math.sqrt(PDFTOOLS_CANVAS_MAX_PIXELS / Math.max(1, v.width * v.height));
+  const maxBySide = 8192 / Math.max(1, v.width, v.height);
+  return Math.max(0.1, Math.min(wanted, maxByArea, maxBySide));
+}
+
+// Área visível da página (CropBox, ou MediaBox se não houver), com a origem real:
+// muitos PDFs (digitalizações, recortes) não começam em 0,0, e escrever como se
+// começassem põe o texto fora da folha.
+function pdftoolsPageBox(page) {
+  let b = null;
+  try { b = page.getCropBox(); } catch (e) { b = null; }
+  if (!b || !(b.width > 0) || !(b.height > 0)) b = page.getMediaBox();
+  return { x0: b.x, y0: b.y, W: b.width, H: b.height };
+}
+
 function pdftoolsHandleDrop(event, kind) {
   event.preventDefault();
   event.currentTarget.classList.remove('dragover');
@@ -23159,7 +23211,7 @@ async function pdftoolsMergePdfs() {
     const filenameInput = document.getElementById('pdftoolsMergeFilename');
     const typed = filenameInput ? filenameInput.value.trim() : '';
     const fallback = pdftoolsDefaultMergeName();
-    const base = (typed || fallback).replace(/[\\/:*?"<>|]+/g, '').replace(/\.pdf$/i, '').trim() || fallback;
+    const base = pdftoolsSafeName(typed || fallback, fallback);
     const outBlob = new Blob([bytes], { type: 'application/pdf' });
     pdftoolsDownloadBlob(outBlob, `${base}.pdf`);
     pdftoolsMergeState.last = { blob: outBlob, name: `${base}.pdf`, pages: merged.getPageCount() };
@@ -23526,7 +23578,7 @@ async function pdftoolsRunJpgToPdf() {
   const scanFilter = (document.getElementById('pdftoolsJpgPdfFilter') || {}).value || 'original';
   const scanSize = (document.getElementById('pdftoolsJpgPdfSize') || {}).value || 'normal';
   const nameEl = document.getElementById('pdftoolsJpgPdfFilename');
-  const outName = ((nameEl && nameEl.value || '').replace(/[\\/:*?"<>|]+/g, '').replace(/\.pdf$/i, '').trim()) || 'imagens-convertidas';
+  const outName = pdftoolsSafeName(nameEl && nameEl.value, 'imagens-convertidas');
   try {
     const PDFLib = await ensurePdfLib();
     const doc = await PDFLib.PDFDocument.create();
@@ -23563,18 +23615,23 @@ async function pdftoolsRunPdfToJpg(file, inputEl) {
     const JSZipLib = await ensureJSZip();
     const bytes = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
-    const baseName = file.name.replace(/\.pdf$/i, '') || 'documento';
+    const baseName = pdftoolsSafeName(file.name, 'documento');
     const zip = new JSZipLib();
     pdftoolsSetStatus('pdftoolsPdfJpgStatus', `Gerando imagens (0/${pdf.numPages})...`, 'info');
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
-      const viewport = page.getViewport({ scale: 2 });
+      const viewport = page.getViewport({ scale: pdftoolsSafeScale(page, 2) });
       const canvas = document.createElement('canvas');
       canvas.width = Math.ceil(viewport.width);
       canvas.height = Math.ceil(viewport.height);
       const ctx = canvas.getContext('2d');
+      // JPEG não tem transparência: sem fundo branco, áreas sem cor saem pretas.
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
       await page.render({ canvasContext: ctx, viewport }).promise;
-      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+      const blob = await pdftoolsCanvasToBlob(canvas, 'image/jpeg', 0.92);
+      canvas.width = canvas.height = 0; // libera a memória da página já gerada
+      if (page.cleanup) page.cleanup();
       if (pdf.numPages === 1) {
         pdftoolsDownloadBlob(blob, `${baseName}.jpg`);
       } else {
@@ -23584,12 +23641,14 @@ async function pdftoolsRunPdfToJpg(file, inputEl) {
       pdftoolsSetStatus('pdftoolsPdfJpgStatus', `Gerando imagens (${i}/${pdf.numPages})...`, 'info');
     }
     if (pdf.numPages > 1) {
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'STORE' }); // JPEG já é comprimido
       pdftoolsDownloadBlob(zipBlob, `${baseName}-imagens.zip`);
     }
-    pdftoolsSetStatus('pdftoolsPdfJpgStatus', 'Imagens geradas com sucesso!', 'success');
+    const nPages = pdf.numPages;
+    if (pdf.destroy) pdf.destroy();
+    pdftoolsSetStatus('pdftoolsPdfJpgStatus', nPages === 1 ? 'Imagem gerada com sucesso!' : `${nPages} imagens geradas e reunidas em um .zip.`, 'success');
   } catch (e) {
-    pdftoolsSetStatus('pdftoolsPdfJpgStatus', 'Não foi possível converter este PDF.', 'error');
+    pdftoolsSetStatus('pdftoolsPdfJpgStatus', pdftoolsPdfErrorMsg(e, 'Não foi possível converter este PDF.'), 'error');
   } finally {
     if (inputEl) { inputEl.disabled = false; inputEl.value = ''; }
     pdftoolsSetProgress('PdfJpg', 0, 0);
@@ -23749,7 +23808,7 @@ function pdftoolsExtraClear(kind) {
   if (kind === 'Protect') { pdftoolsProtectResetFields(); pdftoolsProtectManyReset(); }
 }
 
-function pdftoolsBaseName(file) { return file.name.replace(/\.pdf$/i, '') || 'documento'; }
+function pdftoolsBaseName(file) { return pdftoolsSafeName(file.name, 'documento'); }
 
 async function pdftoolsRunSplit() {
   const st = pdftoolsExtra.Split;
@@ -23818,7 +23877,7 @@ async function pdftoolsRunCompress() {
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const base = page.getViewport({ scale: 1 });
-      const vp = page.getViewport({ scale: pre.scale });
+      const vp = page.getViewport({ scale: pdftoolsSafeScale(page, pre.scale) });
       const canvas = document.createElement('canvas');
       canvas.width = Math.ceil(vp.width);
       canvas.height = Math.ceil(vp.height);
@@ -23826,7 +23885,7 @@ async function pdftoolsRunCompress() {
       ctx.fillStyle = '#fff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       await page.render({ canvasContext: ctx, viewport: vp }).promise;
-      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', pre.q));
+      const blob = await pdftoolsCanvasToBlob(canvas, 'image/jpeg', pre.q);
       canvas.width = canvas.height = 0;
       const img = await out.embedJpg(await blob.arrayBuffer());
       const pg = out.addPage([base.width, base.height]);
@@ -23835,6 +23894,7 @@ async function pdftoolsRunCompress() {
       pdftoolsSetProgress('Compress', i, pdf.numPages);
       pdftoolsSetStatus(id, 'Reduzindo páginas (' + i + '/' + pdf.numPages + ')...', 'info');
     }
+    if (pdf.destroy) pdf.destroy();
     const bytes = await out.save();
     const before = st.file.size, after = bytes.length;
     if (after >= before * 0.98) {
@@ -23844,7 +23904,7 @@ async function pdftoolsRunCompress() {
       pdftoolsSetStatus(id, 'De ' + pdftoolsFormatBytes(before) + ' para ' + pdftoolsFormatBytes(after) + ' (redução de ' + Math.round((1 - after / before) * 100) + '%).', 'success');
     }
   } catch (e) {
-    pdftoolsSetStatus(id, 'Não foi possível reduzir este PDF.', 'error');
+    pdftoolsSetStatus(id, pdftoolsPdfErrorMsg(e, 'Não foi possível reduzir este PDF.'), 'error');
   } finally {
     pdftoolsSetProgress('Compress', 0, 0);
     pdftoolsExtraSetBusy('Compress', false);
@@ -23873,7 +23933,7 @@ async function pdftoolsRunNumber() {
       const n = start + i;
       const text = fmt === 'n' ? String(n) : 'Página ' + n + ' de ' + last;
       const tw = font.widthOfTextAtSize(text, size);
-      const W = page.getWidth(), H = page.getHeight();
+      const { x0, y0, W, H } = pdftoolsPageBox(page); // área visível, com a origem real
       const angle = ((page.getRotation().angle % 360) + 360) % 360;
       // Medidas da página como aparece na tela (gira com /Rotate).
       const Wd = (angle === 90 || angle === 270) ? H : W;
@@ -23883,7 +23943,7 @@ async function pdftoolsRunNumber() {
       if (angle === 90) { x = W - yd; y = xd; }
       else if (angle === 180) { x = W - xd; y = H - yd; }
       else if (angle === 270) { x = yd; y = H - xd; }
-      page.drawText(text, { x, y, size, font, color: rgb(0.2, 0.2, 0.2), rotate: degrees(angle) });
+      page.drawText(text, { x: x0 + x, y: y0 + y, size, font, color: rgb(0.2, 0.2, 0.2), rotate: degrees(angle) });
       if ((i + 1) % 10 === 0) pdftoolsSetProgress('Number', i + 1, pages.length);
     });
     pdftoolsDownloadBlob(new Blob([await doc.save()], { type: 'application/pdf' }), pdftoolsBaseName(st.file) + '-numerado.pdf');
@@ -24166,7 +24226,7 @@ async function pdftoolsRunMark() {
     const pages = doc.getPages();
     const base = font.widthOfTextAtSize(text, 100); // erro aqui = caractere não suportado pela fonte
     pages.forEach(page => {
-      const W = page.getWidth(), H = page.getHeight();
+      const { x0, y0, W, H } = pdftoolsPageBox(page); // área visível, com a origem real
       const rot = ((page.getRotation().angle % 360) + 360) % 360;
       const Wd = (rot === 90 || rot === 270) ? H : W;
       const Hd = (rot === 90 || rot === 270) ? W : H;
@@ -24180,7 +24240,7 @@ async function pdftoolsRunMark() {
       if (rot === 90) { x = W - yd; y = xd; }
       else if (rot === 180) { x = W - xd; y = H - yd; }
       else if (rot === 270) { x = yd; y = H - xd; }
-      page.drawText(text, { x, y, size, font, color: rgb(0.45, 0.45, 0.45), opacity, rotate: degrees(a * 180 / Math.PI + rot) });
+      page.drawText(text, { x: x0 + x, y: y0 + y, size, font, color: rgb(0.45, 0.45, 0.45), opacity, rotate: degrees(a * 180 / Math.PI + rot) });
     });
     const out = new Blob([await doc.save()], { type: 'application/pdf' });
     pdftoolsDownloadBlob(out, pdftoolsBaseName(st.file) + '-marca-dagua.pdf');
@@ -24893,7 +24953,18 @@ async function pdftoolsRunMeta() {
     const k = (doc.getKeywords() || '').trim(), c = (doc.getCreator() || '').trim(), pr = (doc.getProducer() || '').trim();
     if (t) achados.push('título'); if (a) achados.push('autor'); if (su) achados.push('assunto');
     if (k) achados.push('palavras-chave'); if (c || pr) achados.push('programa criador');
-    doc.setTitle(''); doc.setAuthor(''); doc.setSubject(''); doc.setKeywords([]); doc.setCreator(''); doc.setProducer('');
+    // Datas e qualquer outro campo do dicionário de informações (empresa, caminho do arquivo de origem...)
+    let datas = false;
+    try {
+      const info = doc.getInfoDict();
+      info.keys().slice().forEach(key => {
+        const nome = key.decodeText ? key.decodeText() : String(key).replace(/^\//, '');
+        if (/^(CreationDate|ModDate)$/.test(nome)) datas = true;
+        else if (!/^(Title|Author|Subject|Keywords|Creator|Producer)$/.test(nome)) achados.push('campo "' + nome + '"');
+        info.delete(key);
+      });
+    } catch (e) { /* sem dicionário de informações: nada a apagar */ }
+    if (datas) achados.push('datas de criação e alteração');
     // metadados XMP (cópia dos dados acima que alguns programas guardam à parte)
     const xmp = doc.catalog.get(PDFLib.PDFName.of('Metadata'));
     if (xmp) { doc.catalog.delete(PDFLib.PDFName.of('Metadata')); achados.push('metadados XMP'); }
@@ -24935,7 +25006,7 @@ async function pdftoolsRunText() {
     pdftoolsDownloadBlob(blob, pdftoolsBaseName(st.file) + '.txt');
     pdftoolsSetStatus(id, 'Texto de ' + blocos.length + (blocos.length === 1 ? ' página' : ' páginas') + ' salvo (' + chars.toLocaleString('pt-BR') + ' caracteres).', 'success');
   } catch (e) {
-    pdftoolsSetStatus(id, 'Não foi possível ler o texto deste PDF.', 'error');
+    pdftoolsSetStatus(id, pdftoolsPdfErrorMsg(e, 'Não foi possível ler o texto deste PDF.'), 'error');
   } finally {
     pdftoolsSetProgress('Text', 0, 0);
     pdftoolsExtraSetBusy('Text', false);
@@ -25972,6 +26043,7 @@ async function pdftoolsEditExport() {
     pdftoolsDownloadBlob(out, pdftoolsBaseName(st.file) + '-editado.pdf');
     const total = st.items.length + formNames.length;
     let msg = 'PDF editado baixado · ' + total + (total === 1 ? ' edição' : ' edições') + ' · ' + pdftoolsFormatBytes(out.size) + '.';
+    if (st.items.some(a => a.type === 'cover')) msg += ' Atenção: "Cobrir" só esconde — o texto por baixo continua no arquivo e pode ser copiado. Para eliminá-lo de vez (ex.: NIS, endereço), passe o arquivo por "Reduzir tamanho", que transforma as páginas em imagem.';
     if (badChars) msg += ' ' + badChars + ' caractere(s) que a fonte do PDF não aceita foram trocados por "?".';
     if (formFail) msg += ' Alguns campos do formulário não puderam ser gravados (' + formFail + ').';
     st.dirty = false;
@@ -25987,7 +26059,8 @@ async function pdftoolsEditExport() {
 
 /* ---------- PDF → Word ---------- */
 function pdftoolsEscapeXml(s) {
-  return String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
+  return String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, '')
+    .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
@@ -26790,7 +26863,7 @@ async function pdftoolsPdfToDocxBlob(bytes, onProgress) {
       // página escaneada, girada ou só com figuras: vira uma imagem da página inteira (o texto não é selecionável, mas nada se perde)
       const hasAnything = rotated || bigBox || boxes.length || paths > 0 || !hasText;
       if (hasAnything) {
-        const cv = await pdftoolsRenderPage(page, 1.6);
+        const cv = await pdftoolsRenderPage(page, pdftoolsSafeScale(page, 1.6));
         const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.82));
         cv.width = 0;
         if (blob && mediaBytes < 120e6) { const b = new Uint8Array(await blob.arrayBuffer()); mediaBytes += b.length; info.scan = { bytes: b, ext: 'jpg' }; info.lines = []; }
@@ -27100,7 +27173,7 @@ async function pdftoolsRunPdfToWord(file, inputEl) {
       pdftoolsSetProgress('PdfWord', i, n);
       pdftoolsSetStatus('pdftoolsPdfWordStatus', `Extraindo texto (${i}/${n})...`, 'info');
     });
-    pdftoolsDownloadBlob(res.blob, (file.name.replace(/\.pdf$/i, '') || 'documento') + '.docx');
+    pdftoolsDownloadBlob(res.blob, pdftoolsSafeName(file.name, 'documento') + '.docx');
     const st = res.stats || {};
     const kept = ['fontes, cores, negrito, itálico e sublinhado', 'alinhamento e recuos'];
     if (res.hasHeader || res.hasFooter) kept.push(res.hasHeader && res.hasFooter ? 'cabeçalho e rodapé' : res.hasHeader ? 'cabeçalho' : 'rodapé');
@@ -27112,7 +27185,7 @@ async function pdftoolsRunPdfToWord(file, inputEl) {
     if (st.skippedImages) msg += ' ' + st.skippedImages + ' imagem(ns) ficaram de fora por causa do tamanho do arquivo.';
     pdftoolsSetStatus('pdftoolsPdfWordStatus', msg, 'success');
   } catch (e) {
-    pdftoolsSetStatus('pdftoolsPdfWordStatus', 'Não foi possível converter este PDF.', 'error');
+    pdftoolsSetStatus('pdftoolsPdfWordStatus', pdftoolsPdfErrorMsg(e, 'Não foi possível converter este PDF.'), 'error');
   } finally {
     if (inputEl) { inputEl.disabled = false; inputEl.value = ''; }
     pdftoolsSetProgress('PdfWord', 0, 0);
@@ -27151,7 +27224,27 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
     const ctx = { page: doc.addPage([pageWidth, pageHeight]), y: pageHeight - margin };
     let drewSomething = false;
 
-    const sanitize = t => t.replace(/[^\x20-\x7EÀ-ÿ""''–—•ºª§«»…]/g, '?');
+    // Fontes padrão do PDF só aceitam o alfabeto Latin-1/WinAnsi. Antes, tudo que
+    // não estava numa lista curta virava "?" — inclusive espaço inseparável (muito
+    // comum no Word), tabulação, "°", "²", "©" e "¿". Agora: espaços especiais viram
+    // espaço, hífens "exóticos" viram o hífen simples (as aspas curvas do Word são mantidas), e só o que a fonte
+    // realmente não sabe desenhar vira "?".
+    const charOk = new Map();
+    const fontAceita = ch => {
+      if (!charOk.has(ch)) {
+        let ok = true;
+        try { fonts.regular.widthOfTextAtSize(ch, 10); } catch (e) { ok = false; }
+        charOk.set(ch, ok);
+      }
+      return charOk.get(ch);
+    };
+    const sanitize = t => Array.from(String(t)
+      .replace(/\t/g, '    ')
+      .replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' ')
+      .replace(/[\u00AD\u200B-\u200D\u2060\uFEFF]/g, '')
+      .replace(/[\u2010\u2011\u2012\u2212]/g, '-')
+      .replace(/\u201B/g, '\u2018').replace(/\u201F/g, '\u201C'))
+      .map(ch => (ch >= ' ' && ch !== '\x7f' && fontAceita(ch)) ? ch : '?').join('');
 
     function ensureSpace(height) {
       if (ctx.y - height < margin) {
@@ -27168,7 +27261,7 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
     }
 
     // Extrai o texto de um nó preservando negrito/itálico por trecho (run).
-    function extractRuns(node, bold, italic) {
+    function extractRuns(node, bold, italic, skipLists) {
       const runs = [];
       node.childNodes.forEach(child => {
         if (child.nodeType === 3) {
@@ -27176,10 +27269,11 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
         } else if (child.nodeType === 1) {
           const tag = child.tagName.toLowerCase();
           if (tag === 'img') return;
+          if (skipLists && (tag === 'ul' || tag === 'ol')) return;
           if (tag === 'br') { runs.push({ text: '\n', bold, italic }); return; }
           const nb = bold || tag === 'strong' || tag === 'b';
           const ni = italic || tag === 'em' || tag === 'i';
-          runs.push(...extractRuns(child, nb, ni));
+          runs.push(...extractRuns(child, nb, ni, skipLists));
         }
       });
       return runs;
@@ -27204,6 +27298,20 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
         const w = font.widthOfTextAtSize(sanitize(tok.text), size);
         if (/^\s+$/.test(tok.text)) {
           if (line.length) { line.push(tok); lineW += w; }
+          return;
+        }
+        if (w > width) {
+          // Palavra (ou endereço de site) maior que a linha: quebra por letras, senão sairia da folha.
+          if (line.length) { trimTrailingSpace(); lines.push(line); line = []; lineW = 0; }
+          let pedaco = '';
+          for (const ch of Array.from(tok.text)) {
+            if (pedaco && font.widthOfTextAtSize(sanitize(pedaco + ch), size) > width) {
+              lines.push([{ text: pedaco, bold: tok.bold, italic: tok.italic }]);
+              pedaco = '';
+            }
+            pedaco += ch;
+          }
+          if (pedaco) { line = [{ text: pedaco, bold: tok.bold, italic: tok.italic }]; lineW = font.widthOfTextAtSize(sanitize(pedaco), size); }
           return;
         }
         if (lineW + w > width && line.length) {
@@ -27255,30 +27363,36 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
     async function drawTable(tableNode) {
       const rows = Array.from(tableNode.querySelectorAll('tr'));
       if (!rows.length) return;
-      const colCount = Math.max(...rows.map(r => r.children.length));
+      const spanOf = c => Math.max(1, parseInt(c.getAttribute('colspan'), 10) || 1);
+      // células mescladas (colspan) ocupam várias colunas
+      const colCount = Math.max(...rows.map(r => Array.from(r.children).reduce((n, c) => n + spanOf(c), 0)));
       if (!colCount) return;
       const cellW = maxWidth / colCount;
       const cellPad = 5, fontSize = 9.5, lineH = fontSize + 3;
+      const lineLimit = Math.max(1, Math.floor((pageHeight - margin * 2 - cellPad * 2) / lineH));
 
       rows.forEach(row => {
         const cells = Array.from(row.children);
         const isHeaderRow = cells.length > 0 && cells.every(c => c.tagName.toLowerCase() === 'th');
-        const cellLines = cells.map(cell => {
+        const widths = cells.map(c => cellW * Math.min(spanOf(c), colCount));
+        const cellLines = cells.map((cell, ci) => {
           const runs = extractRuns(cell, isHeaderRow, false);
-          return wrapRuns(runs.length ? runs : [{ text: ' ', bold: isHeaderRow, italic: false }], fontSize, cellW - cellPad * 2);
+          return wrapRuns(runs.length ? runs : [{ text: ' ', bold: isHeaderRow, italic: false }], fontSize, widths[ci] - cellPad * 2);
         });
-        const rowLineCount = Math.max(1, ...cellLines.map(l => l.length || 1));
+        // linha mais alta que uma folha: corta no limite da folha em vez de desenhar fora dela
+        const rowLineCount = Math.min(lineLimit, Math.max(1, ...cellLines.map(l => l.length || 1)));
         const rowHeight = rowLineCount * lineH + cellPad * 2;
         ensureSpace(rowHeight);
         const rowTop = ctx.y;
+        const totalW = widths.reduce((a, b) => a + b, 0);
         if (isHeaderRow) {
-          ctx.page.drawRectangle({ x: margin, y: rowTop - rowHeight, width: cellW * cells.length, height: rowHeight, color: PDFLib.rgb(0.92, 0.92, 0.92) });
+          ctx.page.drawRectangle({ x: margin, y: rowTop - rowHeight, width: totalW, height: rowHeight, color: PDFLib.rgb(0.92, 0.92, 0.92) });
         }
+        let x0 = margin;
         cells.forEach((cell, ci) => {
-          const x0 = margin + ci * cellW;
-          ctx.page.drawRectangle({ x: x0, y: rowTop - rowHeight, width: cellW, height: rowHeight, borderColor: PDFLib.rgb(0.55, 0.55, 0.55), borderWidth: 0.6 });
+          ctx.page.drawRectangle({ x: x0, y: rowTop - rowHeight, width: widths[ci], height: rowHeight, borderColor: PDFLib.rgb(0.55, 0.55, 0.55), borderWidth: 0.6 });
           let ly = rowTop - cellPad;
-          (cellLines[ci] || []).forEach(line => {
+          (cellLines[ci] || []).slice(0, rowLineCount).forEach(line => {
             let lx = x0 + cellPad;
             line.forEach(tok => {
               const font = pickFont(tok.bold, tok.italic);
@@ -27288,11 +27402,45 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
             });
             ly -= lineH;
           });
+          x0 += widths[ci];
         });
         ctx.y = rowTop - rowHeight;
         drewSomething = true;
       });
       ctx.y -= 8;
+    }
+
+    // Lista (com sublistas): cada nível recua mais; o texto de uma sublista não entra no item de cima.
+    function drawList(listNode, level) {
+      const ordered = listNode.tagName.toLowerCase() === 'ol';
+      let idx = 1;
+      for (const li of Array.from(listNode.children)) {
+        if (li.tagName.toLowerCase() !== 'li') continue;
+        const marker = ordered ? `${idx}. ` : (level % 2 ? '– ' : '• ');
+        idx++;
+        const size = 11;
+        const indent = 16 + level * 18;
+        const markerWidth = fonts.regular.widthOfTextAtSize(sanitize(marker), size);
+        const runs = extractRuns(li, false, false, true);
+        const lines = wrapRuns(runs, size, maxWidth - indent - markerWidth);
+        lines.forEach((line, li2) => {
+          ensureSpace(size + 5);
+          if (li2 === 0) {
+            ctx.page.drawText(sanitize(marker), { x: margin + indent, y: ctx.y - size, size, font: fonts.regular });
+          }
+          let x = margin + indent + markerWidth;
+          line.forEach(tok => {
+            const font = pickFont(tok.bold, tok.italic);
+            const text = sanitize(tok.text);
+            ctx.page.drawText(text, { x, y: ctx.y - size, size, font });
+            x += font.widthOfTextAtSize(text, size);
+          });
+          ctx.y -= size + 5;
+          drewSomething = true;
+        });
+        ctx.y -= 3;
+        Array.from(li.children).filter(c => /^(ul|ol)$/i.test(c.tagName)).forEach(sub => drawList(sub, level + 1));
+      }
     }
 
     async function walkBlocks(nodes) {
@@ -27303,36 +27451,7 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
         if (tag === 'img') { await drawImage(node); continue; }
         if (tag === 'table') { await drawTable(node); continue; }
 
-        if (tag === 'ul' || tag === 'ol') {
-          let idx = 1;
-          for (const li of Array.from(node.children)) {
-            if (li.tagName.toLowerCase() !== 'li') continue;
-            const marker = tag === 'ol' ? `${idx}. ` : '• ';
-            idx++;
-            const size = 11;
-            const indent = 16;
-            const markerWidth = fonts.regular.widthOfTextAtSize(marker, size);
-            const runs = extractRuns(li, false, false);
-            const lines = wrapRuns(runs, size, maxWidth - indent - markerWidth);
-            lines.forEach((line, li2) => {
-              ensureSpace(size + 5);
-              if (li2 === 0) {
-                ctx.page.drawText(marker, { x: margin + indent, y: ctx.y - size, size, font: fonts.regular });
-              }
-              let x = margin + indent + markerWidth;
-              line.forEach(tok => {
-                const font = pickFont(tok.bold, tok.italic);
-                const text = sanitize(tok.text);
-                ctx.page.drawText(text, { x, y: ctx.y - size, size, font });
-                x += font.widthOfTextAtSize(text, size);
-              });
-              ctx.y -= size + 5;
-              drewSomething = true;
-            });
-            ctx.y -= 3;
-          }
-          continue;
-        }
+        if (tag === 'ul' || tag === 'ol') { drawList(node, 0); continue; }
 
         const isHeading = /^h[1-6]$/.test(tag);
         if (tag === 'p' || isHeading || tag === 'blockquote' || tag === 'div') {
@@ -27367,7 +27486,7 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
     }
 
     const pdfBytes = await doc.save();
-    pdftoolsDownloadBlob(new Blob([pdfBytes], { type: 'application/pdf' }), (file.name.replace(/\.docx?$/i, '') || 'documento') + '.pdf');
+    pdftoolsDownloadBlob(new Blob([pdfBytes], { type: 'application/pdf' }), pdftoolsSafeName(file.name, 'documento') + '.pdf');
     pdftoolsSetStatus('pdftoolsWordPdfStatus', 'PDF gerado, com títulos, negrito/itálico, listas, tabelas e imagens preservados!', 'success');
   } catch (e) {
     pdftoolsSetStatus('pdftoolsWordPdfStatus', 'Não foi possível converter este documento.', 'error');
@@ -27461,7 +27580,7 @@ async function pdftoolsRunCrop() {
     const media = Math.round(removedSum / changed * 100);
     pdftoolsSetStatus(id, `${changed} ${changed === 1 ? 'página recortada' : 'páginas recortadas'} (em média ${media}% da área saiu)` + (blank ? ` · ${blank} em branco, mantidas como estavam` : '') + '.', 'success');
   } catch (e) {
-    pdftoolsSetStatus(id, /margens/.test(String(e && e.message)) ? 'As margens escolhidas são maiores que a página.' : 'Não foi possível recortar este PDF.', 'error');
+    pdftoolsSetStatus(id, /margens/.test(String(e && e.message)) ? 'As margens escolhidas são maiores que a página.' : pdftoolsPdfErrorMsg(e, 'Não foi possível recortar este PDF.'), 'error');
   } finally {
     pdftoolsSetProgress('Crop', 0, 0);
     pdftoolsExtraSetBusy('Crop', false);
