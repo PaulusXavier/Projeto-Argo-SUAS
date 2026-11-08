@@ -29550,6 +29550,8 @@ function argoAssistantAskHybrid(rawText, meta) {
   if (B && B.session) B.session.aguardando = false;
   const pular = !B || typeof B.interpretar !== 'function' || !B.aiOn() || meta.forceAI || meta.regen || meta.semInterpretar ||
     (texto.length < 4 && !aguardando) || texto.length > 300 || _ubsPsiAguarda || B.crisis(texto) || B.piiBlock(texto) || !!argoAprendizadoKind(texto) || argoAgendaAsk(texto) || argoThemeAsk(texto) || argoOpenTabAsk(texto) ||
+    // traduzir, medir distância e calcular têm leitura própria: a reescrita da pergunta poderia mexer no texto a traduzir ou nos números
+    argoHabReconhece(texto) ||
     // pedido de rota ("traçar rota saindo do CRAS X: A, B e C"): o Paulus lê com as palavras da pessoa; reescrever a pergunta perderia paradas
     (typeof Paulus !== 'undefined' && Paulus.rota && typeof Paulus.rota.ler === 'function' && !!Paulus.rota.ler(texto)) ||
     (typeof B.psi === 'function' && B.psi(texto).score >= 3) ||
@@ -29625,6 +29627,13 @@ function argoAssistantAskHybridCore(rawText, meta) {
   if (themeAnswer) return themeAnswer;
   const closeAnswer = argoCloseAppAsk(rawText);
   if (closeAnswer) return closeAnswer;
+
+  // Traduzir ("traduza para o espanhol: ..."), medir distância ("distância entre A e B") e calcular ("quanto é 15% de 1200"):
+  // feitos aqui, no aparelho (js/argo-habilidades.js). "Aprofundar com a IA" (forceAI) pula esta etapa.
+  if (!meta.forceAI) {
+    const habAnswer = argoTradAsk(rawText) || argoDistAsk(rawText, meta) || argoCalcAsk(rawText);
+    if (habAnswer) return habAnswer;
+  }
 
   // Pedido claro para abrir uma aba ("abre o mapa"): abre na hora, sem passar pela IA.
   const tabOpen = argoOpenTabAsk(rawText);
@@ -29863,6 +29872,250 @@ function argoEscolherAcoesIA(lista, texto, aba, max) {
     pontuadas.filter(x => !x.a.tool && !ja.has(x.a.id)).slice(0, max - escolhidas.length).forEach(x => escolhidas.push(x.a));
   }
   return escolhidas.slice(0, max);
+}
+
+/* ============================================================
+   HABILIDADES DO MASCOTE — calcular, medir distância e traduzir
+   A leitura do pedido e as contas ficam em js/argo-habilidades.js (lógica pura, com teste: npm run test:habilidades).
+   Aqui ficam só as ligações com o app: de onde vêm as unidades e a posição, como a resposta aparece e os botões.
+   Sem IA. Cálculo e distância entre unidades/municípios de Roraima funcionam sem internet; tradução de frase livre
+   e lugares fora da lista usam os serviços que o app já usa (MyMemory e Nominatim), só quando a pessoa pede.
+   ============================================================ */
+function argoHab() { return typeof ArgoHabilidades !== 'undefined' ? ArgoHabilidades : null; }
+
+// A mensagem pede uma destas três coisas? (usado para não deixar a reescrita da IA mexer no pedido)
+function argoHabReconhece(rawText) {
+  const H = argoHab();
+  if (!H) return false;
+  try {
+    const tr = H.planejarTraducao(rawText);
+    if (tr && !(tr.soSeEstrangeiro && !(typeof tradutorDetectLang === 'function' && ['es', 'en', 'fr'].includes(tradutorDetectLang(tr.texto))))) return true;
+    return !!(H.lerDistancia(rawText) || H.calcular(rawText, argoHabReferencias()));
+  } catch (e) { return false; }
+}
+
+function argoHabCopiar(texto) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto).then(() => argoAviso('Copiado.', 'success'), () => argoAviso('Não consegui copiar neste navegador.', 'error'));
+      return;
+    }
+  } catch (e) { /* cai no aviso */ }
+  argoAviso('Não consegui copiar neste navegador.', 'error');
+}
+
+function argoHabChipCopiar(texto, rotulo) {
+  return { label: rotulo || '📋 Copiar', run: () => argoHabCopiar(texto), reply: 'Copiei.', mood: 'success' };
+}
+
+/* ---------- 1. Cálculo ---------- */
+// Salário mínimo e linha do Bolsa Família: os da ferramenta Renda per capita (editáveis lá), senão os de PC_REF.
+function argoHabReferencias() {
+  const ref = { sm: PC_REF.sm, bf: PC_REF.bf };
+  try {
+    const a = document.getElementById('pcSm'), b = document.getElementById('pcBf');
+    const sm = a && pcParse(a.value), bf = b && pcParse(b.value);
+    if (sm > 0) ref.sm = sm;
+    if (bf > 0) ref.bf = bf;
+  } catch (e) { /* fica com os valores de referência */ }
+  return ref;
+}
+
+function argoCalcAsk(rawText) {
+  const H = argoHab();
+  if (!H) return null;
+  let r = null;
+  try { r = H.calcular(rawText, Object.assign({ hoje: new Date() }, argoHabReferencias())); } catch (e) { return null; }
+  if (!r || !r.linhas || !r.linhas.length) return null;
+  const quick = [];
+  if (r.copiar) quick.push(argoHabChipCopiar(r.copiar, '📋 Copiar resultado'));
+  if (r.ferramenta && typeof TOOLS_CATALOG === 'object' && Object.values(TOOLS_CATALOG).some(m => m.id === r.ferramenta)) {
+    quick.push({ label: 'Abrir a ferramenta', run: () => argoAssistantOpenTool(r.ferramenta), reply: 'Abri a ferramenta.', mood: 'success' });
+  }
+  // Não vai para a memória da conversa: rendas e datas de nascimento são dado de família.
+  return { reply: r.linhas.join('\n'), mood: r.erro ? 'notfound' : 'success', badge: r.faltando || r.erro ? undefined : 'Conta', note: r.nota || (r.erro || r.faltando ? '' : 'Conta feita no aparelho, sem IA.'), quickActions: quick, followups: [] };
+}
+
+/* ---------- 2. Distância ---------- */
+let argoHabPosAparelho = null; // posição obtida quando a pessoa tocou em "usar minha localização" (só na memória)
+
+function argoHabPontos() {
+  const H = argoHab();
+  return argoRotaPontos().concat(H ? H.municipios() : []);
+}
+
+function argoHabPosicaoQuem() {
+  const p = argoRotaAparelho();
+  if (p) return { nome: 'Sua localização', lat: p.lat, lng: p.lng, aprox: true };
+  return argoHabPosAparelho ? { nome: 'Sua localização', lat: argoHabPosAparelho.lat, lng: argoHabPosAparelho.lng, aprox: true } : null;
+}
+
+async function argoHabGeocodar(nome, signal) {
+  const tentativas = [nome + ', Boa Vista, Roraima, Brasil', nome + ', Roraima, Brasil', nome + ', Brasil'];
+  for (let i = 0; i < tentativas.length; i++) {
+    if (i > 0) await new Promise(r => setTimeout(r, 1100)); // limite do Nominatim: ~1 pedido por segundo
+    const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=' + encodeURIComponent(tentativas[i]), { headers: { 'Accept': 'application/json' }, signal });
+    if (!res.ok) throw new Error('geocode');
+    const d = await res.json();
+    if (d && d[0] && isFinite(parseFloat(d[0].lat)) && isFinite(parseFloat(d[0].lon))) {
+      return { nome: nome.replace(/\b\w/g, c => c.toUpperCase()), lat: parseFloat(d[0].lat), lng: parseFloat(d[0].lon), aprox: true, achado: String(d[0].display_name || '').split(',').slice(0, 3).join(',').trim() };
+    }
+  }
+  return null;
+}
+
+function argoHabRespostaDistancia(a, b, modo) {
+  const H = argoHab();
+  const m = H.medir(a, b, modo);
+  const abrir = url => { try { window.open(url, '_blank', 'noopener'); } catch (e) { /* bloqueio de pop-up */ } };
+  const quick = [{ label: '🗺️ Ver no app de mapas', run: () => abrir(H.linkMapa(a, b, modo || 'carro')), reply: 'Abri o app de mapas em outra aba.', mood: 'success' }];
+  [['pe', 'A pé'], ['carro', 'De carro']].forEach(([k, rot]) => {
+    if (!modo || modo !== k) quick.push({ label: rot + '?', run: () => argoAssistantAskInline('distância entre ' + a.nome + ' e ' + b.nome + (k === 'pe' ? ' a pé' : ' de carro')), reply: '', mood: 'info' });
+  });
+  const extra = [a, b].filter(p => p.achado).map(p => '"' + p.nome + '" foi localizado no mapa como: ' + p.achado + '. Confira se é o lugar certo.').join(' ');
+  return { reply: m.linhas.join('\n'), mood: 'success', badge: 'Distância', note: ((m.nota || '') + (extra ? ' ' + extra : '')).trim(), quickActions: quick.slice(0, 3), followups: [] };
+}
+
+function argoDistAsk(rawText, meta) {
+  const H = argoHab();
+  if (!H) return null;
+  const pontos = argoHabPontos();
+  let lr = null;
+  try { lr = H.lerDistancia(rawText, pontos); } catch (e) { return null; }
+  if (!lr) return null;
+  const resolve = nome => {
+    if (H.ehAqui(nome)) { const p = argoHabPosicaoQuem(); return p ? { ponto: p } : { aqui: true }; }
+    return H.resolver(nome, pontos);
+  };
+  const ra = resolve(lr.a), rb = resolve(lr.b);
+  if (ra.aqui || rb.aqui) {
+    return {
+      reply: 'Para medir "daqui" preciso saber onde você está. A localização fica só neste aparelho e só nesta conversa.', mood: 'info', badge: 'Distância',
+      quickActions: [{
+        label: '📍 Usar minha localização',
+        run: () => {
+          if (!navigator.geolocation) { argoAviso('Este navegador não permite obter a localização atual.', 'error'); return; }
+          navigator.geolocation.getCurrentPosition(
+            pos => { argoHabPosAparelho = { lat: pos.coords.latitude, lng: pos.coords.longitude }; argoAssistantAskInline(rawText); },
+            () => argoAviso('Não consegui obter a localização. Diga o nome de um lugar como ponto de partida.', 'error'),
+            { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 });
+        }, reply: 'Pedindo a localização ao aparelho…', mood: 'info'
+      }], followups: []
+    };
+  }
+  const ambiguo = (r, nome) => r.ambiguos ? { reply: 'Encontrei mais de um lugar para "' + nome + '":\n' + r.ambiguos.slice(0, 8).map(p => '- ' + p.nome).join('\n') + '\n\nDiga o nome completo, por exemplo: "distância entre ' + r.ambiguos[0].nome + ' e ...".', mood: 'info', badge: 'Distância', quickActions: [], followups: [] } : null;
+  const amb = ambiguo(ra, lr.a) || ambiguo(rb, lr.b);
+  if (amb) return amb;
+  if (ra.ponto && rb.ponto) return argoHabRespostaDistancia(ra.ponto, rb.ponto, lr.modo);
+  // Algum lugar fora da lista (bairro, endereço, cidade de outro estado): procura no mapa online, só porque a pessoa pediu.
+  const faltam = [ra.ponto ? null : lr.a, rb.ponto ? null : lr.b].filter(Boolean);
+  const semNet = { reply: 'Não achei "' + faltam.join('" nem "') + '" na minha lista (CRAS/CREAS, equipamentos já localizados e municípios de Roraima) e estou sem internet para procurar no mapa. Tente com o nome de uma unidade ou município.', mood: 'notfound', badge: 'Distância', quickActions: [], followups: [] };
+  if (!navigator.onLine) return semNet;
+  return {
+    reply: 'Procurando no mapa…', mood: 'info', badge: 'Distância',
+    stream: {
+      run: async (onDelta, signal, onFase) => {
+        if (onFase) onFase('procurando "' + faltam[0] + '" no mapa…');
+        const achar = async (r, nome) => r.ponto || await argoHabGeocodar(nome, signal);
+        const a = await achar(ra, lr.a);
+        const b = a ? await achar(rb, lr.b) : null;
+        if (!a || !b) {
+          const e = new Error('nao-achou');
+          e.userMessage = 'Não consegui localizar "' + (!a ? lr.a : lr.b) + '" no mapa. Tente com o endereço completo ou o nome de uma unidade.';
+          e.noRetry = true;
+          throw e;
+        }
+        const r = argoHabRespostaDistancia(a, b, lr.modo);
+        return { text: r.reply, note: r.note, badge: r.badge, quickActions: r.quickActions };
+      },
+      fallback: semNet
+    }
+  };
+}
+
+/* ---------- 3. Tradução ---------- */
+function argoTradAbrirNoTradutor(texto, de, para) {
+  argoAssistantGoTo('tradutor');
+  let t = 0;
+  const ir = () => {
+    const inp = document.getElementById('tradutorInput'), f = document.getElementById('tradutorFrom'), to = document.getElementById('tradutorTo');
+    if (!inp || !f || !to) { if (++t < 20) setTimeout(ir, 60); return; }
+    f.value = de; to.value = para; inp.value = texto;
+    inp.dispatchEvent(new Event('input', { bubbles: true }));
+    try { inp.focus({ preventScroll: true }); } catch (e) { /* sem foco */ }
+  };
+  ir();
+}
+
+function argoTradChips(texto, de, para, saida) {
+  const q = [argoHabChipCopiar(saida, '📋 Copiar tradução')];
+  if ('speechSynthesis' in window) q.unshift({ label: '🔊 Ouvir', run: () => tradutorSpeakText(saida, para), reply: '', mood: 'info' });
+  q.push({ label: '🔍 Tela grande', run: () => tradutorShowBig(saida, para), reply: '', mood: 'info' });
+  q.push({ label: 'Abrir no Tradutor', run: () => argoTradAbrirNoTradutor(texto, de, para), reply: 'Abri o Tradutor com o texto.', mood: 'success' });
+  return q.slice(0, 4);
+}
+
+function argoTradResultado(texto, de, para, saida, nota) {
+  const H = argoHab();
+  return {
+    reply: '**' + H.nomeIdioma(para).replace(/^./, c => c.toUpperCase()) + ':** ' + saida, mood: 'success', badge: 'Tradução', note: nota,
+    quickActions: argoTradChips(texto, de, para, saida), followups: []
+  };
+}
+
+function argoTradAsk(rawText) {
+  const H = argoHab();
+  if (!H || typeof TRADUTOR_LANGS !== 'object') return null;
+  let plano = null;
+  try { plano = H.planejarTraducao(rawText); } catch (e) { return null; }
+  if (!plano) return null;
+  const detectado = plano.texto && typeof tradutorDetectLang === 'function' ? tradutorDetectLang(plano.texto) : '';
+  let de = plano.de || detectado || '';
+  let para = plano.para;
+  // "o que significa PAIF": só é tradução se o texto for mesmo de outro idioma; senão é pergunta de conteúdo.
+  if (plano.soSeEstrangeiro && !(de && de !== 'pt')) return null;
+  const abrirTradutor = { label: 'Abrir o Tradutor', run: () => argoAssistantGoTo('tradutor'), reply: 'Abri o Tradutor.', mood: 'success' };
+  if (plano.faltaTexto) {
+    return { reply: 'Claro! Qual texto devo traduzir' + (para ? ' para ' + H.nomeIdioma(para) : '') + '? Escreva assim: **traduza para ' + H.nomeIdioma(para || 'es') + ': seu texto**.', mood: 'info', badge: 'Tradução', quickActions: [abrirTradutor], followups: [] };
+  }
+  if (!para) {
+    if (de && de !== 'pt') para = 'pt';
+    else {
+      return {
+        reply: 'Para qual idioma devo traduzir?', mood: 'info', badge: 'Tradução',
+        quickActions: ['es', 'en', 'fr'].map(c => ({ label: H.nomeIdioma(c).replace(/^./, x => x.toUpperCase()), run: () => argoAssistantAskInline('traduza para o ' + H.nomeIdioma(c) + ': ' + plano.texto), reply: '', mood: 'info' })), followups: []
+      };
+    }
+  }
+  if (!de) de = 'pt';
+  if (!TRADUTOR_LANGS[para] || !TRADUTOR_LANGS[de]) return null;
+  if (de === para) return { reply: 'O texto já parece estar em ' + H.nomeIdioma(para) + '. Diga para qual idioma devo traduzir (espanhol, inglês, francês ou português).', mood: 'info', badge: 'Tradução', quickActions: [], followups: [] };
+  if (plano.texto.length > TRADUTOR_MAX_CHARS) return { reply: 'O texto é grande demais (' + plano.texto.length + ' caracteres; o limite é ' + TRADUTOR_MAX_CHARS + '). Divida em partes ou use a aba Tradutor.', mood: 'notfound', badge: 'Tradução', quickActions: [abrirTradutor], followups: [] };
+  // Frase padrão de atendimento: tradução revisada, na hora e sem internet.
+  const hit = TRADUTOR_BANK_REV.get(de + '|' + tradutorNormKey(plano.texto));
+  if (hit && hit[para]) return argoTradResultado(plano.texto, de, para, hit[para], 'Frase padrão de atendimento, com tradução revisada (funciona sem internet).');
+  const semNet = { reply: 'Estou sem internet, e só consigo traduzir offline as frases padrão de atendimento (as do Tradutor). Para texto livre, volte quando estiver conectado.', mood: 'notfound', badge: 'Tradução', quickActions: [abrirTradutor], followups: [] };
+  if (!navigator.onLine) return semNet;
+  const aviso = 'Tradução automática (MyMemory): confira o sentido antes de usar em documento. O texto foi enviado ao serviço de tradução; não escreva dado pessoal.';
+  return {
+    reply: semNet.reply, mood: 'info', badge: 'Tradução',
+    stream: {
+      run: async (onDelta, signal, onFase) => {
+        if (onFase) onFase('traduzindo para ' + H.nomeIdioma(para) + '…');
+        let saida;
+        try { saida = await tradutorFetchText(plano.texto, de, para); }
+        catch (e) {
+          const err = new Error(e && e.message || 'falha');
+          err.userMessage = e && e.message === 'quota' ? 'O serviço de tradução gratuito atingiu o limite diário de uso. Use as frases padrão do Tradutor ou tente mais tarde.'
+            : e && e.message === 'timeout' ? 'O serviço de tradução demorou demais para responder. Tente de novo em instantes.' : 'Não consegui traduzir agora. Verifique a internet e tente de novo.';
+          throw err;
+        }
+        const r = argoTradResultado(plano.texto, de, para, saida, aviso);
+        return { text: r.reply, note: r.note, badge: r.badge, quickActions: r.quickActions };
+      },
+      fallback: semNet
+    }
+  };
 }
 
 /* ---------- Rotas (Paulus v0.12.0) ----------
