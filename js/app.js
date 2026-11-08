@@ -23617,10 +23617,11 @@ async function pdftoolsRunPdfToJpg(file, inputEl) {
     const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
     const baseName = pdftoolsSafeName(file.name, 'documento');
     const zip = new JSZipLib();
+    const jpgScale = pdf.numPages > 40 ? 1.5 : 2; // PDF longo: imagens um pouco menores para não estourar a memória do aparelho
     pdftoolsSetStatus('pdftoolsPdfJpgStatus', `Gerando imagens (0/${pdf.numPages})...`, 'info');
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
-      const viewport = page.getViewport({ scale: pdftoolsSafeScale(page, 2) });
+      const viewport = page.getViewport({ scale: pdftoolsSafeScale(page, jpgScale) });
       const canvas = document.createElement('canvas');
       canvas.width = Math.ceil(viewport.width);
       canvas.height = Math.ceil(viewport.height);
@@ -23688,7 +23689,10 @@ async function pdftoolsExtraPick(kind, file, inputEl) {
   } catch (e) {
     const info = document.getElementById('pdftools' + kind + 'Info');
     if (info) info.textContent = '';
-    pdftoolsSetStatus(statusId, 'Não foi possível ler este PDF. Ele pode estar protegido por senha ou danificado.', 'error');
+    const msgErro = String((e && (e.message || e.name)) || '');
+    pdftoolsSetStatus(statusId, /encrypt|password|senha/i.test(msgErro)
+      ? 'Este PDF está protegido por senha. Abra-o, salve uma cópia sem senha e escolha o arquivo de novo.'
+      : 'Não foi possível ler este PDF. O arquivo pode estar danificado ou não ser um PDF de verdade.', 'error');
   } finally {
     if (inputEl) inputEl.value = '';
   }
@@ -24326,7 +24330,7 @@ async function pdftoolsRunProtect() {
     pdftoolsSetStatus(id, 'PDF protegido com senha · ' + pdftoolsFormatBytes(out.size) + '. Guarde a senha: sem ela o arquivo não abre.', 'success');
     pdftoolsProtectResetFields();
   } catch (e) {
-    pdftoolsSetStatus(id, 'Não foi possível proteger este PDF. Se ele já tem senha, abra-o sem senha antes; a biblioteca de criptografia também precisa ter sido carregada (internet na primeira vez).', 'error');
+    pdftoolsSetStatus(id, 'Não foi possível proteger este PDF. Se ele já tem senha, abra-o sem senha antes e tente de novo.', 'error');
   } finally {
     pdftoolsExtraSetBusy('Protect', false);
   }
@@ -26859,15 +26863,16 @@ async function pdftoolsPdfToDocxBlob(bytes, onProgress) {
     const bigBox = boxes.some(b => (b.x1 - b.x0) * (b.y1 - b.y0) > W * H * 0.45);
     info.skip = rotated;
 
-    if (rotated || (!hasText && (bigBox || boxes.length || true))) {
+    // página realmente vazia (sem texto, figura nem traço): segue em branco no Word, sem virar "página escaneada"
+    const blankPage = !rotated && !hasText && !bigBox && !boxes.length && !(paths > 0);
+    if (blankPage) {
+      // nada a desenhar: mantém só as linhas curtas que houver (ex.: número de página) e a quebra de página
+    } else if (rotated || !hasText) {
       // página escaneada, girada ou só com figuras: vira uma imagem da página inteira (o texto não é selecionável, mas nada se perde)
-      const hasAnything = rotated || bigBox || boxes.length || paths > 0 || !hasText;
-      if (hasAnything) {
-        const cv = await pdftoolsRenderPage(page, pdftoolsSafeScale(page, 1.6));
-        const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.82));
-        cv.width = 0;
-        if (blob && mediaBytes < 120e6) { const b = new Uint8Array(await blob.arrayBuffer()); mediaBytes += b.length; info.scan = { bytes: b, ext: 'jpg' }; info.lines = []; }
-      }
+      const cv = await pdftoolsRenderPage(page, pdftoolsSafeScale(page, 1.6));
+      const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.82));
+      cv.width = 0;
+      if (blob && mediaBytes < 120e6) { const b = new Uint8Array(await blob.arrayBuffer()); mediaBytes += b.length; info.scan = { bytes: b, ext: 'jpg' }; info.lines = []; }
     } else {
       // imagens de faixa (logos de cabeçalho/rodapé) para a detecção de cabeçalho e rodapé
       try { info.images = await pdftoolsBandImages(page, pdfjsLib, W, H, view[0], view[1], band, list); } catch (e) { info.images = []; }
@@ -26938,6 +26943,7 @@ async function pdftoolsPdfToDocxBlob(bytes, onProgress) {
   const ctx = { media, idState: geo.idState, stats };
   const pageXmls = pageInfos.map((info, idx) => pdftoolsPageBodyXml(info, geo, ctx, idx));
   const blob = await pdftoolsBuildDocx(pageXmls, hf, geo, media);
+  try { if (pdf.destroy) pdf.destroy(); } catch (e) { /* já liberado */ }
   return {
     blob,
     hasHeader: !!(hf.header.lines.length || hf.header.images.some(i => i.bytes)),
@@ -27323,7 +27329,10 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
         }
       });
       if (line.length) { trimTrailingSpace(); lines.push(line); }
-      return lines.filter(l => l.length);
+      // mantém as linhas em branco do meio (quebras duplas do Word); tira só as das pontas
+      while (lines.length && !lines[0].length) lines.shift();
+      while (lines.length && !lines[lines.length - 1].length) lines.pop();
+      return lines;
     }
 
     function drawWrappedLines(lines, size, x0, lineHeight, indent) {
@@ -27572,6 +27581,7 @@ async function pdftoolsRunCrop() {
         pdftoolsSetStatus(id, `Recortando (${i + 1}/${pages.length})...`, 'info');
       }
     }
+    if (src.destroy) src.destroy();
     if (!changed) {
       pdftoolsSetStatus(id, manual ? 'Nada foi recortado.' : 'Não achei bordas para tirar: as páginas já estão preenchidas ou em branco.', 'error');
       return;
