@@ -10784,32 +10784,15 @@ function renderPdfToolsCard() {
           <span class="pdftools-badge">${ICONS.pdf}</span>
           <h2 style="margin:0;">Central de PDF</h2>
         </div>
-        <span class="subtitle">🗂️ Unir, dividir, girar, marcar, converter e reduzir PDFs</span>
+        <span class="subtitle">🗂️ Editar, assinar, unir, dividir, recortar, converter e reduzir PDFs — até sem internet</span>
       </div>
       <div class="card-body">
         <div class="pdftools-privacy">
           ${ICONS.info}
-          <span>Tudo acontece aqui no seu navegador — nenhum arquivo é enviado a servidor algum. Na primeira vez que usar cada função, o app baixa uma pequena biblioteca (leva poucos segundos e precisa de internet só nesse momento).</span>
+          <span>Tudo acontece aqui no seu navegador — nenhum arquivo é enviado a servidor algum — e as ferramentas funcionam também sem internet.</span>
         </div>
 
-        <nav class="pdftools-jump" aria-label="Ir direto para uma ferramenta">
-          <span class="pdftools-jump-label">Ir para:</span>
-          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolEdit')">Editar</button>
-          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolMerge')">Unir</button>
-          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolOrganize')">Organizar</button>
-          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolSplit')">Dividir</button>
-          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolRemove')">Excluir</button>
-          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolRotate')">Girar</button>
-          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolNumber')">Numerar</button>
-          <button type="button" class="pdftools-jump-btn" onclick="argoAssistantGoTo('criptografia')" title="Proteger PDF com senha fica na aba Criptografia">Senha → Criptografia</button>
-          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolMark')">Marca d'água</button>
-          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolMeta')">Dados ocultos</button>
-          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolText')">Texto</button>
-          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolCompress')">Reduzir</button>
-          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolPdfWord')">PDF ⇄ Word</button>
-          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolPdfJpg')">PDF ⇄ JPG</button>
-          <button type="button" class="pdftools-jump-btn" onclick="pdftoolsJump('pdftoolsToolJpgPdf')">Digitalizar</button>
-        </nav>
+        ${pdfhubHtml()}
 
         <div class="pdftools-section-title">${ICONS.form}<span>Editar PDF</span><small>escrever, desenhar, realçar, cobrir e assinar</small></div>
         <div class="pdftools-grid pdftools-grid-single" style="margin-bottom:1.4rem;">
@@ -10989,6 +10972,7 @@ ${extra.mark}
 ${extra.meta}
 ${extra.text}
 ${extra.compress}
+${extra.crop}
         </div>
 
         <div class="pdftools-section-title">${ICONS.pdf}<span>Converter formatos</span><small>PDF, Word e imagens</small></div>
@@ -11137,6 +11121,35 @@ function pdftoolsExtraToolsHtml() {
               <div class="pdftools-chips" role="group" aria-label="Atalhos de páginas"><button type="button" class="pdftools-chip" onclick="pdftoolsSetRange('pdftoolsSplitRange', 'ímpares')">Ímpares</button><button type="button" class="pdftools-chip" onclick="pdftoolsSetRange('pdftoolsSplitRange', 'pares')">Pares</button><button type="button" class="pdftools-chip" onclick="pdftoolsSetRange('pdftoolsSplitRange', 'primeira')">Primeira</button><button type="button" class="pdftools-chip" onclick="pdftoolsSetRange('pdftoolsSplitRange', 'última')">Última</button></div>
             </div>
             ${tail('Split', ICONS.layers + ' Dividir e baixar', 'pdftoolsRunSplit')}
+          </div>
+`,
+    crop: `
+          <div class="pdftools-tool" id="pdftoolsToolCrop">
+            <div class="pdftools-tool-header">
+              <span class="pdftools-tool-icon">${ICONS.layers}</span>
+              <div>
+                <div class="pdftools-tool-title">Recortar margens</div>
+                <div class="pdftools-tool-limit">Um PDF · até 60 MB</div>
+              </div>
+            </div>
+            <p class="pdftools-tool-desc">Tira as bordas em branco (comum em digitalizações) ou corta margens com a medida que você escolher. O corte vale para todas as páginas. A área cortada só fica escondida no arquivo — para apagar de verdade o conteúdo, use "Editar PDF → Cobrir".</p>
+            ${drop('Crop', 'pdftoolsCropInput', 'Escolher um PDF', 'para recortar as margens das páginas')}
+            <div class="pdftools-opts">
+              <label class="pdftools-opt"><input type="radio" name="pdftoolsCropMode" value="auto" checked onchange="pdftoolsCropMode()"> Automático: tirar as bordas em branco</label>
+              <label class="pdftools-opt"><input type="radio" name="pdftoolsCropMode" value="manual" onchange="pdftoolsCropMode()"> Manual: cortar uma medida fixa de cada lado</label>
+            </div>
+            <div class="pdftools-opts pdftools-opts-row" id="pdftoolsCropAutoRow">
+              <label class="pdftools-opt-label">Folga ao redor do conteúdo (mm)
+                <input type="number" id="pdftoolsCropPad" class="tools-input" min="0" max="50" step="1" value="6" inputmode="decimal">
+              </label>
+            </div>
+            <div class="pdftools-opts pdftools-opts-row" id="pdftoolsCropManualRow" hidden>
+              <label class="pdftools-opt-label">Em cima (mm)<input type="number" id="pdftoolsCropT" class="tools-input" min="0" max="200" step="1" value="10" inputmode="decimal"></label>
+              <label class="pdftools-opt-label">Embaixo (mm)<input type="number" id="pdftoolsCropB" class="tools-input" min="0" max="200" step="1" value="10" inputmode="decimal"></label>
+              <label class="pdftools-opt-label">Esquerda (mm)<input type="number" id="pdftoolsCropL" class="tools-input" min="0" max="200" step="1" value="10" inputmode="decimal"></label>
+              <label class="pdftools-opt-label">Direita (mm)<input type="number" id="pdftoolsCropR" class="tools-input" min="0" max="200" step="1" value="10" inputmode="decimal"></label>
+            </div>
+            ${tail('Crop', ICONS.layers + ' Recortar e baixar', 'pdftoolsRunCrop')}
           </div>
 `,
     organize: `
@@ -22494,10 +22507,17 @@ function initAgendaPanel() {
 
 /* ============================================================
    FERRAMENTAS DE ARQUIVO — Unificar PDF · PDF<->Word · PDF<->JPG
-   Tudo roda no navegador (client-side). As bibliotecas abaixo só
-   são baixadas do cdnjs na primeira vez que cada função é usada
-   (por isso não entram no cache offline do Service Worker).
+   Tudo roda no navegador (client-side). As bibliotecas ficam guardadas
+   no próprio app (assets/vendor/), então tudo funciona offline desde a
+   primeira vez; o cdnjs só entra como reserva se a cópia local faltar.
    ============================================================ */
+const PDFTOOLS_LOCAL = {
+  pdfLib: 'assets/vendor/pdf-lib.min.js',
+  pdfJs: 'assets/vendor/pdf.min.js',
+  pdfJsWorker: 'assets/vendor/pdf.worker.min.js',
+  jszip: 'assets/vendor/jszip.min.js',
+  mammoth: 'assets/vendor/mammoth.browser.min.js'
+};
 const PDFTOOLS_CDN = {
   pdfLib: 'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js',
   pdfJs: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
@@ -22518,10 +22538,15 @@ function pdftoolsLoadScript(url) {
   });
   return pdftoolsScriptPromises[url];
 }
+// Tenta a cópia local primeiro (funciona offline) e, se ela faltar, o cdnjs.
+async function pdftoolsLoadLib(key) {
+  try { await pdftoolsLoadScript(PDFTOOLS_LOCAL[key]); return 'local'; }
+  catch (e) { await pdftoolsLoadScript(PDFTOOLS_CDN[key]); return 'cdn'; }
+}
 async function ensurePdfLib() {
   if (!window.PDFLib) {
     try {
-      await pdftoolsLoadScript(PDFTOOLS_CDN.pdfLib);
+      await pdftoolsLoadLib('pdfLib');
     } catch (e) {
       // Sem internet (e sem a biblioteca no cache): usa a cópia guardada no app,
       // que é a própria pdf-lib com criptografia. Assim as ferramentas de PDF
@@ -22535,8 +22560,8 @@ async function ensurePdfLib() {
 }
 async function ensurePdfJs() {
   if (!window.pdfjsLib) {
-    await pdftoolsLoadScript(PDFTOOLS_CDN.pdfJs);
-    window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFTOOLS_CDN.pdfJsWorker;
+    const origem = await pdftoolsLoadLib('pdfJs');
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = origem === 'local' ? PDFTOOLS_LOCAL.pdfJsWorker : PDFTOOLS_CDN.pdfJsWorker;
   }
   return window.pdfjsLib;
 }
@@ -22556,11 +22581,11 @@ async function ensurePdfLibEncrypt() {
   return window.__pdfLibEnc;
 }
 async function ensureJSZip() {
-  if (!window.JSZip) await pdftoolsLoadScript(PDFTOOLS_CDN.jszip);
+  if (!window.JSZip) await pdftoolsLoadLib('jszip');
   return window.JSZip;
 }
 async function ensureMammoth() {
-  if (!window.mammoth) await pdftoolsLoadScript(PDFTOOLS_CDN.mammoth);
+  if (!window.mammoth) await pdftoolsLoadLib('mammoth');
   return window.mammoth;
 }
 
@@ -22598,6 +22623,12 @@ function pdftoolsSetStatus(id, message, kind) {
     b.onclick = () => pdftoolsTriggerDownload(out.blob, out.name);
     el.appendChild(document.createTextNode(' '));
     el.appendChild(b);
+    // PDF gerado: oferece seguir para a próxima ferramenta sem baixar e escolher de novo.
+    const m = /^pdftools(\w+)Status$/.exec(id);
+    if (m && /pdf/i.test(out.blob.type || '') && typeof pdfhubChainEl === 'function' && document.getElementById('pdfhub')) {
+      el.appendChild(document.createElement('br'));
+      el.appendChild(pdfhubChainEl(m[1], out));
+    }
   }
 }
 
@@ -22628,7 +22659,7 @@ function pdftoolsHandleDrop(event, kind) {
   if (kind === 'wordpdf') { pdftoolsRunWordToPdf(files[0]); return; }
   if (kind === 'pdfjpg') { pdftoolsRunPdfToJpg(files[0]); return; }
   if (kind === 'Edit') { pdftoolsEditPick(files[0]); return; }
-  if (['Split', 'Compress', 'Number', 'Rotate', 'Remove', 'Mark', 'Meta', 'Text', 'Protect', 'Organize'].includes(kind)) { pdftoolsExtraPick(kind, files[0]); return; }
+  if (['Split', 'Compress', 'Number', 'Rotate', 'Remove', 'Mark', 'Meta', 'Text', 'Protect', 'Organize', 'Crop'].includes(kind)) { pdftoolsExtraPick(kind, files[0]); return; }
 }
 
 // Limite para os conversores de um arquivo só (PDF→Word, Word→PDF, PDF→JPG):
@@ -23567,7 +23598,7 @@ async function pdftoolsRunPdfToJpg(file, inputEl) {
 
 
 /* ---------- Dividir / reduzir / numerar (um PDF por vez) ---------- */
-const pdftoolsExtra = { Split: null, Compress: null, Number: null, Rotate: null, Remove: null, Mark: null, Meta: null, Text: null, Protect: null, Organize: null, busy: false };
+const pdftoolsExtra = { Crop: null, Split: null, Compress: null, Number: null, Rotate: null, Remove: null, Mark: null, Meta: null, Text: null, Protect: null, Organize: null, busy: false };
 
 function pdftoolsExtraSetBusy(kind, busy) {
   pdftoolsExtra.busy = busy;
@@ -27345,9 +27376,338 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
   }
 }
 
+/* ---------- Recortar margens (automático ou medida fixa) ----------
+   Usa a pdf.js para achar a área com conteúdo (ou para converter as margens
+   escolhidas, já considerando páginas giradas) e a pdf-lib para gravar a
+   MediaBox/CropBox. O conteúdo fora da área fica escondido, não apagado. */
+function pdftoolsCropMode() {
+  const manual = (document.querySelector('input[name="pdftoolsCropMode"]:checked') || {}).value === 'manual';
+  const a = document.getElementById('pdftoolsCropAutoRow'), m = document.getElementById('pdftoolsCropManualRow');
+  if (a) a.hidden = manual;
+  if (m) m.hidden = !manual;
+}
+
+async function pdftoolsRunCrop() {
+  const st = pdftoolsExtra.Crop;
+  if (!st || pdftoolsExtra.busy) return;
+  const id = 'pdftoolsCropStatus';
+  const manual = (document.querySelector('input[name="pdftoolsCropMode"]:checked') || {}).value === 'manual';
+  const num = (el, def) => { const v = Number(String(document.getElementById(el).value).replace(',', '.')); return isFinite(v) && v >= 0 ? v : def; };
+  const MM = 72 / 25.4;
+  const pad = num('pdftoolsCropPad', 6) * MM;
+  const mt = num('pdftoolsCropT', 0) * MM, mb = num('pdftoolsCropB', 0) * MM, ml = num('pdftoolsCropL', 0) * MM, mr = num('pdftoolsCropR', 0) * MM;
+  pdftoolsExtraSetBusy('Crop', true);
+  pdftoolsSetProgress('Crop', 0, 0);
+  pdftoolsSetStatus(id, 'Analisando as páginas...', 'info');
+  try {
+    const [PDFLib, pdfjsLib] = await Promise.all([ensurePdfLib(), ensurePdfJs()]);
+    const doc = await PDFLib.PDFDocument.load(st.bytes);
+    const src = await pdfjsLib.getDocument({ data: new Uint8Array(st.bytes.slice(0)) }).promise;
+    const pages = doc.getPages();
+    let changed = 0, blank = 0, removedSum = 0;
+    for (let i = 0; i < pages.length; i++) {
+      const jsPage = await src.getPage(i + 1);
+      const vp1 = jsPage.getViewport({ scale: 1 });
+      let box = null; // [l, t, r, b] em pontos, na página como aparece na tela
+      if (manual) {
+        if (ml + mr >= vp1.width - 20 || mt + mb >= vp1.height - 20) throw new Error('margens grandes demais');
+        box = [ml, mt, vp1.width - mr, vp1.height - mb];
+      } else {
+        const S = Math.min(1, 900 / Math.max(vp1.width, vp1.height)) * 1.0;
+        const vp = jsPage.getViewport({ scale: S });
+        const cv = document.createElement('canvas');
+        cv.width = Math.max(1, Math.ceil(vp.width)); cv.height = Math.max(1, Math.ceil(vp.height));
+        const ctx = cv.getContext('2d', { willReadFrequently: true });
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+        await jsPage.render({ canvasContext: ctx, viewport: vp }).promise;
+        const { data, width, height } = ctx.getImageData(0, 0, cv.width, cv.height);
+        let x0 = width, y0 = height, x1 = -1, y1 = -1;
+        const T = 244; // abaixo disso o pixel conta como "tinta"
+        for (let y = 0; y < height; y++) {
+          const row = y * width * 4;
+          for (let x = 0; x < width; x++) {
+            const o = row + x * 4;
+            if (data[o] < T || data[o + 1] < T || data[o + 2] < T) {
+              if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+            }
+          }
+        }
+        cv.width = cv.height = 1;
+        if (x1 < 0) { blank++; pdftoolsSetProgress('Crop', i + 1, pages.length); continue; }
+        box = [Math.max(0, x0 / S - pad), Math.max(0, y0 / S - pad), Math.min(vp1.width, (x1 + 1) / S + pad), Math.min(vp1.height, (y1 + 1) / S + pad)];
+      }
+      // converte os dois cantos para o espaço do PDF (considera /Rotate)
+      const p1 = vp1.convertToPdfPoint(box[0], box[1]);
+      const p2 = vp1.convertToPdfPoint(box[2], box[3]);
+      const x = Math.min(p1[0], p2[0]), y = Math.min(p1[1], p2[1]);
+      const w = Math.abs(p2[0] - p1[0]), h = Math.abs(p2[1] - p1[1]);
+      if (w < 20 || h < 20) { blank++; continue; }
+      const page = pages[i];
+      page.setMediaBox(x, y, w, h);
+      page.setCropBox(x, y, w, h);
+      page.setBleedBox(x, y, w, h); page.setTrimBox(x, y, w, h); page.setArtBox(x, y, w, h);
+      changed++;
+      removedSum += 1 - (box[2] - box[0]) * (box[3] - box[1]) / (vp1.width * vp1.height);
+      if ((i + 1) % 3 === 0 || i === pages.length - 1) {
+        pdftoolsSetProgress('Crop', i + 1, pages.length);
+        pdftoolsSetStatus(id, `Recortando (${i + 1}/${pages.length})...`, 'info');
+      }
+    }
+    if (!changed) {
+      pdftoolsSetStatus(id, manual ? 'Nada foi recortado.' : 'Não achei bordas para tirar: as páginas já estão preenchidas ou em branco.', 'error');
+      return;
+    }
+    pdftoolsDownloadBlob(new Blob([await doc.save()], { type: 'application/pdf' }), pdftoolsBaseName(st.file) + '-recortado.pdf');
+    const media = Math.round(removedSum / changed * 100);
+    pdftoolsSetStatus(id, `${changed} ${changed === 1 ? 'página recortada' : 'páginas recortadas'} (em média ${media}% da área saiu)` + (blank ? ` · ${blank} em branco, mantidas como estavam` : '') + '.', 'success');
+  } catch (e) {
+    pdftoolsSetStatus(id, /margens/.test(String(e && e.message)) ? 'As margens escolhidas são maiores que a página.' : 'Não foi possível recortar este PDF.', 'error');
+  } finally {
+    pdftoolsSetProgress('Crop', 0, 0);
+    pdftoolsExtraSetBusy('Crop', false);
+  }
+}
+
+/* ============================================================
+   CENTRAL DE PDF — painel inicial ("hub")
+   1) Comece pelo arquivo: solte um PDF/fotos/.docx e o app mostra o que dá
+      para fazer com ele (e já abre a ferramenta com o arquivo carregado).
+   2) Busca e atalhos por grupo, com as últimas ferramentas usadas.
+   3) Modo foco: ao abrir uma ferramenta, só ela fica na tela (em vez de uma
+      rolagem enorme), com botão para voltar e trocar de ferramenta.
+   4) "Continuar com este arquivo": o PDF gerado por uma ferramenta pode ser
+      enviado direto para a próxima, sem baixar e escolher de novo.
+   ============================================================ */
+const PDFHUB_GROUPS = ['Editar', 'Páginas', 'Limpar e proteger', 'Reduzir e extrair', 'Converter'];
+const PDFHUB_TOOLS = [
+  { key: 'Edit', tool: 'pdftoolsToolEdit', name: 'Editar e assinar', desc: 'Escrever, desenhar, preencher formulário, carimbar e assinar', icon: 'form', group: 'Editar', kw: 'editar escrever texto assinar assinatura desenhar caneta realçar cobrir carimbo formulário preencher imagem', input: 'pdf' },
+  { key: 'Merge', tool: 'pdftoolsToolMerge', name: 'Unir', desc: 'Juntar PDFs e fotos em um só arquivo', icon: 'folder', group: 'Páginas', kw: 'unir juntar unificar combinar mesclar fotos pdfs', input: 'multi' },
+  { key: 'Organize', tool: 'pdftoolsToolOrganize', name: 'Organizar', desc: 'Reordenar, girar, duplicar e excluir páginas', icon: 'layers', group: 'Páginas', kw: 'organizar ordenar ordem reordenar mover duplicar páginas miniaturas', input: 'pdf' },
+  { key: 'Split', tool: 'pdftoolsToolSplit', name: 'Dividir', desc: 'Extrair páginas ou separar uma por arquivo', icon: 'layers', group: 'Páginas', kw: 'dividir separar extrair páginas partir cortar zip', input: 'pdf' },
+  { key: 'Remove', tool: 'pdftoolsToolRemove', name: 'Excluir páginas', desc: 'Tirar páginas que não servem', icon: 'layers', group: 'Páginas', kw: 'excluir remover apagar deletar páginas', input: 'pdf' },
+  { key: 'Rotate', tool: 'pdftoolsToolRotate', name: 'Girar', desc: 'Corrigir páginas de lado ou de cabeça para baixo', icon: 'layers', group: 'Páginas', kw: 'girar rotacionar virar horizontal vertical', input: 'pdf' },
+  { key: 'Number', tool: 'pdftoolsToolNumber', name: 'Numerar', desc: 'Número de página no rodapé', icon: 'form', group: 'Páginas', kw: 'numerar numeração paginação rodapé', input: 'pdf' },
+  { key: 'Crop', tool: 'pdftoolsToolCrop', name: 'Recortar margens', desc: 'Tirar bordas em branco ou cortar uma medida fixa', icon: 'layers', group: 'Páginas', kw: 'recortar cortar margens bordas aparar digitalização scan', input: 'pdf', isNew: true },
+  { key: 'Mark', tool: 'pdftoolsToolMark', name: 'Marca d\'água', desc: 'Texto na diagonal em todas as páginas', icon: 'filebinary', group: 'Limpar e proteger', kw: 'marca dagua água confidencial rascunho carimbo texto', input: 'pdf' },
+  { key: 'Meta', tool: 'pdftoolsToolMeta', name: 'Dados ocultos', desc: 'Ver e limpar autor, programa e datas do arquivo', icon: 'filebinary', group: 'Limpar e proteger', kw: 'dados ocultos metadados autor privacidade limpar propriedades', input: 'pdf' },
+  { key: 'Protect', go: 'criptografia', name: 'Proteger com senha', desc: 'Fica na aba Criptografia', icon: 'filebinary', group: 'Limpar e proteger', kw: 'senha proteger criptografar cifrar proteção abrir', input: 'none' },
+  { key: 'Compress', tool: 'pdftoolsToolCompress', name: 'Reduzir tamanho', desc: 'Diminuir o arquivo para enviar por e-mail ou sistema', icon: 'filebinary', group: 'Reduzir e extrair', kw: 'reduzir comprimir diminuir tamanho peso leve enviar email', input: 'pdf' },
+  { key: 'Text', tool: 'pdftoolsToolText', name: 'Extrair texto', desc: 'Copiar o texto do PDF para um arquivo .txt', icon: 'form', group: 'Reduzir e extrair', kw: 'texto extrair copiar txt ler', input: 'pdf' },
+  { key: 'PdfWord', tool: 'pdftoolsToolPdfWord', name: 'PDF → Word', desc: 'Gera um .docx editável', icon: 'pdf', group: 'Converter', kw: 'word docx converter editar documento', input: 'pdf' },
+  { key: 'WordPdf', tool: 'pdftoolsToolWordPdf', name: 'Word → PDF', desc: 'A partir de um .docx', icon: 'form', group: 'Converter', kw: 'word docx converter pdf documento', input: 'docx' },
+  { key: 'PdfJpg', tool: 'pdftoolsToolPdfJpg', name: 'PDF → JPG', desc: 'Uma imagem por página', icon: 'image', group: 'Converter', kw: 'jpg jpeg imagem foto converter', input: 'pdf' },
+  { key: 'JpgPdf', tool: 'pdftoolsToolJpgPdf', name: 'Fotos → PDF', desc: 'Digitalizar: juntar fotos em um PDF', icon: 'image', group: 'Converter', kw: 'fotos imagens jpg png digitalizar escanear scan câmera', input: 'img' }
+];
+const pdfhub = { files: [], open: null };
+const PDFHUB_RECENT_KEY = 'argo_pdfhub_recent';
+
+function pdfhubRecent() {
+  try { const r = JSON.parse(localStorage.getItem(PDFHUB_RECENT_KEY) || '[]'); return Array.isArray(r) ? r.filter(k => PDFHUB_TOOLS.some(t => t.key === k)).slice(0, 4) : []; }
+  catch (e) { return []; }
+}
+function pdfhubRemember(key) {
+  try {
+    const r = [key].concat(pdfhubRecent().filter(k => k !== key)).slice(0, 4);
+    localStorage.setItem(PDFHUB_RECENT_KEY, JSON.stringify(r));
+  } catch (e) { /* sem armazenamento: só não lembra */ }
+}
+
+function pdfhubToolBtn(t) {
+  const act = t.go ? `argoAssistantGoTo('${t.go}')` : `pdfhubOpen('${t.key}')`;
+  const text = (t.name + ' ' + t.desc + ' ' + (t.kw || '') + ' ' + t.group).toLowerCase();
+  return `<button type="button" class="pdfhub-tool" data-key="${t.key}" data-text="${escapeHtmlAttr(text)}" onclick="${act}">
+      <span class="pdfhub-tool-icon" aria-hidden="true">${ICONS[t.icon] || ICONS.pdf}</span>
+      <span class="pdfhub-tool-name">${t.name}${t.isNew ? ' <em class="pdfhub-new">novo</em>' : ''}</span>
+      <span class="pdfhub-tool-desc">${t.desc}</span>
+    </button>`;
+}
+function escapeHtmlAttr(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+
+function pdfhubHtml() {
+  const groups = PDFHUB_GROUPS.map(g => `
+      <div class="pdfhub-group" data-group="${g}">
+        <h3 class="pdfhub-group-title">${g}</h3>
+        <div class="pdfhub-grid">${PDFHUB_TOOLS.filter(t => t.group === g).map(pdfhubToolBtn).join('')}</div>
+      </div>`).join('');
+  const switchOpts = PDFHUB_TOOLS.filter(t => t.tool).map(t => `<option value="${t.key}">${t.name}</option>`).join('');
+  return `
+        <div class="pdfhub-bar" id="pdfhubBar">
+          <button type="button" class="pdfhub-back" onclick="pdfhubBack()">← Todas as ferramentas</button>
+          <label class="pdfhub-switch">Trocar para
+            <select id="pdfhubSwitch" class="tools-input" onchange="pdfhubOpen(this.value)" aria-label="Trocar de ferramenta">${switchOpts}</select>
+          </label>
+        </div>
+        <section class="pdfhub" id="pdfhub" aria-label="Escolher a ferramenta de PDF">
+          <label class="pdfhub-drop" for="pdfhubInput" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="pdfhubDrop(event)">
+            <input type="file" id="pdfhubInput" multiple accept=".pdf,application/pdf,.jpg,.jpeg,.png,image/jpeg,image/png,.docx" onchange="pdfhubPick(this.files, this)">
+            <span class="pdfhub-drop-icon" aria-hidden="true">${ICONS.pdf}</span>
+            <span class="pdfhub-drop-text"><strong>Comece pelo arquivo</strong><small>Solte ou escolha um PDF, fotos ou um .docx — o app mostra o que dá para fazer com ele</small></span>
+          </label>
+          <div class="pdfhub-chooser" id="pdfhubChooser" hidden></div>
+          <div class="pdfhub-search">
+            <input type="search" id="pdfhubSearch" class="tools-input" placeholder="Ou busque uma ferramenta: juntar, reduzir, assinar, girar…" autocomplete="off" aria-label="Buscar ferramenta" oninput="pdfhubFilter(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();pdfhubOpenFirst();}">
+          </div>
+          <div class="pdfhub-recent" id="pdfhubRecent" hidden></div>
+          <div id="pdfhubGroups">${groups}</div>
+          <p class="pdfhub-empty" id="pdfhubEmpty" hidden>Nenhuma ferramenta com esse nome. Tente "juntar", "reduzir", "girar" ou "assinar".</p>
+        </section>`;
+}
+
+function pdfhubRenderRecent() {
+  const box = document.getElementById('pdfhubRecent');
+  if (!box) return;
+  const rec = pdfhubRecent().map(k => PDFHUB_TOOLS.find(t => t.key === k)).filter(t => t && t.tool);
+  if (!rec.length) { box.hidden = true; box.innerHTML = ''; return; }
+  box.hidden = false;
+  box.innerHTML = '<span class="pdfhub-recent-label">Usadas por último:</span>' + rec.map(t => `<button type="button" class="pdfhub-chip" onclick="pdfhubOpen('${t.key}')">${t.name}</button>`).join('');
+}
+
+function pdfhubFilter(q) {
+  const terms = String(q || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').split(/\s+/).filter(Boolean);
+  let shown = 0;
+  document.querySelectorAll('#pdfhubGroups .pdfhub-tool').forEach(b => {
+    const text = (b.dataset.text || '').normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const ok = terms.every(t => text.includes(t));
+    b.hidden = !ok;
+    if (ok) shown++;
+  });
+  document.querySelectorAll('#pdfhubGroups .pdfhub-group').forEach(g => { g.hidden = !g.querySelector('.pdfhub-tool:not([hidden])'); });
+  const empty = document.getElementById('pdfhubEmpty');
+  if (empty) empty.hidden = shown > 0;
+}
+function pdfhubOpenFirst() {
+  const b = document.querySelector('#pdfhubGroups .pdfhub-tool:not([hidden])');
+  if (b) b.click();
+}
+
+function pdfhubOpen(key) {
+  const t = PDFHUB_TOOLS.find(x => x.key === key);
+  if (!t) return;
+  if (t.go) { argoAssistantGoTo(t.go); return; }
+  const el = document.getElementById(t.tool);
+  const card = el && el.closest('.pdftools-card');
+  if (!el || !card) return;
+  card.querySelectorAll('.pdftools-tool.is-focused').forEach(x => x.classList.remove('is-focused'));
+  el.classList.add('is-focused');
+  card.classList.add('is-focus');
+  pdfhub.open = key;
+  const sel = document.getElementById('pdfhubSwitch');
+  if (sel) sel.value = key;
+  pdfhubRemember(key);
+  const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const bar = document.getElementById('pdfhubBar');
+  (bar || el).scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
+  const title = el.querySelector('.pdftools-tool-title');
+  if (title) { title.setAttribute('tabindex', '-1'); title.focus({ preventScroll: true }); }
+  // O editor mede a largura da tela: se estava escondido, refaz o desenho agora que apareceu.
+  if (key === 'Edit' && pdftoolsEdit.pdf) { try { pdftoolsEditRender(); } catch (e) { /* segue */ } }
+}
+function pdfhubBack() {
+  const hubEl = document.getElementById('pdfhub');
+  const card = hubEl && hubEl.closest('.pdftools-card');
+  if (!card) return;
+  card.classList.remove('is-focus');
+  card.querySelectorAll('.pdftools-tool.is-focused').forEach(x => x.classList.remove('is-focused'));
+  pdfhub.open = null;
+  pdfhubRenderRecent();
+  const hub = document.getElementById('pdfhub');
+  if (hub) hub.scrollIntoView({ block: 'start' });
+}
+
+/* ---- "Comece pelo arquivo" ---- */
+function pdfhubKind(f) {
+  if (pdftoolsIsPdfFile(f)) return 'pdf';
+  if (pdftoolsIsImageFile(f)) return 'img';
+  if (/\.docx$/i.test(f.name)) return 'docx';
+  return null;
+}
+function pdfhubDrop(event) {
+  event.preventDefault();
+  event.currentTarget.classList.remove('dragover');
+  pdfhubPick(event.dataTransfer && event.dataTransfer.files, null);
+}
+function pdfhubPick(list, inputEl) {
+  const files = Array.from(list || []);
+  if (inputEl) inputEl.value = '';
+  if (!files.length) return;
+  const ok = files.filter(f => pdfhubKind(f));
+  const box = document.getElementById('pdfhubChooser');
+  if (!box) return;
+  if (!ok.length) {
+    pdfhub.files = [];
+    box.hidden = false;
+    box.innerHTML = '<div class="pdfhub-chooser-head"><span>Esse tipo de arquivo não é aceito aqui. Use PDF, JPG/PNG ou .docx.</span></div>';
+    return;
+  }
+  pdfhub.files = ok;
+  const kinds = ok.map(pdfhubKind);
+  const nPdf = kinds.filter(k => k === 'pdf').length, nImg = kinds.filter(k => k === 'img').length, nDoc = kinds.filter(k => k === 'docx').length;
+  let keys = [], hint = '';
+  if (nDoc === 1 && ok.length === 1) { keys = ['WordPdf']; hint = 'Documento Word:'; }
+  else if (nPdf === 1 && ok.length === 1) { keys = ['Edit', 'Compress', 'Split', 'Organize', 'Rotate', 'Remove', 'Number', 'Crop', 'Mark', 'Meta', 'Text', 'PdfWord', 'PdfJpg']; hint = 'O que fazer com este PDF?'; }
+  else if (nImg === ok.length) { keys = ['JpgPdf', 'Merge']; hint = nImg === 1 ? 'Foto:' : 'Fotos:'; }
+  else if (nPdf + nImg >= 2) { keys = ['Merge']; hint = 'Vários arquivos: junte em um só. Para as outras ferramentas, escolha um PDF por vez.'; }
+  else { keys = []; hint = 'Escolha um arquivo de cada vez para usar nas outras ferramentas.'; }
+  const total = ok.reduce((s, f) => s + f.size, 0);
+  const name = ok.length === 1 ? escapeHtmlAttr(ok[0].name) : ok.length + ' arquivos';
+  const skipped = files.length - ok.length;
+  box.hidden = false;
+  box.innerHTML = `
+    <div class="pdfhub-chooser-head">
+      <span class="pdfhub-chooser-file">${ICONS.pdf}<strong>${name}</strong><small>${pdftoolsFormatBytes(total)}</small></span>
+      <button type="button" class="pdfhub-clear" onclick="pdfhubClearFiles()" aria-label="Tirar os arquivos escolhidos">Trocar</button>
+    </div>
+    <div class="pdfhub-chooser-hint">${hint}${skipped ? ' (' + skipped + ' arquivo(s) de outro tipo foram ignorados.)' : ''}</div>
+    <div class="pdfhub-chooser-chips">${keys.map((k, i) => { const t = PDFHUB_TOOLS.find(x => x.key === k); return `<button type="button" class="pdfhub-chip${i === 0 && keys.length < 4 ? ' is-primary' : ''}" onclick="pdfhubSendPicked('${k}')">${t.name}</button>`; }).join('')}</div>`;
+}
+function pdfhubClearFiles() {
+  pdfhub.files = [];
+  const box = document.getElementById('pdfhubChooser');
+  if (box) { box.hidden = true; box.innerHTML = ''; }
+}
+function pdfhubSendPicked(key) { pdfhubSend(key, pdfhub.files); }
+
+// Entrega o(s) arquivo(s) à ferramenta (como se tivessem sido escolhidos nela) e abre o foco.
+function pdfhubSend(key, files) {
+  files = Array.from(files || []);
+  if (!files.length) { pdfhubOpen(key); return; }
+  const first = files[0];
+  pdfhubOpen(key);
+  if (key === 'Edit') pdftoolsEditPick(first, null);
+  else if (key === 'Merge') pdftoolsAddMergeFiles(files);
+  else if (key === 'JpgPdf') pdftoolsAddJpgPdfFiles(files);
+  else if (key === 'PdfWord') pdftoolsRunPdfToWord(first);
+  else if (key === 'PdfJpg') pdftoolsRunPdfToJpg(first);
+  else if (key === 'WordPdf') pdftoolsRunWordToPdf(first);
+  else if (Object.prototype.hasOwnProperty.call(pdftoolsExtra, key)) pdftoolsExtraPick(key, first, null);
+}
+
+/* ---- "Continuar com este arquivo" (usado em pdftoolsSetStatus) ---- */
+const PDFHUB_NEXT = ['Compress', 'Number', 'Mark', 'Crop', 'Organize', 'Edit', 'Split'];
+function pdfhubChainEl(fromKey, out) {
+  const wrap = document.createElement('span');
+  wrap.className = 'pdfhub-next';
+  const lab = document.createElement('span');
+  lab.className = 'pdfhub-next-label';
+  lab.textContent = 'Continuar com este arquivo:';
+  wrap.appendChild(lab);
+  PDFHUB_NEXT.filter(k => k !== fromKey).slice(0, 5).forEach(k => {
+    const t = PDFHUB_TOOLS.find(x => x.key === k);
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'pdfhub-chip';
+    b.textContent = t.name;
+    b.onclick = () => pdfhubSend(k, [new File([out.blob], out.name, { type: 'application/pdf' })]);
+    wrap.appendChild(b);
+  });
+  return wrap;
+}
+
 // Atalhos do topo da Central de PDF: rolam até a ferramenta e levam o foco ao
 // título dela (teclado e leitor de tela). Respeita "reduzir movimento".
 function pdftoolsJump(id) {
+  const hubTool = PDFHUB_TOOLS.find(x => x.tool === id);
+  if (hubTool && document.getElementById('pdfhub')) { pdfhubOpen(hubTool.key); return; }
   const el = document.getElementById(id);
   if (!el) return;
   const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
