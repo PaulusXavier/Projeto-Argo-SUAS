@@ -8664,3 +8664,18 @@ header.hero .hero-stat-value { text-shadow: 0 0 18px rgba(242, 203, 126, 0.25); 
   .pdfhub-tool, .pdfhub-drop { transition: none; }
   .pdfhub-tool:hover, .pdfhub-drop:hover { transform: none; }
 }
+
+
+/* Aba Ferramentas: alvos de toque de pelo menos 44 px em telas de toque (celular e tablet) */
+@media (pointer: coarse) {
+  #toolsRoot .tools-ico-btn { min-width: 44px; min-height: 44px; }
+  #toolsRoot .tools-tab { min-height: 44px; }
+  #toolsRoot .tools-chip { min-height: 44px; }
+  #toolsRoot .tools-link-btn { min-height: 44px; }
+  #toolsRoot .tools-select { min-height: 44px; }
+  #toolsRoot .ac-privacy > summary { min-height: 44px; display: flex; align-items: center; }
+}
+.ac-privacy { margin-top: 0.2rem; }
+.ac-privacy > summary { cursor: pointer; font-size: 0.82rem; font-weight: 700; color: var(--brand-primary); }
+.ac-privacy > summary:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 2px; border-radius: 6px; }
+.ac-privacy-short { margin-bottom: 0.2rem; }
