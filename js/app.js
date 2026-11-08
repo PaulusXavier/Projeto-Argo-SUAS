@@ -7704,7 +7704,8 @@ function renderToolsCard() {
     + '<div class="calc-top"><span id="calcMem" class="calc-mem" hidden>M</span><div id="calcHist" class="calc-hist" aria-hidden="true">&nbsp;</div></div>'
     + '<div class="calc-display-row"><div id="calcDisplay" class="calc-display" role="status" aria-live="polite">0</div>'
     + '<button type="button" class="calc-copy" id="calcCopy" aria-label="Copiar resultado" title="Copiar resultado">Copiar</button>'
-    + '<button type="button" class="calc-copy" id="calcCopyBrl" aria-label="Copiar como valor em reais" title="Copiar como valor em reais (R$)">R$</button></div>'
+    + '<button type="button" class="calc-copy" id="calcCopyBrl" aria-label="Copiar como valor em reais" title="Copiar como valor em reais (R$)">R$</button>'
+    + '<button type="button" class="calc-copy" id="calcPaste" aria-label="Colar um valor copiado" title="Colar um valor copiado">Colar</button></div>'
     + '<div id="calcKeys" class="calc-keys">' + btns + '</div>'
     + '<div id="calcHint" class="tools-hint" role="status">Clique aqui e use o teclado: números, + − * /, Enter, Backspace, Esc (limpa tudo) e Del (limpa o número). Ctrl+V cola um valor.</div>'
     + '<details class="calc-log-box"><summary>Histórico <span id="calcLogCount" class="calc-log-count"></span></summary>'
@@ -7749,6 +7750,8 @@ const TOOLS_CATS = [
   ['familias', 'Famílias'], ['atend', 'Atendimento'], ['dados', 'Dados'], ['notas', 'Notas']
 ];
 // A chave é o aria-label de cada cartão (é por ele que a barra encontra o cartão).
+// Cartões que aparecem primeiro quando a pessoa ainda não favoritou nada.
+const TOOLS_DEFAULT_FIRST = ['relogio', 'calculadora'];
 const TOOLS_CATALOG = {
   'Relógio, cronômetro e temporizador': { id: 'relogio', cat: 'tempo', kw: 'hora horario cronometro timer alarme lembrete despertador boa vista brasilia fuso' },
   'Calculadora': { id: 'calculadora', cat: 'calculo', kw: 'conta somar porcentagem dividir multiplicar memoria raiz quadrado colar real reais' },
@@ -7816,7 +7819,8 @@ function initToolsNav() {
 
   const paintCard = c => {
     const pinned = pins.has(c.id), folded = folds.has(c.id);
-    c.el.style.order = pinned ? '-1' : '';
+    // Favoritas no topo; sem favoritar, Relógio e Calculadora (as mais usadas) vêm antes do resto.
+    c.el.style.order = pinned ? '-3' : (TOOLS_DEFAULT_FIRST.indexOf(c.id) !== -1 ? '-2' : '');
     c.el.classList.toggle('is-collapsed', folded);
     if (c.pinBtn) {
       c.pinBtn.textContent = pinned ? '★' : '☆';
@@ -8078,6 +8082,8 @@ function initToolsPanel() {
   const disp = $('calcDisplay'), hist = $('calcHist'), logEl = $('calcLog'), hint = $('calcHint');
   const memEl = $('calcMem'), keysEl = $('calcKeys');
   const mcBtn = keysEl.querySelector('[data-k="MC"]'), mrBtn = keysEl.querySelector('[data-k="MR"]');
+  // Em tela de toque (sem mouse) a dica de teclado não serve: mostra uma dica de toque.
+  if (window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches) hint.textContent = 'Toque nas teclas para calcular. Use Colar para trazer um valor que você copiou.';
   const hintDefault = hint.textContent;
   const S = { cur: '0', prev: null, op: null, fresh: true, last: null, note: '' };
   const val = s => parseFloat(String(s).replace(',', '.'));
@@ -8194,13 +8200,26 @@ function initToolsPanel() {
     const n = parseFloat(s);
     return isFinite(n) ? n : null;
   };
-  $('calcBox').addEventListener('paste', e => {
-    const n = parseBr((e.clipboardData && e.clipboardData.getData('text')) || '');
-    if (n === null) return;
-    e.preventDefault();
+  const pasteText = txt => {
+    const n = parseBr(txt || '');
+    if (n === null) return false;
     if (S.cur === 'Erro') reset();
     S.cur = fmt(n); S.fresh = true; S.note = '';
     show(); say('Valor colado: ' + pretty(S.cur));
+    return true;
+  };
+  $('calcBox').addEventListener('paste', e => {
+    const txt = (e.clipboardData && e.clipboardData.getData('text')) || '';
+    if (parseBr(txt) === null) return;
+    e.preventDefault();
+    pasteText(txt);
+  });
+  // Botão Colar (para o celular, onde não há Ctrl+V). O navegador pode pedir permissão para ler a área de transferência.
+  $('calcPaste').addEventListener('click', () => {
+    if (!(navigator.clipboard && navigator.clipboard.readText)) { say('Seu navegador não deixa colar daqui. Digite o valor.'); return; }
+    navigator.clipboard.readText()
+      .then(t => { if (!pasteText(t)) say('O que está copiado não parece um número.'); })
+      .catch(() => say('Não foi possível colar. Permita o acesso à área de transferência ou digite o valor.'));
   });
   logEl.addEventListener('click', e => {
     const b = e.target.closest('[data-i]'); if (!b) return;
@@ -10966,10 +10985,11 @@ ${extra.rotate}
 ${extra.number}
         </div>
 
-        <div class="pdftools-section-title">${ICONS.filebinary}<span>Outras ferramentas</span><small>marca d'água, dados ocultos, texto e tamanho</small></div>
+        <div class="pdftools-section-title">${ICONS.filebinary}<span>Outras ferramentas</span><small>marca d'água, dados ocultos, senha, texto e tamanho</small></div>
         <div class="pdftools-grid" style="margin-bottom:1.4rem;">
 ${extra.mark}
 ${extra.meta}
+${extra.unlock}
 ${extra.text}
 ${extra.compress}
 ${extra.crop}
@@ -11332,6 +11352,28 @@ function pdftoolsExtraToolsHtml() {
             <p class="pdftools-tool-desc">Apaga título, autor, assunto, palavras-chave e o programa que criou o arquivo. Bom antes de enviar documentos para fora, pois esses dados podem revelar quem e onde o PDF foi feito. O conteúdo das páginas não muda.</p>
             ${drop('Meta', 'pdftoolsMetaInput', 'Escolher um PDF', 'o conteúdo das páginas é mantido')}
             ${tail('Meta', ICONS.filebinary + ' Limpar e baixar', 'pdftoolsRunMeta')}
+          </div>
+`,
+    unlock: `
+          <div class="pdftools-tool" id="pdftoolsToolUnlock">
+            <div class="pdftools-tool-header">
+              <span class="pdftools-tool-icon">${ICONS.shield}</span>
+              <div>
+                <div class="pdftools-tool-title">Remover senha do PDF</div>
+                <div class="pdftools-tool-limit">Um PDF · até 60 MB</div>
+              </div>
+            </div>
+            <p class="pdftools-tool-desc">Gera uma cópia do PDF que abre sem pedir senha. <strong>Você precisa saber a senha de abrir</strong>: o app não adivinha nem quebra senhas. Se o PDF abre sem senha mas não deixa copiar ou imprimir, não precisa digitar nada. Use só em arquivos seus ou que você tem autorização para usar. Tudo é feito no seu aparelho. As páginas viram imagens com texto invisível por cima (dá para buscar e copiar), então o arquivo pode ficar maior e perde formulários preenchíveis e links.</p>
+            ${drop('Unlock', 'pdftoolsUnlockInput', 'Escolher um PDF com senha', 'a senha é digitada aqui, nada é enviado')}
+            <div class="pdftools-opts pdftools-opts-row">
+              <label class="pdftools-opt-label">Senha para abrir (se o PDF pedir)
+                <input type="password" id="pdftoolsUnlockPass" class="tools-input" autocomplete="off" maxlength="128" onkeydown="if(event.key==='Enter'){event.preventDefault();pdftoolsRunUnlock();}">
+              </label>
+            </div>
+            <div class="pdftools-protect-extra">
+              <label class="pdfedit-check"><input type="checkbox" onchange="document.getElementById('pdftoolsUnlockPass').type = this.checked ? 'text' : 'password'"> Mostrar a senha</label>
+            </div>
+            ${tail('Unlock', ICONS.shield + ' Remover senha e baixar', 'pdftoolsRunUnlock')}
           </div>
 `,
     text: `
@@ -22711,7 +22753,7 @@ function pdftoolsHandleDrop(event, kind) {
   if (kind === 'wordpdf') { pdftoolsRunWordToPdf(files[0]); return; }
   if (kind === 'pdfjpg') { pdftoolsRunPdfToJpg(files[0]); return; }
   if (kind === 'Edit') { pdftoolsEditPick(files[0]); return; }
-  if (['Split', 'Compress', 'Number', 'Rotate', 'Remove', 'Mark', 'Meta', 'Text', 'Protect', 'Organize', 'Crop'].includes(kind)) { pdftoolsExtraPick(kind, files[0]); return; }
+  if (['Split', 'Compress', 'Number', 'Rotate', 'Remove', 'Mark', 'Meta', 'Text', 'Unlock', 'Protect', 'Organize', 'Crop'].includes(kind)) { pdftoolsExtraPick(kind, files[0]); return; }
 }
 
 // Limite para os conversores de um arquivo só (PDF→Word, Word→PDF, PDF→JPG):
@@ -23658,7 +23700,7 @@ async function pdftoolsRunPdfToJpg(file, inputEl) {
 
 
 /* ---------- Dividir / reduzir / numerar (um PDF por vez) ---------- */
-const pdftoolsExtra = { Crop: null, Split: null, Compress: null, Number: null, Rotate: null, Remove: null, Mark: null, Meta: null, Text: null, Protect: null, Organize: null, busy: false };
+const pdftoolsExtra = { Crop: null, Split: null, Compress: null, Number: null, Rotate: null, Remove: null, Mark: null, Meta: null, Text: null, Unlock: null, Protect: null, Organize: null, busy: false };
 
 function pdftoolsExtraSetBusy(kind, busy) {
   pdftoolsExtra.busy = busy;
@@ -23669,6 +23711,7 @@ function pdftoolsExtraSetBusy(kind, busy) {
 async function pdftoolsExtraPick(kind, file, inputEl) {
   const statusId = 'pdftools' + kind + 'Status';
   if (!file) return;
+  if (kind === 'Unlock') { await pdftoolsUnlockPick(file, inputEl); return; }
   if (!pdftoolsIsPdfFile(file)) { pdftoolsSetStatus(statusId, 'Escolha um arquivo PDF.', 'error'); if (inputEl) inputEl.value = ''; return; }
   if (!pdftoolsCheckSingleFileSize(file, statusId, inputEl)) return;
   pdftoolsSetStatus(statusId, 'Lendo o arquivo...', 'info');
@@ -23810,6 +23853,7 @@ function pdftoolsExtraClear(kind) {
   pdftoolsSetStatus('pdftools' + kind + 'Status', '', 'info');
   pdftoolsSetProgress(kind, 0, 0);
   if (kind === 'Protect') { pdftoolsProtectResetFields(); pdftoolsProtectManyReset(); }
+  if (kind === 'Unlock') { const pw = document.getElementById('pdftoolsUnlockPass'); if (pw) pw.value = ''; }
 }
 
 function pdftoolsBaseName(file) { return pdftoolsSafeName(file.name, 'documento'); }
@@ -24979,6 +25023,118 @@ async function pdftoolsRunMeta() {
     pdftoolsSetStatus(id, 'Não foi possível limpar este PDF.', 'error');
   } finally {
     pdftoolsExtraSetBusy('Meta', false);
+  }
+}
+
+// ---- Remover senha: abre com o pdf.js (que sabe ler PDF criptografado, dada a senha)
+// e remonta um PDF novo, sem criptografia: imagem de cada página + texto invisível por cima.
+async function pdftoolsUnlockPick(file, inputEl) {
+  const id = 'pdftoolsUnlockStatus';
+  if (!pdftoolsIsPdfFile(file)) { pdftoolsSetStatus(id, 'Escolha um arquivo PDF.', 'error'); if (inputEl) inputEl.value = ''; return; }
+  if (!pdftoolsCheckSingleFileSize(file, id, inputEl)) return;
+  pdftoolsSetStatus(id, 'Lendo o arquivo...', 'info');
+  pdftoolsExtra.Unlock = null;
+  pdftoolsExtraSetBusy('Unlock', false);
+  const info = document.getElementById('pdftoolsUnlockInfo');
+  try {
+    const bytes = await file.arrayBuffer();
+    const pdfjs = await ensurePdfJs();
+    let precisaSenha = false, pages = 0;
+    try {
+      const doc = await pdfjs.getDocument({ data: new Uint8Array(bytes.slice(0)) }).promise;
+      pages = doc.numPages;
+      if (doc.destroy) doc.destroy();
+    } catch (e) {
+      if (e && e.name === 'PasswordException') precisaSenha = true; else throw e;
+    }
+    pdftoolsExtra.Unlock = { file, bytes, pages, precisaSenha };
+    if (info) info.textContent = file.name + (pages ? ' · ' + pages + (pages === 1 ? ' página' : ' páginas') : '') + ' · ' + pdftoolsFormatBytes(file.size);
+    pdftoolsExtraSetBusy('Unlock', false);
+    const pw = document.getElementById('pdftoolsUnlockPass');
+    if (precisaSenha) {
+      pdftoolsSetStatus(id, 'Este PDF pede senha para abrir. Digite a senha e toque no botão.', 'info');
+      if (pw) pw.focus();
+    } else {
+      pdftoolsSetStatus(id, 'Este PDF abre sem senha (pode ter só restrições de copiar ou imprimir). Toque no botão para gerar a cópia livre.', 'info');
+    }
+  } catch (e) {
+    if (info) info.textContent = '';
+    pdftoolsSetStatus(id, pdftoolsPdfErrorMsg(e, 'Não foi possível ler este PDF. O arquivo pode estar danificado ou não ser um PDF de verdade.'), 'error');
+  } finally {
+    if (inputEl) inputEl.value = '';
+  }
+}
+
+async function pdftoolsRunUnlock() {
+  const st = pdftoolsExtra.Unlock;
+  if (!st || pdftoolsExtra.busy) return;
+  const id = 'pdftoolsUnlockStatus';
+  const pwEl = document.getElementById('pdftoolsUnlockPass');
+  const senha = pwEl ? pwEl.value : '';
+  if (st.precisaSenha && !senha) { pdftoolsSetStatus(id, 'Digite a senha do PDF.', 'error'); if (pwEl) pwEl.focus(); return; }
+  pdftoolsExtraSetBusy('Unlock', true);
+  pdftoolsSetProgress('Unlock', 0, 0);
+  pdftoolsSetStatus(id, 'Abrindo o PDF...', 'info');
+  let pdf = null;
+  try {
+    const [pdfjsLib, PDFLib] = await Promise.all([ensurePdfJs(), ensurePdfLib()]);
+    try {
+      pdf = await pdfjsLib.getDocument({ data: new Uint8Array(st.bytes.slice(0)), password: senha || undefined }).promise;
+    } catch (e) {
+      if (e && e.name === 'PasswordException') {
+        pdftoolsSetStatus(id, e.code === 2 ? 'Senha incorreta. Confira e tente de novo.' : 'Este PDF pede senha. Digite a senha e tente de novo.', 'error');
+        if (pwEl) { pwEl.focus(); pwEl.select(); }
+        return;
+      }
+      throw e;
+    }
+    const out = await PDFLib.PDFDocument.create();
+    const font = await out.embedFont(PDFLib.StandardFonts.Helvetica);
+    let comTexto = false;
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const base = page.getViewport({ scale: 1 });
+      const vp = page.getViewport({ scale: pdftoolsSafeScale(page, 2) });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.ceil(vp.width);
+      canvas.height = Math.ceil(vp.height);
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+      const blob = await pdftoolsCanvasToBlob(canvas, 'image/jpeg', 0.88);
+      canvas.width = canvas.height = 0;
+      const img = await out.embedJpg(await blob.arrayBuffer());
+      const pg = out.addPage([base.width, base.height]);
+      pg.drawImage(img, { x: 0, y: 0, width: base.width, height: base.height });
+      // Texto invisível por cima da imagem, para buscar e copiar.
+      try {
+        const tc = await page.getTextContent();
+        for (const it of tc.items) {
+          const txt = String(it.str || '').replace(/[^\x20-\x7E\u00A0-\u00FF]/g, '');
+          if (!txt.trim()) continue;
+          const t = pdfjsLib.Util.transform(base.transform, it.transform);
+          const size = Math.max(1, Math.min(200, Math.hypot(t[2], t[3])));
+          try {
+            pg.drawText(txt, { x: t[4], y: base.height - t[5], size, font, opacity: 0, rotate: PDFLib.degrees(-Math.atan2(t[1], t[0]) * 180 / Math.PI) });
+            comTexto = true;
+          } catch (e) { /* trecho que a fonte não escreve: pula */ }
+        }
+      } catch (e) { /* página sem texto legível (digitalização): fica só a imagem */ }
+      if (page.cleanup) page.cleanup();
+      pdftoolsSetProgress('Unlock', i, pdf.numPages);
+      pdftoolsSetStatus(id, 'Refazendo páginas (' + i + '/' + pdf.numPages + ')...', 'info');
+    }
+    const bytes = await out.save();
+    pdftoolsDownloadBlob(new Blob([bytes], { type: 'application/pdf' }), pdftoolsBaseName(st.file) + '-sem-senha.pdf');
+    pdftoolsSetStatus(id, 'Cópia sem senha gerada: ' + pdf.numPages + (pdf.numPages === 1 ? ' página' : ' páginas') + ' · ' + pdftoolsFormatBytes(bytes.length) + (comTexto ? ' (texto pesquisável mantido).' : ' (sem texto pesquisável: as páginas são só imagem).'), 'success');
+    if (pwEl) pwEl.value = '';
+  } catch (e) {
+    pdftoolsSetStatus(id, pdftoolsPdfErrorMsg(e, 'Não foi possível remover a senha deste PDF.'), 'error');
+  } finally {
+    if (pdf && pdf.destroy) { try { pdf.destroy(); } catch (e) { /* segue */ } }
+    pdftoolsSetProgress('Unlock', 0, 0);
+    pdftoolsExtraSetBusy('Unlock', false);
   }
 }
 
@@ -27619,6 +27775,7 @@ const PDFHUB_TOOLS = [
   { key: 'Crop', tool: 'pdftoolsToolCrop', name: 'Recortar margens', desc: 'Tirar bordas em branco ou cortar uma medida fixa', icon: 'layers', group: 'Páginas', kw: 'recortar cortar margens bordas aparar digitalização scan', input: 'pdf', isNew: true },
   { key: 'Mark', tool: 'pdftoolsToolMark', name: 'Marca d\'água', desc: 'Texto na diagonal em todas as páginas', icon: 'filebinary', group: 'Limpar e proteger', kw: 'marca dagua água confidencial rascunho carimbo texto', input: 'pdf' },
   { key: 'Meta', tool: 'pdftoolsToolMeta', name: 'Dados ocultos', desc: 'Ver e limpar autor, programa e datas do arquivo', icon: 'filebinary', group: 'Limpar e proteger', kw: 'dados ocultos metadados autor privacidade limpar propriedades', input: 'pdf' },
+  { key: 'Unlock', tool: 'pdftoolsToolUnlock', name: 'Remover senha', desc: 'Abrir um PDF com senha (que você sabe) e salvar cópia livre', icon: 'shield', group: 'Limpar e proteger', kw: 'remover senha tirar senha desproteger desbloquear destravar abrir pdf protegido restrição proteção', input: 'pdf', isNew: true },
   { key: 'Protect', go: 'criptografia', name: 'Proteger com senha', desc: 'Fica na aba Criptografia', icon: 'filebinary', group: 'Limpar e proteger', kw: 'senha proteger criptografar cifrar proteção abrir', input: 'none' },
   { key: 'Compress', tool: 'pdftoolsToolCompress', name: 'Reduzir tamanho', desc: 'Diminuir o arquivo para enviar por e-mail ou sistema', icon: 'filebinary', group: 'Reduzir e extrair', kw: 'reduzir comprimir diminuir tamanho peso leve enviar email', input: 'pdf' },
   { key: 'Text', tool: 'pdftoolsToolText', name: 'Extrair texto', desc: 'Copiar o texto do PDF para um arquivo .txt', icon: 'form', group: 'Reduzir e extrair', kw: 'texto extrair copiar txt ler', input: 'pdf' },
@@ -27773,7 +27930,7 @@ function pdfhubPick(list, inputEl) {
   const nPdf = kinds.filter(k => k === 'pdf').length, nImg = kinds.filter(k => k === 'img').length, nDoc = kinds.filter(k => k === 'docx').length;
   let keys = [], hint = '';
   if (nDoc === 1 && ok.length === 1) { keys = ['WordPdf']; hint = 'Documento Word:'; }
-  else if (nPdf === 1 && ok.length === 1) { keys = ['Edit', 'Compress', 'Split', 'Organize', 'Rotate', 'Remove', 'Number', 'Crop', 'Mark', 'Meta', 'Text', 'PdfWord', 'PdfJpg']; hint = 'O que fazer com este PDF?'; }
+  else if (nPdf === 1 && ok.length === 1) { keys = ['Edit', 'Compress', 'Split', 'Organize', 'Rotate', 'Remove', 'Number', 'Crop', 'Mark', 'Meta', 'Unlock', 'Text', 'PdfWord', 'PdfJpg']; hint = 'O que fazer com este PDF?'; }
   else if (nImg === ok.length) { keys = ['JpgPdf', 'Merge']; hint = nImg === 1 ? 'Foto:' : 'Fotos:'; }
   else if (nPdf + nImg >= 2) { keys = ['Merge']; hint = 'Vários arquivos: junte em um só. Para as outras ferramentas, escolha um PDF por vez.'; }
   else { keys = []; hint = 'Escolha um arquivo de cada vez para usar nas outras ferramentas.'; }
