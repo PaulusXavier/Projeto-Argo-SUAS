@@ -24427,7 +24427,14 @@ function pdftoolsProtectPickMany(fileList, inputEl) {
   const statusId = 'pdftoolsProtectStatus';
   const all = Array.from(fileList || []);
   if (inputEl) inputEl.value = '';
-  if (!all.length || pdftoolsExtra.busy) return;
+  if (pdftoolsExtra.busy) return;
+  if (!all.length) {
+    // pasta vazia: o navegador não entrega nenhum arquivo. Antes não aparecia aviso algum e a seleção
+    // anterior (e a mensagem de "pronto") continuavam na tela, como se a pasta tivesse sido aceita.
+    pdftoolsProtectManyReset();
+    pdftoolsSetStatus(statusId, 'A pasta escolhida está vazia (ou o navegador não conseguiu ler os arquivos dela). Coloque pelo menos um PDF dentro da pasta e escolha de novo.', 'error');
+    return;
+  }
   pdftoolsProtectManyReset();
   const pdfs = all.filter(pdftoolsIsPdfFile);
   const notPdf = all.length - pdfs.length;
@@ -24744,7 +24751,13 @@ function criptoZipPick(fileList, inputEl) {
   const statusId = 'pdftoolsZipStatus';
   const all = Array.from(fileList || []);
   if (inputEl) inputEl.value = '';
-  if (!all.length || pdftoolsExtra.busy) return;
+  if (pdftoolsExtra.busy) return;
+  if (!all.length) {
+    // pasta vazia: o navegador não entrega nenhum arquivo (ver pdftoolsProtectPickMany)
+    criptoZipReset(false);
+    pdftoolsSetStatus(statusId, 'A pasta escolhida está vazia (ou o navegador não conseguiu ler os arquivos dela). Coloque pelo menos um arquivo dentro da pasta e escolha de novo.', 'error');
+    return;
+  }
   criptoZipReset(false);
   // Arquivos de sistema que o computador cria sozinho e ninguém quer levar junto.
   const lixo = /(^|\/)(\.DS_Store|Thumbs\.db|desktop\.ini|~\$[^/]*)$/i;
@@ -26459,6 +26472,65 @@ function pdftoolsSampleColors(cv, S, H, lines) {
   }));
 }
 
+/* Linhas horizontais escuras e finas da página (os "______" de preencher, feitos como traço e não como texto), em pontos. */
+function pdftoolsFindHLines(cv, S, H) {
+  let d;
+  try { d = cv.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, cv.width, cv.height).data; } catch (e) { return []; }
+  const w = cv.width, h = cv.height, minRun = Math.round(18 * S);
+  const groups = [];
+  let open = [];
+  for (let y = 0; y < h; y++) {
+    const now = [];
+    let run = 0, start = 0;
+    for (let x = 0; x <= w; x++) {
+      let dark = false;
+      // só cinza/preto: traços coloridos fazem parte de figuras (o brasão tem faixas verdes e azuis que pareciam linhas)
+      if (x < w) { const i = (y * w + x) * 4; dark = d[i] < 170 && d[i + 1] < 170 && d[i + 2] < 170 && Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2]) < 40; }
+      if (dark) { if (!run) start = x; run++; }
+      else { if (run >= minRun) now.push({ x0: start, x1: start + run }); run = 0; }
+    }
+    const next = [];
+    now.forEach(r => {
+      const g = open.find(q => Math.abs(q.x0 - r.x0) <= 3 && Math.abs(q.x1 - r.x1) <= 3 && q.yEnd === y - 1);
+      if (g) { g.yEnd = y; next.push(g); }
+      else { const ng = { x0: r.x0, x1: r.x1, yStart: y, yEnd: y }; groups.push(ng); next.push(ng); }
+    });
+    open = next;
+  }
+  return groups.filter(g => g.yEnd - g.yStart + 1 <= 3 * S)
+    .map(g => ({ x0: g.x0 / S, x1: (g.x1 + 1) / S, y: H - ((g.yStart + g.yEnd + 1) / 2) / S }));
+}
+
+/* Liga cada traço de preencher à linha de texto em que ele está (rótulo + traço: "Nome: ______").
+   No Word o traço vira uma tabulação com preenchimento sublinhado, e a linha de preencher não se perde.
+   Ignora: sublinhado de texto, "____" que já é texto, bordas de tabela e traços que não ficam na base de uma linha. */
+function pdftoolsAttachRules(info, hlines) {
+  let n = 0;
+  hlines.forEach(r => {
+    if (r.x1 - r.x0 < 18) return;
+    // borda de tabela: encosta numa linha vertical
+    if ((info.vlines || []).some(v => v.x >= r.x0 - 3 && v.x <= r.x1 + 3 && r.y <= v.yTop + 2 && r.y >= v.yBot - 2)) return;
+    let best = null, bestD = 1e9;
+    info.lines.forEach(l => {
+      if (!l.parts.length || l.hf) return;
+      const dy = r.y - l.y; // positivo = traço acima da base do texto
+      if (dy < -0.35 * l.size || dy > 0.2 * l.size) return;
+      if (r.x1 <= l.x0 + 4) return; // o traço precisa vir depois do começo do rótulo
+      if (Math.abs(dy) < bestD) { best = l; bestD = Math.abs(dy); }
+    });
+    if (!best) return;
+    // sublinhado de um texto ou "____" escrito como texto: o traço cobre um trecho existente
+    const covers = best.parts.some(p => {
+      const ov = Math.min(p.x1, r.x1) - Math.max(p.x0, r.x0);
+      return p.text.trim() && ov > 0 && ov >= (p.x1 - p.x0) * 0.4;
+    });
+    if (covers) return;
+    (best.rules = best.rules || []).push({ x0: r.x0, x1: r.x1 });
+    n++;
+  });
+  return n;
+}
+
 /* Bordas verticais da página (linhas escuras compridas), em pontos — dão as colunas exatas das tabelas com grade. */
 function pdftoolsFindVLines(cv, S, H) {
   let d;
@@ -26507,7 +26579,111 @@ function pdftoolsPageImageBoxes(list, pdfjsLib, oxPt, oyPt) {
       boxes.push(b);
     }
   }
-  return { boxes, paths };
+  return { boxes: pdftoolsMergeBoxes(boxes), paths };
+}
+
+/* Figuras fatiadas (ex.: um brasão guardado em 3 faixas coladas) viram UMA caixa só: caixas que se
+   tocam ou se sobrepõem (folga de 1,5 pt) são unidas. Sem isso o Word recebia cada faixa como uma
+   imagem separada, empilhadas e repetidas. */
+function pdftoolsMergeBoxes(boxes) {
+  const list = boxes.map(b => Object.assign({}, b));
+  const near = (a, b) => {
+    const dx = Math.max(0, Math.max(a.x0, b.x0) - Math.min(a.x1, b.x1));
+    const dy = Math.max(0, Math.max(a.y0, b.y0) - Math.min(a.y1, b.y1));
+    return dx <= 1.5 && dy <= 1.5;
+  };
+  let again = true;
+  while (again) {
+    again = false;
+    for (let i = 0; i < list.length && !again; i++) {
+      for (let j = i + 1; j < list.length; j++) {
+        if (!near(list[i], list[j])) continue;
+        const a = list[i], b = list[j];
+        a.x0 = Math.min(a.x0, b.x0); a.y0 = Math.min(a.y0, b.y0);
+        a.x1 = Math.max(a.x1, b.x1); a.y1 = Math.max(a.y1, b.y1);
+        list.splice(j, 1);
+        again = true;
+        break;
+      }
+    }
+  }
+  return list;
+}
+
+/* Segunda etapa contra textos "fantasma": cópias do mesmo texto em OUTRO lugar da página (o remendo mudou a
+   posição) que o leitor de PDF não mostra, porque um retângulo branco as cobre. Olha a página já desenhada: se o
+   texto tem cópia na página e o lugar dele está em branco, ele é descartado. Só mexe em textos que se repetem,
+   e só quando alguma cópia aparece de fato na imagem. Devolve os índices (em `items`) a descartar. */
+function pdftoolsGhostByInk(items, cv, S, H, oxPt, oyPt) {
+  const out = new Set();
+  let ctx;
+  try { ctx = cv.getContext('2d', { willReadFrequently: true }); } catch (e) { return out; }
+  const byText = new Map();
+  items.forEach((it, i) => {
+    if (!it || !it.str || !it.transform || !it.width) return;
+    const t = it.str.trim();
+    if (t.replace(/[^\p{L}\p{N}]/gu, '').length < 2) return; // só palavras de verdade (pontos, traços e espaços ficam)
+    if (!byText.has(t)) byText.set(t, []);
+    byText.get(t).push(i);
+  });
+  const density = it => {
+    const tr = it.transform;
+    const fh = Math.hypot(tr[2], tr[3]) || Math.abs(tr[3]) || Math.abs(tr[0]) || 10;
+    const x = Math.max(0, Math.floor((tr[4] - oxPt) * S)), w = Math.min(cv.width - x, Math.ceil(it.width * S));
+    const yb = tr[5] - oyPt;
+    const y0 = Math.max(0, Math.floor((H - (yb + fh * 0.75)) * S)), y1 = Math.min(cv.height, Math.ceil((H - (yb + fh * 0.12)) * S));
+    if (w < 2 || y1 - y0 < 2) return null;
+    let d;
+    try { d = ctx.getImageData(x, y0, w, y1 - y0).data; } catch (e) { return null; }
+    const cnt = new Map();
+    for (let i = 0; i < d.length; i += 4) { const k = ((d[i] >> 4) << 8) | ((d[i + 1] >> 4) << 4) | (d[i + 2] >> 4); cnt.set(k, (cnt.get(k) || 0) + 1); }
+    let bk = 0, bc = 0;
+    cnt.forEach((c, k) => { if (c > bc) { bc = c; bk = k; } });
+    const br = ((bk >> 8) & 15) * 17, bg = ((bk >> 4) & 15) * 17, bb = (bk & 15) * 17;
+    let ink = 0;
+    for (let i = 0; i < d.length; i += 4) if (Math.abs(d[i] - br) + Math.abs(d[i + 1] - bg) + Math.abs(d[i + 2] - bb) > 100) ink++;
+    return ink / (d.length / 4);
+  };
+  byText.forEach(list => {
+    if (list.length < 2) return;
+    const dens = list.map(i => density(items[i]));
+    if (dens.some(v => v === null)) return;
+    const best = Math.max.apply(null, dens);
+    if (best < 0.2) return; // nenhuma cópia aparece de verdade: não dá para saber qual vale, mantém todas
+    // cópia coberta: lugar praticamente em branco (às vezes só um traço de tabela por cima, ~9%) ao lado de uma cópia bem visível
+    list.forEach((i, k) => { if (dens[k] < 0.15 && dens[k] < best * 0.5) out.add(i); });
+  });
+  return out;
+}
+
+/* Textos "fantasma": PDFs remendados (um texto novo desenhado por cima do antigo, que fica coberto por um
+   retângulo branco) guardam as duas cópias. O leitor de PDF mostra só a de cima, mas a extração via
+   pdf.js entregava as duas, e o Word ficava com "Horas:Horas:Horas:". Quando o mesmo texto aparece de novo
+   no mesmo lugar (caixas sobrepostas), só a ÚLTIMA cópia desenhada é mantida. */
+function pdftoolsDropGhostText(items) {
+  const geo = items.map(it => {
+    if (!it || !it.str || !it.str.trim() || !it.transform) return null;
+    const tr = it.transform;
+    const fh = Math.hypot(tr[2], tr[3]) || Math.abs(tr[3]) || Math.abs(tr[0]) || 10;
+    return { t: it.str.trim(), x0: tr[4], x1: tr[4] + (it.width || 0), y: tr[5], fh };
+  });
+  const byText = new Map();
+  geo.forEach((g, i) => { if (g) { if (!byText.has(g.t)) byText.set(g.t, []); byText.get(g.t).push(i); } });
+  const drop = new Set();
+  byText.forEach(list => {
+    for (let a = 0; a < list.length - 1; a++) {
+      const A = geo[list[a]];
+      for (let b = a + 1; b < list.length; b++) {
+        const B = geo[list[b]];
+        const fh = Math.max(A.fh, B.fh);
+        const ov = Math.min(A.x1, B.x1) - Math.max(A.x0, B.x0);
+        const minW = Math.min(A.x1 - A.x0, B.x1 - B.x0);
+        const sameX = minW > 0 ? ov >= minW * 0.3 : Math.abs(A.x0 - B.x0) <= fh * 0.5;
+        if (sameX && Math.abs(A.y - B.y) <= fh * 0.8) { drop.add(list[a]); break; }
+      }
+    }
+  });
+  return drop.size ? items.filter((_, i) => !drop.has(i)) : items;
 }
 
 async function pdftoolsRenderPage(page, S) {
@@ -26537,6 +26713,7 @@ async function pdftoolsCropBox(cv, S, H, b) {
 
 /* ---------- Estrutura do corpo: tabelas, parágrafos, listas ---------- */
 function pdftoolsLineAlign(l, geo) {
+  if (l.rules && l.rules.length) return 'left'; // rótulo + traço de preencher: sempre à esquerda
   const TW = geo.R - geo.L, tol = Math.max(4, geo.W * 0.008);
   const c = (l.x0 + l.x1) / 2, pc = (geo.L + geo.R) / 2;
   if (Math.abs(c - pc) <= tol && l.x0 - geo.L > tol * 1.5 && geo.R - l.x1 > tol * 1.5) return 'center';
@@ -26696,6 +26873,7 @@ function pdftoolsMakeParagraphs(lineItems, geo) {
     if (!!prev.bold !== !!line.bold) return true;
     if (alignOf(prev) !== alignOf(line)) return true;
     if (alignOf(prev) !== 'left') return true;
+    if (prev.rules || line.rules) return true; // linha de preencher: cada uma é o seu parágrafo
     if (pdftoolsListMarker(line)) return true;
     if (prev.x1 < R - 0.3 * TW) return true;
     if (!para.list && line.x0 > prev.x0 + Math.max(prev.size, line.size) * 0.8 && /[.!?:;»”")]$/.test(prev.text)) return true;
@@ -26715,8 +26893,27 @@ function pdftoolsMakeParagraphs(lineItems, geo) {
     const size = ls[0].size;
     // runs do parágrafo, com um espaço entre as linhas (sem espaço depois de hífen no fim da linha)
     let runs = [];
+    const ruleTabs = []; // tabulações do Word para os traços de preencher
     ls.forEach((l, i) => {
       let lr = pdftoolsRunsOfParts(l.parts);
+      if (l.rules && l.rules.length && !p.list) {
+        // rótulo + traço de preencher: o traço vira uma tabulação com preenchimento sublinhado até o fim dele
+        let rest = l.parts.slice(), out = [], prevEnd = 0, ref = l.parts[0];
+        const mkTab = q => ({ text: '\t', font: q.font, size: Math.round(q.size * 2) / 2, bold: q.bold, italic: q.italic });
+        l.rules.slice().sort((a, b) => a.x0 - b.x0).forEach(r => {
+          const before = rest.filter(q => q.x0 < r.x0 + 1);
+          rest = rest.filter(q => q.x0 >= r.x0 + 1);
+          if (before.length) { out = out.concat(pdftoolsRunsOfParts(before)); ref = before[before.length - 1]; }
+          out.push(mkTab(ref));
+          ruleTabs.push({ pos: r.x1 - L, leader: true });
+          prevEnd = r.x1;
+        });
+        if (rest.length) {
+          if (rest[0].x0 - prevEnd > 3) { out.push(mkTab(ref)); ruleTabs.push({ pos: rest[0].x0 - L, leader: false }); }
+          out = out.concat(pdftoolsRunsOfParts(rest));
+        }
+        lr = out;
+      }
       if (i === 0 && p.list) {
         // troca o marcador por: marcador + tabulação (recuo deslocado)
         const mk = p.list;
@@ -26768,7 +26965,7 @@ function pdftoolsMakeParagraphs(lineItems, geo) {
     let pitch = ls.length > 1 ? med(ls.slice(1).map((l, i) => ls[i].y - l.y)) : pitchOf(size);
     pitch = Math.max(size * 0.9, Math.min(size * 3, pitch));
     const lastLine = ls[ls.length - 1];
-    return { kind: 'para', lines: ls, runs, size, align, left, first, right, list: p.list, pitch,
+    return { kind: 'para', lines: ls, runs, size, align, left, first, right, list: p.list, pitch, ruleTabs,
       topBase: ls[0].y, botBase: lastLine.y, top: ls[0].y + size * 0.8, lastSize: lastLine.size };
   });
 }
@@ -26802,11 +26999,15 @@ function pdftoolsRunsToXml(runs) {
   return xml;
 }
 
-function pdftoolsParaXml(p, before, pageBreak) {
+function pdftoolsParaXml(p, before, pageBreak, geo) {
   const jc = { left: 'left', center: 'center', right: 'right', both: 'both' }[p.align] || 'left';
   const ratio = Math.max(0.85, Math.min(3, p.pitch / (p.size * 1.17)));
   let ppr = pageBreak ? '<w:pageBreakBefore/>' : '';
-  if (p.list) ppr += `<w:tabs><w:tab w:val="left" w:pos="${pdftoolsTw(p.left)}"/></w:tabs>`;
+  const tabList = [];
+  if (p.list) tabList.push(`<w:tab w:val="left" w:pos="${pdftoolsTw(p.left)}"/>`);
+  const maxTab = pdftoolsTw(Math.max(0, (geo ? geo.R - geo.L : 1e4) - 1));
+  (p.ruleTabs || []).forEach(t => tabList.push(`<w:tab w:val="left"${t.leader ? ' w:leader="underscore"' : ''} w:pos="${Math.min(maxTab, pdftoolsTw(t.pos))}"/>`));
+  if (tabList.length) ppr += `<w:tabs>${tabList.join('')}</w:tabs>`;
   ppr += `<w:spacing w:before="${pdftoolsTw(Math.max(0, before))}" w:after="0" w:line="${Math.round(ratio * 240)}" w:lineRule="auto"/>`;
   if (p.left > 0.5 || p.right > 0.5 || p.first) {
     ppr += `<w:ind w:left="${pdftoolsTw(p.left)}"${p.right > 0.5 ? ` w:right="${pdftoolsTw(p.right)}"` : ''}${p.first < 0 ? ` w:hanging="${pdftoolsTw(-p.first)}"` : (p.first > 0 ? ` w:firstLine="${pdftoolsTw(p.first)}"` : '')}/>`;
@@ -26909,7 +27110,7 @@ function pdftoolsPageBodyXml(info, geo, ctx, pageIdx) {
     }
     before = Math.max(0, Math.min(600, before));
     const pageBreak = first && pb;
-    if (b.kind === 'para') xml += pdftoolsParaXml(b, before, pageBreak);
+    if (b.kind === 'para') xml += pdftoolsParaXml(b, before, pageBreak, geo);
     else if (b.kind === 'table') {
       if (before > 2 || pageBreak) xml += pdftoolsSpacerXml(before > 2 ? before : 1, pageBreak);
       xml += pdftoolsTableXml(b, geo, b.grid);
@@ -27023,7 +27224,7 @@ async function pdftoolsPdfToDocxBlob(bytes, onProgress) {
   const pageInfos = [];
   const S = N <= 40 ? 2 : 1.5;
   let mediaBytes = 0;
-  const stats = { tables: 0, images: 0, lists: 0, scanPages: 0, colors: 0, skippedImages: 0 };
+  const stats = { tables: 0, images: 0, lists: 0, scanPages: 0, colors: 0, skippedImages: 0, rules: 0 };
 
   for (let i = 1; i <= N; i++) {
     const page = await pdf.getPage(i);
@@ -27032,6 +27233,7 @@ async function pdftoolsPdfToDocxBlob(bytes, onProgress) {
     const info = { W, H, skip: false, lines: [], images: [], bodyImages: [], bordered: false, scan: null, vlines: [] };
     const list = await page.getOperatorList();
     const content = await page.getTextContent();
+    content.items = pdftoolsDropGhostText(content.items);
     const fontCache = {};
     const fontOf = id => fontCache[id] || (fontCache[id] = pdftoolsFontInfo(page, id));
     const rot = content.items.filter(it => it.str && it.str.trim() && Math.abs(it.transform[1]) > Math.abs(it.transform[0]) * 0.5).length;
@@ -27063,8 +27265,14 @@ async function pdftoolsPdfToDocxBlob(bytes, onProgress) {
         let cv = null;
         try { cv = await pdftoolsRenderPage(page, S); } catch (e) { cv = null; }
         if (cv) {
+          const ghosts = pdftoolsGhostByInk(content.items, cv, S, H, view[0], view[1]);
+          if (ghosts.size) {
+            content.items = content.items.filter((_, gi) => !ghosts.has(gi));
+            info.lines = pdftoolsExtractLines(content.items, view[0], view[1], fontOf);
+          }
           pdftoolsSampleColors(cv, S, H, info.lines);
           if (info.bordered) info.vlines = pdftoolsFindVLines(cv, S, H);
+          if (!rotated) stats.rules += pdftoolsAttachRules(info, pdftoolsFindHLines(cv, S, H));
           for (const b of boxes) {
             const w = b.x1 - b.x0, h = b.y1 - b.y0;
             if (w < 8 || h < 8) continue;
@@ -27143,6 +27351,7 @@ async function pdftoolsBandImages(page, pdfjsLib, W, H, oxPt, oyPt, band, preLis
   let ctm = [1, 0, 0, 1, 0, 0];
   const stack = [];
   const imgOps = [OPS.paintImageXObject, OPS.paintInlineImageXObject, OPS.paintImageMaskXObject, OPS.paintJpegXObject].filter(v => v != null);
+  const raw = [];
   for (let k = 0; k < list.fnArray.length; k++) {
     const fn = list.fnArray[k];
     if (fn === OPS.save) stack.push(ctm.slice());
@@ -27151,17 +27360,19 @@ async function pdftoolsBandImages(page, pdfjsLib, W, H, oxPt, oyPt, band, preLis
     else if (imgOps.indexOf(fn) >= 0) {
       const xs = [ctm[4], ctm[4] + ctm[0], ctm[4] + ctm[2], ctm[4] + ctm[0] + ctm[2]];
       const ys = [ctm[5], ctm[5] + ctm[1], ctm[5] + ctm[3], ctm[5] + ctm[1] + ctm[3]];
-      const x0 = Math.min.apply(null, xs) - oxPt, x1 = Math.max.apply(null, xs) - oxPt;
-      const y0 = Math.min.apply(null, ys) - oyPt, y1 = Math.max.apply(null, ys) - oyPt;
-      const w = x1 - x0, h = y1 - y0;
-      if (w < 6 || h < 6 || h > H * 0.2 || w > W * 0.95) continue; // ignora ícones minúsculos e imagens de fundo/página inteira
-      const cy = (y0 + y1) / 2;
-      const zone = cy > H * (1 - band) ? 'h' : cy < H * band ? 'f' : null;
-      if (!zone) continue;
-      const sig = zone + '|' + [x0, y0, x1, y1].map(v => Math.round(v / 3)).join(',');
-      out.push({ zone, sig, x0, y0, x1, y1 });
+      raw.push({ x0: Math.min.apply(null, xs) - oxPt, x1: Math.max.apply(null, xs) - oxPt, y0: Math.min.apply(null, ys) - oyPt, y1: Math.max.apply(null, ys) - oyPt });
     }
   }
+  // mesma regra do corpo da página: faixas de uma figura fatiada contam como uma imagem só
+  pdftoolsMergeBoxes(raw).forEach(({ x0, y0, x1, y1 }) => {
+    const w = x1 - x0, h = y1 - y0;
+    if (w < 6 || h < 6 || h > H * 0.2 || w > W * 0.95) return; // ignora ícones minúsculos e imagens de fundo/página inteira
+    const cy = (y0 + y1) / 2;
+    const zone = cy > H * (1 - band) ? 'h' : cy < H * band ? 'f' : null;
+    if (!zone) return;
+    const sig = zone + '|' + [x0, y0, x1, y1].map(v => Math.round(v / 3)).join(',');
+    out.push({ zone, sig, x0, y0, x1, y1 });
+  });
   return out;
 }
 
@@ -27366,6 +27577,7 @@ async function pdftoolsRunPdfToWord(file, inputEl) {
     const kept = ['fontes, cores, negrito, itálico e sublinhado', 'alinhamento e recuos'];
     if (res.hasHeader || res.hasFooter) kept.push(res.hasHeader && res.hasFooter ? 'cabeçalho e rodapé' : res.hasHeader ? 'cabeçalho' : 'rodapé');
     if (st.lists) kept.push('listas');
+    if (st.rules) kept.push(st.rules + (st.rules === 1 ? ' linha de preencher' : ' linhas de preencher'));
     if (st.tables) kept.push(st.tables + (st.tables === 1 ? ' tabela' : ' tabelas'));
     if (st.images) kept.push(st.images + (st.images === 1 ? ' imagem' : ' imagens'));
     let msg = 'Documento Word gerado, com ' + kept.join(', ') + ' preservados!';
@@ -27395,7 +27607,61 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
     const mammothLib = await ensureMammoth();
     const PDFLib = await ensurePdfLib();
     const bytes = await file.arrayBuffer();
-    const result = await mammothLib.convertToHtml({ arrayBuffer: bytes });
+    // Tamanho real (em pontos) de cada figura, lido do próprio .docx: o mammoth só entrega os pixels, e uma
+    // figura guardada em resolução dobrada (como as que o conversor PDF→Word grava) saía com o dobro do tamanho no PDF.
+    const imgSizes = [];
+    let docBuf = bytes;
+    try {
+      const JSZip = await ensureJSZip();
+      const zip = await JSZip.loadAsync(bytes);
+      const docXml = await zip.file('word/document.xml').async('string');
+      (docXml.match(/<wp:(?:inline|anchor)\b[\s\S]*?<\/wp:(?:inline|anchor)>/g) || []).forEach(d => {
+        if (!/<a:blip\b[^>]*r:embed=/.test(d)) return;
+        const m = /<wp:extent\s+cx="(\d+)"\s+cy="(\d+)"/.exec(d);
+        imgSizes.push(m ? { w: Number(m[1]) / 12700, h: Number(m[2]) / 12700 } : null);
+      });
+      // Tabulações com preenchimento (as linhas de preencher "Nome: ______" do Word): o mammoth as entrega como um
+      // simples espaço em branco, e a linha se perdia no PDF. Troca cada tabulação por sublinhados (ou espaços, se
+      // não houver preenchimento) com a largura que ela ocupa entre as paradas de tabulação do parágrafo.
+      let mudou = false;
+      const novoXml = docXml.replace(/<w:p[ >][\s\S]*?<\/w:p>/g, para => {
+        const tabsDef = /<w:tabs>([\s\S]*?)<\/w:tabs>/.exec(para);
+        if (!tabsDef || !/<w:tab\/>/.test(para)) return para;
+        const stops = [];
+        (tabsDef[1].match(/<w:tab\b[^>]*\/>/g) || []).forEach(t => {
+          const pos = /w:pos="(-?\d+)"/.exec(t);
+          if (pos) stops.push({ pos: Number(pos[1]), und: /w:leader="underscore"/.test(t) });
+        });
+        if (!stops.length) return para;
+        stops.sort((a, b) => a.pos - b.pos);
+        const szm = /<w:sz w:val="(\d+)"/.exec(para);
+        const size = szm ? Number(szm[1]) / 2 : 10;
+        const charTw = size * 0.58 * 20; // largura média de uma letra, em twips
+        const indM = /<w:ind[^>]*w:left="(\d+)"/.exec(para);
+        let cur = indM ? Number(indM[1]) : 0, si = 0;
+        const corpo = para.replace(/<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>|<w:tab\/>/g, (m, txt) => {
+          if (txt !== undefined) { cur += txt.length * charTw; return m; }
+          while (si < stops.length && stops[si].pos <= cur + 20) si++;
+          if (si >= stops.length) return m;
+          const st = stops[si++];
+          const n = Math.max(1, Math.floor(((st.pos - cur) / 20) / (size * (st.und ? 0.556 : 0.278)) * 0.8));
+          cur = st.pos;
+          mudou = true;
+          return '<w:t xml:space="preserve">' + (st.und ? '_' : ' ').repeat(n) + '</w:t>';
+        });
+        return corpo;
+      });
+      if (mudou) { zip.file('word/document.xml', novoXml); docBuf = await zip.generateAsync({ type: 'arraybuffer' }); }
+    } catch (e) { /* sem os tamanhos: vale o tamanho em pixels da figura */ }
+    let imgSeq = 0;
+    const result = await mammothLib.convertToHtml({ arrayBuffer: docBuf }, {
+      convertImage: mammothLib.images.imgElement(image => image.read('base64').then(b64 => {
+        const attrs = { src: 'data:' + image.contentType + ';base64,' + b64 };
+        const s = imgSizes[imgSeq++];
+        if (s && s.w > 0 && s.h > 0) { attrs['data-w'] = String(s.w); attrs['data-h'] = String(s.h); }
+        return attrs;
+      }))
+    });
     const container = document.createElement('div');
     container.innerHTML = result.value;
 
@@ -27542,6 +27808,9 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
         for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
         const img = /png/i.test(m[2]) ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
         let { width, height } = img;
+        // tamanho que a figura tem no Word (confere a proporção para não aplicar o tamanho de outra figura)
+        const dw = parseFloat(imgNode.getAttribute('data-w')), dh = parseFloat(imgNode.getAttribute('data-h'));
+        if (dw > 0 && dh > 0 && Math.abs(dw / dh - width / height) <= 0.06 * (width / height)) { width = dw; height = dh; }
         const scale = Math.min(maxWidth / width, 340 / height, 1);
         width *= scale; height *= scale;
         ensureSpace(height + 10);
