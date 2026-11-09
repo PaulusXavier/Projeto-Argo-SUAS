@@ -30,6 +30,12 @@
  * TIPOS: 'info' (padrão, azul) · 'error' (vermelho) · 'notfound' (dourado) · 'success' (verde)
  *        · 'thinking' (violeta: o Argo "pensando" — usado enquanto a IA responde)
  *
+ * NOVIDADES DO DESENHO (tamanho completo): lanterna de bordo que balança, constelação
+ * que se desenha na vela, luneta de latão no humor "não achei", estrela cadente rara,
+ * espuma na proa e rastro na popa, cavalo-marinho que pisca e bolhinhas na água, mãos
+ * com polegar, luz de contorno e a cabeça do comandante que também vira para o cursor.
+ * Tocar no mascote (ou comemorar) levanta respingos de água.
+ *
  * ÍCONE AVULSO: ArgoMascot.icon('info', 48). Abaixo de 48 px o desenho troca
  * sozinho para uma versão compacta (cabeça maior, menos detalhes) que continua
  * legível em avisos, chat e botão flutuante.
@@ -123,13 +129,19 @@
              '<circle cx="' + (cx + r * 0.35) + '" cy="' + (cy - r * 0.38) + '" r="' + (r * 0.36) + '" fill="#fff"/>';
     }
     function hand(cx, cy) {
-      return '<circle cx="' + cx + '" cy="' + cy + '" r="4.6" fill="' + PILOT.skin + '" stroke="' + INK + '" stroke-width="1.8"/>';
+      // polegar por trás da palma + dois dedinhos marcados: deixa de ser uma bolinha lisa
+      var tx = cx - 3.4, ty = cy - 1.8;
+      return '<ellipse cx="' + tx + '" cy="' + ty + '" rx="1.8" ry="2.9" transform="rotate(-28 ' + tx + ' ' + ty + ')" fill="' + PILOT.skin + '" stroke="' + INK + '" stroke-width="1.3"/>' +
+             '<circle cx="' + cx + '" cy="' + cy + '" r="4.6" fill="' + PILOT.skin + '" stroke="' + INK + '" stroke-width="1.8"/>' +
+             '<path d="M' + (cx + 1.2) + ' ' + (cy - 2.6) + ' q1.9 1.5 .2 3.4 M' + (cx + 2.7) + ' ' + (cy - 1) + ' q1.2 1.2 .2 2.4" fill="none" stroke="' + PILOT.skinDk + '" stroke-width=".9" stroke-linecap="round" opacity=".9"/>' +
+             '<path d="M' + (cx - 1.6) + ' ' + (cy + 2.6) + ' q1.6 1.2 3.6 .2" fill="none" stroke="#fff" stroke-width=".8" stroke-linecap="round" opacity=".35"/>';
     }
     // Braço: contorno escuro + manga da camisa, do ombro até a mão.
     function arm(x1, y1, x2, y2) {
       var d = 'M' + x1 + ' ' + y1 + ' L' + x2 + ' ' + y2;
       return '<path d="' + d + '" stroke="' + INK + '" stroke-width="9" stroke-linecap="round" fill="none"/>' +
              '<path d="' + d + '" stroke="' + PILOT.shirt + '" stroke-width="5.6" stroke-linecap="round" fill="none"/>' +
+             '<path d="' + d + '" transform="translate(-1.5 -1.4)" stroke="' + PILOT.shirtLt + '" stroke-width="1.5" stroke-linecap="round" fill="none" opacity=".6"/>' +
              hand(x2, y2);
     }
 
@@ -176,7 +188,16 @@
       face = '<g class="argo-mascot-look"><g class="argo-mascot-blink">' + eye(36.5, 39, 2.3) + eye(47.5, 38.6, 3.2) + '</g></g>' +
         stroke('M44 32.6 Q47.6 29.4 51.6 32.6', 2) +
         '<ellipse cx="42" cy="46.4" rx="2.3" ry="2.9" fill="' + MOUTH + '" stroke="' + EYE + '" stroke-width="1.8"/>';
-      arms = arm(23, 63, 21, 61) + arm(61, 62, 53.5, 50.5);
+      // luneta de latão: o comandante procura no horizonte (o braço sobe até a luneta)
+      var spy = '<g class="argo-mascot-scan"><g transform="translate(49.5 38) rotate(-24)">' +
+        '<rect x="-1.2" y="-1.9" width="6.6" height="3.8" rx="1.3" fill="#7A5320" stroke="' + NAVY + '" stroke-width="1.2"/>' +
+        '<rect x="4" y="-2.5" width="9.4" height="5" rx="1.1" fill="' + GOLD + '" stroke="' + NAVY + '" stroke-width="1.3"/>' +
+        '<rect x="12.6" y="-3.4" width="8" height="6.8" rx="1.5" fill="#D9962E" stroke="' + NAVY + '" stroke-width="1.3"/>' +
+        '<path d="M8.6 -2.5 V2.5 M15.4 -3.4 V3.4" stroke="' + GOLD_DK + '" stroke-width="1" opacity=".8"/>' +
+        '<path d="M5 -1.5 H12 M13.6 -2.4 H19.4" stroke="#fff" stroke-width=".9" stroke-linecap="round" opacity=".55"/>' +
+        '<ellipse cx="20.6" cy="0" rx="1.5" ry="3.3" fill="' + CYAN + '" fill-opacity=".9" stroke="' + NAVY + '" stroke-width=".9"/></g></g>' +
+        '<path class="argo-fx argo-mascot-glint" style="animation-delay:.4s" d="M70.6 25.4 Q70.9 27.6 73.1 28 Q70.9 28.4 70.6 30.6 Q70.3 28.4 68.1 28 Q70.3 27.6 70.6 25.4 Z" fill="#fff"/>';
+      arms = arm(23, 63, 21, 61) + spy + arm(60, 62, 61.6, 32.8);
       extra = '<g class="argo-fx argo-mascot-qmark"><circle cx="63" cy="15.6" r="1.2" fill="#fff" stroke="' + NAVY + '" stroke-width=".8"/>' +
         '<circle cx="67" cy="11.4" r="1.8" fill="#fff" stroke="' + NAVY + '" stroke-width=".9"/>' +
         '<ellipse cx="76" cy="3" rx="7.4" ry="6" fill="#fff" stroke="' + NAVY + '" stroke-width="1.5"/>' +
@@ -217,13 +238,14 @@
       // pin Ψ dourado (psicologia) no peito
       '<circle cx="30.6" cy="60.4" r="3" fill="' + GOLD + '" stroke="' + INK + '" stroke-width="1.1"/>' +
       '<path d="M29.1 58.6 Q29.1 61.6 30.6 61.6 Q32.1 61.6 32.1 58.6 M30.6 58.2 V62.6" fill="none" stroke="' + INK + '" stroke-width=".9" stroke-linecap="round"/>' +
-      '<g class="argo-mascot-head"><g transform="translate(42 54) scale(' + (compact ? 1.3 : 1.13) + ') translate(-42 -54)">' +
+      '<g class="argo-mascot-aim"><g class="argo-mascot-head"><g transform="translate(42 54) scale(' + (compact ? 1.3 : 1.13) + ') translate(-42 -54)">' +
       '<ellipse cx="27.2" cy="39.5" rx="2.4" ry="3.6" fill="' + PILOT.skin + '" stroke="' + INK + '" stroke-width="1.6"/>' +
       '<ellipse cx="56.8" cy="39.5" rx="2.4" ry="3.6" fill="' + PILOT.skin + '" stroke="' + INK + '" stroke-width="1.6"/>' +
       // rosto um pouco alongado, com queixo firme e barba rala por baixo
       '<path d="M27.4 34 Q27.4 21.6 42 21.6 Q56.6 21.6 56.6 34 Q56.6 44 53 48.6 Q48 53.8 42 53.8 Q36 53.8 31 48.6 Q27.4 44 27.4 34 Z" fill="url(#' + faceGradId + ')" stroke="' + INK + '" stroke-width="2.4" stroke-linejoin="round"/>' +
       '<path d="M31.4 47.6 Q36 52.4 42 52.6 Q48 52.4 52.6 47.6 Q50 52.6 42 53 Q34 52.6 31.4 47.6 Z" fill="' + PILOT.skinDk + '" opacity=".38"/>' +
-      // sombra do queixo no pescoço/gola dá profundidade
+      // luz de contorno (o sol vem da popa) no rosto e sombra do queixo no pescoço
+      '<path d="M55.6 30 Q56.6 41 52.4 48" fill="none" stroke="#CFF7F5" stroke-width="1.3" stroke-linecap="round" opacity=".5"/>' +
       cheeks + nose + face + brows + glasses +
       // cabelo preto curto, com topete volumoso caído para o lado e costeletas
       '<g class="argo-mascot-hair">' +
@@ -231,7 +253,8 @@
       '<path d="M37.4 26.6 Q36.6 31.6 40.4 32.4 Q39 29.4 41.4 26.8 Z" fill="' + PILOT.hair + '"/>' +
       '<path d="M32.5 20.4 Q41 16.6 51.5 21" fill="none" stroke="#6B5646" stroke-width="1.4" stroke-linecap="round" opacity=".8"/>' +
       '<path d="M45 18.4 Q51 18.6 54.4 24" fill="none" stroke="#6B5646" stroke-width="1" stroke-linecap="round" opacity=".55"/>' +
-      '</g></g></g>' +
+      '<path d="M52.4 17.6 Q57 21 57 28.6" fill="none" stroke="#9FE3EE" stroke-width="1.1" stroke-linecap="round" opacity=".5"/>' +
+      '</g></g></g></g>' +
       arms;
 
     var bob = mood === 'error' ? '' : ' argo-mascot-bob';
@@ -280,6 +303,8 @@
         // aura suave na cor do humor + gaivota passando ao fundo
         '<ellipse class="argo-mascot-halo" cx="65" cy="64" rx="64" ry="50" fill="url(#' + haloGradId + ')"/>' +
         '<g class="argo-fx"><g class="argo-mascot-gull"><path d="M0 0 q3 -3.6 6 0 q3 -3.6 6 0" fill="none" stroke="#8FAFBF" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></g></g>' +
+        // estrela cadente rara (a cada ~9 s) riscando o céu atrás do barco
+        '<g class="argo-fx"><g class="argo-mascot-shoot"><path d="M0 0 L-15 -6.4" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".75"/><path d="M0 0 L-7 -3" stroke="' + GOLD + '" stroke-width="1.8" stroke-linecap="round"/><circle r="1.7" fill="#fff" stroke="' + GOLD + '" stroke-width=".7"/></g></g>' +
         // ondinha de fundo
         '<path class="argo-mascot-swell2" d="M5 105 ' + wave + '" fill="none" stroke="' + SEA + '" stroke-width="3" stroke-linecap="round" opacity=".55"/>' +
         '<g class="argo-mascot-rock">' +
@@ -293,7 +318,7 @@
         '<path d="M72 21.4 L118 14.6" stroke="' + NAVY + '" stroke-width="4.6" stroke-linecap="round"/>' +
         '<path d="M72 21.4 L118 14.6" stroke="' + MAST + '" stroke-width="2.4" stroke-linecap="round"/>' +
         // constelação Argo Navis (estrelas ligadas por linhas de luz) na vela
-        '<path d="M80 34 L87 28 L95 35 L90 42 M95 35 L100 29" fill="none" stroke="' + HULL + '" stroke-width="1" stroke-linecap="round" opacity=".6"/>' +
+        '<path class="argo-mascot-constel" pathLength="1" d="M80 34 L87 28 L95 35 L90 42 M95 35 L100 29" fill="none" stroke="' + HULL + '" stroke-width="1.1" stroke-linecap="round" opacity=".7"/>' +
         [[80, 34, 1.7, 0], [87, 28, 2.1, .5], [95, 35, 2.3, 1], [90, 42, 1.6, 1.5], [100, 29, 1.5, 2]].map(function (t) {
           return '<circle class="argo-fx argo-mascot-glow" style="animation-delay:' + t[3] + 's" cx="' + t[0] + '" cy="' + t[1] + '" r="' + (t[2] * 2.6).toFixed(1) + '" fill="' + GOLD + '" opacity=".25"/>' +
                  '<circle class="argo-mascot-star" style="animation-delay:' + t[3] + 's" cx="' + t[0] + '" cy="' + t[1] + '" r="' + t[2] + '" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width=".6"/>';
@@ -304,6 +329,14 @@
         '<rect x="85.6" y="48.8" width="6.8" height="6.8" rx="1.6" fill="none" stroke="#fff" stroke-width=".9" stroke-dasharray="1.4 1.4" opacity=".85"/>' +
         '<circle cx="89" cy="52.2" r="1.3" fill="#fff"/>' +
         '</g>' +
+        // lanterna de bordo pendurada na ponta direita da retranca: brilha como um LED quente e balança com o barco
+        (compact ? '' : '<g class="argo-mascot-lantern">' +
+          '<circle class="argo-fx argo-mascot-lglow" cx="112" cy="25.4" r="9" fill="#FFC857" opacity=".35"/>' +
+          '<path d="M112 15.6 V19.6" stroke="' + NAVY + '" stroke-width="1.1" stroke-linecap="round"/>' +
+          '<path d="M109.4 21.8 L112 19.4 L114.6 21.8 Z" fill="' + GOLD + '" stroke="' + NAVY + '" stroke-width="1.1" stroke-linejoin="round"/>' +
+          '<rect x="109.8" y="21.8" width="4.4" height="6.2" rx="1.5" fill="#FFD76A" stroke="' + NAVY + '" stroke-width="1.1"/>' +
+          '<rect x="110.8" y="22.8" width="1.2" height="3.6" rx=".6" fill="#fff" opacity=".7"/>' +
+          '<rect x="109.2" y="27.8" width="5.6" height="1.9" rx=".9" fill="' + GOLD + '" stroke="' + NAVY + '" stroke-width="1"/></g>') +
         // mastro à direita, com bolinha dourada no topo
         '<line x1="104" y1="70" x2="104" y2="6" stroke="' + NAVY + '" stroke-width="5.4" stroke-linecap="round"/>' +
         '<line x1="104" y1="70" x2="104" y2="6" stroke="' + MAST + '" stroke-width="2.6" stroke-linecap="round"/>' +
@@ -316,13 +349,14 @@
           '<path d="M19 62 Q4 56 7 36 Q8 27 14 24" fill="none" stroke="' + NAVY + '" stroke-width="9.4" stroke-linecap="round"/>' +
           '<path d="M19 62 Q4 56 7 36 Q8 27 14 24" fill="none" stroke="' + HULL + '" stroke-width="6" stroke-linecap="round"/>' +
           '<path d="M16 60.4 Q3 54 5.6 36" fill="none" stroke="' + GOLD + '" stroke-width="1.3" stroke-linecap="round"/>' +
-          '<path d="M11.4 15 Q14.6 8.4 18.6 11.8 Q16 11.8 16.4 16 Q13.6 13.8 11.4 18 Z" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width="1" stroke-linejoin="round"/>' +
+          '<path class="argo-mascot-mane" d="M11.4 15 Q14.6 8.4 18.6 11.8 Q16 11.8 16.4 16 Q13.6 13.8 11.4 18 Z" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width="1" stroke-linejoin="round"/>' +
           '<path d="M13.6 14.8 L14.6 10 L18.4 14 Z" fill="' + HULL + '" stroke="' + NAVY + '" stroke-width="1.3" stroke-linejoin="round"/>' +
           '<ellipse cx="7.4" cy="23.4" rx="4.4" ry="3.3" fill="' + HULL_LT + '" stroke="' + NAVY + '" stroke-width="1.8"/>' +
           '<circle cx="12.4" cy="20" r="6.4" fill="' + HULL + '" stroke="' + NAVY + '" stroke-width="2"/>' +
           '<ellipse cx="8.2" cy="23.6" rx="3.6" ry="2.6" fill="' + HULL_LT + '"/>' +
           '<circle cx="5.8" cy="22.8" r=".8" fill="' + NAVY + '"/>' +
-          '<circle cx="13.4" cy="18.4" r="2" fill="' + NAVY + '"/><circle cx="14" cy="17.7" r=".75" fill="#fff"/>' +
+          '<g class="argo-mascot-seye"><circle cx="13.4" cy="18.4" r="2" fill="' + NAVY + '"/><circle cx="14" cy="17.7" r=".75" fill="#fff"/></g>' +
+          (compact ? '' : '<circle class="argo-fx argo-mascot-bubble" style="animation-delay:.5s" cx="3.4" cy="21" r="1" fill="#fff" fill-opacity=".8" stroke="#BFE9F7" stroke-width=".5"/><circle class="argo-fx argo-mascot-bubble" style="animation-delay:1.5s" cx="1.8" cy="19" r=".7" fill="#fff" fill-opacity=".8" stroke="#BFE9F7" stroke-width=".5"/>') +
           '<ellipse cx="14.6" cy="22.4" rx="2" ry="1.2" fill="' + BLUSH + '" opacity=".75"/>' +
           '</g>' +
           // popa em voluta dourada
@@ -374,6 +408,15 @@
         '<g class="argo-fx">' + [[26, 103, 1.5, 0], [52, 106, 1.2, .9], [80, 104, 1.6, 1.7], [106, 106, 1.3, .4]].map(function (b) {
           return '<circle class="argo-mascot-bubble" style="animation-delay:' + b[3] + 's" cx="' + b[0] + '" cy="' + b[1] + '" r="' + b[2] + '" fill="#fff" fill-opacity=".75" stroke="#BFE9F7" stroke-width=".6"/>';
         }).join('') + '</g>' +
+        // espuma na proa, rastro na popa e brilhos na água: o barco parece mesmo navegar
+        '<g class="argo-fx">' + [[10, 106, 2.2, 0], [17, 107, 1.7, .8], [13, 105, 1.3, 1.6]].map(function (f) {
+          return '<circle class="argo-mascot-foam" style="animation-delay:' + f[3] + 's" cx="' + f[0] + '" cy="' + f[1] + '" r="' + f[2] + '" fill="#fff" stroke="#BFE9F7" stroke-width=".6"/>';
+        }).join('') +
+        '<path class="argo-mascot-wake" d="M117 108.4 h7" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>' +
+        '<path class="argo-mascot-wake" style="animation-delay:1.2s" d="M115 111.6 h9" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/>' +
+        [[30, 109.4, 0], [78, 111, 1.1], [106, 108.6, .6]].map(function (g) {
+          return '<g transform="translate(' + g[0] + ' ' + g[1] + ')"><path class="argo-mascot-spark2" style="animation-delay:' + g[2] + 's" d="M0 -3.4 Q.5 -.5 3.4 0 Q.5 .5 0 3.4 Q-.5 .5 -3.4 0 Q-.5 -.5 0 -3.4 Z" fill="#fff"/></g>';
+        }).join('') + '</g>' +
         // bandeirinha de ponta, balançando
         '<g class="argo-mascot-flag">' +
           '<path d="M106 3 H126 L121.5 8.5 L126 14 H106 Z" fill="' + accent + '" stroke="' + NAVY + '" stroke-width="1.8" stroke-linejoin="round"/>' +
@@ -393,7 +436,7 @@
   // ---------------------------------------------------------------------
   function miniSVG(mood, size, accent, flagSymbol) {
     mascotUid += 1;
-    var hid = 'argoMini' + mascotUid + 'H', fid = 'argoMini' + mascotUid + 'F';
+    var hid = 'argoMini' + mascotUid + 'H', fid = 'argoMini' + mascotUid + 'F', gid = 'argoMini' + mascotUid + 'G';
     var INK = '#5A3118', NAVY = '#0B2230', GOLD = '#F6BE3A', GOLD_DK = '#B07A12', EYE = '#3B2314';
     var HULL_D = 'M9 57 Q36 71 65 71 Q94 71 121 55 Q121 90 98 105 Q86 111 65 111 Q44 111 32 105 Q9 90 9 57 Z';
     var mouth = {
@@ -423,6 +466,7 @@
       '" viewBox="0 0 130 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">' +
         '<defs>' +
           '<linearGradient id="' + hid + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3D93AD"/><stop offset="50%" stop-color="#1F5F78"/><stop offset="100%" stop-color="#0F3447"/></linearGradient>' +
+          '<linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fff" stop-opacity=".38"/><stop offset="45%" stop-color="#fff" stop-opacity=".07"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></linearGradient>' +
           '<radialGradient id="' + fid + '" cx=".36" cy=".3" r=".85"><stop offset="0%" stop-color="#EBBC8F"/><stop offset="60%" stop-color="#D9A474"/><stop offset="100%" stop-color="#BC8758"/></radialGradient>' +
         '</defs>' +
         '<g class="argo-mascot-rock">' +
@@ -441,13 +485,17 @@
             '<circle cx="41" cy="46" r="8.6" fill="#8FE9FF" fill-opacity=".28" stroke="#2A2A33" stroke-width="2.6"/>' +
             '<circle cx="59" cy="46" r="8.6" fill="#8FE9FF" fill-opacity=".28" stroke="#2A2A33" stroke-width="2.6"/>' +
             '<path d="M49.6 45 H50.4" stroke="#2A2A33" stroke-width="2.6" stroke-linecap="round"/>' +
+            '<path d="M35 41.4 L39 40 M53 41.4 L57 40" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".6"/>' +
             '<ellipse cx="31" cy="55" rx="3.6" ry="2.4" fill="#FF8FA3" opacity=".6"/><ellipse cx="69" cy="55" rx="3.6" ry="2.4" fill="#FF8FA3" opacity=".6"/>' +
             mouth +
           '</g>' +
           // casco: azul-marinho com friso dourado e 3 escudos
           '<path d="' + HULL_D + '" fill="url(#' + hid + ')" stroke="' + NAVY + '" stroke-width="4.4" stroke-linejoin="round"/>' +
+          '<path d="' + HULL_D + '" fill="url(#' + gid + ')"/>' +
+          '<path d="M121 57 Q121 90 98 105" fill="none" stroke="#BFF3F2" stroke-width="2.2" stroke-linecap="round" opacity=".5"/>' +
           '<path d="M9 57 Q36 71 65 71 Q94 71 121 55" fill="none" stroke="' + NAVY + '" stroke-width="9" stroke-linecap="round"/>' +
           '<path d="M9 57 Q36 71 65 71 Q94 71 121 55" fill="none" stroke="' + GOLD + '" stroke-width="5.4" stroke-linecap="round"/>' +
+          '<path d="M16 62 Q38 75 65 75 Q92 75 114 61" fill="none" stroke="#5EE6FF" stroke-width="2" stroke-linecap="round" opacity=".9"/>' +
           [34, 65, 96].map(function (x) {
             return '<circle cx="' + x + '" cy="91" r="10.5" fill="#2A8A86" stroke="' + NAVY + '" stroke-width="3"/><circle cx="' + x + '" cy="91" r="3.6" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width="1"/>';
           }).join('') +
@@ -490,6 +538,25 @@
     }
   }
 
+  // Respingos de água na linha d'água (toque/comemoração). Só no desenho completo.
+  function splash(svg, n) {
+    if (!svg || calmMotion()) return;
+    for (var i = 0; i < n; i++) {
+      var c = document.createElementNS(NS_SVG, 'circle');
+      c.setAttribute('cx', (22 + Math.random() * 86).toFixed(1));
+      c.setAttribute('cy', '107');
+      c.setAttribute('r', (1 + Math.random() * 1.3).toFixed(1));
+      c.setAttribute('fill', '#fff'); c.setAttribute('fill-opacity', '.92');
+      c.setAttribute('stroke', '#8AD3F2'); c.setAttribute('stroke-width', '.7');
+      c.setAttribute('class', 'argo-mascot-drop');
+      c.style.setProperty('--dx', ((Math.random() - 0.5) * 24).toFixed(1) + 'px');
+      c.style.setProperty('--dy', (-(12 + Math.random() * 11)).toFixed(1) + 'px');
+      c.style.animationDelay = (i * 0.05).toFixed(2) + 's';
+      svg.appendChild(c);
+      (function (el) { setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 1300); })(c);
+    }
+  }
+
   // Reação do mascote: 'hop' (pulinho + estrelas), 'wink' (piscadinha) ou 'love' (corações).
   // Cinco toques seguidos viram uma voltinha completa do barco (e dispara o evento
   // "argo-mascot:easter" no document, caso o app queira dar um prêmio).
@@ -504,6 +571,7 @@
     if (kind === 'wink') { svg.classList.add('argo-mascot-winking'); setTimeout(function () { svg.classList.remove('argo-mascot-winking'); }, 900); }
     else if (!compactIcon && kind === 'love') burst(svg, '♥', '#E5486B', 3);
     else if (!compactIcon) burst(svg, '★', '#F2B84B', 3);
+    if (!compactIcon && kind !== 'wink') splash(svg, 5);
     var now = Date.now();
     pokeTimes.push(now);
     pokeTimes = pokeTimes.filter(function (t) { return now - t < 3500; });
@@ -526,7 +594,7 @@
     Object.keys(REACT_CLASS).forEach(function (k) { svg.classList.remove(REACT_CLASS[k]); });
     void svg.getBoundingClientRect(); svg.classList.add(cls);
     setTimeout(function () { svg.classList.remove(cls); }, 900);
-    if (kind === 'cheer' && !svg.classList.contains('argo-mascot-lite')) burst(svg, '★', '#F2B84B', 4);
+    if (kind === 'cheer' && !svg.classList.contains('argo-mascot-lite')) { burst(svg, '★', '#F2B84B', 4); splash(svg, 7); }
   }
   // Mascotes que a pessoa está vendo agora (dentro da janela). `fullOnly` ignora os minis.
   function visibleMascots(fullOnly) {
@@ -576,12 +644,15 @@
       var els = document.querySelectorAll('.argo-mascot-icon:not(.argo-mascot-lite) .argo-mascot-look');
       for (var i = 0; i < els.length; i++) {
         var el = els[i];
-        if (mx === null) { el.style.transform = ''; continue; }
         var svg = el.ownerSVGElement; if (!svg) continue;
+        var am = svg.querySelector('.argo-mascot-aim');
+        if (mx === null) { el.style.transform = ''; if (am) am.style.transform = ''; continue; }
         var r = svg.getBoundingClientRect(); if (!r.width) continue;
         var dx = mx - (r.left + r.width * 0.32), dy = my - (r.top + r.height * 0.33);
         var d = Math.sqrt(dx * dx + dy * dy) || 1, k = Math.min(1, d / 150);
         el.style.transform = 'translate(' + (dx / d * k * 2.2).toFixed(2) + 'px,' + (dy / d * k * 1.6).toFixed(2) + 'px)';
+        // a cabeça também vira um pouquinho para o cursor (olhos e cabeça juntos dão vida)
+        if (am) am.style.transform = 'rotate(' + (dx / d * k * 3.4).toFixed(2) + 'deg) translate(' + (dx / d * k * 0.9).toFixed(2) + 'px,' + (dy / d * k * 0.5).toFixed(2) + 'px)';
       }
     }
     function aim(x, y) { mx = x; my = y; if (!raf) raf = window.requestAnimationFrame(apply); }
@@ -626,10 +697,13 @@
     // escondida, com o mascote dormindo ou enquanto a pessoa está mexendo.
     function glance(svg) {
       var eyes = svg.querySelector('.argo-mascot-look'); if (!eyes) return;
-      var side = Math.random() < 0.5 ? -1 : 1;
-      eyes.style.transform = 'translate(' + (side * 2.2) + 'px,-.6px)';
-      setTimeout(function () { eyes.style.transform = 'translate(' + (-side * 2.2) + 'px,-.2px)'; }, 650);
-      setTimeout(function () { if (mx === null) eyes.style.transform = ''; }, 1300);
+      var side = Math.random() < 0.5 ? -1 : 1, up = Math.random() < 0.4;
+      var head = svg.querySelector('.argo-mascot-aim');
+      // às vezes olha para cima (a vela, a lanterna), às vezes de um lado a outro
+      eyes.style.transform = 'translate(' + (up ? 0 : side * 2.2) + 'px,' + (up ? -1.9 : -0.6) + 'px)';
+      if (head) head.style.transform = 'rotate(' + (up ? -2.2 : side * 3) + 'deg)';
+      setTimeout(function () { eyes.style.transform = 'translate(' + (up ? 1.8 : -side * 2.2) + 'px,' + (up ? -1.6 : -0.2) + 'px)'; if (head && !up) head.style.transform = 'rotate(' + (-side * 2.4) + 'deg)'; }, 700);
+      setTimeout(function () { if (mx === null) { eyes.style.transform = ''; if (head) head.style.transform = ''; } }, 1500);
     }
     function idleTick() {
       setTimeout(idleTick, 9000 + Math.random() * 11000);
@@ -786,6 +860,34 @@
       '.argo-mascot-m-error .argo-mascot-rock{animation-duration:.9s}' +
       // sucesso: balança mais animado
       '.argo-mascot-m-success .argo-mascot-rock{animation-duration:2.2s}.argo-mascot-m-success .argo-mascot-bob{animation-duration:1.6s}' +
+      // ---- Argo 2.0: lanterna, luneta, constelação que se desenha, espuma, estrela cadente ----
+      '.argo-mascot-aim{transform-origin:42px 54px;transition:transform .22s ease-out}' +
+      '.argo-mascot-seye,.argo-mascot-mane,.argo-mascot-spark2,.argo-mascot-foam,.argo-mascot-drop,.argo-mascot-lglow{transform-box:fill-box;transform-origin:center}' +
+      '.argo-mascot-seye{animation:argoMascotBlink 4.6s infinite 1.2s}' +
+      '.argo-mascot-mane{transform-origin:25% 100%;animation:argoMascotMane 2.1s ease-in-out infinite}' +
+      '@keyframes argoMascotMane{0%,100%{transform:rotate(-5deg) scaleY(1)}50%{transform:rotate(7deg) scaleY(1.06)}}' +
+      '.argo-mascot-constel{stroke-dasharray:1;animation:argoMascotConstel 8s ease-in-out infinite}' +
+      '@keyframes argoMascotConstel{0%{stroke-dashoffset:1}22%,78%{stroke-dashoffset:0}100%{stroke-dashoffset:-1}}' +
+      '.argo-mascot-lantern{transform-origin:112px 15.6px;animation:argoMascotLantern 3.1s ease-in-out infinite}' +
+      '@keyframes argoMascotLantern{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}' +
+      '.argo-mascot-lglow{animation:argoMascotLglow 2.2s ease-in-out infinite}' +
+      '@keyframes argoMascotLglow{0%,100%{opacity:.5;transform:scale(.9)}45%{opacity:1;transform:scale(1.12)}60%{opacity:.78;transform:scale(1.02)}}' +
+      '.argo-mascot-m-error .argo-mascot-lglow{animation-duration:.45s}.argo-mascot-m-success .argo-mascot-lantern{animation-duration:1.5s}' +
+      '.argo-mascot-scan{transform-origin:49.5px 38px;animation:argoMascotScan 3.4s ease-in-out infinite}' +
+      '@keyframes argoMascotScan{0%,100%{transform:rotate(-3.5deg)}50%{transform:rotate(3.5deg)}}' +
+      '.argo-mascot-shoot{animation:argoMascotShoot 9s ease-in infinite 3s;opacity:0}' +
+      '@keyframes argoMascotShoot{0%{transform:translate(20px,-3px);opacity:0}1.5%{opacity:1}7%{transform:translate(72px,13px);opacity:0}100%{transform:translate(72px,13px);opacity:0}}' +
+      '.argo-mascot-foam{animation:argoMascotFoam 2.4s ease-out infinite;opacity:0}' +
+      '@keyframes argoMascotFoam{0%{transform:translate(0,2px) scale(.4);opacity:0}25%{opacity:.95}100%{transform:translate(-5px,-8px) scale(1.25);opacity:0}}' +
+      '.argo-mascot-wake{animation:argoMascotWake 2.6s ease-out infinite;opacity:0}' +
+      '@keyframes argoMascotWake{0%{transform:translateX(-4px);opacity:0}25%{opacity:.85}100%{transform:translateX(12px);opacity:0}}' +
+      '.argo-mascot-spark2{animation:argoMascotTwinkle2 2.2s ease-in-out infinite;opacity:0;transform-box:fill-box;transform-origin:center}' +
+      '@keyframes argoMascotTwinkle2{0%,100%{transform:scale(0) rotate(0);opacity:0}50%{transform:scale(1) rotate(30deg);opacity:1}}' +
+      '.argo-mascot-drop{animation:argoMascotDrop .9s cubic-bezier(.25,.7,.4,1) both;pointer-events:none}' +
+      '@keyframes argoMascotDrop{0%{transform:translate(0,0) scale(.6);opacity:0}15%{opacity:1}50%{transform:translate(calc(var(--dx,0px)*.7),var(--dy,-16px)) scale(1);opacity:1}100%{transform:translate(var(--dx,0px),5px) scale(.8);opacity:0}}' +
+      '.argo-mascot-icon:not(.argo-mascot-lite):hover .argo-mascot-lantern{animation-duration:1.3s}' +
+      '.argo-mascot-gust .argo-mascot-icon:not(.argo-mascot-lite) .argo-mascot-lantern{animation-duration:.9s}' +
+      '.argo-mascot-sleepy .argo-mascot-m-info .argo-mascot-lglow{opacity:.3;animation:none}' +
       // ícones pequenos (chat/listas): só o essencial, bem leve
       '.argo-mascot-lite .argo-fx,.argo-mascot-lite .argo-mascot-halo,.argo-mascot-lite .argo-mascot-bubble,.argo-mascot-lite .argo-mascot-glow{display:none}' +
       '.argo-mascot-lite .argo-mascot-breathe,.argo-mascot-lite .argo-mascot-head,.argo-mascot-lite .argo-mascot-hair,.argo-mascot-lite .argo-mascot-prow,.argo-mascot-lite .argo-mascot-stern,.argo-mascot-lite .argo-mascot-sail,.argo-mascot-lite .argo-mascot-star,.argo-mascot-lite .argo-mascot-chip,.argo-mascot-lite .argo-mascot-ledstrip,.argo-mascot-lite .argo-mascot-led,.argo-mascot-lite .argo-mascot-boss,.argo-mascot-lite .argo-mascot-swell2,.argo-mascot-lite .argo-mascot-oar{animation:none}' +
