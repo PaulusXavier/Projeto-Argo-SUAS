@@ -9023,13 +9023,17 @@ function render() {
         crossHtml = `<div style="text-align:center; padding:0 1.5rem 2.5rem;"><button type="button" class="btn-tech btn-primary" onclick="argoSearchAllCategories()">Buscar em todas as categorias (${cross} ${cross === 1 ? 'resultado' : 'resultados'})</button></div>`;
       }
     }
+    // Mascote × IA: busca sem resultado → o Argo oferece procurar o assunto por conta própria (só o termo digitado, já filtrado contra dado pessoal).
+    const iaVazioHtml = (sq && String(sq).trim().length >= 3 && typeof argoMascoteAsk === 'function' && !isRecentTab)
+      ? `<div style="text-align:center; padding:0 1.5rem 2.5rem;"><button type="button" class="btn-tech btn-secondary argo-vazio-ia" data-q="${escapeHtml(String(sq).trim().slice(0, 80))}" onclick="argoMascoteAsk(argoMascotePerguntaVazio(this.dataset.q))">✨ Pedir ao Argo que procure “${escapeHtml(String(sq).trim().slice(0, 40))}”</button></div>`
+      : '';
     grid.innerHTML = `<div class="empty-state" style="padding:0">${
       (typeof ArgoMascot !== 'undefined')
         ? ((isRecentTab && !sq)
             ? ArgoMascot.emptyStateHTML('Nenhuma unidade acessada ainda', { type: 'info', hint: 'As últimas 6 unidades que você abrir aparecem aqui, da mais recente para a mais antiga.' })
             : ArgoMascot.emptyStateHTML('Nenhum registro encontrado', { type: 'notfound', hint: 'Tente ajustar os termos da busca ou selecionar outra categoria.' }))
         : '<strong style="display:block;padding:3.5rem 1.5rem">Nenhum registro encontrado</strong>'
-    }${crossHtml}</div>`;
+    }${crossHtml}${iaVazioHtml}</div>`;
     return;
   }
 
@@ -10553,11 +10557,16 @@ function getUnitTelHref(i) {
 function renderCardQuickActions(i) {
   const tel = getUnitTelHref(i);
   const hasAddr = !!stripHtml(i.address || '').trim();
-  if (!tel && !hasAddr) return '';
   const stop = 'onclick="event.stopPropagation()"';
+  // Mascote × IA: pede ao Argo (Paulus) que explique a unidade (quando encaminhar, o que levar). Só a pergunta sai; a ficha pública vai como contexto.
+  const ia = (typeof argoCardAsk === 'function')
+    ? `<button type="button" class="card-quick-btn card-quick-ia" onclick="event.stopPropagation();argoCardAsk('${escapeHtml(String(i.id))}')" title="Pedir ao Argo que explique esta unidade: quando encaminhar e o que levar">✨ Perguntar ao Argo</button>`
+    : '';
+  if (!tel && !hasAddr && !ia) return '';
   return `<div class="card-quick">
     ${tel ? `<a class="card-quick-btn" href="${tel}" ${stop} title="Ligar para esta unidade">${ICONS.phone} Ligar</a>` : ''}
     ${hasAddr ? `<a class="card-quick-btn" href="${getUnitMapLink(i, true)}" target="_blank" rel="noopener noreferrer" ${stop} title="Abrir a rota até esta unidade no Google Maps">${ICONS.map} Rota</a>` : ''}
+    ${ia}
   </div>`;
 }
 
@@ -17842,6 +17851,11 @@ function argoAviso(msg, type, extra) {
   if (typeof ArgoMascot !== 'undefined') {
     const opts = Object.assign({ type: type || 'info' }, extra || {});
     if (!opts.duration && String(msg).length > 90) opts.duration = 9000;
+    // Mascote × IA: erro sem ação própria ganha "Perguntar ao Argo" (ele explica o que pode ser e o que fazer).
+    if (opts.type === 'error' && !opts.onAction && typeof argoMascotePerguntaErro === 'function' && typeof argoMascoteAsk === 'function') {
+      opts.actionLabel = 'Perguntar ao Argo';
+      opts.onAction = () => argoMascoteErroAsk(String(msg));
+    }
     ArgoMascot.notify(msg, opts);
   } else {
     alert(msg);
@@ -18451,6 +18465,13 @@ function argoAssistantDefaultQuickActions() {
     ];
   }
   if (cat !== 'all') list.push({ label: 'Dicas desta aba', run: () => argoAssistantAskInline('dicas') });
+  // Mascote × IA: com a IA ligada, também oferece que o Paulus explique a aba aberta (para que serve, quando usar).
+  try {
+    const B = argoBrain(), tab = argoActiveTabInfo();
+    if (cat !== 'all' && B && B.aiOn() && navigator.onLine !== false && typeof argoMascotePerguntaAba === 'function') {
+      list.push({ label: '✨ Explicar esta aba', run: () => argoMascoteAsk(argoMascotePerguntaAba(tab.name), { forceAI: true }) });
+    }
+  } catch (e) { /* atalho opcional */ }
   list.push(
     { label: 'Buscar equipamento', run: () => argoAssistantFocusSearch(), reply: 'Pronto! O cursor já está na busca 🔍', mood: 'success' },
     { label: 'Notícias', run: () => argoAssistantGoTo('noticias'), reply: 'Abri as Notícias.', mood: 'success' },
@@ -30737,4 +30758,148 @@ function argoAskAI(rawText, tab, fallbackResult) {
     const btn = document.getElementById(dx < 0 ? 'tabFocusNext' : 'tabFocusPrev');
     if (btn) btn.click();
   }, { passive: true });
+})();
+
+
+/* ============================================================
+   MASCOTE × IA — pontos de contato fora do painel de conversa
+   O painel do Argo já fala com o Paulus (IA). Aqui o mascote passa a oferecer a IA
+   nos lugares onde a dúvida nasce, sem sair do que a pessoa está fazendo:
+     · botão "Perguntar ao Argo" em cada card de unidade;
+     · busca sem resultado → "Pedir ao Argo que procure …";
+     · aviso de erro → "Perguntar ao Argo" (o que pode ser e o que fazer);
+     · texto selecionado na tela → balão "Perguntar ao Argo" (explica em linguagem simples);
+     · "✨ Explicar esta aba" nos atalhos do painel.
+   Nenhum desses pontos envia nada sozinho: cada um abre o painel e faz UMA pergunta, que passa
+   pelo mesmo caminho de sempre (filtro de dado pessoal, socorro, limite de uso, IA em streaming).
+   Fora do que o diretório e as normas já mostram, nada sai do aparelho: não há leitura de campo
+   preenchido, anotação, registro de atendimento nem agenda. A seleção de texto fica desligada
+   nessas áreas (e em qualquer campo de digitação) e em abas com registro de atendimento.
+   ============================================================ */
+
+/* MASCOTE-IA:início — funções puras (testadas em scripts/teste-mascote-ia.mjs) */
+// Abas em que o balão de seleção NÃO aparece: têm registro de atendimento, anotações, agenda ou arquivos do usuário.
+function argoMascoteAbaPermitida(cat) {
+  return ['cas', 'cras', 'anotacoes', 'agenda', 'ferramentas', 'criptografia', 'pdftools'].indexOf(String(cat || '')) < 0;
+}
+// Espaços em um só, sem caracteres de controle, cortado em `max` (com reticências).
+function argoMascoteLimpar(raw, max) {
+  let t = String(raw == null ? '' : raw).replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim();
+  if (max && t.length > max) t = t.slice(0, max - 1).replace(/\s+\S*$/, '').replace(/[\s,;:.\-–—]+$/, '') + '…';
+  return t;
+}
+// Texto selecionado → texto para perguntar, ou '' se não serve (curto demais, sem palavras, só número/símbolo, ou longo demais).
+function argoMascoteTextoSelecao(raw) {
+  const t = argoMascoteLimpar(raw, 0);
+  if (t.length < 12 || t.length > 300) return '';
+  const palavras = t.split(' ').filter(w => /[A-Za-zÀ-ÿ]{2,}/.test(w));
+  if (palavras.length < 3) return '';
+  return t.replace(/[«»]/g, '"');
+}
+function argoMascotePerguntaSelecao(txt) {
+  return 'Explique em linguagem simples, para quem trabalha na rede: «' + argoMascoteLimpar(txt, 300) + '»';
+}
+function argoMascotePerguntaUnidade(nome) {
+  return 'Me explique o que faz ' + argoMascoteLimpar(nome, 120) + ', quando encaminhar para lá e o que a pessoa precisa levar.';
+}
+function argoMascotePerguntaVazio(termo) {
+  return 'Não achei «' + argoMascoteLimpar(termo, 80).replace(/[«»]/g, '"') + '» no diretório. Qual serviço da rede atende isso?';
+}
+function argoMascotePerguntaAba(nome) {
+  const n = argoMascoteLimpar(nome, 40);
+  return n ? 'Explique a aba "' + n + '" do Argo SUAS: para que serve e quando usar no meu trabalho.' : 'Explique esta aba do Argo SUAS: para que serve e quando usar no meu trabalho.';
+}
+function argoMascotePerguntaErro(msg, aba) {
+  const m = argoMascoteLimpar(msg, 160).replace(/"/g, "'");
+  const onde = aba ? ' na aba "' + argoMascoteLimpar(aba, 40) + '"' : '';
+  return m
+    ? 'Apareceu este aviso de erro' + onde + ' do app: "' + m + '". O que pode ser e o que eu faço?'
+    : 'Apareceu um aviso de erro' + onde + ' do app. O que pode ser e o que eu faço?';
+}
+/* MASCOTE-IA:fim */
+
+// Abre o painel do Argo e faz a pergunta. { forceAI: true } pula as respostas prontas e vai direto à IA.
+// Devolve false se o painel ainda não existe (ou está respondendo outra pergunta: aí o painel só abre).
+function argoMascoteAsk(text, opts) {
+  const ctrl = (typeof argoAssistantCtrl !== 'undefined') ? argoAssistantCtrl : null;
+  const q = String(text || '').trim();
+  if (!ctrl || !q) return false;
+  const root = document.getElementById('appRoot');
+  if (root && root.dataset.locked === 'true') return false;   // app trancado: nada de IA
+  try { ctrl.open(); ctrl.ask(q, opts && opts.forceAI ? { forceAI: true } : null); return true; } catch (e) { return false; }
+}
+
+// Card de unidade: pergunta sobre a unidade (o nome basta; a ficha pública vem do diretório).
+function argoCardAsk(id) {
+  const u = (typeof DATA !== 'undefined' ? DATA : []).find(x => String(x.id) === String(id));
+  if (!u) return;
+  argoMascoteAsk(argoMascotePerguntaUnidade(u.name || u.fullName || ''), { forceAI: true });
+}
+
+// Aviso de erro: manda a mensagem do aviso, a menos que ela traga dado pessoal (ex.: nome de arquivo com nome de pessoa).
+function argoMascoteErroAsk(msg) {
+  const aba = argoActiveTabInfo().name;
+  let q = argoMascotePerguntaErro(msg, aba);
+  try { const B = argoBrain(); if (B && B.piiBlock(q)) q = argoMascotePerguntaErro('', aba); } catch (e) { /* sem filtro: manda só o genérico */ }
+  argoMascoteAsk(q, { forceAI: true });
+}
+
+// Balão "Perguntar ao Argo" sobre o texto selecionado.
+(function initMascoteIASelecao() {
+  if (typeof document === 'undefined' || typeof window.getSelection !== 'function') return;
+  const BLOQ = 'input, textarea, select, [contenteditable], #argoAssistantRoot, .argo-greeting-overlay, .user-data-fields, .notes-box, ' +
+    '.second-unit-box, .cas-card, .cras-card, .tools-card, #notesRoot, [data-no-ia], .argo-selia';
+  let pop = null, timer = 0, atual = '';
+
+  function esconder() { if (pop) pop.hidden = true; atual = ''; }
+  function elDe(n) { return n ? (n.nodeType === 1 ? n : n.parentElement) : null; }
+  function ler() {
+    const ctrl = (typeof argoAssistantCtrl !== 'undefined') ? argoAssistantCtrl : null;
+    if (!ctrl) return null;
+    const root = document.getElementById('appRoot');
+    if (root && root.dataset.locked === 'true') return null;
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
+    const range = sel.getRangeAt(0);
+    const host = elDe(range.commonAncestorContainer);
+    if (!host || !host.closest('#mainContent') || host.closest(BLOQ)) return null;
+    for (const n of [sel.anchorNode, sel.focusNode]) { const e = elDe(n); if (!e || e.closest(BLOQ)) return null; }
+    if (!argoMascoteAbaPermitida(argoActiveTabInfo().cat)) return null;
+    const texto = argoMascoteTextoSelecao(String(sel));
+    if (!texto) return null;
+    try { const B = argoBrain(); if (B && B.piiBlock(texto)) return null; } catch (e) { return null; }
+    const r = range.getBoundingClientRect();
+    if (!r || (!r.width && !r.height)) return null;
+    return { texto, r };
+  }
+  function montar() {
+    pop = document.createElement('button');
+    pop.type = 'button'; pop.className = 'argo-selia'; pop.hidden = true;
+    pop.textContent = '✨ Perguntar ao Argo';
+    pop.setAttribute('aria-label', 'Perguntar ao Argo sobre o texto selecionado');
+    pop.addEventListener('mousedown', e => e.preventDefault());   // clicar não desfaz a seleção antes da hora
+    pop.addEventListener('click', e => {
+      e.stopPropagation();                                         // o clique fora do painel o fecharia
+      const t = atual; esconder();
+      try { window.getSelection().removeAllRanges(); } catch (err) { /* ignora */ }
+      if (t) argoMascoteAsk(argoMascotePerguntaSelecao(t), { forceAI: true });
+    });
+    document.body.appendChild(pop);
+  }
+  function atualizar() {
+    const got = ler();
+    if (!got) { esconder(); return; }
+    if (!pop) montar();
+    atual = got.texto;
+    pop.hidden = false;
+    const w = pop.offsetWidth || 150, h = pop.offsetHeight || 36;
+    const left = Math.max(8, Math.min(window.innerWidth - w - 8, got.r.left + got.r.width / 2 - w / 2));
+    // embaixo da seleção (em celular o menu do sistema aparece em cima); se não couber, em cima
+    const top = got.r.bottom + 10 + h > window.innerHeight ? Math.max(8, got.r.top - h - 10) : got.r.bottom + 10;
+    pop.style.left = left + 'px'; pop.style.top = top + 'px';
+  }
+  document.addEventListener('selectionchange', () => { clearTimeout(timer); timer = setTimeout(atualizar, 350); });
+  window.addEventListener('scroll', esconder, { passive: true, capture: true });
+  window.addEventListener('resize', esconder);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') esconder(); });
 })();
