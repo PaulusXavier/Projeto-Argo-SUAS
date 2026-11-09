@@ -7938,6 +7938,7 @@ const TOOLS_DESC = {
   notas: 'Anotações e listas rápidas, com exportação em PDF/TXT'
 };
 let toolsNavApi = null;
+let toolsEscHandler = null;
 // Abre UMA ferramenta (modo foco) e devolve o cartão; null se a aba ainda não foi desenhada.
 function toolsOpenTool(id) { return toolsNavApi ? toolsNavApi.open(id) : null; }
 function toolsHubHtml() { return '<div id="toolsHub" class="tools-hub" aria-label="Todas as ferramentas"></div>'; }
@@ -8177,12 +8178,15 @@ function initToolsNav() {
     const b = e.target.closest('[data-vt]'); if (b) setMode(b.dataset.vt);
   });
   // Esc volta ao painel (a menos que a pessoa esteja digitando ou a visão ampliada esteja aberta)
-  document.addEventListener('keydown', e => {
+  if (toolsEscHandler) document.removeEventListener('keydown', toolsEscHandler, true);   // a aba é redesenhada: não acumula ouvintes
+  toolsEscHandler = e => {
     if (e.key !== 'Escape' || TOOLS_STATE.view.mode !== 'focus' || !document.body.contains(root)) return;
-    if (document.body.classList.contains('card-focus') || document.body.classList.contains('tab-focus')) return;
+    if (document.body.classList.contains('card-focus')) return;
     const a = document.activeElement; if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+    e.stopImmediatePropagation();   // o 1º Esc só volta ao painel; o 2º fecha a aba em tela cheia
     closeTool();
-  });
+  };
+  document.addEventListener('keydown', toolsEscHandler, true);
 
   let t = null;
   $('toolsFind').addEventListener('input', e => {
