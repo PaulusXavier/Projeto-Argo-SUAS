@@ -3053,7 +3053,7 @@ function renderRegistroTile(l) {
     else meta = 'Link externo';
   }
   return `
-    <a class="cras-rma-tile" href="${url}" target="_blank" rel="noopener noreferrer">
+    <a class="cras-rma-tile" href="${url}" target="_blank" rel="noopener noreferrer" data-atalho="${escapeHtml(l.label)}">
       <span class="cras-rma-icon" aria-hidden="true">${ICONS[l.icon] || ICONS.form}</span>
       <span class="cras-rma-text">
         <span class="cras-rma-title">${l.label}</span>
@@ -3097,7 +3097,7 @@ function renderCasCard(i, query) {
 
   function linkRow(label, url, icon, extra) {
     return `
-      <a class="cas-link-item" href="${url}" target="_blank" rel="noopener noreferrer">
+      <a class="cas-link-item" href="${url}" target="_blank" rel="noopener noreferrer" data-atalho="${escapeHtml(label)}">
         ${icon}
         <span class="cas-link-label">${label}${extra ? `<small>${extra}</small>` : ''}</span>
         <span class="cas-link-arrow" aria-hidden="true">${ICONS.external}</span>
@@ -3144,6 +3144,7 @@ function renderCasCard(i, query) {
 
   const st = casOpenStatus(i.schedule);
   const statusHtml = st ? `<span class="cas-status ${st.open ? 'is-open' : 'is-closed'}" role="status"><span class="cas-status-dot" aria-hidden="true"></span>${st.text}</span>` : '';
+  const favHtml = q ? '' : atalhosUsadosHtml('cas', [].concat(i.systemLinks || [], i.adminLinks || [], i.driveLinks || [], i.mapLinks || []));
 
   const addr = String(i.address || '');
   const hasAddr = addr && !/^N\/?A/i.test(addr);
@@ -3196,6 +3197,7 @@ function renderCasCard(i, query) {
       </div>
       <div class="card-body">
         ${navHtml}
+        ${favHtml}
         ${secao('registros', `${ICONS.table} Registros e Planilhas (2026)`, registrosCorpo, false)}
         ${secao('atalhos', `${ICONS.folder} Atalhos`, atalhosCorpo, false)}
         ${secao('territorio', `${ICONS.map} Território`, territorioCorpo, false)}
@@ -3264,12 +3266,38 @@ function crasSalvarSecao(chave, fechada) {
   } catch (e) { /* sem armazenamento: a seção só não fica lembrada */ }
 }
 
+// "Mais usados": lembra, neste aparelho, os atalhos que a pessoa mais abre em cada painel
+// (CRAS / CAS) e mostra os 4 primeiros no topo. Só guarda o nome do atalho e a contagem.
+function atalhosUsadosLer(painel) {
+  try { return JSON.parse(localStorage.getItem('argo.atalhosUsados.' + painel) || '{}') || {}; } catch (e) { return {}; }
+}
+function atalhosUsadosRegistrar(painel, label) {
+  if (!label) return;
+  try {
+    const m = atalhosUsadosLer(painel);
+    const x = m[label] || { n: 0, t: 0 };
+    m[label] = { n: x.n + 1, t: Date.now() };
+    localStorage.setItem('argo.atalhosUsados.' + painel, JSON.stringify(m));
+  } catch (e) { /* sem armazenamento: só não fica lembrado */ }
+}
+function atalhosUsadosHtml(painel, links) {
+  const m = atalhosUsadosLer(painel);
+  const lista = (links || []).filter(l => l && l.label && m[l.label])
+    .sort((a, b) => (m[b.label].n - m[a.label].n) || (m[b.label].t - m[a.label].t))
+    .slice(0, 4);
+  if (!lista.length) return '';
+  return `<div class="cras-fav" role="group" aria-label="Atalhos mais usados neste aparelho">
+      <span class="cras-fav-title">⭐ Mais usados</span>
+      ${lista.map(l => `<a class="cras-fav-item" href="${l.url}" target="_blank" rel="noopener noreferrer" data-atalho="${escapeHtml(l.label)}">${ICONS[l.icon] || ICONS.form}<span>${escapeHtml(l.label)}</span></a>`).join('')}
+    </div>`;
+}
+
 function renderCrasCard(i, query) {
   const q = query || null; // consulta estruturada (argoParseQuery) ou null
 
   function linkRow(label, url, icon) {
     return `
-      <a class="cras-link-item" href="${url}" target="_blank" rel="noopener noreferrer">
+      <a class="cras-link-item" href="${url}" target="_blank" rel="noopener noreferrer" data-atalho="${escapeHtml(label)}">
         ${icon}
         <span>${label}</span>
         <span class="cras-link-arrow" aria-hidden="true">${ICONS.external}</span>
@@ -3343,6 +3371,15 @@ function renderCrasCard(i, query) {
   const volanteEmpty = !volanteRows ? `<tr><td colspan="2" style="color:var(--text-muted); text-align:center; padding:1.25rem;">Nenhum técnico encontrado.</td></tr>` : '';
 
   const hasTeam = (i.fixedTeam || []).length > 0 || (i.volanteTeam || []).length > 0;
+  const favHtml = q ? '' : atalhosUsadosHtml('cras', [].concat(i.rmaLinks || [], i.municipalLinks || [], i.federalLinks || [], i.driveLinks || []));
+  const st = casOpenStatus(i.schedule);
+  const statusHtml = st ? `<span class="cas-status ${st.open ? 'is-open' : 'is-closed'}" role="status"><span class="cas-status-dot" aria-hidden="true"></span>${st.text}</span>` : '';
+  const addrLimpo = String(i.address || '').replace(/\s*\(.*?\)\s*$/, '');
+  const addrActions = addrLimpo ? `
+          <div class="cas-addr-actions">
+            <a class="cas-mini-btn" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addrLimpo)}" target="_blank" rel="noopener noreferrer">${ICONS.map} Como chegar</a>
+            <button type="button" class="cas-mini-btn cas-copy-btn" data-copy="${escapeHtml(addrLimpo)}">${ICONS.copy} Copiar endereço</button>
+          </div>` : '';
 
   const teamSection = hasTeam ? `
         <div class="cras-lookup" role="search" aria-label="Buscar técnico por bairro">
@@ -3426,7 +3463,7 @@ function renderCrasCard(i, query) {
   }</nav>`;
 
   const infoCorpo = `
-        <div class="info-group"><span class="info-icon">${ICONS.map}</span><div><span class="label-tech">Localização</span>${i.address}</div></div>
+        <div class="info-group"><span class="info-icon">${ICONS.map}</span><div><span class="label-tech">Localização</span>${i.address}${addrActions}</div></div>
         <div class="info-group"><span class="info-icon">${ICONS.clock}</span><div><span class="label-tech">Disponibilidade</span>${i.hours}</div></div>
         <div class="info-group"><span class="info-icon">${ICONS.phone}</span><div><span class="label-tech">Contato Técnico</span>${phoneHtml}</div></div>
         <div class="desc-box">
@@ -3467,16 +3504,18 @@ function renderCrasCard(i, query) {
   return `
     <div class="tech-card cras-card">
       <div class="card-top">
-        <div style="display:flex; justify-content:space-between; align-items:start;">
+        <div style="display:flex; justify-content:space-between; align-items:start; gap:0.75rem; flex-wrap:wrap;">
           <div style="display:flex; align-items:center; gap:0.55rem;">
             <span class="cras-badge">${ICONS.building}</span>
             <h2 style="margin:0;">${i.name}</h2>
           </div>
+          ${statusHtml}
         </div>
         <span class="subtitle">🏢 Equipe Técnica e Atendimento CRAS · Sistemas Municipais, Federais e RMA</span>
       </div>
       <div class="card-body">
         ${navHtml}
+        ${favHtml}
         ${secao('rma', `${ICONS.barchart} Registro Mensal (RMA)`, rmaCorpo, false)}
         ${hasTeam ? secao('equipe', `${ICONS.building} Equipe Técnica`, equipeCorpo, false) : ''}
         ${secao('sistemas', `${ICONS.folder} Atalhos e Sistemas`, sistemasCorpo, false)}
@@ -16730,7 +16769,14 @@ document.getElementById('grid').addEventListener('click', (e) => {
   if (!sec.open) sec.open = true;
   sec.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
 });
-// Botão "Copiar endereço" do painel CAS.
+// Conta os atalhos abertos nos painéis CRAS e CAS (alimenta "Mais usados").
+document.getElementById('grid').addEventListener('click', (e) => {
+  const a = e.target.closest ? e.target.closest('[data-atalho]') : null;
+  if (!a) return;
+  const painel = a.closest('.cras-card') ? 'cras' : (a.closest('.cas-card') ? 'cas' : '');
+  if (painel) atalhosUsadosRegistrar(painel, a.dataset.atalho);
+});
+// Botão "Copiar endereço" dos painéis CAS e CRAS.
 document.getElementById('grid').addEventListener('click', (e) => {
   const b = e.target.closest ? e.target.closest('.cas-copy-btn') : null;
   if (b && typeof toolsCopy === 'function') toolsCopy(b.dataset.copy || '', 'Endereço copiado.');
@@ -18702,6 +18748,7 @@ const ARGO_SISTEMAS = [
   { nome: 'SICON / SIGPBF (MDS)', url: 'https://www.mds.gov.br/mds-sigpbf-web/carregarTelaLogin.jsf', keys: ['sicon', 'sigpbf'] },
   { nome: 'Cidade Social', url: 'https://cidadesocial.pmbv.rr.gov.br/auth/login', keys: ['cidade social', 'cidadesocial'] },
   { nome: 'BV Cidadão', url: 'https://bvcidadao.prefeitura.boavista.br/proton/login.asp', keys: ['bv cidadao', 'bvcidadao'] },
+  { nome: 'Portal do Cidadão', url: 'https://portalcidadao.prefeitura.boavista.br/default.aspx', keys: ['portal do cidadao', 'portal cidadao', 'portal de cidadao'] },
   { nome: 'Banco de Talentos', url: 'https://bt.pmbv.rr.gov.br/SMT73/open.do?sys=SMT', keys: ['banco de talentos', 'banco talentos'] },
   { nome: 'Portal CadÚnico', url: 'https://cadunico.dataprev.gov.br/portal/', keys: ['cadunico', 'cad unico', 'cadastro unico'] },
   { nome: 'Carteira do Idoso', url: 'https://carteiraidoso.cidadania.gov.br/', keys: ['carteira do idoso', 'carteira idoso', 'carteira da pessoa idosa', 'carteira de idoso'] }
