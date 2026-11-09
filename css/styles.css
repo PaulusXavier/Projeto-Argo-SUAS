@@ -8701,3 +8701,10 @@ button.card-quick-btn { font-family: inherit; cursor: pointer; }
 @keyframes argo-selia-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .argo-selia { animation: none; } }
 @media print { .argo-selia, .card-quick-ia { display: none !important; } }
+
+/* Calculadora: casas decimais e histórico */
+.calc-opts { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.8rem; margin: 0 0 0.6rem; }
+.calc-dec { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-muted); }
+.calc-dec .tools-input { width: auto; min-height: 36px; padding: 0.2rem 0.5rem; }
+.calc-log-box .tools-row { gap: 0.5rem; margin-top: 0.4rem; }
+.calc-log-box .calc-log-clear[hidden] { display: none; }
