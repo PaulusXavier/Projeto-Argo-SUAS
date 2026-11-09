@@ -861,7 +861,7 @@ let argoGreetingSlowTimer = null;
 // quem está vendo o Argo pela primeira vez); nas próximas vezes, troca por
 // uma frase mais curta — só um lembrete do que o app é, sem repetir a
 // apresentação inteira toda santo dia.
-const ARGO_INTRO_FIRST_TIME = 'Sou o Argo, seu guia a bordo da Rede de Políticas Públicas de Roraima. Aqui você encontra equipamentos de Assistência Social, Saúde, Educação e outras áreas, monta a ficha de encaminhamento para imprimir e acompanha a agenda da semana — tudo no navegador, até sem internet. Dica: use o campo de busca do menu ou tecle / para chegar mais rápido.';
+const ARGO_INTRO_FIRST_TIME = 'Sou seu guia a bordo da Rede de Políticas Públicas de Roraima: equipamentos, ficha de encaminhamento e agenda da semana, tudo no navegador, até sem internet. Dica: tecle / para buscar e ? para me chamar.';
 const ARGO_INTRO_RETURNING = 'Bom te ver de volta a bordo! Equipamentos, ficha de encaminhamento e agenda estão a um toque — e se precisar de ajuda, tecle ? para me chamar.';
 
 function argoIntroAlreadySeen() {
@@ -887,48 +887,25 @@ function argoGreetingWord() {
 // dragão, vela, escudos) balançando e três camadas de ondas em movimento.
 // SVG inline (sem imagem externa), então funciona offline e nos dois temas.
 // As animações são em CSS e desligam com "reduzir movimento" do sistema.
+// Barco da cena: o mesmo desenho do mascote (ArgoMascot.icon); se o mascote não carregou, usa o navio antigo.
+function argoSceneBoat(oldShipSvg) {
+  try {
+    if (typeof ArgoMascot !== 'undefined' && ArgoMascot.icon) {
+      const svg = ArgoMascot.icon('info', 172);
+      if (svg && svg.indexOf('<svg') === 0) return svg.replace('<svg ', '<svg x="94" y="-4" overflow="visible" ');
+    }
+  } catch (e) { /* usa o navio antigo */ }
+  return oldShipSvg;
+}
+
 function argoSceneSvg() {
-  const wave = (cls, y, amp, fill, op) =>
-    `<path class="argo-wave ${cls}" fill="${fill}" fill-opacity="${op}" d="M0 ${y} q30 -${amp} 60 0` + ' t60 0'.repeat(11) + ' V172 H0Z"/>';
-  const star = (x, y, s, d) =>
-    `<g transform="translate(${x} ${y})"><g class="argo-twinkle" style="animation-delay:${d}s"><use href="#argoStar" fill="#f3d58a" transform="scale(${s})"/></g></g>`;
-  return `
-  <svg class="argo-scene-svg" viewBox="0 -20 360 192" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
-    <defs>
-      <linearGradient id="argoSky" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#050f22"/><stop offset=".55" stop-color="#0c2946"/><stop offset="1" stop-color="#14496d"/>
-      </linearGradient>
-      <linearGradient id="argoSail" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0" stop-color="#9fcbcc"/><stop offset=".45" stop-color="#efe8cf"/><stop offset="1" stop-color="#fdf2d4"/>
-      </linearGradient>
-      <linearGradient id="argoHull" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#21606f"/><stop offset="1" stop-color="#0a2233"/>
-      </linearGradient>
-      <linearGradient id="argoGold" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#f6dc95"/><stop offset="1" stop-color="#b8894f"/>
-      </linearGradient>
-      <radialGradient id="argoGlow" cx=".5" cy=".55" r=".55">
-        <stop offset="0" stop-color="#f3d58a" stop-opacity=".30"/><stop offset="1" stop-color="#f3d58a" stop-opacity="0"/>
-      </radialGradient>
-      <path id="argoStar" d="M0-5L1.3-1.3L5 0L1.3 1.3L0 5L-1.3 1.3L-5 0L-1.3-1.3Z"/>
-    </defs>
-
-    <rect y="-20" width="360" height="192" fill="url(#argoSky)"/>
-    <circle cx="180" cy="100" r="92" fill="url(#argoGlow)"/>
-    <circle cx="180" cy="100" r="84" fill="none" stroke="#f3d58a" stroke-opacity=".38" stroke-width=".8" stroke-dasharray="1.5 4.5" stroke-linecap="round"/>
-    <circle cx="180" cy="100" r="70" fill="none" stroke="#f3d58a" stroke-opacity=".16" stroke-width=".6"/>
-
-    <g stroke="#f3d58a" stroke-opacity=".45" stroke-width=".7" fill="none">
-      <path d="M52 44 L86 26 L112 34 L128 18"/>
-      <path d="M246 30 L278 20 L300 40 L326 30 L338 52"/>
-    </g>
-    <g fill="#f3d58a" fill-opacity=".85">
-      <circle cx="52" cy="44" r="1.5"/><circle cx="86" cy="26" r="1.7"/><circle cx="112" cy="34" r="1.4"/><circle cx="128" cy="18" r="1.6"/>
-      <circle cx="246" cy="30" r="1.5"/><circle cx="278" cy="20" r="1.7"/><circle cx="300" cy="40" r="1.4"/><circle cx="326" cy="30" r="1.6"/><circle cx="338" cy="52" r="1.3"/>
-    </g>
-    ${star(214, 6, 1.9, 0)}${star(30, 78, 1.1, .8)}${star(334, 96, 1.2, 1.5)}${star(64, 118, .8, 2.1)}${star(152, 26, .8, 1.1)}${star(292, 70, .9, .4)}${star(22, 22, .9, 1.9)}${star(150, -6, 1, .6)}${star(96, -10, .8, 1.7)}${star(330, 8, 1.3, 1.2)}
-
-    <g transform="translate(180 104) scale(1.12) translate(-180 -104)"><g class="argo-ship">
+  // o céu acompanha a hora: amanhecer, dia claro e noite (a constelação some um pouco de dia)
+  const h = new Date().getHours();
+  const sky = h >= 5 && h < 8 ? ['#22305a', '#8a5a7a', '#e6a06a']
+    : h >= 8 && h < 17 ? ['#1b5f93', '#3b8fc4', '#8fd0ea']
+    : h >= 17 && h < 19 ? ['#1a2650', '#7a4a78', '#e08a5a']
+    : ['#050f22', '#0c2946', '#14496d'];
+  const oldShip = `<g transform="translate(180 104) scale(1.12) translate(-180 -104)">
       <g stroke="#f3d58a" stroke-opacity=".55" stroke-width=".7" fill="none">
         <path d="M178 27 L94 82"/><path d="M178 27 L266 83"/>
       </g>
@@ -963,7 +940,50 @@ function argoSceneSvg() {
         <circle cx="118" cy="97" r="1.6"/><circle cx="145" cy="100" r="1.6"/><circle cx="171" cy="101.5" r="1.6"/>
         <circle cx="198" cy="101" r="1.6"/><circle cx="224" cy="98.5" r="1.6"/><circle cx="250" cy="94" r="1.6"/>
       </g>
-    </g></g>
+    </g></g>`;
+  const wave = (cls, y, amp, fill, op) =>
+    `<path class="argo-wave ${cls}" fill="${fill}" fill-opacity="${op}" d="M0 ${y} q30 -${amp} 60 0` + ' t60 0'.repeat(11) + ' V172 H0Z"/>';
+  const star = (x, y, s, d) =>
+    `<g transform="translate(${x} ${y})"><g class="argo-twinkle" style="animation-delay:${d}s"><use href="#argoStar" fill="#f3d58a" transform="scale(${s})"/></g></g>`;
+  return `
+  <svg class="argo-scene-svg" viewBox="0 -20 360 192" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="argoSky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="${sky[0]}"/><stop offset=".55" stop-color="${sky[1]}"/><stop offset="1" stop-color="${sky[2]}"/>
+      </linearGradient>
+      <linearGradient id="argoSail" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#9fcbcc"/><stop offset=".45" stop-color="#efe8cf"/><stop offset="1" stop-color="#fdf2d4"/>
+      </linearGradient>
+      <linearGradient id="argoHull" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#21606f"/><stop offset="1" stop-color="#0a2233"/>
+      </linearGradient>
+      <linearGradient id="argoGold" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#f6dc95"/><stop offset="1" stop-color="#b8894f"/>
+      </linearGradient>
+      <radialGradient id="argoGlow" cx=".5" cy=".55" r=".55">
+        <stop offset="0" stop-color="#f3d58a" stop-opacity=".30"/><stop offset="1" stop-color="#f3d58a" stop-opacity="0"/>
+      </radialGradient>
+      <path id="argoStar" d="M0-5L1.3-1.3L5 0L1.3 1.3L0 5L-1.3 1.3L-5 0L-1.3-1.3Z"/>
+    </defs>
+
+    <rect y="-20" width="360" height="192" fill="url(#argoSky)"/>
+    <g class="argo-sky-fx" opacity="${h >= 8 && h < 17 ? '.35' : '1'}">
+    <circle cx="180" cy="100" r="92" fill="url(#argoGlow)"/>
+    <circle cx="180" cy="100" r="84" fill="none" stroke="#f3d58a" stroke-opacity=".38" stroke-width=".8" stroke-dasharray="1.5 4.5" stroke-linecap="round"/>
+    <circle cx="180" cy="100" r="70" fill="none" stroke="#f3d58a" stroke-opacity=".16" stroke-width=".6"/>
+
+    <g stroke="#f3d58a" stroke-opacity=".45" stroke-width=".7" fill="none">
+      <path d="M52 44 L86 26 L112 34 L128 18"/>
+      <path d="M246 30 L278 20 L300 40 L326 30 L338 52"/>
+    </g>
+    <g fill="#f3d58a" fill-opacity=".85">
+      <circle cx="52" cy="44" r="1.5"/><circle cx="86" cy="26" r="1.7"/><circle cx="112" cy="34" r="1.4"/><circle cx="128" cy="18" r="1.6"/>
+      <circle cx="246" cy="30" r="1.5"/><circle cx="278" cy="20" r="1.7"/><circle cx="300" cy="40" r="1.4"/><circle cx="326" cy="30" r="1.6"/><circle cx="338" cy="52" r="1.3"/>
+    </g>
+    ${star(214, 6, 1.9, 0)}${star(30, 78, 1.1, .8)}${star(334, 96, 1.2, 1.5)}${star(64, 118, .8, 2.1)}${star(152, 26, .8, 1.1)}${star(292, 70, .9, .4)}${star(22, 22, .9, 1.9)}${star(150, -6, 1, .6)}${star(96, -10, .8, 1.7)}${star(330, 8, 1.3, 1.2)}
+
+    </g>
+    <g class="argo-ship">${argoSceneBoat(oldShip)}</g>
 
     ${wave('argo-wave-a', 116, 7, '#1d6b6e', .9)}
     ${wave('argo-wave-b', 126, 8, '#15575f', 1)}
@@ -1003,8 +1023,10 @@ function argoEnsureGreetingUI() {
               <span class="argo-yes-label">Ver agenda e sincronização</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </button>
-            <button type="button" class="argo-greeting-add" onclick="argoOpenAgendaFromGreeting('note')">＋ Anotar para hoje</button>
-            <button type="button" class="argo-greeting-no" onclick="argoDismissGreeting()">Agora não</button>
+            <div class="argo-greeting-pair">
+              <button type="button" class="argo-greeting-add" onclick="argoOpenAgendaFromGreeting('note')">＋ Anotar para hoje</button>
+              <button type="button" class="argo-greeting-no" onclick="argoDismissGreeting()">Agora não</button>
+            </div>
           </div>
 
           <label class="argo-greeting-mute">
@@ -1017,10 +1039,10 @@ function argoEnsureGreetingUI() {
     <style>
       .argo-greeting-overlay { display:none; position:fixed; inset:0; background:rgba(4,10,22,0.62); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); z-index:1200; align-items:center; justify-content:center; padding:18px; }
       .argo-greeting-overlay.visible { display:flex; }
-      .argo-greeting-box { overscroll-behavior:contain; position:relative; background:var(--bg-card,#fff); color:var(--text-main,#1e293b); width:100%; max-width:392px; max-height:calc(100vh - 36px); max-height:calc(100dvh - 36px); overflow-y:auto; border-radius:20px; box-shadow:0 30px 64px -12px rgba(0,0,0,0.6), 0 0 0 1px rgba(184,137,79,0.4); animation:argoGreetingPop .4s cubic-bezier(.2,.8,.2,1); }
+      .argo-greeting-box { overscroll-behavior:contain; position:relative; background:var(--bg-card,#fff); color:var(--text-main,#1e293b); width:100%; max-width:440px; max-height:calc(100vh - 36px); max-height:calc(100dvh - 36px); overflow-y:auto; border-radius:20px; box-shadow:0 30px 64px -12px rgba(0,0,0,0.6), 0 0 0 1px rgba(184,137,79,0.4); animation:argoGreetingPop .4s cubic-bezier(.2,.8,.2,1); }
       @keyframes argoGreetingPop { from { transform:translateY(16px) scale(.96); opacity:0; } to { transform:none; opacity:1; } }
 
-      .argo-scene { position:relative; height:188px; background:#050f22; overflow:hidden; }
+      .argo-scene { position:relative; height:210px; background:#050f22; overflow:hidden; }
       .argo-scene-svg { display:block; width:100%; height:100%; }
       .argo-scene::after { content:''; position:absolute; left:0; right:0; bottom:0; height:2px; background:linear-gradient(90deg, transparent, #f3d58a, transparent); opacity:.7; }
       .argo-scene-pill { position:absolute; top:12px; left:12px; display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.04em; color:#f6e7bd; background:rgba(5,15,34,0.55); border:1px solid rgba(243,213,138,0.4); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); }
@@ -1073,7 +1095,7 @@ function argoEnsureGreetingUI() {
       .argo-chip-extra { --chip:#2f7fb8; }
       .argo-note { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; font-weight:500; color:var(--text-muted,#475569); }
       .argo-chip + .argo-note { margin-top:1px; }
-      .argo-when { margin-left:8px; font-size:12px; color:var(--text-muted,#475569); }
+      .argo-when { display:block; width:fit-content; margin:3px 0 0; padding:1px 9px; border-radius:999px; font-size:11.5px; font-weight:700; color:var(--brand-primary,#0091C2); background:rgba(0,145,194,0.1); }
       .argo-week-empty { margin-top:6px; color:var(--text-muted,#475569); }
       .argo-todo { display:flex; gap:8px; align-items:baseline; margin-top:3px; font-weight:600; }
       .argo-todo-time { flex-shrink:0; min-width:40px; font-size:12px; font-weight:800; color:var(--brand-primary,#0091C2); font-variant-numeric:tabular-nums; }
@@ -1084,8 +1106,8 @@ function argoEnsureGreetingUI() {
       .argo-greeting-add:hover { background:rgba(0,145,194,0.1); }
       .argo-greeting-add:focus-visible { outline:3px solid var(--brand-primary-light,#29ABE2); outline-offset:2px; }
 
-      .argo-sync-row { display:flex; align-items:center; flex-wrap:wrap; gap:9px; margin:12px 2px 0 2px; font-size:12.5px; color:var(--text-muted,#475569); line-height:1.4; }
-      .argo-sync-text { flex:1 1 auto; }
+      .argo-sync-row { display:flex; align-items:center; flex-wrap:wrap; gap:9px; margin:12px 2px 0 2px; padding:9px 12px; border-radius:12px; background:rgba(148,163,184,0.1); font-size:12.5px; color:var(--text-muted,#475569); line-height:1.4; }
+      .argo-sync-text { flex:1 1 140px; min-width:0; }
       .argo-sync-dot { flex-shrink:0; width:9px; height:9px; border-radius:50%; background:#94a3b8; }
       .argo-sync-row[data-state="ok"] .argo-sync-dot { background:#3f9d6b; box-shadow:0 0 0 3px rgba(63,157,107,0.2); }
       .argo-sync-row[data-state="connecting"] .argo-sync-dot { background:#d99a2b; animation:argoPulse 1.1s ease-in-out infinite; }
@@ -1108,9 +1130,33 @@ function argoEnsureGreetingUI() {
       .argo-greeting-no:hover { background:rgba(148,163,184,0.12); }
       .argo-greeting-yes:focus-visible, .argo-greeting-no:focus-visible, .argo-greeting-x:focus-visible { outline:3px solid var(--brand-primary-light,#29ABE2); outline-offset:2px; }
 
-      @media (max-width: 420px) { .argo-greeting-content { padding:16px 18px 20px; } .argo-scene { height:172px; } }
+      .argo-greeting-box:focus { outline:none; }
+      .argo-greeting-box h3 { position:relative; padding-bottom:10px; margin-bottom:10px; }
+      .argo-greeting-box h3::after { content:''; position:absolute; left:0; bottom:0; width:44px; height:3px; border-radius:3px; background:linear-gradient(90deg,#f6dc95,#b8894f); }
+      .argo-week-empty::before { content:'✓'; margin-right:6px; font-weight:800; color:#3f9d6b; }
+      .argo-scene-svg .argo-mascot-icon { filter:drop-shadow(0 6px 10px rgba(0,0,0,.35)); }
+      .argo-scene::before { content:''; position:absolute; inset:0; z-index:1; pointer-events:none; background:radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(3,10,24,.38)); }
+      .argo-scene-pill, .argo-greeting-x { z-index:2; }
+      .argo-greeting-pair { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+      .argo-greeting-pair button { min-height:44px; padding:10px 8px; line-height:1.2; }
+      .argo-greeting-date::before { content:''; display:inline-block; width:6px; height:6px; margin-right:8px; vertical-align:middle; border-radius:50%; background:#b8894f; }
+      .argo-greeting-intro { font-size:14px; }
+      .argo-greeting-box h3 { font-size:25px; }
+      .argo-week { font-size:13.5px; }
+      .argo-week { border-left:4px solid var(--brand-primary,#0091C2); background:linear-gradient(180deg, rgba(0,145,194,0.08), rgba(0,145,194,0.03)); }
+      .argo-greeting-btns { margin-top:16px; }
+      .argo-greeting-yes { min-height:48px; box-shadow:0 8px 18px -10px rgba(0,145,194,0.8); }
+      .argo-greeting-mute { justify-content:center; margin-top:12px; }
+      .argo-greeting-overlay.visible .argo-greeting-content > * { animation:argoRise .45s cubic-bezier(.2,.7,.2,1) both; }
+      .argo-greeting-overlay.visible .argo-greeting-content > *:nth-child(2) { animation-delay:.05s; }
+      .argo-greeting-overlay.visible .argo-greeting-content > *:nth-child(3) { animation-delay:.1s; }
+      .argo-greeting-overlay.visible .argo-greeting-content > *:nth-child(4) { animation-delay:.15s; }
+      .argo-greeting-overlay.visible .argo-greeting-content > *:nth-child(5) { animation-delay:.2s; }
+      .argo-greeting-overlay.visible .argo-greeting-content > *:nth-child(6) { animation-delay:.25s; }
+      @keyframes argoRise { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+      @media (max-width: 420px) { .argo-greeting-content { padding:16px 18px 20px; } .argo-scene { height:190px; } }
       @media (prefers-reduced-motion: reduce) {
-        .argo-greeting-box, .argo-ship, .argo-wave, .argo-twinkle, .argo-glint, .argo-sync-row .argo-sync-dot { animation:none !important; }
+        .argo-greeting-box, .argo-greeting-content > *, .argo-ship, .argo-wave, .argo-twinkle, .argo-glint, .argo-sync-row .argo-sync-dot { animation:none !important; }
       }
     </style>
   `;
@@ -1512,8 +1558,11 @@ function argoShowGreeting() {
   clearTimeout(argoGreetingSlowTimer);
   argoGreetingSlowTimer = setTimeout(argoRefreshGreeting, 8100);
 
-  const yes = document.getElementById('argoGreetingYes');
-  if (yes) setTimeout(() => yes.focus(), 60);
+  setTimeout(() => {
+    try { const m = modal.querySelector('.argo-scene-svg .argo-mascot-icon'); if (m && typeof ArgoMascot !== 'undefined' && ArgoMascot.react) ArgoMascot.react(m, 'hop'); } catch (e) { /* sem reação */ }
+  }, 500);
+  const box = modal.querySelector('.argo-greeting-box');
+  if (box) { box.setAttribute('tabindex', '-1'); setTimeout(() => box.focus({ preventScroll: true }), 60); }
 }
 
 document.addEventListener('keydown', e => {
@@ -4162,7 +4211,7 @@ const TOOLS_STATE = {
   alarms: [],        // alarmes (só na memória; o nome não é salvo em lugar nenhum)
   alarmTimer: null,
   baseTitle: null,   // título original da página, enquanto o temporizador mostra a contagem
-  view: { cat: 'all', q: '' }, // filtro e busca da aba Ferramentas (sobrevivem a trocar de aba)
+  view: { cat: 'all', q: '', mode: '', focus: '' }, // filtro e busca da aba Ferramentas (sobrevivem a trocar de aba)
   ctx: null,
   hooked: false,
   clockTimer: null,
@@ -7720,6 +7769,7 @@ function renderToolsCard() {
     .map(p => '<button type="button" class="tools-chip" data-sec="' + p[0] + '">' + p[1] + '</button>').join('');
   return '<div id="toolsRoot" class="tools-wrap">'
     + toolsNavHtml()
+    + toolsHubHtml()
     + toolsAcompHtml()
     // ---------- Relógio / cronômetro / temporizador
     + '<section class="tech-card tools-card" aria-label="Relógio, cronômetro e temporizador"><h2>Relógio</h2>'
@@ -7858,17 +7908,61 @@ const TOOLS_ICONS = {
 const toolsIconHtml = id => '<span class="tools-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + (TOOLS_ICONS[id] || TOOLS_ICONS.notas) + '</svg></span>';
 const toolsNorm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
+// Painel: a aba abre num painel de azulejos agrupados; cada ferramenta abre sozinha
+// (modo "foco") com botão de voltar; o modo "Lista" mantém o empilhado de cartões.
+// Só guarda códigos de ferramenta neste aparelho (nada de dados de pessoas).
+const TOOLS_VIEW_KEY = 'argo_tools_view_v1';       // 'hub' | 'list'
+const TOOLS_RECENT_KEY = 'argo_tools_recent_v1';
+const TOOLS_GROUPS = [
+  { id: 'familias', titulo: 'Famílias e planilhas', sub: 'Acompanhamento e conferência de bases', ids: ['acomp', 'planilha'] },
+  { id: 'atend', titulo: 'Atendimento', sub: 'Renda, prazos, documentos e contato', ids: ['renda', 'prazos', 'documentos', 'idade', 'contador', 'whatsapp', 'qr'] },
+  { id: 'calculo', titulo: 'Cálculos', sub: 'Contas, porcentagens, listas e valor por extenso', ids: ['calculadora', 'porcentagem', 'lista', 'extenso'] },
+  { id: 'dia', titulo: 'Dia a dia', sub: 'Hora, texto e anotações', ids: ['relogio', 'notas', 'texto'] }
+];
+const TOOLS_DESC = {
+  relogio: 'Hora de Boa Vista, cronômetro, temporizador e alarmes',
+  calculadora: 'Memória, raiz, porcentagem e histórico',
+  renda: 'Renda per capita e comparação com a linha do Bolsa Família',
+  idade: 'Idade exata e tempo entre duas datas',
+  qr: 'Transforma link ou texto em QR Code (PNG)',
+  contador: 'Conta os atendimentos do dia e do mês',
+  prazos: 'Prazos em dias úteis ou corridos',
+  documentos: 'Confere o dígito verificador de NIS e CPF',
+  porcentagem: 'X% de um valor, aumento e desconto',
+  lista: 'Soma, média e mediana de valores colados',
+  extenso: 'Escreve o valor em reais por extenso',
+  whatsapp: 'Abre a conversa ou gera o link com mensagem pronta',
+  texto: 'Nome próprio, maiúsculas e limpeza de espaços',
+  acomp: 'Importa a planilha e mostra retornos vencidos e pendências',
+  planilha: 'Acha duplicados e conta valores de qualquer coluna',
+  notas: 'Anotações e listas rápidas, com exportação em PDF/TXT'
+};
+let toolsNavApi = null;
+// Abre UMA ferramenta (modo foco) e devolve o cartão; null se a aba ainda não foi desenhada.
+function toolsOpenTool(id) { return toolsNavApi ? toolsNavApi.open(id) : null; }
+function toolsHubHtml() { return '<div id="toolsHub" class="tools-hub" aria-label="Todas as ferramentas"></div>'; }
+
 function toolsNavHtml() {
   const chips = TOOLS_CATS.map(c =>
     '<button type="button" class="tools-chip tools-fchip" data-tf="' + c[0] + '" aria-pressed="false">' + c[1]
     + '<span class="tools-fcount" data-tfc="' + c[0] + '"></span></button>').join('');
   return '<div class="tools-nav" role="search" aria-label="Encontrar ferramenta">'
     + '<label class="sr-only" for="toolsFind">Buscar ferramenta</label>'
-    + '<input id="toolsFind" class="tools-input tools-find" type="search" autocomplete="off" enterkeyhint="search" placeholder="Buscar ferramenta (ex.: renda, prazo, planilha)…">'
+    + '<div class="tools-searchrow">'
+    +   '<input id="toolsFind" class="tools-input tools-find" type="search" autocomplete="off" enterkeyhint="search" placeholder="Buscar ferramenta (ex.: renda, prazo, planilha)…">'
+    +   '<div class="tools-viewtoggle" role="group" aria-label="Modo de exibição">'
+    +     '<button type="button" class="tools-vt" data-vt="hub" aria-pressed="true" title="Painel de ferramentas">Painel</button>'
+    +     '<button type="button" class="tools-vt" data-vt="list" aria-pressed="false" title="Todas empilhadas, em lista">Lista</button>'
+    +   '</div>'
+    + '</div>'
     + '<div class="tools-filter" role="group" aria-label="Filtrar por tipo">' + chips + '</div>'
     + '<div class="tools-nav-foot"><span id="toolsNavInfo" class="tools-hint" role="status" aria-live="polite"></span>'
     + '<button type="button" class="tools-link-btn" id="toolsFoldAll"></button></div>'
-    + '<p id="toolsEmpty" class="tools-empty" hidden></p></div>';
+    + '<p id="toolsEmpty" class="tools-empty" hidden></p></div>'
+    + '<div id="toolsFocusBar" class="tools-focusbar" hidden>'
+    +   '<button type="button" class="tools-back" id="toolsBack"><span aria-hidden="true">←</span> Todas as ferramentas</button>'
+    +   '<span id="toolsFocusCrumb" class="tools-crumb"></span>'
+    + '</div>';
 }
 
 function initToolsNav() {
@@ -7930,7 +8024,16 @@ function initToolsNav() {
     const terms = toolsNorm(v.q).split(/\s+/).filter(Boolean);
     let shown = 0;
     const visible = [];
+    const mode = v.mode;
+    root.classList.toggle('is-hub', mode === 'hub');
+    root.classList.toggle('is-list', mode === 'list');
+    root.classList.toggle('is-focus', mode === 'focus');
     cards.forEach(c => {
+      if (mode !== 'list') {   // painel: nenhum cartão; foco: só o escolhido (sempre aberto)
+        const f = mode === 'focus' && c.id === v.focus;
+        c.el.hidden = !f; if (f) c.el.classList.remove('is-collapsed');
+        return;
+      }
       const okCat = v.cat === 'all' || (v.cat === 'fav' ? pins.has(c.id) : c.cat === v.cat);
       const okQ = terms.every(t => c.hay.indexOf(t) !== -1);
       const on = okCat && okQ;
@@ -7952,6 +8055,12 @@ function initToolsNav() {
       const k = b.dataset.tf; if (k === 'all' || k === 'fav') return;
       b.hidden = !cards.some(c => c.cat === k);
     });
+    if (mode !== 'list') {
+      renderHub();
+      const fa0 = $('toolsFoldAll'); if (fa0) fa0.hidden = true;
+      return;
+    }
+    $('toolsHub').hidden = true;
     const info = $('toolsNavInfo'), empty = $('toolsEmpty');
     info.textContent = shown === cards.length ? cards.length + (cards.length === 1 ? ' ferramenta' : ' ferramentas')
       : shown + ' de ' + cards.length + (shown === 1 ? ' ferramenta' : ' ferramentas');
@@ -7968,9 +8077,112 @@ function initToolsNav() {
     fa.dataset.mode = anyOpen ? 'fold' : 'open';
   };
 
+  // ---------- painel de azulejos
+  const RECENT_MAX = 4;
+  const recents = readList(TOOLS_RECENT_KEY).filter(id => cards.some(c => c.id === id)).slice(0, RECENT_MAX);
+  const byId = id => cards.find(c => c.id === id);
+  const esc = t => String(t).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+  const tileHtml = (c, sec) => {
+    const pinned = pins.has(c.id);
+    return '<div class="tools-tile" data-tcat="' + c.cat + '">'
+      + '<button type="button" class="tools-tile-open" data-open="' + c.id + '">' + toolsIconHtml(c.id)
+      + '<span class="tools-tile-txt"><strong>' + esc(c.title) + '</strong><small>' + esc(TOOLS_DESC[c.id] || '') + '</small></span></button>'
+      + '<button type="button" class="tools-tile-pin' + (pinned ? ' is-on' : '') + '" data-pin="' + c.id + '" aria-pressed="' + pinned + '" aria-label="'
+      + (pinned ? 'Tirar das favoritas: ' : 'Favoritar: ') + esc(c.title) + '" title="' + (pinned ? 'Tirar das favoritas' : 'Favoritar') + '">' + (pinned ? '★' : '☆') + '</button></div>';
+  };
+  const secHtml = (cls, titulo, sub, list) => '<section class="tools-group ' + cls + '"><header><h3>' + titulo + '</h3>'
+    + (sub ? '<p>' + sub + '</p>' : '') + '</header><div class="tools-tiles">' + list.map(c => tileHtml(c)).join('') + '</div></section>';
+  function renderHub() {
+    const hub = $('toolsHub'), v = TOOLS_STATE.view;
+    const terms = toolsNorm(v.q).split(/\s+/).filter(Boolean);
+    const match = c => terms.every(t => c.hay.indexOf(t) !== -1);
+    let html = '', n = 0;
+    if (!terms.length) {
+      const fav = cards.filter(c => pins.has(c.id));
+      if (fav.length) html += secHtml('is-fav', '★ Favoritas', '', fav);
+      const rec = recents.map(byId).filter(Boolean).filter(c => !pins.has(c.id));
+      if (rec.length) html += secHtml('is-recent', 'Usadas há pouco', '', rec);
+    }
+    TOOLS_GROUPS.forEach(g => {
+      const list = g.ids.map(byId).filter(Boolean).filter(match);
+      n += list.length;
+      if (list.length) html += secHtml('', g.titulo, terms.length ? '' : g.sub, list);
+    });
+    hub.innerHTML = html;
+    hub.hidden = v.mode !== 'hub';
+    const info = $('toolsNavInfo'), empty = $('toolsEmpty');
+    info.textContent = terms.length ? n + (n === 1 ? ' ferramenta encontrada' : ' ferramentas encontradas') : cards.length + ' ferramentas';
+    empty.hidden = n > 0;
+    if (!n) empty.textContent = 'Nenhuma ferramenta encontrada. Tente outra palavra.';
+  }
+  const syncChrome = () => {
+    const v = TOOLS_STATE.view, focus = v.mode === 'focus';
+    const nav = root.querySelector('.tools-nav'); nav.hidden = focus;
+    nav.classList.toggle('is-hub', v.mode === 'hub');
+    $('toolsFocusBar').hidden = !focus;
+    root.querySelectorAll('.tools-vt').forEach(b => { const on = b.dataset.vt === (v.mode === 'list' ? 'list' : 'hub'); b.classList.toggle('is-active', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+    if (focus) {
+      const c = byId(v.focus), g = TOOLS_GROUPS.find(x => x.ids.indexOf(v.focus) !== -1);
+      const crumb = $('toolsFocusCrumb'); crumb.textContent = g ? g.titulo : ''; crumb.dataset.tcat = c ? c.cat : '';
+    }
+  };
+  const setMode = (mode, focusId) => {
+    const v = TOOLS_STATE.view;
+    v.mode = mode; v.focus = mode === 'focus' ? focusId : '';
+    if (mode !== 'focus') { try { localStorage.setItem(TOOLS_VIEW_KEY, mode); } catch (e) { /* ignora */ } }
+    syncChrome(); apply();
+  };
+  const scrollTop = () => {
+    const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    try { root.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' }); } catch (e) { root.scrollIntoView(); }
+  };
+  const openTool = id => {
+    const c = byId(id); if (!c) return null;
+    const v = TOOLS_STATE.view; v.q = ''; v.cat = 'all'; $('toolsFind').value = '';
+    const ix = recents.indexOf(id); if (ix !== -1) recents.splice(ix, 1);
+    recents.unshift(id); recents.length = Math.min(recents.length, RECENT_MAX);
+    saveList(TOOLS_RECENT_KEY, new Set(recents));
+    setMode('focus', id); scrollTop();
+    return c.el;
+  };
+  const closeTool = () => {
+    const id = TOOLS_STATE.view.focus;
+    setMode(localStorage.getItem(TOOLS_VIEW_KEY) === 'list' ? 'list' : 'hub'); scrollTop();
+    const t = id && root.querySelector('[data-open="' + id + '"]'); if (t) { try { t.focus({ preventScroll: true }); } catch (e) { /* sem foco */ } }
+  };
+  toolsNavApi = { open: openTool, close: closeTool };
+
+  {
+    let saved = ''; try { saved = localStorage.getItem(TOOLS_VIEW_KEY) || ''; } catch (e) { /* ignora */ }
+    const v = TOOLS_STATE.view;
+    if (v.mode === 'focus' && !byId(v.focus)) v.mode = '';
+    if (!v.mode) v.mode = saved === 'list' ? 'list' : 'hub';
+  }
   cards.forEach(paintCard);
   $('toolsFind').value = TOOLS_STATE.view.q;
+  syncChrome();
   apply();
+  $('toolsHub').addEventListener('click', e => {
+    const pin = e.target.closest('[data-pin]');
+    if (pin) {
+      const id = pin.dataset.pin; if (pins.has(id)) pins.delete(id); else pins.add(id);
+      saveList(TOOLS_PINS_KEY, pins); const c = byId(id); if (c) paintCard(c);
+      renderHub(); const again = root.querySelector('[data-pin="' + id + '"]'); if (again) again.focus();
+      return;
+    }
+    const open = e.target.closest('[data-open]'); if (open) openTool(open.dataset.open);
+  });
+  $('toolsBack').addEventListener('click', closeTool);
+  root.querySelector('.tools-viewtoggle').addEventListener('click', e => {
+    const b = e.target.closest('[data-vt]'); if (b) setMode(b.dataset.vt);
+  });
+  // Esc volta ao painel (a menos que a pessoa esteja digitando ou a visão ampliada esteja aberta)
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape' || TOOLS_STATE.view.mode !== 'focus' || !document.body.contains(root)) return;
+    if (document.body.classList.contains('card-focus') || document.body.classList.contains('tab-focus')) return;
+    const a = document.activeElement; if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+    closeTool();
+  });
 
   let t = null;
   $('toolsFind').addEventListener('input', e => {
@@ -7981,6 +8193,7 @@ function initToolsNav() {
     if (e.key === 'Enter') {
       e.preventDefault();
       clearTimeout(t); TOOLS_STATE.view.q = e.target.value; apply();
+      if (TOOLS_STATE.view.mode === 'hub') { const f = root.querySelector('.tools-tile-open'); if (f) openTool(f.dataset.open); return; }
       const first = cards.find(c => !c.el.hidden);
       if (first) {
         const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -13300,6 +13513,7 @@ function mapaRedeCategoryIcon(colorHex) {
 const NEWS_SOURCES = [
   {
     id: 'mds',
+    nivel: 'federal',
     label: 'MDS',
     fullLabel: 'Ministério do Desenvolvimento e Assistência Social, Família e Combate à Fome',
     feeds: ['https://www.gov.br/mds/RSS', 'https://www.gov.br/mds/pt-br/noticias/RSS'],
@@ -13307,6 +13521,7 @@ const NEWS_SOURCES = [
   },
   {
     id: 'mec',
+    nivel: 'federal',
     label: 'MEC',
     fullLabel: 'Ministério da Educação',
     feeds: ['https://www.gov.br/mec/RSS', 'https://www.gov.br/mec/pt-br/noticias/RSS'],
@@ -13314,14 +13529,61 @@ const NEWS_SOURCES = [
   },
   {
     id: 'saude',
+    nivel: 'federal',
     label: 'Saúde',
     fullLabel: 'Ministério da Saúde',
     feeds: ['https://www.gov.br/saude/RSS', 'https://www.gov.br/saude/pt-br/noticias/RSS'],
     siteUrl: 'https://www.gov.br/saude/pt-br'
+  },
+  // Fontes de Roraima (estado e município). Os endereços de feed abaixo são os padrões de cada
+  // tipo de site (WordPress: /feed/; Joomla: ?format=feed&type=rss). Se algum site não tiver
+  // feed, ele aparece no aviso "não carregou" e o link do site continua funcionando.
+  {
+    id: 'setrabes',
+    nivel: 'estadual',
+    label: 'SETRABES',
+    fullLabel: 'Secretaria do Trabalho e Bem-Estar Social de Roraima',
+    feeds: ['https://setrabes.rr.gov.br/feed/', 'https://setrabes.rr.gov.br/noticias/feed/'],
+    siteUrl: 'https://setrabes.rr.gov.br/noticias/'
+  },
+  {
+    id: 'boavista',
+    nivel: 'municipal',
+    label: 'Boa Vista',
+    fullLabel: 'Prefeitura de Boa Vista',
+    feeds: ['https://boavista.rr.gov.br/feed/', 'https://www.boavista.rr.gov.br/feed/'],
+    siteUrl: 'https://boavista.rr.gov.br/'
+  },
+  {
+    id: 'govrr',
+    nivel: 'estadual',
+    label: 'Gov. RR',
+    fullLabel: 'Portal do Governo de Roraima',
+    feeds: ['https://portal.rr.gov.br/feed/', 'https://portal.rr.gov.br/index.php?format=feed&type=rss'],
+    siteUrl: 'https://portal.rr.gov.br/'
+  },
+  {
+    id: 'sesaurr',
+    nivel: 'estadual',
+    label: 'SESAU-RR',
+    fullLabel: 'Secretaria de Estado da Saúde de Roraima',
+    feeds: ['https://saude.rr.gov.br/index.php?format=feed&type=rss', 'https://saude.rr.gov.br/feed/'],
+    siteUrl: 'https://saude.rr.gov.br/'
+  },
+  {
+    id: 'seedrr',
+    nivel: 'estadual',
+    label: 'SEED-RR',
+    fullLabel: 'Secretaria de Estado da Educação e Desporto de Roraima',
+    feeds: ['https://educacao.rr.gov.br/feed/', 'https://educacao.rr.gov.br/index.php?format=feed&type=rss'],
+    siteUrl: 'https://educacao.rr.gov.br/'
   }
 ];
+// Esfera de governo de cada fonte (para segmentar a lista).
+const NEWS_LEVELS = [['federal', 'Federal'], ['estadual', 'Estadual'], ['municipal', 'Municipal']];
+const newsLevelLabel = id => (NEWS_LEVELS.find(l => l[0] === id) || ['', ''])[1];
 const NEWS_CACHE_KEY = 'argo_noticias_mds_v3';
-const NEWS_MAX_ITEMS = 120;     // total mantido na lista
+const NEWS_MAX_ITEMS = 200;     // total mantido na lista
 const NEWS_MAX_PER_FEED = 40;   // por feed, para um ministério não engolir os outros
 
 // Repassadores tentados em ordem (o primeiro é a tentativa direta, que quase
@@ -13445,13 +13707,20 @@ function newsParseFeed(xmlText, sourceId) {
   const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
   if (doc.getElementsByTagName('parsererror').length) throw new Error('XML inválido');
 
-  const nodes = Array.from(doc.getElementsByTagNameNS('*', 'item'));
+  let nodes = Array.from(doc.getElementsByTagNameNS('*', 'item'));
+  if (!nodes.length) nodes = Array.from(doc.getElementsByTagNameNS('*', 'entry'));   // Atom
+  const linkOf = item => {
+    const t = newsField(item, 'link'); if (t) return t;
+    const ls = item.getElementsByTagNameNS('*', 'link');   // Atom: o endereço fica no atributo href
+    for (const l of ls) { const h = l.getAttribute('href'); if (h && (l.getAttribute('rel') || 'alternate') === 'alternate') return h; }
+    return '';
+  };
   return nodes
     .map(item => ({
       title: newsField(item, 'title'),
-      link: newsCanonLink(newsField(item, 'link') || item.getAttribute('rdf:about') || ''),
-      desc: newsCleanText(newsField(item, 'description')),
-      date: newsField(item, 'date') || newsField(item, 'pubDate'),
+      link: newsCanonLink(linkOf(item) || item.getAttribute('rdf:about') || ''),
+      desc: newsCleanText(newsField(item, 'description') || newsField(item, 'summary')),
+      date: newsField(item, 'date') || newsField(item, 'pubDate') || newsField(item, 'published') || newsField(item, 'updated'),
       type: newsField(item, 'type'),
       source: sourceId
     }))
@@ -13633,7 +13902,12 @@ function newsIsNormative(item) { return newsKind(item) !== 'Notícia'; }
 const NEWS_SOURCE_COLORS = {
   mds: { bg: '#e8f1f9', fg: '#0f4a41', accent: '#0891b2' },
   mec: { bg: '#fef3e2', fg: '#92400e', accent: '#d97706' },
-  saude: { bg: '#e7f7ec', fg: '#065f46', accent: '#059669' }
+  saude: { bg: '#e7f7ec', fg: '#065f46', accent: '#059669' },
+  setrabes: { bg: '#efe9fb', fg: '#4c2f9e', accent: '#6d4fd0' },
+  boavista: { bg: '#fde8ef', fg: '#9d174d', accent: '#d6336c' },
+  govrr: { bg: '#e6eefb', fg: '#1e3a8a', accent: '#2563eb' },
+  sesaurr: { bg: '#e2f6f3', fg: '#0b5f58', accent: '#0f9488' },
+  seedrr: { bg: '#fdf3d9', fg: '#7a4b00', accent: '#c77a0a' }
 };
 
 function newsSourceInfo(sourceId) {
@@ -13726,13 +14000,20 @@ function newsGroupLabel(iso) {
 }
 
 function renderNewsCard() {
-  const sourceChips = NEWS_SOURCES.map(s => `
+  const chipHtml = s => `
     <label class="noticias-source-chip" title="${escapeHtml(s.fullLabel)}">
       <input type="checkbox" class="noticias-source-checkbox" value="${s.id}" checked onchange="newsResetAndRender()">
       <span>${escapeHtml(s.label)}</span>
       <span class="noticias-source-count" id="noticiasCount-${s.id}"></span>
-    </label>
-  `).join('');
+    </label>`;
+  const sourceChips = NEWS_LEVELS.map(([lv, name]) => {
+    const list = NEWS_SOURCES.filter(s => s.nivel === lv);
+    return list.length ? `<div class="noticias-level-group" data-level="${lv}"><span class="noticias-level-name">${name}</span><div class="noticias-source-filter">${list.map(chipHtml).join('')}</div></div>` : '';
+  }).join('');
+  const levelSeg = `<div class="noticias-seg noticias-levelseg" role="group" aria-label="Esfera de governo">
+      <button type="button" data-level="all" class="is-active" onclick="newsSetLevel('all')">Todas</button>`
+    + NEWS_LEVELS.map(([lv, name]) => `<button type="button" data-level="${lv}" onclick="newsSetLevel('${lv}')">${name} <span class="noticias-kind-count" id="noticiasLevelCount-${lv}"></span></button>`).join('')
+    + `</div>`;
 
   const siteLinks = NEWS_SOURCES.map(s => `
     <a class="noticias-site-link" href="${s.siteUrl}" target="_blank" rel="noopener noreferrer">
@@ -13749,24 +14030,25 @@ function renderNewsCard() {
       <div class="card-top">
         <div style="display:flex; align-items:center; gap:0.55rem;">
           <span class="tradutor-badge noticias-badge"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22h14a2 2 0 0 0 2-2V7l-4-4H8a2 2 0 0 0-2 2v3H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2z" transform="translate(0 -1)"/><path d="M18 3v4h4"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></span>
-          <h2 style="margin:0;">Notícias do MDS, MEC e Saúde</h2>
+          <h2 style="margin:0;">Notícias do MDS, MEC, Saúde e Roraima</h2>
         </div>
-        <span class="subtitle">📰 Últimas publicações dos três ministérios, com normativos separados das notícias</span>
+        <span class="subtitle">📰 Últimas publicações dos ministérios e de órgãos de Roraima, com normativos separados das notícias</span>
       </div>
       <div class="card-body">
-        <div class="noticias-layout">
-          <aside class="noticias-controls" aria-label="Filtros das notícias">
-            <div class="noticias-toolbar">
+            <div class="noticias-toolbar noticias-toolbar-top" role="search">
+              <span class="noticias-search-wrap"><svg class="noticias-search-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
               <input type="search" id="noticiasFilter" class="noticias-search"
-                     placeholder="Buscar (ex.: Bolsa Família, CadÚnico, SUAS)…"
+                     placeholder="Buscar: Bolsa Família, CadÚnico…"
                      aria-label="Buscar nas notícias" autocomplete="off"
                      oninput="newsDebouncedSearch()"
-                     onkeydown="if (event.key === 'Escape' && this.value) { this.value = ''; newsResetAndRender(); }">
+                     onkeydown="if (event.key === 'Escape' && this.value) { this.value = ''; newsResetAndRender(); }"></span>
               <button type="button" class="tradutor-btn" id="noticiasRefreshBtn" onclick="refreshNews()">
                 ${ICONS.cloud} Atualizar
               </button>
             </div>
 
+        <div class="noticias-layout">
+          <aside class="noticias-controls" aria-label="Filtros das notícias">
             <div class="noticias-ctrl-label">Temas rápidos</div>
             <div class="noticias-topics" aria-label="Temas rápidos">${topicChips}</div>
 
@@ -13774,8 +14056,10 @@ function renderNewsCard() {
               <span>⚙️ Filtros e ordem</span> <span class="noticias-filters-badge" id="noticiasFiltersBadge" hidden></span>
             </button>
             <div class="noticias-filters-body" id="noticiasFiltersBody">
-            <div class="noticias-ctrl-label">Ministério</div>
-            <div class="noticias-source-filter" role="group" aria-label="Filtrar por ministério">${sourceChips}</div>
+            <div class="noticias-ctrl-label">Esfera de governo</div>
+            ${levelSeg}
+            <div class="noticias-ctrl-label">Origem</div>
+            <div class="noticias-sources" role="group" aria-label="Filtrar por origem">${sourceChips}</div>
 
             <div class="noticias-ctrl-label">Tipo e período</div>
             <div class="noticias-filters-row">
@@ -13824,7 +14108,7 @@ function renderNewsCard() {
 
             <details class="noticias-privacy">
               <summary>Como esta lista é carregada</summary>
-              <p>A lista vem dos feeds públicos dos três ministérios (gov.br/mds, gov.br/mec e gov.br/saude). Como o portal não libera leitura direta por outros sites, o app pode buscar o mesmo endereço por um repassador público (allorigins, corsproxy ou codetabs) — só o endereço do feed é enviado, nenhum dado de atendido. A última lista baixada, as publicações salvas e as já lidas ficam guardadas apenas neste navegador.</p>
+              <p>A lista vem dos feeds públicos dos ministérios (gov.br/mds, gov.br/mec e gov.br/saude) e dos sites de Roraima (SETRABES, Prefeitura de Boa Vista, Governo, SESAU e SEED). Como o portal não libera leitura direta por outros sites, o app pode buscar o mesmo endereço por um repassador público (allorigins, corsproxy ou codetabs) — só o endereço do feed é enviado, nenhum dado de atendido. A última lista baixada, as publicações salvas e as já lidas ficam guardadas apenas neste navegador.</p>
             </details>
           </aside>
 
@@ -13870,6 +14154,12 @@ function newsUpdateSourceCounts() {
     el.textContent = failed ? '⚠' : (n ? `(${n})` : '');
     el.title = failed ? 'Não foi possível atualizar este ministério na última busca' : '';
   });
+  NEWS_LEVELS.forEach(([lv]) => {
+    const el = document.getElementById(`noticiasLevelCount-${lv}`); if (!el) return;
+    const n = newsState.items.filter(it => (newsSourceInfo(it.source) || {}).nivel === lv).length;
+    el.textContent = n ? `(${n})` : '';
+  });
+  newsSyncLevelSeg();
   const sc = document.getElementById('noticiasSavedCount');
   if (sc) sc.textContent = newsSaved.length ? `(${newsSaved.length})` : '';
   const nNorm = newsState.items.filter(newsIsNormative).length;
@@ -13884,6 +14174,30 @@ function newsUpdateSourceCounts() {
     const unread = newsState.items.filter(it => !newsReadSet.has(it.link)).length;
     uc.textContent = unread ? `(${unread})` : '';
   }
+}
+
+// Marca só as fontes de uma esfera (federal, estadual ou municipal); 'all' marca todas.
+function newsSetLevel(level) {
+  document.querySelectorAll('.noticias-source-checkbox').forEach(b => {
+    const src = NEWS_SOURCES.find(s => s.id === b.value);
+    b.checked = level === 'all' || (src && src.nivel === level);
+  });
+  newsResetAndRender();
+}
+// Destaca no seletor a esfera que corresponde às fontes marcadas (nenhuma, se for uma mistura).
+function newsSyncLevelSeg() {
+  const boxes = Array.from(document.querySelectorAll('.noticias-source-checkbox'));
+  if (!boxes.length) return;
+  const on = new Set(boxes.filter(b => b.checked).map(b => b.value));
+  let active = '';
+  if (on.size === NEWS_SOURCES.length) active = 'all';
+  else NEWS_LEVELS.forEach(([lv]) => {
+    const ids = NEWS_SOURCES.filter(s => s.nivel === lv).map(s => s.id);
+    if (ids.length === on.size && ids.every(id => on.has(id))) active = lv;
+  });
+  document.querySelectorAll('.noticias-levelseg button').forEach(b => {
+    const is = b.dataset.level === active; b.classList.toggle('is-active', is); b.setAttribute('aria-pressed', is ? 'true' : 'false');
+  });
 }
 
 function newsResetAndRender() { newsUi.limit = NEWS_PAGE_SIZE; renderNewsList(); }
@@ -14197,6 +14511,7 @@ function newsItemHtml(it, terms) {
     <article class="noticias-item${isRead ? ' is-read' : ''}${normative ? ' is-normative' : ''}" data-src="${escapeHtml(it.source || '')}" style="--src-color:${color.accent || color.fg};">
       <div class="noticias-item-tags">
         <span class="noticias-tag" title="${escapeHtml(src.fullLabel)}" style="--tag-bg:${color.bg}; --tag-fg:${color.fg};">${escapeHtml(src.label)}</span>
+        <span class="noticias-tag noticias-tag-level" data-level="${escapeHtml(src.nivel || '')}">${escapeHtml(newsLevelLabel(src.nivel))}</span>
         <span class="noticias-tag noticias-tag-kind">${escapeHtml(newsKind(it))}</span>
         ${isNew ? `<span class="noticias-tag noticias-tag-new">Novo</span>` : ''}
         ${newsIsPriority(it) ? `<span class="noticias-tag noticias-tag-suas" title="Menciona tema central do SUAS (benefícios, cadastro, serviços ou rede)">SUAS</span>` : ''}
@@ -17302,7 +17617,7 @@ const NAV_RECENT_KEY = 'argo_recent_tabs_v1';
 const NAV_DEFAULT_SHORTCUTS = ['agenda', 'mapa', 'tradutor', 'pdftools', 'appsext', 'noticias'];
 const NAV_SHORT_LABELS = {
   agenda: 'Agenda Argo', mapa: 'Mapa dos Equipamentos', tradutor: 'Tradutor (Es / En / Fr)',
-  pdftools: 'Central de PDF', criptografia: 'Criptografia', appsext: 'Aplicativos', ferramentas: 'Ferramentas', noticias: 'Notícias do MDS, MEC e Saúde',
+  pdftools: 'Central de PDF', criptografia: 'Criptografia', appsext: 'Aplicativos', ferramentas: 'Ferramentas', noticias: 'Notícias do MDS, MEC, Saúde e Roraima',
   saude: 'RAPS', hospitalar: 'Hospitais', social: 'SUAS', informes: 'Programas', cas: 'CAS', cras: 'CRAS'
 };
 const NAV_QUICK_MAX = 6;
@@ -17314,7 +17629,7 @@ const NAV_QUICK_META = {
   pdftools: { title: 'Central de PDF',         sub: 'Unir, dividir, converter' },
   criptografia: { title: 'Criptografia',        sub: 'Senha em PDF, Word, .zip' },
   appsext:  { title: 'Aplicativos',           sub: 'Toth, Umbrela, Verbus…' },
-  noticias: { title: 'Notícias',              sub: 'MDS, MEC e Saúde' }
+  noticias: { title: 'Notícias',              sub: 'MDS, MEC, Saúde e Roraima' }
 };
 
 function navReadRecent() {
@@ -18087,7 +18402,7 @@ const ARGO_ASSISTANT_INTENTS = [
   },
   {
     keys: ['noticia', 'noticias', 'portaria', 'instrucao normativa', 'mds', 'mec', 'novidade', 'novidades', 'normativo', 'normativos'],
-    reply: 'Em "Notícias do MDS, MEC e Saúde" você busca por assunto, filtra por ministério, separa notícias de normativos, escolhe o período e salva as publicações para ler depois.',
+    reply: 'Em "Notícias do MDS, MEC, Saúde e Roraima" você busca por assunto, filtra por ministério, separa notícias de normativos, escolhe o período e salva as publicações para ler depois.',
     action: { label: 'Abrir Notícias', run: () => argoAssistantGoTo('noticias'), reply: 'Abri as Notícias. Tente os temas rápidos no topo, como Bolsa Família ou CadÚnico.', mood: 'success' }
   },
   {
@@ -29417,17 +29732,9 @@ function acompPendText() {
 
 // ---------- ligações com as outras ferramentas
 function acompGoCard(id) {
-  const root = document.getElementById('toolsRoot'); if (!root) return null;
-  const all = root.querySelector('.tools-fchip[data-tf="all"]');
-  if (TOOLS_STATE.view.cat !== 'all' || TOOLS_STATE.view.q) {
-    const f = document.getElementById('toolsFind'); if (f) f.value = '';
-    TOOLS_STATE.view.q = '';
-    if (all) all.click();
-  }
-  const card = root.querySelector('section[data-tid="' + id + '"]'); if (!card) return null;
-  if (card.classList.contains('is-collapsed')) { const b = card.querySelector('[data-act="fold"]'); if (b) b.click(); }
-  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  return card;
+  const card = typeof toolsOpenTool === 'function' ? toolsOpenTool(id) : null;
+  if (card) { card.scrollIntoView({ behavior: 'smooth', block: 'start' }); return card; }
+  const root = document.getElementById('toolsRoot'); return root ? root.querySelector('section[data-tid="' + id + '"]') : null;
 }
 function acompToRenda(row) {
   const ix = acompIdx(), $ = id => document.getElementById(id);
@@ -30366,7 +30673,7 @@ const ARGO_ACOES_IA = [
   { id: 'cas', cat: 'cas', rotulo: 'Registro de Atendimento (CAS)', descricao: 'Registro de atendimentos do CAS' },
   { id: 'pdftools', cat: 'pdftools', rotulo: 'Central de PDF', descricao: 'Ferramentas para PDF' },
   { id: 'tradutor', cat: 'tradutor', rotulo: 'Tradutor', descricao: 'Tradutor Es/En/Fr' },
-  { id: 'noticias', cat: 'noticias', rotulo: 'Notícias', descricao: 'Notícias do MDS, MEC e Saúde' },
+  { id: 'noticias', cat: 'noticias', rotulo: 'Notícias', descricao: 'Notícias do MDS, MEC, Saúde e Roraima' },
   { id: 'raps', cat: 'saude', rotulo: 'Rede RAPS', descricao: 'Rede de Atenção Psicossocial (CAPS, UBS de saúde mental)' },
   { id: 'social', cat: 'social', rotulo: 'Proteção Social (CRAS/CREAS)', descricao: 'Proteção Social Básica e Especial' },
   { id: 'tea', cat: 'tea', rotulo: 'Rede TEA e PCD', descricao: 'Atenção à Pessoa com Deficiência e TEA' },
@@ -30401,15 +30708,8 @@ function argoAssistantOpenTool(toolId) {
   if (!entrada) return;
   let tentativas = 0;
   const ir = () => {
-    const busca = document.getElementById('toolsFind');
-    if (!busca) { if (++tentativas < 20) setTimeout(ir, 60); return; }   // a aba pode levar um instante para desenhar
-    const todas = document.querySelector('#toolsRoot .tools-fchip[data-tf="all"]');
-    if (todas) todas.click();
-    busca.value = entrada[0];
-    busca.dispatchEvent(new Event('input', { bubbles: true }));
-    const cartao = document.querySelector('#toolsRoot [data-tid="' + toolId + '"]');
-    if (!cartao) return;
-    try { cartao.scrollIntoView({ block: 'start', behavior: 'smooth' }); } catch (e) { cartao.scrollIntoView(); }
+    const cartao = typeof toolsOpenTool === 'function' ? toolsOpenTool(toolId) : null;
+    if (!cartao) { if (++tentativas < 20) setTimeout(ir, 60); return; }   // a aba pode levar um instante para desenhar
     const campo = cartao.querySelector('input:not([type=hidden]), textarea, select');
     if (campo) { try { campo.focus({ preventScroll: true }); } catch (e) { /* sem foco */ } }
   };
