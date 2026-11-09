@@ -7731,10 +7731,12 @@ function renderToolsCard() {
     + '<button type="button" class="calc-copy" id="calcCopy" aria-label="Copiar resultado" title="Copiar resultado">Copiar</button>'
     + '<button type="button" class="calc-copy" id="calcCopyBrl" aria-label="Copiar como valor em reais" title="Copiar como valor em reais (R$)">R$</button>'
     + '<button type="button" class="calc-copy" id="calcPaste" aria-label="Colar um valor copiado" title="Colar um valor copiado">Colar</button></div>'
+    + '<div class="calc-opts"><label class="calc-dec" for="calcDec">Casas decimais <select id="calcDec" class="tools-input" aria-describedby="calcDecHint"><option value="">Automático</option><option value="0">0</option><option value="1">1</option><option value="2">2 (reais)</option><option value="3">3</option><option value="4">4</option></select></label>'
+    + '<span id="calcDecHint" class="tools-hint">Arredonda o resultado de cada conta.</span></div>'
     + '<div id="calcKeys" class="calc-keys">' + btns + '</div>'
     + '<div id="calcHint" class="tools-hint" role="status">Clique aqui e use o teclado: números, + − * /, Enter, Backspace, Esc (limpa tudo) e Del (limpa o número). Ctrl+V cola um valor.</div>'
     + '<details class="calc-log-box"><summary>Histórico <span id="calcLogCount" class="calc-log-count"></span></summary>'
-    + '<ul id="calcLog" class="calc-log"></ul><button type="button" class="btn-tech btn-secondary calc-log-clear" id="calcLogClear">Limpar histórico</button></details></section>'
+    + '<ul id="calcLog" class="calc-log"></ul><div class="tools-row"><button type="button" class="btn-tech btn-secondary calc-log-clear" id="calcLogCopy">Copiar histórico</button><button type="button" class="btn-tech btn-secondary calc-log-clear" id="calcLogClear">Limpar histórico</button></div></details></section>'
     + toolsCalcMoreHtml()
     // ---------- Atendimento: renda per capita, idade e QR Code
     + toolsExtrasHtml()
@@ -8113,7 +8115,12 @@ function initToolsPanel() {
   const hintDefault = hint.textContent;
   const S = { cur: '0', prev: null, op: null, fresh: true, last: null, note: '' };
   const val = s => parseFloat(String(s).replace(',', '.'));
-  const fmt = n => !isFinite(n) ? 'Erro' : String(parseFloat(n.toPrecision(12))).replace('.', ',');
+  // 15 algarismos significativos: tira o ruído do ponto flutuante (0,1 + 0,2 = 0,3) sem perder números grandes
+  // (antes eram 12 e uma soma de 13 a 15 dígitos saía arredondada, ex.: 1234567890123 + 1).
+  const fmt = n => !isFinite(n) ? 'Erro' : String(parseFloat(n.toPrecision(15))).replace('.', ',');
+  let dec = null; // casas decimais escolhidas (null = automático)
+  const rnd = n => dec === null || !isFinite(n) ? n : Number(Math.round(Number(n + 'e' + dec)) + 'e-' + dec);
+  const fmtR = n => fmt(rnd(n));
   const pretty = s => {
     if (s === 'Erro' || /e/i.test(s)) return s;
     const neg = s[0] === '-', t = neg ? s.slice(1) : s, parts = t.split(',');
@@ -8128,7 +8135,7 @@ function initToolsPanel() {
       ? log.map((e, i) => '<li><button type="button" class="calc-log-item" data-i="' + i + '" title="Usar este resultado"><span>' + escapeHtml(e.expr) + '</span><strong>' + escapeHtml(e.res) + '</strong></button></li>').join('')
       : '<li class="tools-hint">Nenhuma conta ainda.</li>';
     $('calcLogCount').textContent = log.length ? '(' + log.length + ')' : '';
-    $('calcLogClear').hidden = !log.length;
+    $('calcLogClear').hidden = $('calcLogCopy').hidden = !log.length;
   };
   const show = () => {
     disp.textContent = pretty(S.cur);
@@ -8157,16 +8164,16 @@ function initToolsPanel() {
     else if (k === '%') {
       // 200 + 10 % mostra 20 (10% de 200) e "=" dá 220; sem operação pendente, divide por 100.
       const x = val(S.cur);
-      S.cur = fmt((S.op === '+' || S.op === '−') && S.prev !== null ? val(S.prev) * x / 100 : x / 100); S.fresh = true;
+      S.cur = fmtR((S.op === '+' || S.op === '−') && S.prev !== null ? val(S.prev) * x / 100 : x / 100); S.fresh = true;
     } else if (k === '√' || k === 'x²' || k === '1/x') {
       const x = val(S.cur);
-      S.cur = fmt(k === '√' ? Math.sqrt(x) : k === 'x²' ? x * x : 1 / x); S.fresh = true;
+      S.cur = fmtR(k === '√' ? Math.sqrt(x) : k === 'x²' ? x * x : 1 / x); S.fresh = true;
       if (S.cur === 'Erro') S.note = k === '√' ? 'Não existe raiz quadrada de número negativo' : k === '1/x' ? MSG_ZERO : 'Resultado grande demais';
     } else if (k === 'MC') { TOOLS_STATE.calcMem = 0; }
     else if (k === 'MR') { S.cur = fmt(TOOLS_STATE.calcMem); S.fresh = true; }
     else if (k === 'M+' || k === 'M−') {
       const x = val(S.cur);
-      TOOLS_STATE.calcMem = parseFloat((TOOLS_STATE.calcMem + (k === 'M+' ? x : -x)).toPrecision(12));
+      TOOLS_STATE.calcMem = parseFloat((TOOLS_STATE.calcMem + (k === 'M+' ? x : -x)).toPrecision(15));
       S.fresh = true;
     } else if (k === '=') {
       // Com operação pendente: calcula. Sem ela, "=" repete a última (ex.: 5 + 3 = = dá 11).
@@ -8174,7 +8181,7 @@ function initToolsPanel() {
       if (S.op && S.prev !== null) { op = S.op; aStr = S.prev; bStr = S.cur; S.last = { op, b: bStr }; }
       else if (S.last) { op = S.last.op; aStr = S.cur; bStr = S.last.b; }
       else return;
-      const r = fmt(calc(val(aStr), op, val(bStr)));
+      const r = fmtR(calc(val(aStr), op, val(bStr)));
       S.note = pretty(aStr) + ' ' + op + ' ' + pretty(bStr) + ' =';
       if (r !== 'Erro') {
         TOOLS_STATE.calcLog.unshift({ expr: S.note, res: pretty(r) });
@@ -8183,7 +8190,7 @@ function initToolsPanel() {
       } else { S.last = null; S.note = MSG_ZERO; }
       S.cur = r; S.op = null; S.prev = null; S.fresh = true;
     } else { // operador
-      if (S.op && S.prev !== null && !S.fresh) S.cur = fmt(calc(val(S.prev), S.op, val(S.cur)));
+      if (S.op && S.prev !== null && !S.fresh) S.cur = fmtR(calc(val(S.prev), S.op, val(S.cur)));
       if (S.cur === 'Erro') { S.prev = null; S.op = null; S.fresh = true; S.last = null; S.note = MSG_ZERO; }
       else { S.prev = S.cur; S.op = k; S.fresh = true; S.last = null; }
     }
@@ -8254,6 +8261,18 @@ function initToolsPanel() {
     show(); $('calcBox').focus();
   });
   $('calcLogClear').addEventListener('click', () => { TOOLS_STATE.calcLog.length = 0; renderLog(); });
+  $('calcLogCopy').addEventListener('click', () => {
+    const log = TOOLS_STATE.calcLog;
+    if (!log.length) return;
+    // da conta mais antiga para a mais nova, uma por linha: "10 + 5 = 15"
+    toolsCopy(log.slice().reverse().map(e => e.expr + ' ' + e.res).join('\n'), 'Histórico copiado.');
+  });
+  $('calcDec').addEventListener('change', e => {
+    dec = e.target.value === '' ? null : +e.target.value;
+    // Já arredonda o número que está na tela, se for resultado (não o que está sendo digitado).
+    if (S.fresh && S.cur !== 'Erro' && dec !== null) S.cur = fmtR(val(S.cur));
+    show(); say(dec === null ? 'Casas decimais: automático.' : 'Resultados com ' + dec + (dec === 1 ? ' casa decimal.' : ' casas decimais.'));
+  });
   renderLog(); show();
 
   // ---- Bloco de notas (várias notas, cifradas via safeStorage, com salvamento adiado)
@@ -18964,7 +18983,7 @@ function argoAssistantAsk(rawText) {
   return {
     reply: matches.length
       ? 'Achei ' + (matches.length === 1 ? 'uma aba que combina' : 'algumas abas que combinam') + ' com isso. Quer abrir? Se preferir, posso procurar o termo nos equipamentos.'
-      : 'Essa eu não sei de cabeça, e prefiro não chutar. Mas posso procurar "' + rawText.trim() + '" direto nos equipamentos da rede.',
+      : 'Não tenho uma resposta segura para isso aqui, e prefiro não chutar. Posso procurar "' + rawText.trim().slice(0, 60) + '" direto nos equipamentos da rede. Ou pergunte de outro jeito, por exemplo: "o que é PAIF", "documentos do BPC", "CRAS do Caimbé" ou "telefone do Conselho Tutelar".',
     mood: matches.length ? 'info' : 'notfound',
     quickActions: acts,
     fallback: !matches.length   // sem resposta pronta nem aba parecida: a IA (se ligada) pode tentar
@@ -22809,6 +22828,18 @@ function pdftoolsHandleDrop(event, kind) {
 // começar a processar. Os mesmos princípios de limite já usados em
 // "Unificar PDF" e "JPG → PDF" agora valem aqui também.
 const PDFTOOLS_SINGLE_MAX_BYTES = 60 * 1024 * 1024;
+// Conversão em andamento por ferramenta: arrastar um arquivo ou escolhê-lo pelo hub não trava o botão da ferramenta,
+// então um segundo arquivo largado durante a conversão rodava junto (dois downloads, mais memória, mensagens trocadas).
+const pdftoolsConvBusy = { PdfJpg: false, PdfWord: false, WordPdf: false };
+function pdftoolsConvStart(key, statusId, inputEl) {
+  if (pdftoolsConvBusy[key]) {
+    pdftoolsSetStatus(statusId, 'Ainda estou convertendo o arquivo anterior. Espere terminar para enviar outro.', 'warn');
+    if (inputEl) inputEl.value = '';
+    return false;
+  }
+  pdftoolsConvBusy[key] = true;
+  return true;
+}
 function pdftoolsCheckSingleFileSize(file, statusId, inputEl) {
   if (file.size <= PDFTOOLS_SINGLE_MAX_BYTES) return true;
   pdftoolsSetStatus(statusId, `"${file.name}" (${pdftoolsFormatBytes(file.size)}) é maior que o limite de 60 MB para essa conversão.`, 'error');
@@ -22843,7 +22874,8 @@ function pdftoolsDefaultMergeName() {
 // até a última página; vazio ou "todas" usa o arquivo inteiro. A ordem
 // digitada é respeitada (ex.: "3,1,2" reordena as páginas).
 function pdftoolsParsePageRange(text, total) {
-  const raw = String(text || '').trim().toLowerCase();
+  // Teclados de celular e o Word trocam o hífen por traço longo (– — −): "1–3" valia como erro.
+  const raw = String(text || '').replace(/[‐-―−]/g, '-').trim().toLowerCase();
   if (!raw || raw === 'todas' || raw === 'todos' || raw === 'tudo') {
     return { indices: Array.from({ length: total }, (_, i) => i) };
   }
@@ -23696,6 +23728,7 @@ async function pdftoolsRunJpgToPdf() {
 async function pdftoolsRunPdfToJpg(file, inputEl) {
   if (!file) return;
   if (!pdftoolsCheckSingleFileSize(file, 'pdftoolsPdfJpgStatus', inputEl)) return;
+  if (!pdftoolsConvStart('PdfJpg', 'pdftoolsPdfJpgStatus', inputEl)) return;
   if (inputEl) inputEl.disabled = true;
   pdftoolsSetStatus('pdftoolsPdfJpgStatus', 'Carregando biblioteca de PDF...', 'info');
   pdftoolsSetProgress('PdfJpg', 0, 0);
@@ -23740,6 +23773,7 @@ async function pdftoolsRunPdfToJpg(file, inputEl) {
   } catch (e) {
     pdftoolsSetStatus('pdftoolsPdfJpgStatus', pdftoolsPdfErrorMsg(e, 'Não foi possível converter este PDF.'), 'error');
   } finally {
+    pdftoolsConvBusy.PdfJpg = false;
     if (inputEl) { inputEl.disabled = false; inputEl.value = ''; }
     pdftoolsSetProgress('PdfJpg', 0, 0);
   }
@@ -27584,6 +27618,7 @@ function pdftoolsBuildHeaderFooterXml(tag, zone, pageW, textWidthTw, idState) {
 async function pdftoolsRunPdfToWord(file, inputEl) {
   if (!file) return;
   if (!pdftoolsCheckSingleFileSize(file, 'pdftoolsPdfWordStatus', inputEl)) return;
+  if (!pdftoolsConvStart('PdfWord', 'pdftoolsPdfWordStatus', inputEl)) return;
   if (inputEl) inputEl.disabled = true;
   pdftoolsSetStatus('pdftoolsPdfWordStatus', 'Carregando bibliotecas...', 'info');
   pdftoolsSetProgress('PdfWord', 0, 0);
@@ -27608,6 +27643,7 @@ async function pdftoolsRunPdfToWord(file, inputEl) {
   } catch (e) {
     pdftoolsSetStatus('pdftoolsPdfWordStatus', pdftoolsPdfErrorMsg(e, 'Não foi possível converter este PDF.'), 'error');
   } finally {
+    pdftoolsConvBusy.PdfWord = false;
     if (inputEl) { inputEl.disabled = false; inputEl.value = ''; }
     pdftoolsSetProgress('PdfWord', 0, 0);
   }
@@ -27622,6 +27658,7 @@ async function pdftoolsRunPdfToWord(file, inputEl) {
 async function pdftoolsRunWordToPdf(file, inputEl) {
   if (!file) return;
   if (!pdftoolsCheckSingleFileSize(file, 'pdftoolsWordPdfStatus', inputEl)) return;
+  if (!pdftoolsConvStart('WordPdf', 'pdftoolsWordPdfStatus', inputEl)) return;
   if (inputEl) inputEl.disabled = true;
   pdftoolsSetStatus('pdftoolsWordPdfStatus', 'Carregando bibliotecas...', 'info');
   try {
@@ -27972,6 +28009,7 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
   } catch (e) {
     pdftoolsSetStatus('pdftoolsWordPdfStatus', 'Não foi possível converter este documento.', 'error');
   } finally {
+    pdftoolsConvBusy.WordPdf = false;
     if (inputEl) { inputEl.disabled = false; inputEl.value = ''; }
   }
 }
@@ -28248,7 +28286,11 @@ function pdfhubPick(list, inputEl) {
   if (nDoc === 1 && ok.length === 1) { keys = ['WordPdf']; hint = 'Documento Word:'; }
   else if (nPdf === 1 && ok.length === 1) { keys = ['Edit', 'Compress', 'Split', 'Organize', 'Rotate', 'Remove', 'Number', 'Crop', 'Mark', 'Meta', 'Unlock', 'Text', 'PdfWord', 'PdfJpg']; hint = 'O que fazer com este PDF?'; }
   else if (nImg === ok.length) { keys = ['JpgPdf', 'Merge']; hint = nImg === 1 ? 'Foto:' : 'Fotos:'; }
-  else if (nPdf + nImg >= 2) { keys = ['Merge']; hint = 'Vários arquivos: junte em um só. Para as outras ferramentas, escolha um PDF por vez.'; }
+  else if (nPdf + nImg >= 2) {
+    keys = ['Merge'];
+    hint = 'Vários arquivos: junte em um só. Para as outras ferramentas, escolha um PDF por vez.' +
+      (nDoc ? ' O arquivo .docx não entra na união: converta antes em Word → PDF.' : '');
+  }
   else { keys = []; hint = 'Escolha um arquivo de cada vez para usar nas outras ferramentas.'; }
   const total = ok.reduce((s, f) => s + f.size, 0);
   const name = ok.length === 1 ? escapeHtmlAttr(ok[0].name) : ok.length + ' arquivos';
@@ -29840,6 +29882,7 @@ function argoAssistantAskHybrid(rawText, meta) {
   if (B && B.session) B.session.aguardando = false;
   const pular = !B || typeof B.interpretar !== 'function' || !B.aiOn() || meta.forceAI || meta.regen || meta.semInterpretar ||
     (texto.length < 4 && !aguardando) || texto.length > 300 || _ubsPsiAguarda || B.crisis(texto) || B.piiBlock(texto) || !!argoAprendizadoKind(texto) || argoAgendaAsk(texto) || argoThemeAsk(texto) || argoOpenTabAsk(texto) ||
+    (() => { const t = argoConversaTipo(texto); return !!t && argoConversaLocal(t); })() ||
     // traduzir, medir distância e calcular têm leitura própria: a reescrita da pergunta poderia mexer no texto a traduzir ou nos números
     argoHabReconhece(texto) ||
     // pedido de rota ("traçar rota saindo do CRAS X: A, B e C"): o Paulus lê com as palavras da pessoa; reescrever a pergunta perderia paradas
@@ -29883,6 +29926,69 @@ function argoAssistantAskHybrid(rawText, meta) {
   }, () => argoAssistantAskHybridCore(rawText, meta));
 }
 
+// ---- Conversa solta: desabafo, "repete", "não entendi", "resume", curiosidade e assuntos fora do app ----
+// Antes, tudo isso virava "Encontrei 24 unidades para 'me conta uma curiosidade'" ou uma norma sem relação.
+const ARGO_RE_DESABAFO = /\b(desabaf\w+|(preciso|quero|queria|posso|podemos) conversar|estou (mal|triste|ansios[oa]|desanimad[oa]|com medo|chorando|sem animo)|to (mal|triste|ansios[oa])|nao aguento mais|me sinto (mal|sozinh[oa]|perdid[oa]))\b/;
+const ARGO_RE_CURIOSIDADE = /\b(curiosidade|fato curioso|voce sabia|me conta (algo|uma coisa)|algo interessante)\b/;
+const ARGO_RE_FORA = /\b(previsao do tempo|vai chover|temperatura|horoscopo|signo|filme|musica|receita de|futebol|campeonato|resultado do jogo|loteria|mega sena|cotacao|dolar|bitcoin|capital d[aeo]s?|presidente d[aeo]|quem e o (prefeito|governador|presidente)|quem ganhou|me indica um|poema|poesia|escreva um codigo)\b/;
+const ARGO_RE_REPETIR = /^(repete|repita|pode repetir|repete isso|fala de novo|de novo)( por favor)?$/;
+const ARGO_RE_EXPLICAR = /^(nao entendi|nao compreendi|nao ficou claro|pode explicar( melhor| de outro jeito)?|explica( melhor| de outro jeito)?|explique( melhor)?|mais simples|de forma mais simples|simplifica|simplifique|de outro jeito)( por favor)?$/;
+const ARGO_RE_RESUMIR = /^(resum[aeo]|resumir|pode resumir|em poucas palavras|mais curto|encurta)( isso| a resposta| por favor)?$/;
+const ARGO_CURIOSIDADES = [
+  'O SUAS tem raízes na **LOAS (Lei 8.742/1993)**, que reconheceu a assistência social como **direito** e dever do Estado; o sistema foi organizado a partir da PNAS de 2004 e da NOB/SUAS de 2005, e ganhou força de lei com a **Lei 12.435/2011**.',
+  'O **Cadastro Único** nasceu em **2001** e hoje é a porta de entrada para vários programas (Bolsa Família, Tarifa Social, Gás do Povo, entre outros): por isso manter o cadastro **atualizado** faz tanta diferença para as famílias.',
+  'A **Tipificação Nacional dos Serviços Socioassistenciais** (Res. CNAS 109/2009) é o que diz o que o CRAS e o CREAS podem e devem ofertar, e é por ela que PAIF, PAEFI e SCFV têm nome e definição iguais no país inteiro.',
+  'Os **benefícios eventuais** (como o auxílio por natalidade ou por morte) estão na LOAS, art. 22, mas quem define valor e critério é cada município ou estado: por isso variam tanto de lugar para lugar.'
+];
+// Reconhece o tipo de conversa solta; devolve null quando o texto é uma pergunta de verdade.
+function argoConversaTipo(rawText) {
+  const n = argoNorm(rawText);
+  if (!n || n.length > 90) return null;
+  if (ARGO_RE_REPETIR.test(n)) return 'repetir';
+  if (ARGO_RE_EXPLICAR.test(n)) return 'explicar';
+  if (ARGO_RE_RESUMIR.test(n)) return 'resumir';
+  if (ARGO_RE_DESABAFO.test(n)) return 'desabafo';
+  if (ARGO_RE_CURIOSIDADE.test(n)) return 'curiosidade';
+  if (ARGO_RE_FORA.test(n)) return 'fora';
+  return null;
+}
+// Com a IA ligada, "explica melhor" e "resume" ficam com ela (reescrevem de verdade); o resto é resolvido aqui.
+function argoConversaLocal(tipo) { return tipo === 'repetir' || tipo === 'desabafo' || tipo === 'curiosidade' || tipo === 'fora'; }
+function argoConversaEssencial(texto) {
+  const linhas = String(texto || '').split('\n').map(l => l.trim()).filter(Boolean);
+  const out = []; let total = 0;
+  for (const l of linhas) {
+    if (out.length && total + l.length > 420) break;
+    out.push(l.length > 420 ? l.slice(0, 419).replace(/\s+\S*$/, '') + '…' : l); total += l.length;
+    if (out.length >= 4) break;
+  }
+  return out.join('\n');
+}
+function argoConversaAsk(rawText) {
+  const tipo = argoConversaTipo(rawText);
+  if (!tipo) return null;
+  const B = argoBrain();
+  const B_ia = !!(B && B.aiOn && B.aiOn());
+  if (!argoConversaLocal(tipo) && B_ia) return null;
+  if (tipo === 'desabafo') return { reply: 'Pode falar, eu escuto. Se for sobre um caso, conte sem nomes nem dados que identifiquem a pessoa, e eu ajudo a organizar o que está pesando em passos pequenos. Se for o seu cansaço mesmo, vale conversar com a supervisão ou com alguém de confiança. E se estiver muito difícil, o **CVV** atende 24h, de graça, pelo **188**.', mood: 'info', quickActions: [] };
+  if (tipo === 'curiosidade') return { reply: argoPick(ARGO_CURIOSIDADES), mood: 'success', quickActions: [] };
+  if (tipo === 'fora') return {
+    reply: 'Isso foge do que eu cubro aqui (rede socioassistencial, normas do SUAS, valores de referência e as ferramentas do app), e prefiro não chutar. Para esse assunto, uma busca na internet resolve melhor. Se precisar de SUAS ou da rede, é comigo.',
+    mood: 'notfound', quickActions: [{ label: 'O que você sabe fazer?', run: () => argoAssistantAskInline('o que você sabe fazer') }]
+  };
+  // repetir / explicar / resumir a última resposta
+  let ult = '';
+  const hist = (B && B.session && B.session.history) || [];
+  for (let i = hist.length - 1; i >= 0; i--) if (hist[i].papel === 'argo') { ult = hist[i].texto || ''; break; }
+  if (!ult) return { reply: 'Ainda não respondi nada nesta conversa. Qual é a sua dúvida?', mood: 'info', quickActions: [] };
+  if (tipo === 'repetir') return { reply: 'Repito:\n' + ult, mood: 'info', quickActions: [] };
+  return {
+    reply: (tipo === 'resumir' ? 'Em resumo:\n' : 'Sem internet eu não consigo reformular com outras palavras. Mostro só o essencial do que eu disse:\n') + argoConversaEssencial(ult) +
+      (tipo === 'resumir' ? '' : '\nSe me disser qual parte ficou confusa (por exemplo, "quais documentos?"), eu respondo só ela.'),
+    mood: 'info', quickActions: []
+  };
+}
+
 // Fluxo local + IA de resposta (recebe a pergunta já interpretada).
 function argoAssistantAskHybridCore(rawText, meta) {
   const B = argoBrain();
@@ -29917,6 +30023,12 @@ function argoAssistantAskHybridCore(rawText, meta) {
   if (themeAnswer) return themeAnswer;
   const closeAnswer = argoCloseAppAsk(rawText);
   if (closeAnswer) return closeAnswer;
+
+  // Conversa solta ("quero desabafar", "repete", "resume", "me conta uma curiosidade", "previsão do tempo")
+  if (!meta.forceAI) {
+    const conv = argoConversaAsk(rawText);
+    if (conv) { B.remember(rawText, conv.reply, []); return conv; }
+  }
 
   // Traduzir ("traduza para o espanhol: ..."), medir distância ("distância entre A e B") e calcular ("quanto é 15% de 1200"):
   // feitos aqui, no aparelho (js/argo-habilidades.js). "Aprofundar com a IA" (forceAI) pula esta etapa.
@@ -30006,7 +30118,10 @@ function argoAssistantAskHybridCore(rawText, meta) {
   }
 
   // lista aproximada do diretório só serve para pedidos curtos ("preciso de um psicólogo"); em pergunta longa vira ruído
-  const weak = (plan.kind === 'directory-weak' && rawText.trim().split(/\s+/).length < 6) ? argoAssistantToUi(plan.result, rawText, false) : null;
+  // Pergunta aberta ("como escrever um parecer social?", "o que é aluguel social?") sem unidade clara: uma lista de 48 unidades aproximadas só atrapalha.
+  const nAberta = argoNorm(rawText);
+  const perguntaAberta = /^(como|o que|oque|por que|porque|quando|posso|devo|quem|existe)\b/.test(nAberta) && !/\b(telefone|fone|endereco|horario|onde|bairro|fica|perto)\b/.test(nAberta);
+  const weak = (plan.kind === 'directory-weak' && rawText.trim().split(/\s+/).length < 6 && !perguntaAberta) ? argoAssistantToUi(plan.result, rawText, false) : null;
   // verbete pronto (conceito) que ficou de reserva caso a IA falhe
   const conceito = plan.kind === 'concept' ? argoAssistantToUi(plan.result, rawText, false) : null;
   const iaOk = B.aiOn();
@@ -30030,6 +30145,19 @@ function argoAssistantAskHybridCore(rawText, meta) {
   return local;
 }
 
+// O trecho da base responde mesmo à pergunta? Cada palavra-chave da pergunta (sem as genéricas) precisa aparecer
+// no trecho (pela raiz de 5 letras) em pelo menos metade dos casos, e as palavras longas e raras, todas.
+function argoNormaRelevante(pergunta, trecho) {
+  const GEN = new Set(['onde', 'como', 'qual', 'quais', 'quem', 'quando', 'para', 'pra', 'por', 'que', 'tirar', 'fazer', 'faco', 'fica', 'tem', 'uma', 'uns', 'umas', 'com', 'sem', 'dos', 'das', 'nos', 'nas', 'ser', 'sao', 'esta', 'estao', 'meu', 'minha', 'seu', 'sua', 'preciso', 'quero', 'posso', 'devo', 'boa', 'vista', 'roraima', 'brasil', 'cras', 'creas', 'mais', 'muito', 'sobre', 'entre', 'depois', 'antes', 'ainda', 'isso', 'esse', 'essa', 'este', 'funciona', 'significa', 'existe', 'pago', 'paga', 'pagar']);
+  const q = argoNorm(pergunta).split(' ').filter(w => w.length >= 2 && !GEN.has(w));
+  if (!q.length) return true;
+  const hay = ' ' + argoNorm(trecho) + ' ';
+  const acha = w => hay.indexOf(' ' + w) > -1 || (w.length >= 6 && hay.indexOf(' ' + w.slice(0, 5)) > -1);
+  const fora = q.filter(w => w.length >= 3 && !acha(w));
+  // Poucas palavras-chave: todas precisam estar no trecho. Muitas: tolera uma fora.
+  return fora.length <= (q.filter(w => w.length >= 3).length >= 6 ? 1 : 0);
+}
+
 // Pergunta de conteúdo sem IA: procura na base de normas do Paulus (assets/conhecimento.json, também em cache offline).
 // Volta como resposta em stream só para o mascote esperar a base carregar; se nada na base sustenta a pergunta,
 // rejeita e o mascote mostra a resposta de reserva (a mesma que mostraria antes), então o usuário nunca fica pior.
@@ -30046,6 +30174,8 @@ function argoAskNormasOffline(rawText, local) {
         if (!r) { if (local) B.remember(rawText, local.reply, []); throw new Error('sem norma'); }
         const txt = B.cleanAI(r.texto);
         if (!txt) throw new Error('vazia');
+        // Antes saía qualquer trecho "parecido" (ex.: população de Boa Vista para "quem é o prefeito"). Agora o trecho precisa tratar do que foi perguntado.
+        if (!argoNormaRelevante(rawText, txt)) { if (local) B.remember(rawText, local.reply, []); throw new Error('trecho sem relação'); }
         B.remember(rawText, txt, []);
         return { text: txt, note: (r.avisos && r.avisos[0]) || 'Confira o texto oficial vigente.', sources: r.fontes || [] };
       })
