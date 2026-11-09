@@ -8708,3 +8708,335 @@ button.card-quick-btn { font-family: inherit; cursor: pointer; }
 .calc-dec .tools-input { width: auto; min-height: 36px; padding: 0.2rem 0.5rem; }
 .calc-log-box .tools-row { gap: 0.5rem; margin-top: 0.4rem; }
 .calc-log-box .calc-log-clear[hidden] { display: none; }
+
+
+/* =====================================================================
+   ABA FERRAMENTAS — redesenho
+   Ideia: cada ferramenta ganha um azulejo de ícone na cor da sua categoria
+   (tempo, cálculos, famílias, atendimento, dados, notas); a busca e os
+   filtros viram uma barra de comando; o Relógio vira um painel de
+   "instrumento de bordo" (azul-marinho com ponteiro de latão), uma
+   referência ao navio Argo. O resto fica quieto de propósito.
+   Tudo escopado em #toolsRoot: não mexe em nenhuma outra aba.
+   ===================================================================== */
+#toolsRoot {
+  --tc: #0091C2; --tc-ink: #0A6F96;
+  --brass: #C9A24B; --brass-soft: #E6C98A;
+  --deck: #0B1B33; --deck-2: #12294A; --deck-line: rgba(230, 201, 138, 0.28);
+  gap: 1.1rem;
+}
+#toolsRoot [data-tcat="tempo"], #toolsRoot [data-tf="tempo"]       { --tc: #C77A0A; --tc-ink: #9A5B00; }
+#toolsRoot [data-tcat="calculo"], #toolsRoot [data-tf="calculo"]   { --tc: #0091C2; --tc-ink: #0A6F96; }
+#toolsRoot [data-tcat="familias"], #toolsRoot [data-tf="familias"] { --tc: #0F9488; --tc-ink: #0B6F66; }
+#toolsRoot [data-tcat="atend"], #toolsRoot [data-tf="atend"]       { --tc: #6D4FD0; --tc-ink: #5638B8; }
+#toolsRoot [data-tcat="dados"], #toolsRoot [data-tf="dados"]       { --tc: #D6336C; --tc-ink: #B0204F; }
+#toolsRoot [data-tcat="notas"], #toolsRoot [data-tf="notas"]       { --tc: #3F9B3F; --tc-ink: #2D7A2D; }
+#toolsRoot [data-tf="fav"]                                          { --tc: #D97706; --tc-ink: #9A5B00; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) #toolsRoot [data-tcat="tempo"], :root:not([data-theme="light"]) #toolsRoot [data-tf="tempo"]       { --tc-ink: #F2C26B; }
+  :root:not([data-theme="light"]) #toolsRoot [data-tcat="calculo"], :root:not([data-theme="light"]) #toolsRoot [data-tf="calculo"]   { --tc-ink: #6CCBEF; }
+  :root:not([data-theme="light"]) #toolsRoot [data-tcat="familias"], :root:not([data-theme="light"]) #toolsRoot [data-tf="familias"] { --tc-ink: #5EDCCF; }
+  :root:not([data-theme="light"]) #toolsRoot [data-tcat="atend"], :root:not([data-theme="light"]) #toolsRoot [data-tf="atend"]       { --tc-ink: #B7A6F5; }
+  :root:not([data-theme="light"]) #toolsRoot [data-tcat="dados"], :root:not([data-theme="light"]) #toolsRoot [data-tf="dados"]       { --tc-ink: #F58BB0; }
+  :root:not([data-theme="light"]) #toolsRoot [data-tcat="notas"], :root:not([data-theme="light"]) #toolsRoot [data-tf="notas"]       { --tc-ink: #8EDB8E; }
+  :root:not([data-theme="light"]) #toolsRoot [data-tf="fav"]                                          { --tc-ink: #F2C26B; }
+}
+:root[data-theme="dark"] #toolsRoot [data-tcat="tempo"], :root[data-theme="dark"] #toolsRoot [data-tf="tempo"]       { --tc-ink: #F2C26B; }
+:root[data-theme="dark"] #toolsRoot [data-tcat="calculo"], :root[data-theme="dark"] #toolsRoot [data-tf="calculo"]   { --tc-ink: #6CCBEF; }
+:root[data-theme="dark"] #toolsRoot [data-tcat="familias"], :root[data-theme="dark"] #toolsRoot [data-tf="familias"] { --tc-ink: #5EDCCF; }
+:root[data-theme="dark"] #toolsRoot [data-tcat="atend"], :root[data-theme="dark"] #toolsRoot [data-tf="atend"]       { --tc-ink: #B7A6F5; }
+:root[data-theme="dark"] #toolsRoot [data-tcat="dados"], :root[data-theme="dark"] #toolsRoot [data-tf="dados"]       { --tc-ink: #F58BB0; }
+:root[data-theme="dark"] #toolsRoot [data-tcat="notas"], :root[data-theme="dark"] #toolsRoot [data-tf="notas"]       { --tc-ink: #8EDB8E; }
+:root[data-theme="dark"] #toolsRoot [data-tf="fav"]                                          { --tc-ink: #F2C26B; }
+
+/* ---------- Barra de busca e filtros ---------- */
+#toolsRoot .tools-nav {
+  gap: 0.7rem; padding: 0.85rem 1rem; border-radius: 16px;
+  background: color-mix(in srgb, var(--bg-card) 88%, transparent);
+  -webkit-backdrop-filter: blur(10px) saturate(1.2); backdrop-filter: blur(10px) saturate(1.2);
+  box-shadow: var(--shadow-sm);
+}
+#toolsRoot .tools-find {
+  min-height: 46px; padding-left: 2.7rem; font-size: 0.95rem; border-radius: 12px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: 0.95rem center; background-size: 18px;
+}
+#toolsRoot .tools-fchip {
+  min-height: 34px; padding: 0.2rem 0.75rem 0.2rem 0.65rem; gap: 0.4rem;
+  font-size: 0.8rem; font-weight: 700; color: var(--text-muted);
+  background: transparent; border: 1px solid var(--border-ui); border-radius: 999px;
+  transition: background 0.15s var(--ease), border-color 0.15s var(--ease), color 0.15s var(--ease);
+}
+#toolsRoot .tools-fchip::before {
+  content: ""; width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%;
+  background: var(--tc); opacity: 0.9;
+}
+#toolsRoot .tools-fchip[data-tf="all"]::before { background: var(--text-muted); opacity: 0.55; }
+#toolsRoot .tools-fchip:hover { color: var(--text-main); border-color: var(--tc); }
+#toolsRoot .tools-fchip.is-active {
+  color: var(--tc-ink); border-color: var(--tc);
+  background: color-mix(in srgb, var(--tc) 13%, var(--bg-card));
+}
+#toolsRoot .tools-fchip[data-tf="all"].is-active { --tc: #0091C2; --tc-ink: var(--brand-primary); }
+#toolsRoot .tools-fcount { color: inherit; opacity: 0.75; background: color-mix(in srgb, var(--tc) 12%, transparent); }
+#toolsRoot .tools-fchip[data-tf="all"] .tools-fcount { background: var(--bg-main); }
+
+/* ---------- Cartões ---------- */
+#toolsRoot .tools-card {
+  --tc-soft: color-mix(in srgb, var(--tc) 13%, transparent);
+  padding: 1.15rem 1.2rem 1.25rem; border-radius: 18px; cursor: default;
+  box-shadow: var(--shadow-sm);
+}
+#toolsRoot .tools-card:hover { transform: none; box-shadow: var(--shadow-sm); }
+#toolsRoot .tools-card > h2 {
+  gap: 0.7rem; margin: 0 0 1rem; padding-bottom: 0.85rem; min-height: 40px;
+  font-size: 1.02rem; font-weight: 800; letter-spacing: -0.005em; color: var(--text-main);
+  border-bottom: 1px solid var(--border-ui);
+}
+#toolsRoot .tools-ico {
+  flex: 0 0 auto; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center;
+  color: var(--tc-ink); background: var(--tc-soft); border-radius: 11px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tc) 22%, transparent);
+}
+#toolsRoot .tools-card.is-collapsed > h2 { padding-bottom: 0; border-bottom-color: transparent; }
+#toolsRoot .tools-ico-btn { border-radius: 10px; }
+#toolsRoot .tools-ico-btn:hover { background: var(--tc-soft); color: var(--tc-ink); }
+#toolsRoot .tools-ico-btn.is-on { color: #D97706; }
+#toolsRoot .tools-hint { line-height: 1.45; }
+
+/* ---------- Campos e abas internas ---------- */
+#toolsRoot .tools-input { min-height: 42px; border-radius: 11px; }
+#toolsRoot .tools-input:focus { border-color: var(--tc); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tc) 22%, transparent); }
+#toolsRoot .tools-lbl { font-weight: 600; }
+#toolsRoot .tools-tabs { padding: 0.28rem; border-radius: 13px; gap: 0.2rem; }
+#toolsRoot .tools-tab { border-radius: 10px; font-weight: 700; transition: background 0.15s var(--ease), color 0.15s var(--ease); }
+#toolsRoot .tools-tab.is-active { color: var(--tc-ink); background: var(--bg-card); box-shadow: 0 1px 3px rgba(15, 23, 42, 0.16), inset 0 -2px 0 var(--tc); }
+#toolsRoot .tools-chip { border-width: 1px; font-weight: 700; }
+#toolsRoot .tools-chip.is-active { color: var(--tc-ink); border-color: var(--tc); background: var(--tc-soft); }
+
+/* ---------- Relógio: painel de instrumento de bordo ---------- */
+#toolsRoot .tools-clock-row {
+  position: relative; padding: 1.15rem 1.2rem; gap: 1.1rem 1.8rem; border-radius: 16px; color: #F3EBDA;
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(201, 162, 75, 0.16), transparent 55%),
+    linear-gradient(160deg, var(--deck-2), var(--deck));
+  box-shadow: inset 0 0 0 1px var(--deck-line), 0 10px 24px -14px rgba(8, 18, 36, 0.7);
+}
+#toolsRoot .tools-analog { width: 150px; height: 150px; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.4)); }
+#toolsRoot .tools-clock-row .an-face { fill: #0E2240; stroke: var(--brass); stroke-width: 2; }
+#toolsRoot .tools-clock-row .an-tick { stroke: #AFC0D8; opacity: 0.5; }
+#toolsRoot .tools-clock-row .an-tick.is-major { stroke: var(--brass-soft); opacity: 1; stroke-width: 2; }
+#toolsRoot .tools-clock-row .an-h, #toolsRoot .tools-clock-row .an-m { stroke: #F3EBDA; }
+#toolsRoot .tools-clock-row .an-s { stroke: var(--brass); stroke-width: 1.6; }
+#toolsRoot .tools-clock-row .an-dot { fill: var(--brass); }
+#toolsRoot .tools-clock-text { text-align: left; }
+#toolsRoot .tools-clock-row .tools-time { font-size: clamp(2.3rem, 7vw, 3rem); font-weight: 700; letter-spacing: 0.01em; color: #FFF8E6; text-shadow: 0 0 18px rgba(230, 201, 138, 0.25); }
+#toolsRoot .tools-clock-row .tools-date { font-size: 0.92rem; font-weight: 600; color: var(--brass-soft); }
+#toolsRoot .tools-clock-row .tools-hint { color: #B7C4D9; }
+#toolsRoot .tools-clock-row .tools-br { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.55rem; padding-top: 0.55rem; border-top: 1px solid var(--deck-line); }
+#toolsRoot .tools-clock-row .tools-br strong { color: #FFF8E6; font-size: 1rem; }
+#toolsRoot .tools-clock-row .tools-select { color: #F3EBDA; background: rgba(255, 255, 255, 0.08); border-color: var(--deck-line); }
+#toolsRoot .tools-clock-row .tools-select option { color: #1E293B; background: #fff; }
+@media (max-width: 480px) {
+  #toolsRoot .tools-clock-row { justify-content: center; }
+  #toolsRoot .tools-clock-text { text-align: center; }
+  #toolsRoot .tools-clock-row .tools-br { justify-content: center; }
+}
+/* cronômetro e temporizador: mesmo mostrador, em faixa */
+#toolsRoot .tools-time-sm {
+  margin: 0 0 0.2rem; padding: 0.9rem 0.5rem; border-radius: 14px; color: #FFF8E6;
+  background: linear-gradient(160deg, var(--deck-2), var(--deck)); box-shadow: inset 0 0 0 1px var(--deck-line);
+}
+#toolsRoot .tools-time-sm.is-done { color: #FF8A80; }
+#toolsRoot .tools-progress { height: 8px; border-radius: 999px; }
+#toolsRoot .tools-progress span { background: linear-gradient(90deg, var(--brass), var(--brass-soft)); }
+#toolsRoot .tools-lap.is-best strong { color: #059669; }
+
+/* ---------- Calculadora: teclas com hierarquia ---------- */
+#toolsRoot .calc-display {
+  min-height: 3.6rem; padding: 0.6rem 1rem; font-size: 2rem; font-weight: 700; border-radius: 13px; color: #FFF8E6;
+  background: linear-gradient(160deg, var(--deck-2), var(--deck)); border-color: transparent; box-shadow: inset 0 0 0 1px var(--deck-line);
+}
+#toolsRoot .calc-hist { padding-right: 0.2rem; }
+#toolsRoot .calc-copy { border-radius: 13px; color: var(--tc-ink); }
+#toolsRoot .calc-keys { gap: 0.45rem; }
+#toolsRoot .calc-k { min-height: 50px; border-radius: 13px; font-weight: 700; box-shadow: 0 1px 0 var(--border-ui); transition: transform 0.06s ease, border-color 0.15s var(--ease), background 0.15s var(--ease); }
+#toolsRoot .calc-k.calc-fn { font-size: 0.92rem; color: var(--text-muted); background: var(--bg-main); }
+#toolsRoot .calc-k.is-op { color: var(--tc-ink); background: var(--tc-soft); border-color: color-mix(in srgb, var(--tc) 28%, var(--border-ui)); }
+#toolsRoot .calc-k.is-op.is-pending { color: #fff; background: var(--tc); border-color: var(--tc); }
+#toolsRoot .calc-k.is-eq { color: #fff; background: linear-gradient(180deg, var(--brand-primary-light), var(--brand-primary)); border-color: var(--brand-primary); box-shadow: 0 4px 10px -3px rgba(0, 145, 194, 0.55); }
+#toolsRoot .calc-k:hover { border-color: var(--tc); }
+
+/* ---------- Bloco de notas ---------- */
+#toolsRoot .notes-item { border-radius: 12px; }
+#toolsRoot .notes-item.is-active { background: var(--tc-soft); border-color: var(--tc); box-shadow: inset 3px 0 0 var(--tc); }
+#toolsRoot .tools-pad { border-radius: 12px; line-height: 1.6; }
+#toolsRoot .tools-pad:focus { border-color: var(--tc); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tc) 22%, transparent); }
+
+/* ---------- Estado vazio e foco ---------- */
+#toolsRoot .tools-empty { padding: 1.4rem 1rem; border-radius: 14px; }
+#toolsRoot .tools-fchip:focus-visible, #toolsRoot .tools-tab:focus-visible, #toolsRoot .calc-k:focus-visible { outline: 2px solid var(--tc); outline-offset: 2px; }
+#toolsRoot .tools-card.tools-flash { animation: toolsFlash 1.4s ease-out; }
+@keyframes toolsFlash { 0% { box-shadow: 0 0 0 3px var(--tc); } 100% { box-shadow: 0 0 0 3px transparent; } }
+
+/* celular: mais ar nas bordas e títulos mais compactos */
+@media (max-width: 759px) {
+  #toolsRoot { gap: 0.8rem; }
+  #toolsRoot .tools-card { padding: 1rem 0.95rem 1.1rem; border-radius: 16px; }
+  #toolsRoot .tools-card > h2 { font-size: 0.98rem; }
+  #toolsRoot .tools-nav { border-radius: 14px; padding: 0.6rem 0.75rem; }
+  #toolsRoot .tools-find { min-height: 44px; }
+  #toolsRoot .tools-clock-row { padding: 1rem; }
+}
+@media (pointer: coarse) { #toolsRoot .tools-fchip { min-height: 40px; } #toolsRoot .calc-k { min-height: 54px; } }
+@media (prefers-reduced-motion: reduce) {
+  #toolsRoot .tools-fchip, #toolsRoot .tools-tab, #toolsRoot .calc-k { transition: none; }
+  #toolsRoot .tools-card.tools-flash { animation: none; box-shadow: 0 0 0 3px var(--tc); }
+}
+@media print { #toolsRoot .tools-nav { display: none; } }
+
+
+/* =====================================================================
+   ABA PDF (Central de PDF) — redesenho
+   Cada grupo de ferramentas tem uma cor (Editar azul, Páginas verde-água,
+   Proteger roxo, Reduzir âmbar, Converter verde) e cada ferramenta tem o
+   seu ícone. A área de soltar arquivo vira o ponto de partida da tela.
+   Escopado em .pdftools-card: nenhuma outra aba é afetada.
+   ===================================================================== */
+.pdftools-card { --gc: #1D4ED8; --gc-ink: #1D4ED8; }
+.pdftools-card [data-g="editar"]    { --gc: #1D4ED8; --gc-ink: #1D4ED8; }
+.pdftools-card [data-g="paginas"]   { --gc: #0F9488; --gc-ink: #0B6F66; }
+.pdftools-card [data-g="proteger"]  { --gc: #6D4FD0; --gc-ink: #5638B8; }
+.pdftools-card [data-g="reduzir"]   { --gc: #C77A0A; --gc-ink: #9A5B00; }
+.pdftools-card [data-g="converter"] { --gc: #3F9B3F; --gc-ink: #2D7A2D; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .pdftools-card [data-g="editar"]    { --gc-ink: #8FB0FF; }
+  :root:not([data-theme="light"]) .pdftools-card [data-g="paginas"]   { --gc-ink: #5EDCCF; }
+  :root:not([data-theme="light"]) .pdftools-card [data-g="proteger"]  { --gc-ink: #B7A6F5; }
+  :root:not([data-theme="light"]) .pdftools-card [data-g="reduzir"]   { --gc-ink: #F2C26B; }
+  :root:not([data-theme="light"]) .pdftools-card [data-g="converter"] { --gc-ink: #8EDB8E; }
+}
+:root[data-theme="dark"] .pdftools-card [data-g="editar"]    { --gc-ink: #8FB0FF; }
+:root[data-theme="dark"] .pdftools-card [data-g="paginas"]   { --gc-ink: #5EDCCF; }
+:root[data-theme="dark"] .pdftools-card [data-g="proteger"]  { --gc-ink: #B7A6F5; }
+:root[data-theme="dark"] .pdftools-card [data-g="reduzir"]   { --gc-ink: #F2C26B; }
+:root[data-theme="dark"] .pdftools-card [data-g="converter"] { --gc-ink: #8EDB8E; }
+
+/* Aviso de privacidade: informação, não alerta (sem borda tracejada) */
+.pdftools-card .pdftools-privacy {
+  border: 1px solid color-mix(in srgb, var(--brand-pdftools) 22%, var(--border-ui));
+  background: color-mix(in srgb, var(--brand-pdftools) 6%, var(--bg-card));
+  border-radius: 12px; padding: 0.65rem 0.95rem; line-height: 1.45;
+}
+
+/* Área de soltar: o ponto de partida da tela */
+.pdftools-card .pdfhub-drop {
+  position: relative; gap: 1.1rem; padding: 1.35rem 1.5rem; margin-bottom: 1.1rem; border-radius: 18px;
+  border: 1.5px dashed color-mix(in srgb, var(--brand-pdftools) 45%, var(--border-ui));
+  background: color-mix(in srgb, var(--brand-pdftools) 5%, var(--bg-card));
+}
+.pdftools-card .pdfhub-drop:hover, .pdftools-card .pdfhub-drop:focus-within {
+  transform: none; border-color: var(--brand-pdftools);
+  background: color-mix(in srgb, var(--brand-pdftools) 9%, var(--bg-card));
+}
+.pdftools-card .pdfhub-drop.dragover {
+  transform: none; border-style: solid; border-color: var(--brand-pdftools);
+  background: color-mix(in srgb, var(--brand-pdftools) 15%, var(--bg-card));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-pdftools) 20%, transparent);
+}
+.pdftools-card .pdfhub-drop:focus-within { outline: 2px solid var(--brand-pdftools); outline-offset: 2px; }
+.pdftools-card .pdfhub-drop-icon {
+  flex: 0 0 58px; height: 58px; border-radius: 16px;
+  background: linear-gradient(160deg, #3B82F6, #1D4ED8); box-shadow: 0 8px 18px -8px rgba(29, 78, 216, 0.7);
+}
+.pdftools-card .pdfhub-drop-icon svg { width: 28px; height: 28px; }
+.pdftools-card .pdfhub-drop-text strong { font-size: 1.12rem; letter-spacing: -0.01em; }
+.pdftools-card .pdfhub-drop-text small { font-size: 0.88rem; }
+.pdftools-card .pdfhub-formats { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.45rem; }
+.pdftools-card .pdfhub-formats i {
+  font-style: normal; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.04em; padding: 0.12rem 0.5rem; border-radius: 6px;
+  color: var(--text-muted); background: var(--bg-card); border: 1px solid var(--border-ui);
+}
+
+/* Busca */
+.pdftools-card .pdfhub-search .tools-input {
+  min-height: 46px; padding-left: 2.7rem; border-radius: 12px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: 0.95rem center; background-size: 18px;
+}
+.pdftools-card .pdfhub-search .tools-input:focus { border-color: var(--brand-pdftools); box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.18); }
+
+/* Grupos: título em frase normal, barra na cor do grupo e contagem */
+.pdftools-card .pdfhub-group { margin-bottom: 1.5rem; }
+.pdftools-card .pdfhub-group-title {
+  gap: 0.55rem; margin: 0 0 0.7rem; font-size: 0.98rem; font-weight: 800; letter-spacing: -0.005em; text-transform: none; color: var(--text-main);
+}
+.pdftools-card .pdfhub-group-title::before { content: ""; width: 4px; height: 1.05rem; border-radius: 3px; background: var(--gc); flex: 0 0 auto; }
+.pdftools-card .pdfhub-group-title::after { display: none; }
+.pdftools-card .pdfhub-group-n {
+  min-width: 1.35rem; padding: 0 0.4rem; font-size: 0.72rem; font-weight: 800; line-height: 1.35rem; text-align: center;
+  color: var(--gc-ink); background: color-mix(in srgb, var(--gc) 13%, transparent); border-radius: 999px;
+}
+
+/* Ferramentas: ícone na cor do grupo, sem "pular" ao passar o mouse */
+.pdftools-card .pdfhub-grid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0.75rem; }
+.pdftools-card .pdfhub-tool {
+  grid-template-columns: 44px 1fr; column-gap: 0.8rem; padding: 0.85rem 0.95rem; border-width: 1px; border-radius: 16px;
+  box-shadow: var(--shadow-xs);
+}
+.pdftools-card .pdfhub-tool:hover, .pdftools-card .pdfhub-tool:focus-visible {
+  transform: none; border-color: var(--gc); box-shadow: var(--shadow-sm);
+  background: color-mix(in srgb, var(--gc) 4%, var(--bg-card));
+}
+.pdftools-card .pdfhub-tool:focus-visible { outline: 2px solid var(--gc); outline-offset: 2px; }
+.pdftools-card .pdfhub-tool-icon {
+  width: 44px; height: 44px; border-radius: 13px; color: var(--gc-ink);
+  background: color-mix(in srgb, var(--gc) 13%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gc) 22%, transparent);
+}
+.pdftools-card .pdfhub-tool-name { font-size: 0.95rem; }
+.pdftools-card .pdfhub-tool-desc { font-size: 0.8rem; line-height: 1.35; }
+.pdftools-card .pdfhub-new { background: var(--gc); }
+
+/* Atalhos e chips */
+.pdftools-card .pdfhub-chip { border-width: 1px; min-height: 34px; font-weight: 700; }
+.pdftools-card .pdfhub-chip.is-primary { background: var(--brand-pdftools); border-color: var(--brand-pdftools); }
+.pdftools-card .pdfhub-chooser { border-width: 1px; border-radius: 16px; box-shadow: var(--shadow-sm); }
+
+/* Barra do modo foco (quando uma ferramenta está aberta) */
+.pdftools-card.is-focus .pdfhub-bar { border-width: 1px; border-radius: 14px; background: color-mix(in srgb, var(--bg-card) 90%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.pdftools-card .pdfhub-back { border-width: 1px; min-height: 40px; }
+
+/* Dentro de cada ferramenta: cabeçalho, área de arquivo e campos */
+.pdftools-card .pdftools-tool { background: var(--bg-card); border-width: 1px; border-radius: 18px; padding: 1.2rem 1.25rem 1.4rem; box-shadow: var(--shadow-sm); }
+.pdftools-card .pdftools-tool:hover { border-color: var(--border-ui); }
+.pdftools-card .pdftools-tool-header { padding-bottom: 0.8rem; margin-bottom: 0.7rem; border-bottom: 1px solid var(--border-ui); gap: 0.75rem; }
+.pdftools-card .pdftools-tool-icon { width: 40px; height: 40px; border-radius: 12px; box-shadow: inset 0 0 0 1px rgba(29, 78, 216, 0.2); }
+.pdftools-card .pdftools-tool-title { font-size: 1.05rem; letter-spacing: -0.01em; }
+.pdftools-card .pdftools-tool-desc { font-size: 0.84rem; line-height: 1.5; }
+.pdftools-card .pdftools-dropzone {
+  padding: 1.5rem 1rem; border-radius: 14px;
+  border: 1.5px dashed color-mix(in srgb, var(--brand-pdftools) 40%, var(--border-ui));
+  background: color-mix(in srgb, var(--brand-pdftools) 4%, var(--bg-card));
+}
+.pdftools-card .pdftools-dropzone:hover, .pdftools-card .pdftools-dropzone.dragover {
+  border-color: var(--brand-pdftools); background: color-mix(in srgb, var(--brand-pdftools) 9%, var(--bg-card));
+}
+.pdftools-card .pdftools-dropzone:focus-within { outline: 2px solid var(--brand-pdftools); outline-offset: 2px; }
+.pdftools-card .pdftools-dropzone-text { font-size: 0.9rem; }
+.pdftools-card .pdftools-dropzone-hint { font-size: 0.76rem; }
+.pdftools-card .pdftools-fileitem { border-radius: 12px; }
+
+@media (max-width: 560px) {
+  .pdftools-card .pdfhub-drop { padding: 1rem; border-radius: 16px; }
+  .pdftools-card .pdfhub-drop-icon { flex-basis: 48px; height: 48px; border-radius: 14px; }
+  .pdftools-card .pdfhub-tool { padding: 0.8rem 0.85rem; }
+  .pdftools-card .pdftools-tool { padding: 1rem 0.95rem 1.15rem; border-radius: 16px; }
+}
+@media (pointer: coarse) {
+  .pdftools-card .pdfhub-chip, .pdftools-card .pdfhub-back { min-height: 44px; }
+  .pdftools-card .pdfhub-tool { min-height: 68px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pdftools-card .pdfhub-drop, .pdftools-card .pdfhub-tool { transition: none; }
+}
