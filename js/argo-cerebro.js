@@ -435,6 +435,26 @@
       text: 'O **SUAS** (Sistema Único de Assistência Social) organiza, em todo o país, os serviços, programas, projetos e benefícios da assistência social, com gestão compartilhada entre União, estados, Distrito Federal e municípios.\n- **Proteção Social Básica** (prevenção): **CRAS**, PAIF e SCFV.\n- **Proteção Social Especial**: média complexidade (**CREAS**, PAEFI) e alta complexidade (acolhimento institucional, abrigos).\n- Funções: proteção social, **vigilância socioassistencial** e defesa de direitos; a participação é feita por conselhos e conferências.\nEm Boa Vista, a rede está no diretório do Argo: pergunte "panorama da assistência social".',
       base: 'LOAS (Lei 8.742/1993, alterada pela Lei 12.435/2011) e Tipificação Nacional (Res. CNAS 109/2009).',
       actions: [{ label: 'Ver CRAS e CREAS', cat: 'social' }], follow: ['Panorama da assistência social', 'Qual a diferença entre CRAS e CREAS?'] },
+    { id: 'nis', keys: ['o que e nis', 'o que e o nis', 'o que e numero nis', 'numero de identificacao social', 'para que serve o nis', 'nis+significa'],
+      text: 'O **NIS** (Número de Identificação Social) é o número, de **11 dígitos**, que identifica a pessoa nos programas sociais do governo federal.\n- Cada pessoa tem **um** NIS; quem já tem PIS/PASEP já tem um número que pode servir.\n- Quem se inscreve no **CadÚnico** e ainda não tem NIS recebe um na inscrição.\n- Para consultar o seu: aplicativo **Meu CadÚnico**, o **CRAS** ou a central **121**.\nCuidado: o NIS é dado pessoal. Em registro de caso, prefira iniciais ou código.',
+      base: 'Cadastro Único (Decreto 11.016/2022) e orientações do MDS.',
+      actions: [{ label: 'Ver CRAS', cat: 'social' }], follow: ['Como consultar meu NIS?', 'Quais documentos para o CadÚnico?'] },
+    { id: 'aluguel-social', keys: ['aluguel social', 'auxilio aluguel', 'bolsa aluguel'],
+      text: '**Aluguel social** não é um benefício nacional único: em geral é concedido pelo **município ou pelo estado**, com regras próprias, muitas vezes como **benefício eventual** (vulnerabilidade temporária, calamidade) ou ligado à política de habitação.\n- **Não há ficha de aluguel social no diretório do Argo** para Boa Vista, então não vou citar valor, prazo nem critério.\n- Caminho: levar o caso ao **CRAS** de referência (que faz a análise social) e confirmar com a gestão municipal se há o benefício e como solicitar.',
+      base: 'LOAS, art. 22 (benefícios eventuais; Lei 8.742/1993) e Decreto 6.307/2007.',
+      actions: [{ label: 'Ver CRAS', cat: 'social' }], follow: ['O que são benefícios eventuais?', 'Qual CRAS atende o meu bairro?'] },
+    { id: 'seguro-defeso', keys: ['seguro defeso', 'seguro-defeso', 'defeso', 'seguro desemprego do pescador', 'pescador artesanal'],
+      text: 'O **seguro-defeso** é pago pelo **INSS** ao **pescador artesanal** nos meses em que a pesca é proibida para a reprodução das espécies (o **defeso**), no valor de **1 salário mínimo por mês**.\n- Exige **registro de pescador ativo** (RGP) e que a pesca seja a atividade principal e a fonte de renda da família.\n- O pedido é feito pelo **Meu INSS** ou pela central **135**.\nRegras e períodos mudam por região e por espécie: confirme no INSS.',
+      base: 'Lei 10.779/2003 (seguro-desemprego do pescador artesanal).',
+      actions: [{ label: 'Ver Previdência/INSS', cat: 'previdencia' }], follow: ['Como funciona o BPC?', 'Onde fica o INSS?'] },
+    { id: 'documentos-civis', keys: ['rg+tirar', 'rg+fazer', 'rg+onde', 'rg+segunda', 'carteira de identidade', 'segunda via do rg', 'tirar rg', 'fazer rg', 'tirar cpf', 'fazer cpf', 'cpf+tirar', 'cpf+fazer', 'certidao de nascimento', 'segunda via da certidao', 'tirar certidao'],
+      text: 'Sobre **documentos civis** (o que eu sei, sem inventar endereço):\n- **Certidão de nascimento:** é feita no **cartório de Registro Civil**; a primeira via do registro de nascimento é **gratuita**. O Registro Civil consta no diretório do Argo.\n- **CPF:** a inscrição é gratuita e pode ser feita pelo site da **Receita Federal** (a Receita Federal/CAC consta no diretório) ou em agências conveniadas.\n- **RG (carteira de identidade):** é emitido pelo órgão de identificação da **Secretaria de Segurança Pública do estado**. **Esse órgão não está no diretório do Argo**, então confirme o local e o agendamento antes de encaminhar.\nPara quem não tem **nenhum** documento, o CRAS ajuda a organizar o caminho (comece pela certidão).',
+      base: 'Lei 9.534/1997 (gratuidade do registro civil) e orientações da Receita Federal.',
+      actions: [{ label: 'Ver Documentação', cat: 'documentacao' }, { label: 'Ver CRAS', cat: 'social' }], follow: ['Onde fica o Registro Civil?', 'Como consultar meu NIS?'] },
+    { id: 'agendar-cras', keys: ['como agendar no cras', 'agendar atendimento no cras', 'marcar atendimento no cras', 'como marcar no cras', 'como ser atendido no cras', 'como ser atendida no cras', 'agendar cras'],
+      text: 'O **CRAS** pode ser procurado **direto**, sem encaminhamento: a família chega, é **acolhida** e a equipe vê o que fazer (acompanhamento no PAIF, grupos do SCFV, CadÚnico, benefícios).\n- Para **CadÚnico**, o agendamento varia: em geral por telefone/WhatsApp da unidade ou presencialmente.\n- Cada CRAS atende o **território** onde a família mora. Diga o **bairro** e eu mostro o CRAS de referência com telefone e horário.',
+      base: 'Tipificação Nacional (Res. CNAS 109/2009) e PNAS/2004.',
+      actions: [{ label: 'Ver CRAS', cat: 'social' }], follow: ['Qual CRAS atende o Caimbé?', 'Quais documentos levar ao CadÚnico?'] },
     { id: 'cras', keys: ['cras', 'centro de referencia de assistencia social', 'protecao social basica'],
       text: 'O **CRAS** é a porta de entrada da Proteção Social Básica do SUAS e fica no território onde a família mora.\n- Oferta o **PAIF** (acompanhamento de famílias) e o **SCFV** (grupos de convivência).\n- Faz a referência para CadÚnico, BPC e benefícios eventuais.\n- Pode ser procurado direto pela família, sem encaminhamento.',
       base: 'Tipificação Nacional dos Serviços Socioassistenciais (Res. CNAS 109/2009) e PNAS/2004.',
@@ -2928,12 +2948,19 @@
     var adolesc = /\b(adolescente|adolescentes|menor|jovem)\b/.test(n) || (idade !== null && idade >= 12 && idade < 18);
     var fem = /\b(menina|feminino|feminina|filha|garota|mulher)\b/.test(n), masc = /\b(menino|masculino|masculina|filho|garoto|rapaz|homem)\b/.test(n);
     var idoso = /\b(idoso|idosa|idosos|idosas|pessoa idosa|terceira idade|velhinho|velhinha)\b/.test(n) || (idade !== null && idade >= 60);
-    var violencia = /\b(violencia|agredid\w*|agress\w*|ameac\w*|apanh\w*|maria da penha|espanc\w*)\b/.test(n);
+    var violencia = /\b(violencia|agredid\w*|agress\w*|ameac\w*|apanh\w*|maria da penha|espanc\w*|maltrat\w*|bate|bateu|batendo|batem|empurr\w*|enforc\w*)\b/.test(n.replace(RE_IDIOMA_BATER, ' '));
     var sexual = /\b(sexual|abuso sexual|estupro|abusad\w*|escuta especializada)\b/.test(n);
     var mulher = /\b(mulher|mulheres|esposa|companheira|namorada|ex mulher|agredida|ameacada|espancada|violentada|abusada|perseguida)\b/.test(n);
+    // pessoa próxima que apanha ("meu pai bate na minha mãe", "minha vizinha apanha do marido"): mesma referência, desde que não seja criança
+    if (!mulher && /\b(mae|mamae|vizinha|irma|amiga|tia|avo|sogra|colega|cunhada|prima)\b/.test(n) && !RE_MENOR.test(n)) mulher = true;
     var r = null;
+    var drogas = /\b(usa|usando|usam|usuari\w*|dependen\w*|viciad\w*|vicio|bebe demais|bebendo demais|alcoolatra|alcoolismo|recaida)\b/.test(n) && /\b(drog\w*|alcool|bebida|crack|cocaina|maconha|entorpecente\w*)\b/.test(n);
 
-    if ((crianca || adolesc) && sexual) {
+    if (drogas && !(crianca || adolesc) && !/\b(filh[oa]|menin[oa]|garot[oa])\b/.test(n.replace(/\b(meu|minha) (filh[oa]|menin[oa])\b.*\b(adulto|anos)\b/, ''))) {
+      r = { ids: ['caps-ad-iii'], t: 'uso problemático de álcool e outras drogas (adultos)', extra: 'Porta aberta: a pessoa pode ir ao CAPS AD III sem encaminhamento. A família também é acolhida. Para o cuidado no território, a UBS e o CRAS ajudam a articular.' };
+    } else if (drogas) {
+      r = { ids: ['caps-ad-iii'], t: 'uso de álcool e outras drogas', extra: 'Se a pessoa é criança ou adolescente, confirme com o CAPS AD III ou com a UBS o fluxo para a idade dela (em Boa Vista não há CAPS infantojuvenil cadastrado). Se houver violação de direitos, acione também o Conselho Tutelar e o CREAS.' };
+    } else if ((crianca || adolesc) && sexual) {
       r = { ids: ['cai-18-de-maio'], t: 'crianças e adolescentes vítimas ou testemunhas de violência sexual' };
     } else if (mulher && violencia && !(crianca && !mulher)) {
       r = { ids: ['casa-da-mulher-brasileira'], t: 'mulher em situação de violência', extra: 'Em risco imediato, ligue 190. O 180 orienta e registra denúncia.' };
@@ -4579,6 +4606,8 @@
     var lead = censoLead(n, textos, conselho);
     return { reply: (lead ? lead + '\n\n' : '') + textos.join('\n\n'), mood: 'info', badge: fonte, note: 'Dados declarados no ' + fonte + ' (MDS), agregados por município; não medem suficiência de equipe nem cobertura. Confira com a gestão municipal para a situação atual.', followups: conselho ? ['Quantos conselheiros tem o conselho estadual?'] : ['Qual a equipe dos CRAS do interior?', 'Quantos psicólogos há no interior de Roraima?'], units: [] };
   }
+  // "o que é", "como funciona", "para que serve": pergunta de CONCEITO. Com verbete no glossário, ele responde antes das fichas e listas do diretório.
+  var RE_CONCEITUAL = /^(o que (e|sao|significa)|oque (e|sao)|que (e|sao)|como funciona|para que serve|pra que serve|quem tem direito|qual a diferenca)\b/;
   function plan(text, opts) {
     opts = opts || {};
     var c = crisis(text);
@@ -4631,7 +4660,7 @@
     var terr = territory(text);
     if (terr) return { kind: 'directory', result: terr, dir: { units: terr.units || [], confidence: 1, mode: 'list' }, con: { score: 0 } };
     // requisitos / documentos / valor / como solicitar de um serviço bem identificado: o cartão da ficha responde (e a IA fica a um toque)
-    if (psiScore(text).score < 3) {
+    if (psiScore(text).score < 3 && !(RE_CONCEITUAL.test(norm(text)) && glossaryScore(text).score >= 3)) {
       var fi = fichaAsk(text);
       if (fi) return { kind: 'ficha', result: fi, dir: { units: fi.units || [], confidence: 1, mode: 'single' }, con: { score: 0 } };
     }
@@ -4656,7 +4685,8 @@
     }
     // pergunta de contato sobre unidade(s) encontradas, ou nome bem identificado: o diretório responde
     if (dir.units.length && ((dir.contact && dir.confidence >= 0.3) || dir.confidence >= 0.85)) {
-      if (!(con.score >= 6 && dir.confidence < 0.9)) {
+      var conceitual = RE_CONCEITUAL.test(norm(text)) && !dir.contact;
+      if (!(con.score >= 6 && dir.confidence < 0.9) && !(conceitual && con.score >= 3)) {
         out.kind = 'directory';
         out.result = withUnits(composeDirectory(dir, session), dir);
         out.lista = true;
@@ -4783,9 +4813,11 @@
 
   // ---- 1) relato de violência contra criança ou adolescente ----
   var RE_MENOR = /\b(crianca|criancas|bebe|menino|menina|meninos|meninas|menininho|menininha|filho|filha|filhos|filhas|enteado|enteada|neto|neta|sobrinho|sobrinha|adolescente|adolescentes|garoto|garota)\b/;
-  var RE_ATO_SEXUAL = /\b(mexe|mexeu|mexendo|mexia) com (ele|ela|o menino|a menina|a crianca|o garoto|a garota)\b|\b(passa|passou|passando|passava) a mao\b|\b(toca|tocou|tocando|tocava|apalpa|apalpou|apalpando) (nele|nela|no corpo|nas partes|a crianca)\b|\b(abusa|abusou|abusando|abusava|abusam|abusaram|abusado|abusada|estupr\w+|molest\w+|bolin\w+|violentou|violentando|violentad[oa]|pornografi\w+|aliciad\w+|aliciou|aliciando|exploracao sexual|violencia sexual|abuso sexual)\b|\bfotos? (nua|nu|pelad\w+|intim\w+)\b|\bnudes?\b/;
+  var RE_ATO_SEXUAL = /\b(mexe|mexeu|mexendo|mexia) com (ele|ela|o menino|a menina|a crianca|o garoto|a garota)\b|\b(passa|passou|passando|passava) a mao\b|\b(toca|tocou|tocando|tocava|apalpa|apalpou|apalpando) (nele|nela|no corpo|nas partes|a crianca)\b|\b(abuso|abusa|abusou|abusando|abusava|abusam|abusaram|abusado|abusada|estupr\w+|molest\w+|bolin\w+|violentou|violentando|violentad[oa]|pornografi\w+|aliciad\w+|aliciou|aliciando|exploracao sexual|violencia sexual|abuso sexual)\b|\bfotos? (nua|nu|pelad\w+|intim\w+)\b|\bnudes?\b/;
   var RE_ATO_FISICO = /\b(bate|bateu|batendo|batia|batem|apanha|apanhou|apanhando|apanhava|espanca\w*|agride|agrediu|agredindo|agredid[oa]|surra\w*|queimou|queimad[oa]|machuca|machucou|machucad[oa]|hematomas?|marcas? (no corpo|roxas?|de cinto|de fio)|roxo|roxa)\b/;
   // "abuso de álcool/drogas" é outro assunto (família com uso de substâncias), não relato de abuso
+  // negligência/abandono: também é violação de direitos e se comunica (ECA art. 13); "largado", "sem comer", "sozinho em casa"
+  var RE_ATO_NEGLIG = /\b(negligenci\w*|negligente|maus tratos|maltrat\w+|abandon\w+|largad[oa]s?|passando fome|sem comer|sem cuidado\w*|trancad[oa]s? (em casa|no quarto)|sozinh[oa]s? em casa|deixad[oa]s? sozinh\w+|trabalhando na rua|pedindo (na rua|esmola))\b/;
   var RE_ABUSO_SUBST = /abus\w*\s+(de|com|do|da)\s+(alcool|drogas?|substancias?|poder|autoridade|medicamentos?|bebida)/g;
   // "bate ponto", "bate papo", "bateu na porta": expressões, não agressão
   var RE_IDIOMA_BATER = /\bbat\w+\s+(ponto|papo|bola|boca|cartao|na porta|a porta|o carro|de frente|palmas|o martelo|record\w*|meta)\b/g;
@@ -4805,11 +4837,12 @@
     if (idades.length && !menorPorIdade) return null;
     if (!menorPorIdade && !RE_MENOR.test(n)) return null;
     var sexual = RE_ATO_SEXUAL.test(n.replace(RE_ABUSO_SUBST, ' ')), fisico = RE_ATO_FISICO.test(n.replace(RE_IDIOMA_BATER, ' '));
-    if (!sexual && !fisico) return null;
+    var negl = RE_ATO_NEGLIG.test(n);
+    if (!sexual && !fisico && !negl) return null;
     // já existe verbete específico para a pergunta (tipos de violência, escuta, depoimento, perícia...): ele responde melhor
     var ps = psiScore(t);
     if (ps.score >= 4 && ps.entry && ps.entry.id !== 'psi-comunicar') return null;
-    return { publico: 'crianca', sexual: sexual, fisica: fisico && !sexual };
+    return { publico: 'crianca', sexual: sexual, fisica: fisico && !sexual, negligencia: negl && !sexual && !fisico };
   }
   function planRelato(text) {
     var rel = relatoViolencia(text);
