@@ -4084,6 +4084,10 @@
     if (RE_REFS.test(n) && refsTexto()) out.push({ titulo: 'Valores de referência do app (2026)', texto: refsTexto(), origem: 'ferramenta de renda per capita do Argo' });
     var pg = pbfPagamento(text);
     if (pg && out.length < 4) out.push({ titulo: 'Calendário de pagamento do Bolsa Família', texto: pg, origem: 'ferramentas/pagamento-pbf.html (Argo)' });
+    try {
+      var mt = matriculaAsk(text);
+      if (mt) out.unshift({ titulo: 'Matrícula escolar (app, conferido nas fontes oficiais)', texto: limpaMd(mt.reply), origem: mt.note });
+    } catch (e3) { /* sem verbete */ }
     var man = manualBase(text);
     if (man.length) out = man.concat(out);
     var censo = censoBaseApp(text);
@@ -4606,6 +4610,45 @@
     var lead = censoLead(n, textos, conselho);
     return { reply: (lead ? lead + '\n\n' : '') + textos.join('\n\n'), mood: 'info', badge: fonte, note: 'Dados declarados no ' + fonte + ' (MDS), agregados por município; não medem suficiência de equipe nem cobertura. Confira com a gestão municipal para a situação atual.', followups: conselho ? ['Quantos conselheiros tem o conselho estadual?'] : ['Qual a equipe dos CRAS do interior?', 'Quantos psicólogos há no interior de Roraima?'], units: [] };
   }
+
+  // ---------------------------------------------------------------------
+  // MATRÍCULA: rede estadual (SEED-RR) e rede municipal de Boa Vista (SMEC)
+  // ---------------------------------------------------------------------
+  // Conteúdo conferido nas publicações oficiais do ciclo 2026 (Governo de Roraima/SEED e Prefeitura de Boa Vista/SMEC; editais de
+  // nov. a dez. de 2025 e jan. de 2026). O calendário de 2027 ainda não tinha sido localizado: datas só como referência do ano anterior.
+  // Ao revisar: confira o edital mais recente (Diário Oficial do Município; site da SEED) e atualize MATRICULA_REV e as datas.
+  var MATRICULA_REV = 'nov. de 2026 (ciclo 2026; calendário 2027 ainda não localizado)';
+  var MATRICULA_AVISO = '\nAs **datas mudam todo ano**: as de 2026 foram citadas só como referência. Confirme o calendário e o edital do ano antes de orientar a família.';
+  var MATRICULA = [
+    { id: 'matricula-estadual', rede: 'estadual',
+      text: 'Matrícula na **rede estadual de Roraima** (SEED):\n- **Onde:** na **secretaria da escola estadual mais próxima da casa**, de forma **presencial**. Em 2026 o atendimento foi das 8h às 11h30 e das 14h às 17h30. As notícias de 2026 não citam matrícula online.\n- **Vagas novas** (2026): **6º ano** do Ensino Fundamental, **1ª série do Ensino Médio** (inclui tempo integral, técnico e Ensino Médio Mais noturno) e **EJA** (2º e 3º segmentos). Escolas **indígenas** não têm limite de vagas.\n- **Documentos** (original e cópia): histórico escolar ou declaração de transferência; certidão de nascimento ou RG do aluno; CPF do aluno (se tiver); cartão de vacina atualizado; cartão do Bolsa Família (se for beneficiário); 2 fotos 3x4 recentes; RG e CPF do responsável; comprovante de residência atualizado, com CEP.\n- **Não conseguiu vaga?** A **Central de Matrículas** da SEED (Praça do Centro Cívico, 550, Centro) localiza uma vaga perto de casa e emite o encaminhamento para a escola (em 2026: das 7h30 às 13h30, depois do período regular).\n- **Sorteio público:** algumas escolas (militarizadas e três não militarizadas na capital) tiveram vagas sorteadas por edital.\n- **Em 2026:** matrículas novas de 6 a 19 de janeiro, Central de Matrículas de 21 a 30 de janeiro, aulas a partir de 29 de janeiro.' + MATRICULA_AVISO,
+      base: 'Governo de Roraima/SEED (matrículas 2026; notícias de jan. 2026). Calendário e regras do ano: www.educacao.rr.gov.br.',
+      follow: ['Como é a matrícula na rede municipal de Boa Vista?', 'Qual escola estadual fica perto do meu bairro?'] },
+    { id: 'matricula-municipal', rede: 'municipal',
+      text: 'Matrícula na **rede municipal de Boa Vista** (SMEC):\n- **Como:** é **online** pelo portal **matriculaonline.boavista.rr.gov.br**, pelo **aplicativo Matrícula Online** (Android e iOS) ou pela **Central Tele Matrícula: 0800-280-3536** (das 7h às 19h). **EJA, escolas indígenas e do campo** seguem **presenciais**, na escola.\n- **Creche** (2 e 3 anos no edital 2026): pré-inscrição online. Quem tem **prioridade** envia os comprovantes na própria plataforma. Prioridades: deficiência, autismo, violência doméstica, criança acolhida, família monoparental em vulnerabilidade, responsável idoso ou com deficiência e responsável economicamente ativo; depois, **ordem de solicitação**. Quem não é chamado entra na **lista de espera** (publicada no Diário Oficial do Município e no site).\n- **Vaga confirmada:** a Central Tele Matrícula entra em contato e o responsável tem **72 horas** para ir à escola efetivar a matrícula. No Ensino Fundamental, o prazo informado foi de **3 dias**.\n- **Documentos** (creche, 2026): certidão de nascimento ou RG; CPF e documentos do responsável; comprovante de residência; cartão de vacina; cartão SUS; 2 fotos 3x4; laudos, em casos específicos. Para Pré-escola e Ensino Fundamental, confira a lista no edital do ano.\n- **Quem já é da rede** faz **transferência** em período próprio (em dezembro, no ciclo 2026). Beneficiárias do programa **Família que Acolhe** têm cronograma próprio.\n- **Em 2026:** pré-escola de 2 a 7 de janeiro; 1º e 2º ano de 8 a 13; 3º ao 5º ano de 14 a 19. O edital saiu no Diário Oficial do Município em 28/11/2025.' + MATRICULA_AVISO,
+      base: 'Prefeitura de Boa Vista/SMEC: Edital de Matrículas 2026 e comunicados (dez. 2025 e jan. 2026).',
+      follow: ['Como é a matrícula na rede estadual?', 'Quais documentos para matricular na creche?'] },
+    { id: 'matricula-geral', rede: 'geral',
+      text: 'Em Boa Vista há **duas redes públicas**, com matrícula diferente:\n- **Rede municipal (SMEC):** pelo que as notícias de 2026 mostram, atende **creche, pré-escola, 1º ao 5º ano** e **EJA do 1º segmento**. A matrícula é **online** (portal, aplicativo ou **0800-280-3536**).\n- **Rede estadual (SEED):** **6º ano em diante, Ensino Médio e EJA (2º e 3º segmentos)**. A matrícula é **presencial**, na escola estadual mais próxima de casa, com a **Central de Matrículas** como segunda chance.\n- **Documentos básicos nas duas redes** (2026): certidão de nascimento ou RG do aluno, documento e CPF do responsável, comprovante de residência, cartão de vacina e fotos 3x4. A lista completa está no edital do ano.\nDiga **qual rede** (ou a idade/série do aluno) que eu detalho: documentos, prazos e o que fazer se faltar vaga.' + MATRICULA_AVISO,
+      base: 'Governo de Roraima/SEED e Prefeitura de Boa Vista/SMEC (matrículas 2026).',
+      follow: ['Como é a matrícula na rede municipal de Boa Vista?', 'Como é a matrícula na rede estadual?'] }
+  ];
+  function matriculaAsk(text) {
+    var n = norm(text);
+    if (!/\b(matricul\w*|rematricul\w*|pre matricula|vagas? (em|na|no|para) (creche|escola|colegio|ensino)|creche.*\b(vaga|inscri\w*)|vaga.*\bcreche|inscri\w+.*\bcreche|central de matriculas?|tele matricula|matricula online)\b/.test(n)) return null;
+    // quem quer a LISTA de escolas/creches do bairro ou o contato de uma unidade segue com o diretório
+    if (/\b(perto|bairro|onde (fica|tem|ha)|telefone|fone|endereco|horario|contato|quantas?|quantos?)\b/.test(n)) return null;
+    var est = /\b(estadual|estaduais|seed|ensino medio|medio|6 ano|sexto ano|militarizad\w+|central de matriculas?)\b/.test(n);
+    var mun = /\b(municipal|municipais|smec|creche|creches|pre escola|infantil|1 ano|2 ano|3 ano|4 ano|5 ano|fundamental|tele matricula|matricula online|proinfancia|educacao infantil)\b/.test(n);
+    var rede = est && !mun ? 'estadual' : mun && !est ? 'municipal' : 'geral';
+    var e = MATRICULA.filter(function (x) { return x.rede === rede; })[0];
+    return {
+      reply: e.text, mood: 'info', badge: 'Matrícula escolar',
+      note: 'Base: ' + e.base + ' Conferido em ' + MATRICULA_REV + '. Confirme no edital vigente.',
+      quickActions: [{ label: 'Ver Educação', cat: 'educacao' }], followups: e.follow.slice(), glossId: e.id
+    };
+  }
+
   // "o que é", "como funciona", "para que serve": pergunta de CONCEITO. Com verbete no glossário, ele responde antes das fichas e listas do diretório.
   var RE_CONCEITUAL = /^(o que (e|sao|significa)|oque (e|sao)|que (e|sao)|como funciona|para que serve|pra que serve|quem tem direito|qual a diferenca)\b/;
   function plan(text, opts) {
@@ -4618,6 +4661,9 @@
     // manual do app: "como uso a Central de PDF?", "onde fica o backup?" (sem IA, sem internet)
     var ma = manualAsk(text);
     if (ma && psiScore(text).score < 6) return { kind: 'manual', result: ma, dir: { units: [], confidence: 1, mode: 'list' }, con: { score: 0 } };
+    // matrícula escolar (rede estadual SEED e rede municipal SMEC): verbete conferido nas fontes oficiais; responde na hora, mesmo com a IA ligada
+    var mat = matriculaAsk(text);
+    if (mat) return { kind: 'manual', result: mat, dir: { units: [], confidence: 1, mode: 'list' }, con: { score: 0 } };
     // psicólogos no Censo SUAS 2025 (Boa Vista em detalhe, Roraima em totais): número fixo da base, nunca da IA
     var cp = psiCensoAsk(text);
     if (cp) return { kind: 'directory', result: cp, dir: { units: [], confidence: 1, mode: 'list' }, con: { score: 0 } };
