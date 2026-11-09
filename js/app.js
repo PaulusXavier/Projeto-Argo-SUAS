@@ -7797,6 +7797,26 @@ const TOOLS_CATALOG = {
   'Analisador de planilha': { id: 'planilha', cat: 'familias', kw: 'csv excel xlsx xls duplicados repetidos base familias nis coluna contar' },
   'Bloco de notas': { id: 'notas', cat: 'notas', kw: 'anotacao nota texto pdf txt lista tarefas checklist fixar' }
 };
+// Ícones de traço (24x24) de cada ferramenta: aparecem num "azulejo" colorido pela categoria.
+const TOOLS_ICONS = {
+  relogio: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  calculadora: '<rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 7.5h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01"/>',
+  renda: '<rect x="3" y="6" width="18" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.5"/><path d="M6.5 12h.01M17.5 12h.01"/>',
+  idade: '<rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M4 10h16M8.5 3v4M15.5 3v4"/>',
+  qr: '<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h2.5v2.5M20 14v.01M14 20h.01M17 20h3v-3"/>',
+  contador: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="m3.5 6 1.2 1.2L7 4.8M3.5 12l1.2 1.2L7 10.8M3.5 18l1.2 1.2L7 16.8"/>',
+  prazos: '<path d="M7 3h10M7 21h10M8 3c0 5 3 6 4 9-1 3-4 4-4 9M16 3c0 5-3 6-4 9 1 3 4 4 4 9"/>',
+  documentos: '<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.6-1.6 1.7-2.3 3-2.3s2.4.7 3 2.3M14.5 10h4M14.5 14h3"/>',
+  porcentagem: '<path d="M19 5 5 19"/><circle cx="7" cy="7" r="2.5"/><circle cx="17" cy="17" r="2.5"/>',
+  lista: '<path d="M17 5H7l6 7-6 7h10"/>',
+  extenso: '<path d="M4 7V5h10v2M9 5v14M7 19h4M14 11h6M17 11v8"/>',
+  whatsapp: '<path d="M4 20l1.3-4.2A8 8 0 1 1 8.2 18.8L4 20z"/><path d="M9 10c0 2.8 2.2 5 5 5"/>',
+  texto: '<path d="M3 18 8 6l5 12M5 14h6M15 18v-7M15 11h5"/>',
+  acomp: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.5-3.2 2.7-5 5.5-5s5 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M16.5 14.2c2.3 0 3.6 1.5 4 3.8"/>',
+  planilha: '<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M3.5 15h17M9.5 4.5v15"/>',
+  notas: '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M10 12h6M10 16h6"/>'
+};
+const toolsIconHtml = id => '<span class="tools-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + (TOOLS_ICONS[id] || TOOLS_ICONS.notas) + '</svg></span>';
 const toolsNorm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
 function toolsNavHtml() {
@@ -7836,6 +7856,8 @@ function initToolsNav() {
   // Botões ★ (favoritar) e ▾ (recolher) no título de cada cartão
   cards.forEach(c => {
     if (!c.h2) return;
+    c.el.dataset.tcat = c.cat;
+    c.h2.insertAdjacentHTML('afterbegin', toolsIconHtml(c.id));
     const box = document.createElement('span'); box.className = 'tools-card-actions';
     box.innerHTML = '<button type="button" class="tools-ico-btn" data-act="pin"></button>'
       + '<button type="button" class="tools-ico-btn tools-fold-btn" data-act="fold"><span aria-hidden="true">▾</span></button>';
@@ -19237,7 +19259,7 @@ function renderAgendaCard() {
           box-shadow: 0 2px 0 rgba(0,0,0,0.04) inset, 0 10px 26px rgba(20,20,10,0.18);
           overflow: hidden;
           padding-left: 30px;
-          font-family: 'Times New Roman', Times, serif;
+          font-family: 'Lora', Georgia, 'Times New Roman', serif;
           color: var(--ink);
         }
         .agenda-book button { font-family: inherit; }
@@ -19321,7 +19343,7 @@ function renderAgendaCard() {
         .agenda-cal-notes { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1 1 auto; }
         .agenda-note-line { display: flex; align-items: flex-start; gap: 5px; font-family: 'Caveat', cursive; font-size: 17px; line-height: 1.12; font-weight: 700; color: var(--blue-ink); white-space: pre-line; overflow-wrap: anywhere; word-break: break-word; }
         .agenda-note-line + .agenda-note-line { padding-top: 3px; border-top: 1px dotted rgba(47, 93, 138, 0.35); }
-        .agenda-note-line .agenda-note-time { font-family: 'Times New Roman', Times, serif; font-size: 11px; font-weight: 800; color: var(--ink-muted); margin-right: 4px; }
+        .agenda-note-line .agenda-note-time { font-family: 'Lora', Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 800; color: var(--ink-muted); margin-right: 4px; }
         /* A grade ocupa a altura da tela (em vez de parar nos 76px por linha) e cresce
            sozinha quando um dia tem muito texto. --agenda-rows é definido ao montar o mês. */
         @media (min-width: 601px) {
@@ -19338,7 +19360,7 @@ function renderAgendaCard() {
         .agenda-day-num { font-size: calc(13px * var(--agenda-zoom)); }
         .agenda-weekdays div { font-size: calc(11px * var(--agenda-zoom)); }
         .agenda-badge-status { font-size: calc(9px * var(--agenda-zoom)); }
-        .agenda-view-btn { min-width: 36px; height: 36px; padding: 0 8px; border-radius: 18px; border: 1px solid var(--rule-line); background: var(--paper-alt); color: var(--cover); font: 800 14px/1 'Times New Roman', Times, serif; cursor: pointer; }
+        .agenda-view-btn { min-width: 36px; height: 36px; padding: 0 8px; border-radius: 18px; border: 1px solid var(--rule-line); background: var(--paper-alt); color: var(--cover); font: 800 14px/1 'Lora', Georgia, 'Times New Roman', serif; cursor: pointer; }
         .agenda-view-btn:hover { border-color: var(--gold); background: rgba(184, 137, 79, 0.18); }
         .agenda-view-btn[aria-pressed="true"] { background: var(--cover); color: var(--paper); border-color: var(--cover); }
         .agenda-view-btn:disabled { opacity: 0.35; cursor: not-allowed; }
@@ -19364,7 +19386,7 @@ function renderAgendaCard() {
         .agenda-book.agenda-week .agenda-day-cell.agenda-is-today .agenda-day-num { width: calc(38px * var(--agenda-zoom)); height: calc(38px * var(--agenda-zoom)); font-size: calc(22px * var(--agenda-zoom)); }
         .agenda-day-cell.agenda-is-today .agenda-note-line { color: #1c4a78; }
         .agenda-today-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-        .agenda-today-tag { background: var(--cover); color: var(--paper); font: 800 calc(10px * var(--agenda-zoom))/1 'Times New Roman', Times, serif; letter-spacing: 0.6px; padding: 4px 7px; border-radius: 999px; }
+        .agenda-today-tag { background: var(--cover); color: var(--paper); font: 800 calc(10px * var(--agenda-zoom))/1 'Lora', Georgia, 'Times New Roman', serif; letter-spacing: 0.6px; padding: 4px 7px; border-radius: 999px; }
         .agenda-weekdays .agenda-wd-today { color: var(--cover); background: rgba(184, 137, 79, 0.30); border-radius: 6px 6px 0 0; box-shadow: inset 0 -3px 0 var(--cover); }
         @keyframes agendaTodayPulse { 0%, 100% { box-shadow: inset 0 0 0 3px var(--cover), 0 4px 16px rgba(31, 61, 51, 0.32); } 50% { box-shadow: inset 0 0 0 3px var(--cover), 0 4px 22px rgba(184, 137, 79, 0.75); } }
         @media (prefers-reduced-motion: reduce) { .agenda-day-cell.agenda-is-today { animation: none; } }
@@ -19372,12 +19394,12 @@ function renderAgendaCard() {
         .agenda-note-text { min-width: 0; flex: 1 1 auto; }
         .agenda-cell-check { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: calc(18px * var(--agenda-zoom)); height: calc(18px * var(--agenda-zoom)); margin-top: 2px; padding: 0; border-radius: 50%; border: 2px solid currentColor; background: transparent; color: var(--blue-ink); cursor: pointer; font-size: 0; line-height: 1; }
         .agenda-cell-check:hover, .agenda-cell-check:focus-visible { background: rgba(63, 125, 85, 0.25); border-color: var(--green-ink); color: var(--green-ink); }
-        .agenda-cell-check:hover::after, .agenda-cell-check:focus-visible::after { content: '✓'; font: 800 calc(12px * var(--agenda-zoom))/1 'Times New Roman', Times, serif; }
+        .agenda-cell-check:hover::after, .agenda-cell-check:focus-visible::after { content: '✓'; font: 800 calc(12px * var(--agenda-zoom))/1 'Lora', Georgia, 'Times New Roman', serif; }
         .agenda-cell-check:disabled { opacity: 0.5; cursor: progress; }
         .agenda-has-late .agenda-cell-check { color: #8f2f29; }
         .agenda-note-line.is-done { color: var(--ink-muted); opacity: 0.75; }
         .agenda-note-line.is-done .agenda-note-text { text-decoration: line-through; text-decoration-thickness: 1.5px; }
-        .agenda-note-done-mark { flex: 0 0 auto; width: calc(18px * var(--agenda-zoom)); text-align: center; color: var(--green-ink); font: 800 calc(14px * var(--agenda-zoom))/1.3 'Times New Roman', Times, serif; }
+        .agenda-note-done-mark { flex: 0 0 auto; width: calc(18px * var(--agenda-zoom)); text-align: center; color: var(--green-ink); font: 800 calc(14px * var(--agenda-zoom))/1.3 'Lora', Georgia, 'Times New Roman', serif; }
         @media (max-width: 600px) { .agenda-cell-check { display: none; } }
         /* Fins de semana mais estreitos: sobra largura para os dias de trabalho. */
         @media (min-width: 601px) {
@@ -19390,7 +19412,7 @@ function renderAgendaCard() {
         .agenda-note-line.is-dim { opacity: 0.3; }
         .agenda-day-cell.agenda-search-dim { opacity: 0.55; }
         .agenda-day-cell.agenda-search-hit { box-shadow: inset 0 0 0 2px #c79a1f; }
-        .agenda-late-chip { border: 1px solid var(--red-ink); background: rgba(179, 65, 58, 0.10); color: #8f2f29; border-radius: 20px; padding: 7px 12px; font: 800 13px/1 'Times New Roman', Times, serif; cursor: pointer; }
+        .agenda-late-chip { border: 1px solid var(--red-ink); background: rgba(179, 65, 58, 0.10); color: #8f2f29; border-radius: 20px; padding: 7px 12px; font: 800 13px/1 'Lora', Georgia, 'Times New Roman', serif; cursor: pointer; }
         .agenda-late-chip:hover { background: rgba(179, 65, 58, 0.2); }
         .agenda-late-chip[hidden] { display: none; }
         @media (max-width: 600px) { #agendaWeekBtn { display: none; } }
@@ -19574,7 +19596,7 @@ function renderAgendaCard() {
         /* Ponto indicando anotação no dia (útil no celular, onde o texto some). */
         .agenda-day-cell { position: relative; }
         .agenda-note-dot { position: absolute; top: 4px; right: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--blue-ink); }
-        .agenda-note-count { position: absolute; top: 3px; right: 3px; min-width: 15px; height: 15px; padding: 0 4px; box-sizing: border-box; border-radius: 999px; background: var(--blue-ink); color: #fff; font: 800 10px/15px 'Times New Roman', Times, serif; text-align: center; font-style: normal; }
+        .agenda-note-count { position: absolute; top: 3px; right: 3px; min-width: 15px; height: 15px; padding: 0 4px; box-sizing: border-box; border-radius: 999px; background: var(--blue-ink); color: #fff; font: 800 10px/15px 'Lora', Georgia, 'Times New Roman', serif; text-align: center; font-style: normal; }
 
         /* Pendências: anotações ainda não concluídas (atrasadas e futuras). */
         .agenda-pend-box[hidden] { display: none; }
@@ -19682,21 +19704,21 @@ function renderAgendaCard() {
         .agenda-toolbar .agenda-month-display { font-size: 18px; min-width: 104px; }
         .agenda-toolbar .agenda-today-btn { padding: 6px 12px; font-size: 13px; }
         .agenda-seg { order: 2; display: inline-flex; border: 1px solid var(--rule-line); border-radius: 18px; overflow: hidden; background: var(--paper-alt); }
-        .agenda-seg button { border: 0; background: none; padding: 7px 13px; font: 800 13px/1 'Times New Roman', Times, serif; color: var(--ink-muted); cursor: pointer; }
+        .agenda-seg button { border: 0; background: none; padding: 7px 13px; font: 800 13px/1 'Lora', Georgia, 'Times New Roman', serif; color: var(--ink-muted); cursor: pointer; }
         .agenda-seg button:hover { color: var(--cover); background: rgba(184, 137, 79, 0.16); }
         .agenda-seg button[aria-pressed="true"] { background: var(--cover); color: var(--paper); }
         .agenda-toolbar .agenda-late-chip { order: 3; padding: 6px 11px; font-size: 12.5px; }
         .agenda-spacer { order: 4; flex: 1 1 0; min-width: 0; }
         .agenda-toolbar .agenda-tools { order: 5; position: relative; display: flex; align-items: center; gap: 6px; }
         .agenda-toolbar .agenda-sync-btn { width: 34px; height: 34px; }
-        .agenda-primary-btn { height: 34px; padding: 0 14px; border: 0; border-radius: 18px; background: var(--cover); color: var(--paper); font: 800 13.5px/1 'Times New Roman', Times, serif; cursor: pointer; white-space: nowrap; }
+        .agenda-primary-btn { height: 34px; padding: 0 14px; border: 0; border-radius: 18px; background: var(--cover); color: var(--paper); font: 800 13.5px/1 'Lora', Georgia, 'Times New Roman', serif; cursor: pointer; white-space: nowrap; }
         .agenda-primary-btn:hover { background: var(--cover-dark); }
 
         /* Menu "Mais": o que se usa de vez em quando fica aqui, fora do caminho. */
         .agenda-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 40; width: min(310px, calc(100vw - 56px)); max-height: min(70dvh, 560px); overflow: auto; background: var(--paper); border: 1px solid var(--gold); border-radius: 12px; box-shadow: 0 14px 34px rgba(20, 20, 10, 0.3); padding: 6px 8px 8px; }
         .agenda-menu[hidden] { display: none; }
-        .agenda-menu-title { margin: 8px 6px 3px; font: 800 11px/1 'Times New Roman', Times, serif; letter-spacing: 0.6px; text-transform: uppercase; color: var(--ink-muted); }
-        .agenda-menu-item { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 8px 10px; border: 0; border-radius: 8px; background: none; color: var(--ink); font: 700 14px/1.2 'Times New Roman', Times, serif; cursor: pointer; }
+        .agenda-menu-title { margin: 8px 6px 3px; font: 800 11px/1 'Lora', Georgia, 'Times New Roman', serif; letter-spacing: 0.6px; text-transform: uppercase; color: var(--ink-muted); }
+        .agenda-menu-item { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 8px 10px; border: 0; border-radius: 8px; background: none; color: var(--ink); font: 700 14px/1.2 'Lora', Georgia, 'Times New Roman', serif; cursor: pointer; }
         .agenda-menu-item:hover { background: rgba(184, 137, 79, 0.16); }
         .agenda-menu-item small { display: block; font-weight: 600; font-size: 11.5px; color: var(--ink-muted); }
         .agenda-menu-item[aria-pressed="true"] { background: rgba(31, 61, 51, 0.12); color: var(--cover); }
@@ -19745,14 +19767,14 @@ function renderAgendaCard() {
         .agenda-quick { display: flex; gap: 6px; margin: 0; }
         .agenda-quick input { flex: 1 1 auto; min-width: 0; box-sizing: border-box; font: inherit; font-size: 14.5px; padding: 9px 12px; border-radius: 10px; border: 1.5px solid var(--gold); background: #fffdf6; color: var(--ink); }
         .agenda-quick input:focus-visible { outline: 2px solid var(--cover); outline-offset: 1px; }
-        .agenda-quick button { flex: 0 0 auto; width: 42px; border: 0; border-radius: 10px; background: var(--cover); color: var(--paper); font: 800 20px/1 'Times New Roman', Times, serif; cursor: pointer; }
+        .agenda-quick button { flex: 0 0 auto; width: 42px; border: 0; border-radius: 10px; background: var(--cover); color: var(--paper); font: 800 20px/1 'Lora', Georgia, 'Times New Roman', serif; cursor: pointer; }
         .agenda-quick button:disabled { opacity: 0.55; cursor: progress; }
         .agenda-quick-hint { margin: 4px 2px 8px; font-size: 12px; line-height: 1.35; color: var(--ink-muted); min-height: 1.35em; }
         .agenda-quick-hint b { color: var(--cover); }
         .agenda-side .agenda-search { margin: 0 0 8px; }
 
         .agenda-tabs { display: flex; gap: 3px; margin: 2px 0 8px; border-bottom: 2px solid var(--gold); }
-        .agenda-tab { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; gap: 5px; padding: 7px 6px 6px; border: 0; border-radius: 8px 8px 0 0; background: none; color: var(--ink-muted); font: 800 13px/1.1 'Times New Roman', Times, serif; cursor: pointer; white-space: nowrap; }
+        .agenda-tab { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; gap: 5px; padding: 7px 6px 6px; border: 0; border-radius: 8px 8px 0 0; background: none; color: var(--ink-muted); font: 800 13px/1.1 'Lora', Georgia, 'Times New Roman', serif; cursor: pointer; white-space: nowrap; }
         .agenda-tab:hover { background: rgba(184, 137, 79, 0.16); color: var(--cover); }
         .agenda-tab[aria-selected="true"] { background: var(--cover); color: var(--paper); }
         .agenda-tab i { font-style: normal; min-width: 18px; padding: 1px 5px; border-radius: 999px; background: rgba(184, 137, 79, 0.3); color: inherit; font-size: 11px; text-align: center; }
@@ -19792,21 +19814,83 @@ function renderAgendaCard() {
         .agenda-pend-snooze:hover { background: rgba(184, 137, 79, 0.2); color: var(--cover); }
         .agenda-pend-snooze:focus-visible { outline: 2px solid var(--cover); outline-offset: -2px; }
         .agenda-pend-snooze:disabled { opacity: 0.6; cursor: progress; }
-        .agenda-pend-bulk { display: block; width: 100%; margin: 2px 0 6px; padding: 7px 10px; border: 1px solid var(--red-ink); border-radius: 8px; background: rgba(179, 65, 58, 0.08); color: #8f2f29; font: 800 13px/1.2 'Times New Roman', Times, serif; cursor: pointer; }
+        .agenda-pend-bulk { display: block; width: 100%; margin: 2px 0 6px; padding: 7px 10px; border: 1px solid var(--red-ink); border-radius: 8px; background: rgba(179, 65, 58, 0.08); color: #8f2f29; font: 800 13px/1.2 'Lora', Georgia, 'Times New Roman', serif; cursor: pointer; }
         .agenda-pend-bulk:hover { background: rgba(179, 65, 58, 0.18); }
         @media print { .agenda-seg, .agenda-side, .agenda-menu, .agenda-toolbar { display: none !important; } }
 
         /* Tipos de anotação (#visita, #grupo...): faixa colorida na grade, selo nas listas, chips no modal. */
         .agenda-note-line.has-cat { border-left: 4px solid var(--cat); padding-left: 5px; border-radius: 2px; }
-        .agenda-cat-tag { display: inline-block; align-self: flex-start; font: 800 10px/1 'Times New Roman', Times, serif; letter-spacing: 0.3px; text-transform: uppercase; color: #fff; background: var(--cat); padding: 3px 6px; border-radius: 999px; margin-right: 6px; }
+        .agenda-cat-tag { display: inline-block; align-self: flex-start; font: 800 10px/1 'Lora', Georgia, 'Times New Roman', serif; letter-spacing: 0.3px; text-transform: uppercase; color: #fff; background: var(--cat); padding: 3px 6px; border-radius: 999px; margin-right: 6px; }
         .agenda-cat-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0 8px; }
         .agenda-cat-lead { font-size: 13px; font-weight: 800; color: #6f6551; margin-right: 2px; }
-        .agenda-cat-chip { font: 700 13px/1 'Times New Roman', Times, serif; padding: 8px 12px; min-height: 34px; border-radius: 999px; border: 1.5px solid var(--cat); background: transparent; color: #2c2620; cursor: pointer; }
+        .agenda-cat-chip { font: 700 13px/1 'Lora', Georgia, 'Times New Roman', serif; padding: 8px 12px; min-height: 34px; border-radius: 999px; border: 1.5px solid var(--cat); background: transparent; color: #2c2620; cursor: pointer; }
         .agenda-cat-chip:hover { background: color-mix(in srgb, var(--cat) 16%, transparent); }
         .agenda-cat-chip[aria-pressed="true"] { background: var(--cat); color: #fff; }
         .agenda-cat-chip:focus-visible { outline: 2px solid #1f3d33; outline-offset: 2px; }
         .agenda-item-main .agenda-cat-tag { margin-bottom: 2px; }
         @media print { .agenda-note-line.has-cat { border-left-color: #555; } .agenda-cat-tag { color: #000; background: none; border: 1px solid #555; } }
+      </style>
+      <style>
+        /* =====================================================================
+           Agenda — refinamentos visuais (v3). Vêm depois de tudo e valem sobre as
+           regras de cima: tipografia com Lora (a mesma do app), dia de hoje sem
+           animação contínua, números alinhados, textos pequenos mais legíveis e
+           alvos de toque de 40 px em celular/tablet.
+           ===================================================================== */
+        .agenda-card .agenda-book { font-family: 'Lora', Georgia, 'Times New Roman', serif; font-feature-settings: 'lnum' 1; }
+        .agenda-card .agenda-book .agenda-day-num,
+        .agenda-card .agenda-book .agenda-item-date b,
+        .agenda-card .agenda-book .agenda-month-display { font-variant-numeric: lining-nums tabular-nums; }
+
+        /* Cabeçalho: mês em destaque e uma linha fina separando a barra do calendário */
+        .agenda-card .agenda-book .agenda-toolbar { border-bottom: 1px solid var(--rule-line); padding-bottom: 8px; margin-bottom: 6px; }
+        .agenda-card .agenda-book .agenda-toolbar .agenda-month-display { font-size: 20px; letter-spacing: -0.01em; }
+        .agenda-card .agenda-book .agenda-year-tag { font-size: 14px; letter-spacing: 0.01em; }
+
+        /* Dias da semana e etiquetas: um pouco maiores e mais firmes */
+        .agenda-card .agenda-book .agenda-weekdays div { font-size: calc(12px * var(--agenda-zoom)); letter-spacing: 0.04em; }
+        .agenda-card .agenda-book .agenda-badge-status { font-size: calc(10px * var(--agenda-zoom)); padding: 2px 4px; border-radius: 4px; }
+        @media (max-width: 600px) {
+          .agenda-card .agenda-book .agenda-weekdays div { font-size: 11px; }
+          .agenda-card .agenda-book .agenda-badge-status { font-size: 8.5px; }
+        }
+
+        /* Hoje: moldura forte e estática (a pulsação contínua cansava a vista e distraía) */
+        .agenda-card .agenda-book .agenda-day-cell.agenda-is-today { animation: none; box-shadow: inset 0 0 0 2.5px var(--cover), 0 6px 18px -6px rgba(31, 61, 51, 0.4); }
+        .agenda-card .agenda-book .agenda-today-tag { letter-spacing: 0.08em; }
+
+        /* Dias: o toque no dia não "pula" mais; só o fundo responde */
+        .agenda-card .agenda-book .agenda-day-cell:hover { transform: none; background: rgba(184, 137, 79, 0.14); }
+
+        /* Lista lateral: data com mais presença e itens mais arejados */
+        .agenda-card .agenda-book .agenda-item { padding: 9px 8px; border-radius: 8px; }
+        .agenda-card .agenda-book .agenda-item-title { font-weight: 600; }
+        .agenda-card .agenda-book .agenda-item-date b { font-size: 21px; }
+        .agenda-card .agenda-book .agenda-item.is-today { box-shadow: inset 3px 0 0 var(--cover); background: rgba(184, 137, 79, 0.2); }
+        .agenda-card .agenda-book .agenda-side-sub { font-size: 13px; }
+        .agenda-card .agenda-book .agenda-quick input { border-radius: 12px; font-family: inherit; }
+        .agenda-card .agenda-book .agenda-tab { font-weight: 700; }
+        .agenda-card .agenda-book .agenda-tab[aria-selected="true"] { box-shadow: 0 -2px 0 var(--gold) inset; }
+
+        /* Legenda e chips: mais respiro entre eles */
+        .agenda-card .agenda-book .agenda-legend { gap: 8px; }
+        .agenda-card .agenda-book .agenda-legend-btn { padding: 5px 11px 5px 9px; font-size: 12.5px; }
+        .agenda-card .agenda-book .agenda-argo-chip { font-size: 12.5px; }
+
+        /* Celular e tablet: alvos de toque de pelo menos 40 px */
+        @media (pointer: coarse) {
+          .agenda-card .agenda-book .agenda-nav-btn { width: 40px; height: 40px; }
+          .agenda-card .agenda-book .agenda-toolbar .agenda-nav-btn { width: 40px; height: 40px; }
+          .agenda-card .agenda-book .agenda-toolbar .agenda-sync-btn { width: 40px; height: 40px; }
+          .agenda-card .agenda-book .agenda-primary-btn { height: 40px; }
+          .agenda-card .agenda-book .agenda-toolbar .agenda-today-btn { min-height: 40px; }
+          .agenda-card .agenda-book .agenda-seg button { min-height: 40px; }
+          .agenda-card .agenda-book .agenda-tab { min-height: 40px; }
+          .agenda-card .agenda-book .agenda-legend-btn,
+          .agenda-card .agenda-book .agenda-argo-chip,
+          .agenda-card .agenda-book .agenda-year-btn { min-height: 38px; }
+          .agenda-card .agenda-book .agenda-menu-item { min-height: 44px; }
+        }
       </style>
       <div class="card-top">
         <div style="display:flex; align-items:center; gap:0.55rem;">
@@ -20877,8 +20961,8 @@ function agendaOpenStats() {
       .ast-seg { fill:none; stroke-width:17; cursor:pointer; transition:stroke-width .15s; animation:ast-ring .9s cubic-bezier(.2,.7,.2,1) both; }
       .ast-seg:hover { stroke-width:20; }
       .ast-s-done { stroke:#3f7d55; } .ast-s-pending { stroke:#2f5d8a; } .ast-s-late { stroke:#b3413a; }
-      .ast-donut-num { font:800 28px 'Times New Roman', Times, serif; fill:#2c2620; }
-      .ast-donut-sub { font:700 11px 'Times New Roman', Times, serif; fill:#6f6551; }
+      .ast-donut-num { font:800 28px 'Lora', Georgia, 'Times New Roman', serif; fill:#2c2620; }
+      .ast-donut-sub { font:700 11px 'Lora', Georgia, 'Times New Roman', serif; fill:#6f6551; }
       .ast-donut-leg { list-style:none; margin:0; padding:0; display:grid; gap:7px; min-width:170px; }
       .ast-donut-leg li { display:grid; grid-template-columns:12px 1fr auto 38px; align-items:center; gap:8px; font-size:14px; font-weight:700; color:#2c2620; }
       .ast-donut-leg i { width:12px; height:12px; border-radius:4px; }
@@ -20891,7 +20975,7 @@ function agendaOpenStats() {
       .ast-line { fill:none; stroke:#3f7d55; stroke-width:2.5; stroke-linejoin:round; stroke-linecap:round; }
       .ast-dot { fill:#f8f2e4; stroke:#3f7d55; stroke-width:2.5; cursor:pointer; }
       .ast-dot:hover { fill:#3f7d55; }
-      .ast-pt { font:700 11px 'Times New Roman', Times, serif; fill:#2c2620; pointer-events:none; }
+      .ast-pt { font:700 11px 'Lora', Georgia, 'Times New Roman', serif; fill:#2c2620; pointer-events:none; }
       .ast-axis-sm { font-size:10px; }
       .ast-scroll { overflow-x:auto; padding-bottom:4px; }
       .ast-h0 { fill:#e6dbb8; background:#e6dbb8; } .ast-h1 { fill:#b9d6b0; background:#b9d6b0; } .ast-h2 { fill:#7fb78f; background:#7fb78f; } .ast-h3 { fill:#4a9264; background:#4a9264; } .ast-h4 { fill:#1f6b46; background:#1f6b46; }
@@ -20911,7 +20995,7 @@ function agendaOpenStats() {
       .ast-h { margin:14px 0 6px; font-size:15px; font-style:italic; font-weight:800; color:#2c2620; }
       .ast-svg { width:100%; height:auto; display:block; }
       .ast-grid { stroke:#d3c495; stroke-width:1; stroke-dasharray:2 3; }
-      .ast-axis { font:600 13px 'Times New Roman', Times, serif; fill:#6f6551; }
+      .ast-axis { font:600 13px 'Lora', Georgia, 'Times New Roman', serif; fill:#6f6551; }
       .ast-done { fill:#3f7d55; background:#3f7d55; } .ast-pending { fill:#2f5d8a; background:#2f5d8a; } .ast-late { fill:#b3413a; background:#b3413a; }
       .ast-legend { display:flex; flex-wrap:wrap; gap:4px 14px; font-size:12.5px; font-weight:700; color:#6f6551; margin-top:4px; }
       .ast-legend i { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
@@ -21638,7 +21722,7 @@ function agendaEnsureModals() {
     </div>
     <style>
       .agenda-modal-overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(20,16,10,0.5); z-index:999; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; }
-      .agenda-modal-box { background:#f8f2e4; background-image: repeating-linear-gradient(to bottom, transparent 0px, transparent 25px, #e0d3ac 25px, #e0d3ac 26px); width:100%; max-width:360px; max-height:100%; overflow:auto; border-radius:4px 14px 14px 4px; padding:20px 22px 22px; box-shadow:0 16px 34px rgba(0,0,0,0.28); position:relative; border-left:8px solid #1f3d33; font-family:'Times New Roman', Times, serif; color:#2c2620; box-sizing:border-box; }
+      .agenda-modal-box { background:#f8f2e4; background-image: repeating-linear-gradient(to bottom, transparent 0px, transparent 25px, #e0d3ac 25px, #e0d3ac 26px); width:100%; max-width:360px; max-height:100%; overflow:auto; border-radius:4px 14px 14px 4px; padding:20px 22px 22px; box-shadow:0 16px 34px rgba(0,0,0,0.28); position:relative; border-left:8px solid #1f3d33; font-family:'Lora', Georgia, 'Times New Roman', serif; color:#2c2620; box-sizing:border-box; }
       .agenda-modal-header { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:12px; }
       .agenda-modal-title { margin:0; font-size:20px; font-style:italic; font-weight:700; line-height:1.2; }
       #agendaModalDate::first-letter { text-transform:uppercase; }
@@ -21667,7 +21751,7 @@ function agendaEnsureModals() {
       #agendaNoteModal .agenda-btn-group button { padding-top:14px; padding-bottom:14px; font-size:16px; }
       .agenda-textarea, .agenda-input { width:100%; border:1px solid #d3c495; background:rgba(255,255,255,0.6); border-radius:8px; padding:10px; box-sizing:border-box; color:#2c2620; }
       .agenda-textarea { font-family:'Caveat', cursive; font-size:21px; line-height:1.15; color:#2f5d8a; resize:vertical; min-height:96px; max-height:220px; margin-bottom:4px; }
-      .agenda-input { font-family:'Times New Roman', Times, serif; font-size:15px; margin-bottom:14px; }
+      .agenda-input { font-family:'Lora', Georgia, 'Times New Roman', serif; font-size:15px; margin-bottom:14px; }
       .agenda-textarea:focus, .agenda-input:focus { outline:2px solid #1f3d33; outline-offset:1px; }
       .agenda-note-meta { display:flex; justify-content:space-between; gap:10px; font-size:12px; color:#6f6551; margin-bottom:12px; min-height:16px; }
       .agenda-note-hint { flex:1; line-height:1.3; }
@@ -21720,7 +21804,7 @@ function agendaEnsureModals() {
       .agenda-sync-code-display { font-size:17px; font-weight:800; letter-spacing:1px; background:#efe4cb; border:1px dashed #b8894f; border-radius:8px; padding:10px; text-align:center; margin-bottom:12px; color:#1f3d33; overflow-wrap:anywhere; }
       .agenda-status-line { font-size:13px; margin-bottom:10px; }
       .agenda-sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
-      .agenda-toast { position:fixed; left:50%; bottom:max(24px, env(safe-area-inset-bottom)); transform:translate(-50%, 12px); max-width:min(92vw, 420px); background:#1f3d33; color:#f8f2e4; padding:11px 16px; border-radius:10px; font:600 14px/1.4 'Times New Roman', Times, serif; box-shadow:0 10px 24px rgba(0,0,0,0.3); z-index:1001; opacity:0; pointer-events:none; transition:opacity .18s, transform .18s; text-align:center; }
+      .agenda-toast { position:fixed; left:50%; bottom:max(24px, env(safe-area-inset-bottom)); transform:translate(-50%, 12px); max-width:min(92vw, 420px); background:#1f3d33; color:#f8f2e4; padding:11px 16px; border-radius:10px; font:600 14px/1.4 'Lora', Georgia, 'Times New Roman', serif; box-shadow:0 10px 24px rgba(0,0,0,0.3); z-index:1001; opacity:0; pointer-events:none; transition:opacity .18s, transform .18s; text-align:center; }
       .agenda-toast.visible { opacity:1; transform:translate(-50%, 0); }
       .agenda-toast[data-kind="error"] { background:#8f2d27; }
       @media (prefers-reduced-motion: reduce) { .agenda-toast { transition:none; } }
@@ -28138,6 +28222,31 @@ const PDFHUB_TOOLS = [
   { key: 'PdfJpg', tool: 'pdftoolsToolPdfJpg', name: 'PDF → JPG', desc: 'Uma imagem por página', icon: 'image', group: 'Converter', kw: 'jpg jpeg imagem foto converter', input: 'pdf' },
   { key: 'JpgPdf', tool: 'pdftoolsToolJpgPdf', name: 'Fotos → PDF', desc: 'Digitalizar: juntar fotos em um PDF', icon: 'image', group: 'Converter', kw: 'fotos imagens jpg png digitalizar escanear scan câmera', input: 'img' }
 ];
+// Cada ferramenta tem o seu próprio ícone (antes vários grupos repetiam o mesmo) e cada grupo tem uma cor.
+const PDFHUB_GSLUG = { 'Editar': 'editar', 'Páginas': 'paginas', 'Limpar e proteger': 'proteger', 'Reduzir e extrair': 'reduzir', 'Converter': 'converter' };
+const PDFHUB_ICONS = {
+  Edit: '<path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/><path d="m14 7 3 3"/>',
+  Merge: '<rect x="3" y="3" width="9" height="11" rx="1.8"/><rect x="12" y="10" width="9" height="11" rx="1.8"/>',
+  Organize: '<path d="M8 4v16M8 4 5 7M8 4l3 3M16 20V4M16 20l-3-3M16 20l3-3"/>',
+  Split: '<circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="M8 7.5 20 17M8 16.5 20 7"/>',
+  Remove: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/>',
+  Rotate: '<path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4h-4"/>',
+  Number: '<path d="M9 4 7 20M17 4l-2 16M4 9h16M3.5 15h16"/>',
+  Crop: '<path d="M6 2v14a2 2 0 0 0 2 2h14M2 6h14a2 2 0 0 1 2 2v14"/>',
+  Mark: '<path d="M12 3s6 6.2 6 10.5a6 6 0 0 1-12 0C6 9.2 12 3 12 3z"/>',
+  Meta: '<path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="12" cy="12" r="2.5"/>',
+  Unlock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/>',
+  Protect: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  Compress: '<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>',
+  Text: '<path d="M5 6h14M5 11h14M5 16h9"/>',
+  PdfWord: '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M9.5 12l1.3 5 1.2-4 1.2 4 1.3-5"/>',
+  WordPdf: '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M10 13h6M10 17h6"/>',
+  PdfJpg: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-8 8"/>',
+  JpgPdf: '<path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.2"/>'
+};
+const pdfhubIconHtml = t => PDFHUB_ICONS[t.key]
+  ? '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + PDFHUB_ICONS[t.key] + '</svg>'
+  : (ICONS[t.icon] || ICONS.pdf);
 const pdfhub = { files: [], open: null };
 const PDFHUB_RECENT_KEY = 'argo_pdfhub_recent';
 
@@ -28155,8 +28264,8 @@ function pdfhubRemember(key) {
 function pdfhubToolBtn(t) {
   const act = t.go ? `argoAssistantGoTo('${t.go}')` : `pdfhubOpen('${t.key}')`;
   const text = (t.name + ' ' + t.desc + ' ' + (t.kw || '') + ' ' + t.group).toLowerCase();
-  return `<button type="button" class="pdfhub-tool" data-key="${t.key}" data-text="${escapeHtmlAttr(text)}" onclick="${act}">
-      <span class="pdfhub-tool-icon" aria-hidden="true">${ICONS[t.icon] || ICONS.pdf}</span>
+  return `<button type="button" class="pdfhub-tool" data-g="${PDFHUB_GSLUG[t.group] || 'editar'}" data-key="${t.key}" data-text="${escapeHtmlAttr(text)}" onclick="${act}">
+      <span class="pdfhub-tool-icon" aria-hidden="true">${pdfhubIconHtml(t)}</span>
       <span class="pdfhub-tool-name">${t.name}${t.isNew ? ' <em class="pdfhub-new">novo</em>' : ''}</span>
       <span class="pdfhub-tool-desc">${t.desc}</span>
     </button>`;
@@ -28165,8 +28274,8 @@ function escapeHtmlAttr(s) { return String(s).replace(/&/g, '&amp;').replace(/"/
 
 function pdfhubHtml() {
   const groups = PDFHUB_GROUPS.map(g => `
-      <div class="pdfhub-group" data-group="${g}">
-        <h3 class="pdfhub-group-title">${g}</h3>
+      <div class="pdfhub-group" data-group="${g}" data-g="${PDFHUB_GSLUG[g] || 'editar'}">
+        <h3 class="pdfhub-group-title">${g}<span class="pdfhub-group-n">${PDFHUB_TOOLS.filter(t => t.group === g).length}</span></h3>
         <div class="pdfhub-grid">${PDFHUB_TOOLS.filter(t => t.group === g).map(pdfhubToolBtn).join('')}</div>
       </div>`).join('');
   const switchOpts = PDFHUB_TOOLS.filter(t => t.tool).map(t => `<option value="${t.key}">${t.name}</option>`).join('');
@@ -28181,7 +28290,7 @@ function pdfhubHtml() {
           <label class="pdfhub-drop" for="pdfhubInput" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="pdfhubDrop(event)">
             <input type="file" id="pdfhubInput" multiple accept=".pdf,application/pdf,.jpg,.jpeg,.png,image/jpeg,image/png,.docx" onchange="pdfhubPick(this.files, this)">
             <span class="pdfhub-drop-icon" aria-hidden="true">${ICONS.pdf}</span>
-            <span class="pdfhub-drop-text"><strong>Comece pelo arquivo</strong><small>Solte ou escolha um PDF, fotos ou um .docx — o app mostra o que dá para fazer com ele</small></span>
+            <span class="pdfhub-drop-text"><strong>Comece pelo arquivo</strong><small>Solte ou escolha um PDF, fotos ou um .docx — o app mostra o que dá para fazer com ele</small><span class="pdfhub-formats" aria-hidden="true"><i>PDF</i><i>JPG</i><i>PNG</i><i>DOCX</i></span></span>
           </label>
           <div class="pdfhub-chooser" id="pdfhubChooser" hidden></div>
           <div class="pdfhub-search">
