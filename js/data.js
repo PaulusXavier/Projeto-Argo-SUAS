@@ -5091,8 +5091,9 @@ const DATA = [
     address: "Rua Santo Agostinho, 193 - Centenário, Boa Vista-RR (CRAS Cristiana Vicente Nunes)",
     hours: "Segunda a sexta, 08:00 às 18:00",
     phones: ["(95) 98402-6617"],
+    schedule: { days: [1, 2, 3, 4, 5], open: "08:00", close: "18:00" },
     services: "PAIF, busca ativa, acompanhamento familiar e articulação em rede, além de acesso rápido a sistemas municipais, sistemas federais do Bolsa Família/CadÚnico, gestão de atendimentos (RMA) e pastas compartilhadas da equipe no Google Drive.",
-    desc: "O CRAS (Centro de Referência de Assistência Social) é a porta de entrada do SUAS. A equipe técnica, composta por assistentes sociais, psicólogos e pedagogos, atua no atendimento a famílias em vulnerabilidade social, realizando o PAIF, busca ativa, acompanhamento e articulação em rede. A Equipe Volante é responsável por levar serviços (PAIF, CadÚnico) a áreas de difícil acesso e populações dispersas. Este painel também reúne os atalhos técnicos de uso interno da equipe: sistemas municipais (BV Cidadão, Cidade Social, Contracheque, Banco de Talentos, Cédula C), sistemas federais (SIBEC, SIGPBF, Carteira do Idoso, CadÚnico, calendários de condicionalidades e pagamento do PBF), a gestão de atendimentos via RMA e as nuvens de arquivos de cada técnico no Google Drive.",
+    desc: "O CRAS (Centro de Referência de Assistência Social) é a porta de entrada do SUAS. A equipe técnica, composta por assistentes sociais, psicólogos e pedagogos, atua no atendimento a famílias em vulnerabilidade social, realizando o PAIF, busca ativa, acompanhamento e articulação em rede. A Equipe Volante é responsável por levar serviços (PAIF, CadÚnico) a áreas de difícil acesso e populações dispersas. Este painel também reúne os atalhos técnicos de uso interno da equipe: sistemas municipais (BV Cidadão, Portal do Cidadão, Cidade Social, Contracheque, Banco de Talentos, Cédula C), sistemas federais (SIBEC, SIGPBF, Carteira do Idoso, CadÚnico, calendários de condicionalidades e pagamento do PBF), a gestão de atendimentos via RMA e as nuvens de arquivos de cada técnico no Google Drive.",
     // Dados da equipe vêm de equipe-cras-cristiana.js (fonte única, compartilhada
     // com o painel avulso ferramentas/equipe-tecnica-cras.html).
     fixedTeam: EQUIPE_CRAS_CRISTIANA.fixedTeam,
@@ -5107,6 +5108,7 @@ const DATA = [
     teamPanelLink: { label: "Consulta em Tela Cheia (buscar por bairro)", icon: "building", url: "ferramentas/equipe-tecnica-cras.html" },
     municipalLinks: [
       { label: "BV Cidadão", icon: "badge", url: "https://bvcidadao.prefeitura.boavista.br/proton/login.asp" },
+      { label: "Portal do Cidadão", icon: "idcard", url: "https://portalcidadao.prefeitura.boavista.br/default.aspx" },
       { label: "Cidade Social", icon: "building", url: "https://cidadesocial.pmbv.rr.gov.br/auth/login" },
       { label: "Contracheque (SIPWEB)", icon: "layers", url: "http://sipweb.boavista.rr.gov.br:8080/sipweb/trabalhador/login/login.xhtml" },
       { label: "Banco de Talentos", icon: "activity", url: "https://bt.pmbv.rr.gov.br/SMT73/open.do?sys=SMT" },
