@@ -11484,7 +11484,7 @@ function pdftoolsExtraToolsHtml() {
                 <div class="pdftools-tool-limit">Um PDF · até 60 MB</div>
               </div>
             </div>
-            <p class="pdftools-tool-desc">Tira as bordas em branco (comum em digitalizações) ou corta margens com a medida que você escolher. O corte vale para todas as páginas. A área cortada só fica escondida no arquivo — para apagar de verdade o conteúdo, use "Editar PDF → Cobrir".</p>
+            <p class="pdftools-tool-desc">Tira as bordas em branco (comum em digitalizações) ou corta margens com a medida que você escolher. O corte vale para todas as páginas. A área cortada só fica escondida no arquivo — para apagar de verdade o conteúdo, passe o arquivo depois por "Reduzir tamanho", que transforma as páginas em imagens.</p>
             ${drop('Crop', 'pdftoolsCropInput', 'Escolher um PDF', 'para recortar as margens das páginas')}
             <div class="pdftools-opts">
               <label class="pdftools-opt"><input type="radio" name="pdftoolsCropMode" value="auto" checked onchange="pdftoolsCropMode()"> Automático: tirar as bordas em branco</label>
@@ -23216,6 +23216,8 @@ function pdftoolsSafeName(text, fallback) {
     .replace(/^[\s.]+|[\s.]+$/g, '')
     .slice(0, 100)
     .trim();
+  // CON, NUL, COM1... são nomes reservados no Windows (o arquivo não é criado).
+  if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(limpo)) return limpo + '-arquivo';
   return limpo || fallback;
 }
 
@@ -24182,11 +24184,12 @@ async function pdftoolsRunPdfToJpg(file, inputEl) {
   if (inputEl) inputEl.disabled = true;
   pdftoolsSetStatus('pdftoolsPdfJpgStatus', 'Carregando biblioteca de PDF...', 'info');
   pdftoolsSetProgress('PdfJpg', 0, 0);
+  let pdf = null;
   try {
     const pdfjsLib = await ensurePdfJs();
     const JSZipLib = await ensureJSZip();
     const bytes = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+    pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
     const baseName = pdftoolsSafeName(file.name, 'documento');
     const zip = new JSZipLib();
     const jpgScale = pdf.numPages > 40 ? 1.5 : 2; // PDF longo: imagens um pouco menores para não estourar a memória do aparelho
@@ -24218,11 +24221,11 @@ async function pdftoolsRunPdfToJpg(file, inputEl) {
       pdftoolsDownloadBlob(zipBlob, `${baseName}-imagens.zip`);
     }
     const nPages = pdf.numPages;
-    if (pdf.destroy) pdf.destroy();
     pdftoolsSetStatus('pdftoolsPdfJpgStatus', nPages === 1 ? 'Imagem gerada com sucesso!' : `${nPages} imagens geradas e reunidas em um .zip.`, 'success');
   } catch (e) {
     pdftoolsSetStatus('pdftoolsPdfJpgStatus', pdftoolsPdfErrorMsg(e, 'Não foi possível converter este PDF.'), 'error');
   } finally {
+    if (pdf && pdf.destroy) { try { pdf.destroy(); } catch (e) { /* já liberado */ } }
     pdftoolsConvBusy.PdfJpg = false;
     if (inputEl) { inputEl.disabled = false; inputEl.value = ''; }
     pdftoolsSetProgress('PdfJpg', 0, 0);
@@ -24238,6 +24241,12 @@ function pdftoolsExtraSetBusy(kind, busy) {
   const btn = document.getElementById('pdftools' + kind + 'Btn');
   if (btn) btn.disabled = busy || !pdftoolsExtra[kind];
 }
+// Só atualiza o botão, sem mexer na trava global: escolher outro arquivo no meio de uma
+// operação não pode liberar a trava (senão dois processamentos rodam ao mesmo tempo).
+function pdftoolsExtraRefreshBtn(kind) {
+  const btn = document.getElementById('pdftools' + kind + 'Btn');
+  if (btn) btn.disabled = pdftoolsExtra.busy || !pdftoolsExtra[kind];
+}
 
 async function pdftoolsExtraPick(kind, file, inputEl) {
   const statusId = 'pdftools' + kind + 'Status';
@@ -24248,7 +24257,7 @@ async function pdftoolsExtraPick(kind, file, inputEl) {
   pdftoolsSetStatus(statusId, 'Lendo o arquivo...', 'info');
   pdftoolsExtra[kind] = null;
   pdftoolsPickerHide(kind);
-  pdftoolsExtraSetBusy(kind, false);
+  pdftoolsExtraRefreshBtn(kind);
   try {
     const PDFLib = await ensurePdfLib();
     const bytes = await file.arrayBuffer();
@@ -24257,7 +24266,7 @@ async function pdftoolsExtraPick(kind, file, inputEl) {
     const info = document.getElementById('pdftools' + kind + 'Info');
     if (info) info.textContent = file.name + ' · ' + doc.getPageCount() + (doc.getPageCount() === 1 ? ' página' : ' páginas') + ' · ' + pdftoolsFormatBytes(file.size);
     pdftoolsSetStatus(statusId, 'Arquivo pronto. Ajuste as opções e toque no botão.', 'info');
-    pdftoolsExtraSetBusy(kind, false);
+    pdftoolsExtraRefreshBtn(kind);
     if (PDFTOOLS_PICKER_INPUT[kind]) pdftoolsRenderPagePicker(kind);
     if (kind === 'Organize') pdftoolsOrgStart();
   } catch (e) {
@@ -24448,10 +24457,11 @@ async function pdftoolsRunCompress() {
   pdftoolsExtraSetBusy('Compress', true);
   pdftoolsSetProgress('Compress', 0, 0);
   pdftoolsSetStatus(id, 'Carregando biblioteca de PDF...', 'info');
+  let pdf = null;
   try {
     const [pdfjsLib, PDFLib] = await Promise.all([ensurePdfJs(), ensurePdfLib()]);
     // pdf.js pode "consumir" o buffer; trabalha numa cópia para manter o original.
-    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(st.bytes.slice(0)) }).promise;
+    pdf = await pdfjsLib.getDocument({ data: new Uint8Array(st.bytes.slice(0)) }).promise;
     const out = await PDFLib.PDFDocument.create();
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
@@ -24473,7 +24483,6 @@ async function pdftoolsRunCompress() {
       pdftoolsSetProgress('Compress', i, pdf.numPages);
       pdftoolsSetStatus(id, 'Reduzindo páginas (' + i + '/' + pdf.numPages + ')...', 'info');
     }
-    if (pdf.destroy) pdf.destroy();
     const bytes = await out.save();
     const before = st.file.size, after = bytes.length;
     if (after >= before * 0.98) {
@@ -24485,6 +24494,7 @@ async function pdftoolsRunCompress() {
   } catch (e) {
     pdftoolsSetStatus(id, pdftoolsPdfErrorMsg(e, 'Não foi possível reduzir este PDF.'), 'error');
   } finally {
+    if (pdf && pdf.destroy) { try { pdf.destroy(); } catch (e) { /* já liberado */ } }
     pdftoolsSetProgress('Compress', 0, 0);
     pdftoolsExtraSetBusy('Compress', false);
   }
@@ -24762,6 +24772,35 @@ async function pdftoolsRunRotate() {
   }
 }
 
+// A pdf-lib tira a página da árvore, mas NÃO apaga o conteúdo dela: o texto e as imagens
+// da página "excluída" continuavam dentro do arquivo (e podiam ser extraídos). Aqui se
+// percorre tudo o que ainda é alcançável a partir do documento e apaga-se o resto.
+function pdftoolsPruneOrphans(PDFLib, doc) {
+  const { PDFRef, PDFDict, PDFArray, PDFStream } = PDFLib;
+  const ctx = doc.context;
+  const seen = new Set();
+  const stack = [];
+  const t = ctx.trailerInfo || {};
+  [t.Root, t.Info, t.Encrypt].forEach(o => { if (o) stack.push(o); });
+  while (stack.length) {
+    const o = stack.pop();
+    if (o instanceof PDFRef) {
+      const k = o.toString();
+      if (seen.has(k)) continue;
+      seen.add(k);
+      const alvo = ctx.lookup(o);
+      if (alvo) stack.push(alvo);
+    } else if (o instanceof PDFStream) { stack.push(o.dict); }
+    else if (o instanceof PDFDict) { o.values().forEach(v => stack.push(v)); }
+    else if (o instanceof PDFArray) { o.asArray().forEach(v => stack.push(v)); }
+  }
+  let apagados = 0;
+  ctx.enumerateIndirectObjects().forEach(([ref]) => {
+    if (!seen.has(ref.toString())) { ctx.delete(ref); apagados++; }
+  });
+  return apagados;
+}
+
 async function pdftoolsRunRemove() {
   const st = pdftoolsExtra.Remove;
   if (!st || pdftoolsExtra.busy) return;
@@ -24778,6 +24817,7 @@ async function pdftoolsRunRemove() {
     const PDFLib = await ensurePdfLib();
     const doc = await PDFLib.PDFDocument.load(st.bytes);
     unicos.sort((a, b) => b - a).forEach(i => doc.removePage(i));
+    pdftoolsPruneOrphans(PDFLib, doc); // o conteúdo das páginas excluídas não pode ficar no arquivo
     const out = new Blob([await doc.save()], { type: 'application/pdf' });
     pdftoolsDownloadBlob(out, pdftoolsBaseName(st.file) + '-sem-paginas.pdf');
     pdftoolsSetStatus(id, unicos.length + (unicos.length === 1 ? ' página excluída' : ' páginas excluídas') + ' · restam ' + doc.getPageCount() + ' · ' + pdftoolsFormatBytes(out.size) + '.', 'success');
@@ -25560,6 +25600,7 @@ async function pdftoolsRunMeta() {
     // metadados XMP (cópia dos dados acima que alguns programas guardam à parte)
     const xmp = doc.catalog.get(PDFLib.PDFName.of('Metadata'));
     if (xmp) { doc.catalog.delete(PDFLib.PDFName.of('Metadata')); achados.push('metadados XMP'); }
+    pdftoolsPruneOrphans(PDFLib, doc); // sem isso o fluxo XMP apagado continuava dentro do arquivo
     const out = new Blob([await doc.save({ updateFieldAppearances: false })], { type: 'application/pdf' });
     pdftoolsDownloadBlob(out, pdftoolsBaseName(st.file) + '-limpo.pdf');
     pdftoolsSetStatus(id, (achados.length ? 'Removido: ' + achados.join(', ') : 'Este arquivo não tinha dados ocultos preenchidos') + ' · ' + pdftoolsFormatBytes(out.size) + '.', 'success');
@@ -25578,7 +25619,7 @@ async function pdftoolsUnlockPick(file, inputEl) {
   if (!pdftoolsCheckSingleFileSize(file, id, inputEl)) return;
   pdftoolsSetStatus(id, 'Lendo o arquivo...', 'info');
   pdftoolsExtra.Unlock = null;
-  pdftoolsExtraSetBusy('Unlock', false);
+  pdftoolsExtraRefreshBtn('Unlock');
   const info = document.getElementById('pdftoolsUnlockInfo');
   try {
     const bytes = await file.arrayBuffer();
@@ -25593,7 +25634,7 @@ async function pdftoolsUnlockPick(file, inputEl) {
     }
     pdftoolsExtra.Unlock = { file, bytes, pages, precisaSenha };
     if (info) info.textContent = file.name + (pages ? ' · ' + pages + (pages === 1 ? ' página' : ' páginas') : '') + ' · ' + pdftoolsFormatBytes(file.size);
-    pdftoolsExtraSetBusy('Unlock', false);
+    pdftoolsExtraRefreshBtn('Unlock');
     const pw = document.getElementById('pdftoolsUnlockPass');
     if (precisaSenha) {
       pdftoolsSetStatus(id, 'Este PDF pede senha para abrir. Digite a senha e toque no botão.', 'info');
@@ -27422,7 +27463,6 @@ function pdftoolsMakeParagraphs(lineItems, geo) {
       if (i === 0 && p.list) {
         // troca o marcador por: marcador + tabulação (recuo deslocado)
         const mk = p.list;
-        const firstPartText = l.parts[0].text.trim();
         if (mk.part) { lr = pdftoolsRunsOfParts(l.parts.slice(1)); }
         else if (lr.length) lr[0].text = lr[0].text.replace(/^\s*\S+\s+/, '');
         const style = { font: l.parts[0].font, size: Math.round(l.parts[0].size * 2) / 2, bold: l.parts[0].bold, italic: l.parts[0].italic, color: l.parts[0].color, bg: l.parts[0].bg };
@@ -27626,8 +27666,6 @@ function pdftoolsPageBodyXml(info, geo, ctx, pageIdx) {
   return xml;
 }
 
-const PDFTOOLS_DOCX_MARGIN_TW = 1417;
-
 async function pdftoolsBuildDocx(pageXmls, hf, geo, media) {
   const JSZipLib = await ensureJSZip();
   const zip = new JSZipLib();
@@ -27722,9 +27760,15 @@ ${ctOverrides.join('\n')}
 
 /* Converte os bytes de um PDF em um Blob .docx. Separado da tela para poder ser reutilizado/testado. */
 async function pdftoolsPdfToDocxBlob(bytes, onProgress) {
+  const holder = {};
+  try { return await pdftoolsPdfToDocxBlobImpl(bytes, onProgress, holder); }
+  finally { try { if (holder.pdf && holder.pdf.destroy) holder.pdf.destroy(); } catch (e) { /* já liberado */ } }
+}
+async function pdftoolsPdfToDocxBlobImpl(bytes, onProgress, holder) {
   const pdfjsLib = await ensurePdfJs();
   await ensureJSZip();
   const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+  holder.pdf = pdf;
   const N = pdf.numPages;
   const pageInfos = [];
   const S = N <= 40 ? 2 : 1.5;
@@ -28487,10 +28531,11 @@ async function pdftoolsRunCrop() {
   pdftoolsExtraSetBusy('Crop', true);
   pdftoolsSetProgress('Crop', 0, 0);
   pdftoolsSetStatus(id, 'Analisando as páginas...', 'info');
+  let src = null;
   try {
     const [PDFLib, pdfjsLib] = await Promise.all([ensurePdfLib(), ensurePdfJs()]);
     const doc = await PDFLib.PDFDocument.load(st.bytes);
-    const src = await pdfjsLib.getDocument({ data: new Uint8Array(st.bytes.slice(0)) }).promise;
+    src = await pdfjsLib.getDocument({ data: new Uint8Array(st.bytes.slice(0)) }).promise;
     const pages = doc.getPages();
     let changed = 0, blank = 0, removedSum = 0;
     for (let i = 0; i < pages.length; i++) {
@@ -28541,7 +28586,6 @@ async function pdftoolsRunCrop() {
         pdftoolsSetStatus(id, `Recortando (${i + 1}/${pages.length})...`, 'info');
       }
     }
-    if (src.destroy) src.destroy();
     if (!changed) {
       pdftoolsSetStatus(id, manual ? 'Nada foi recortado.' : 'Não achei bordas para tirar: as páginas já estão preenchidas ou em branco.', 'error');
       return;
@@ -28552,6 +28596,7 @@ async function pdftoolsRunCrop() {
   } catch (e) {
     pdftoolsSetStatus(id, /margens/.test(String(e && e.message)) ? 'As margens escolhidas são maiores que a página.' : pdftoolsPdfErrorMsg(e, 'Não foi possível recortar este PDF.'), 'error');
   } finally {
+    if (src && src.destroy) { try { src.destroy(); } catch (e) { /* já liberado */ } }
     pdftoolsSetProgress('Crop', 0, 0);
     pdftoolsExtraSetBusy('Crop', false);
   }
