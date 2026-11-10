@@ -8,6 +8,7 @@
     "test:conversa": "node scripts/teste-conversa.mjs",
     "test:manual": "node scripts/teste-manual.mjs",
     "test:paif": "node scripts/teste-paif.mjs",
+    "test:raps": "node scripts/teste-raps.mjs",
     "test:seguimento": "node scripts/teste-seguimento.mjs",
     "test:raciocinio": "node scripts/teste-raciocinio.mjs",
     "test:leitura": "node scripts/teste-leitura.mjs",
