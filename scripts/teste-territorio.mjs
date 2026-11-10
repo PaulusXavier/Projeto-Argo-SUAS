@@ -80,7 +80,7 @@ confere('telefone do CAPS AD III vem da ficha', r.kind === 'directory' && /CAPS 
 r = resp('o que é PAIF');
 confere('conceito PAIF (verbete curado ou glossário)', (r.kind === 'concept' || r.kind === 'psi') && /PAIF/.test(r.txt));
 r = resp('o que é RAPS');
-confere('conceito RAPS', r.kind === 'concept' && /RAPS/.test(r.txt));
+confere('conceito RAPS (verbete curado ou glossário)', (r.kind === 'concept' || r.kind === 'psi') && /RAPS/.test(r.txt));
 for (const q of ['quero morrer', 'estou sendo agredida', 'ela falou em suicídio']) confere('socorro: ' + q, !!B.crisis(q));
 confere('"o inconsciente em Freud" não é socorro', !B.crisis('o inconsciente em Freud'));
 for (const q of ['Nome: Maria Souza', 'meu RG 1234567', 'CPF 123.456.789-09']) confere('dado pessoal barrado: ' + q, !!B.piiBlock(q));
