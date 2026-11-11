@@ -104,7 +104,7 @@ self.addEventListener('activate', event => {
 });
 
 // Endereços em que a rede vem primeiro (notícias do gov.br e repassadores, Firestore); o cache só entra sem internet.
-const NETWORK_FIRST_HOSTS = ['www.gov.br', 'api.allorigins.win', 'corsproxy.io', 'firestore.googleapis.com'];
+const NETWORK_FIRST_HOSTS = ['www.gov.br', 'api.allorigins.win', 'corsproxy.io', 'api.codetabs.com', 'firestore.googleapis.com'];
 
 function offlineFallback() {
   return new Response('Sem conexão com a internet e nenhuma cópia salva deste conteúdo.',
