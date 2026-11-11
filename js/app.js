@@ -11146,6 +11146,36 @@ function updateNoteListItemPreview(id, value, note) {
   metaEl.textContent = preview ? (ts ? `${ts} · ${preview}` : preview) : ts;
 }
 
+// Ícones do editor de PDF (estilo Adobe Acrobat: traço fino, 20 px)
+const PDFEDIT_ICO = (() => {
+  const mk = d => '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
+  return {
+    move: mk('<path d="M5 3l14 7.5-6.2 1.9L10.5 19z"/>'),
+    text: mk('<path d="M5 7V4.5h14V7M12 4.5v15M9 19.5h6"/>'),
+    edittext: mk('<path d="M3.5 7V5h12v2M9.5 5v9M7 14h5"/><path d="M14.5 20l.8-3 5-5 2.2 2.2-5 5z"/>'),
+    form: mk('<rect x="4" y="4" width="16" height="16" rx="2.5"/><path d="M8 12.2l3 3 5-6"/>'),
+    pen: mk('<path d="M16.5 3.5l4 4L8 20l-5 1 1-5z"/>'),
+    hl: mk('<path d="M14 4l6 6-7.5 7.5-6-6z"/><path d="M6.5 11.5L4 17l3 3 5.5-2.5"/><path d="M3 21h8"/>'),
+    cover: mk('<rect x="3.5" y="7.5" width="17" height="9" rx="1" fill="currentColor"/>'),
+    box: mk('<rect x="4" y="5.5" width="16" height="13" rx="1.5"/>'),
+    line: mk('<path d="M5 19L19 5"/>'),
+    stamp: mk('<path d="M9.5 4h5v6l3 3.2V15h-11v-1.8L9.5 10z"/><path d="M5 20h14"/>'),
+    img: mk('<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16.5l-5-5L7 20"/>'),
+    erase: mk('<path d="M20 20H9.5L4 14.5a2 2 0 010-2.8L12.7 3l7.3 7.3L11 19.5"/><path d="M8 8l8 8"/>'),
+    undo: mk('<path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/>'),
+    redo: mk('<path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 000 11H13"/>'),
+    up: mk('<path d="M6 15l6-6 6 6"/>'),
+    down: mk('<path d="M6 9l6 6 6-6"/>'),
+    plus: mk('<path d="M12 5v14M5 12h14"/>'),
+    minus: mk('<path d="M5 12h14"/>'),
+    fit: mk('<path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/>'),
+    full: mk('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'),
+    pages: mk('<rect x="5" y="3" width="11" height="15" rx="1.5"/><path d="M8 21h10a1.5 1.5 0 001.5-1.5V7"/>'),
+    sliders: mk('<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>'),
+    download: mk('<path d="M12 4v11M7.5 11L12 15.5 16.5 11M5 20h14"/>')
+  };
+})();
+
 function renderPdfToolsCard() {
   const extra = pdftoolsExtraToolsHtml();
   return `
@@ -11185,80 +11215,117 @@ function renderPdfToolsCard() {
             <div class="pdftools-pickinfo" id="pdftoolsEditInfo"></div>
 
             <div class="pdfedit" id="pdfEditor" hidden>
-              <div class="pdfedit-toolbar" role="toolbar" aria-label="Ferramentas de edição">
-                <button type="button" class="pdfedit-tool is-active" data-tool="move" aria-pressed="true" onclick="pdftoolsEditSetTool('move')" title="Mover e editar textos e imagens">✥ Mover</button>
-                <button type="button" class="pdfedit-tool" data-tool="text" aria-pressed="false" onclick="pdftoolsEditSetTool('text')" title="Escrever um texto na página">T Texto</button>
-                <button type="button" class="pdfedit-tool" data-tool="edittext" aria-pressed="false" onclick="pdftoolsEditSetTool('edittext')" title="Clicar num texto que já existe no PDF e reescrevê-lo">Ab Editar texto</button>
-                <button type="button" class="pdfedit-tool" data-tool="form" aria-pressed="false" onclick="pdftoolsEditSetTool('form')" title="Preencher os campos de formulário do próprio PDF">☑ Formulário</button>
-                <button type="button" class="pdfedit-tool" data-tool="pen" aria-pressed="false" onclick="pdftoolsEditSetTool('pen')" title="Desenhar à mão livre">✎ Caneta</button>
-                <button type="button" class="pdfedit-tool" data-tool="hl" aria-pressed="false" onclick="pdftoolsEditSetTool('hl')" title="Realçar um trecho">▭ Realçar</button>
-                <button type="button" class="pdfedit-tool" data-tool="cover" aria-pressed="false" onclick="pdftoolsEditSetTool('cover')" title="Cobrir um trecho com uma caixa de cor (só esconde: o texto continua no arquivo)">■ Cobrir</button>
-                <button type="button" class="pdfedit-tool" data-tool="box" aria-pressed="false" onclick="pdftoolsEditSetTool('box')" title="Desenhar uma caixa (só o contorno)">▢ Caixa</button>
-                <button type="button" class="pdfedit-tool" data-tool="line" aria-pressed="false" onclick="pdftoolsEditSetTool('line')" title="Desenhar uma linha reta">╱ Linha</button>
-                <button type="button" class="pdfedit-tool" data-tool="stamp" aria-pressed="false" onclick="pdftoolsEditSetTool('stamp')" title="Carimbos prontos: certo, errado, bolinha e data de hoje">✓ Carimbo</button>
-                <button type="button" class="pdfedit-tool" data-tool="img" aria-pressed="false" onclick="pdftoolsEditSetTool('img')" title="Colocar uma imagem ou assinatura">▣ Imagem</button>
-                <button type="button" class="pdfedit-tool" data-tool="erase" aria-pressed="false" onclick="pdftoolsEditSetTool('erase')" title="Apagar um item que você adicionou">✕ Apagar</button>
-              </div>
-              <div class="pdfedit-options">
-                <label class="pdfedit-opt">Cor
-                  <select id="pdfEditColor" class="tools-input" onchange="pdftoolsEditOptChange()">
-                    <option value="#000000">Preto</option><option value="#1d4ed8">Azul</option><option value="#dc2626">Vermelho</option><option value="#16a34a">Verde</option><option value="#facc15">Amarelo</option><option value="#ffffff">Branco</option>
-                  </select>
-                </label>
-                <label class="pdfedit-opt">Tamanho
-                  <select id="pdfEditSize" class="tools-input" onchange="pdftoolsEditOptChange()">
-                    <option value="p">Pequeno</option><option value="m" selected>Médio</option><option value="g">Grande</option>
-                  </select>
-                </label>
-                <label class="pdfedit-opt" id="pdfEditHlWrap" hidden>Estilo
-                  <select id="pdfEditHlMode" class="tools-input" onchange="pdftoolsEditHlModeChange()"><option value="hl">Realce</option><option value="under">Sublinhado</option><option value="strike">Riscado</option></select>
-                </label>
-                <label class="pdfedit-opt">Fonte
-                  <select id="pdfEditFont" class="tools-input" onchange="pdftoolsEditOptChange()"><option value="h">Arial</option><option value="t">Times</option><option value="c">Courier</option></select>
-                </label>
-                <label class="pdfedit-check"><input type="checkbox" id="pdfEditBold" onchange="pdftoolsEditOptChange()"> <strong>Negrito</strong></label>
-                <label class="pdfedit-check"><input type="checkbox" id="pdfEditItalic" onchange="pdftoolsEditOptChange()"> <em>Itálico</em></label>
-                <span class="pdfedit-spacer"></span>
-                <button type="button" class="pdftools-btn-ghost pdfedit-mini" id="pdfEditUndo" onclick="pdftoolsEditUndo()" disabled title="Desfazer (Ctrl+Z)">↶ Desfazer</button>
-                <button type="button" class="pdftools-btn-ghost pdfedit-mini" id="pdfEditRedo" onclick="pdftoolsEditRedo()" disabled title="Refazer (Ctrl+Shift+Z)">↷ Refazer</button>
-              </div>
-              <div class="pdfedit-imgbar" id="pdfEditImgBar" hidden>
-                <button type="button" class="pdftools-btn-ghost pdfedit-mini" onclick="document.getElementById('pdfEditImgInput').click()">Escolher imagem...</button>
-                <input type="file" id="pdfEditImgInput" accept="image/png,image/jpeg,image/webp,image/gif" hidden onchange="pdftoolsEditPickImage(this.files[0], this)">
-                <label class="pdfedit-check"><input type="checkbox" id="pdfEditImgBg"> Tornar o fundo branco transparente (para assinatura em foto)</label>
-                <span class="pdfedit-imgname" id="pdfEditImgName"></span>
-              </div>
-              <div class="pdfedit-imgbar" id="pdfEditFormBar" hidden>
-                <label class="pdfedit-check"><input type="checkbox" id="pdfEditFlatten"> Travar o formulário ao baixar (os campos deixam de ser editáveis)</label>
-              </div>
-              <div class="pdfedit-imgbar" id="pdfEditStampBar" hidden>
-                <label class="pdfedit-opt">Carimbo
-                  <select id="pdfEditStamp" class="tools-input"><option value="check">✓ Marcar (certo)</option><option value="cross">✗ Cruz (errado)</option><option value="dot">● Bolinha (marcar opção)</option><option value="date">Data de hoje</option></select>
-                </label>
-              </div>
-              <p class="pdfedit-hint" id="pdfEditHint" aria-live="polite"></p>
-              <div class="pdfedit-nav">
-                <button type="button" class="pdftools-btn-ghost pdfedit-mini" id="pdfEditPrev" onclick="pdftoolsEditGo(pdftoolsEdit.page - 1)" aria-label="Página anterior">‹</button>
-                <label class="pdfedit-pagelabel">Página
-                  <input type="number" id="pdfEditPage" class="tools-input" min="1" value="1" inputmode="numeric" onchange="pdftoolsEditGo(Number(this.value))">
-                  <span id="pdfEditPageTotal">de 1</span>
-                </label>
-                <button type="button" class="pdftools-btn-ghost pdfedit-mini" id="pdfEditNext" onclick="pdftoolsEditGo(pdftoolsEdit.page + 1)" aria-label="Próxima página">›</button>
-                <span class="pdfedit-spacer"></span>
-                <button type="button" class="pdftools-btn-ghost pdfedit-mini" onclick="pdftoolsEditZoom(-0.25)" aria-label="Diminuir o zoom">−</button>
-                <span class="pdfedit-zoom" id="pdfEditZoomLabel">100%</span>
-                <button type="button" class="pdftools-btn-ghost pdfedit-mini" onclick="pdftoolsEditZoom(0.25)" aria-label="Aumentar o zoom">+</button>
-                <button type="button" class="pdftools-btn-ghost pdfedit-mini" onclick="pdftoolsEditZoomFit()" title="Voltar a ajustar a página à largura da tela">Ajustar</button>
-              </div>
-              <div class="pdfedit-wrap" id="pdfEditWrap">
-                <div class="pdfedit-stage" id="pdfEditStage" data-tool="move">
-                  <canvas id="pdfEditCanvas"></canvas>
-                  <svg id="pdfEditSvg" class="pdfedit-svg" aria-hidden="true"></svg>
-                  <div id="pdfEditLayer" class="pdfedit-layer" onpointerdown="pdftoolsEditDown(event)" onpointermove="pdftoolsEditMove(event)" onpointerup="pdftoolsEditUp(event)" onpointercancel="pdftoolsEditUp(event)" onclick="pdftoolsEditClick(event)"></div>
-                  <div id="pdfEditForm" class="pdfedit-form"></div>
+              <div class="pdfedit-app" id="pdfEditApp">
+                <div class="pdfedit-topbar">
+                  <button type="button" class="pdfedit-iconbtn" id="pdfEditThumbsBtn" onclick="pdftoolsEditTogglePanel('thumbs')" aria-pressed="true" title="Mostrar ou esconder as miniaturas das páginas" aria-label="Miniaturas das páginas">${PDFEDIT_ICO.pages}</button>
+                  <span class="pdfedit-filename" id="pdfEditFileName"></span>
+                  <span class="pdfedit-spacer"></span>
+                  <div class="pdfedit-nav" role="group" aria-label="Navegação">
+                    <button type="button" class="pdfedit-iconbtn" id="pdfEditPrev" onclick="pdftoolsEditGo(pdftoolsEdit.page - 1)" aria-label="Página anterior" title="Página anterior">${PDFEDIT_ICO.up}</button>
+                    <label class="pdfedit-pagelabel">
+                      <input type="number" id="pdfEditPage" class="tools-input" min="1" value="1" inputmode="numeric" aria-label="Número da página" onchange="pdftoolsEditGo(Number(this.value))">
+                      <span id="pdfEditPageTotal">de 1</span>
+                    </label>
+                    <button type="button" class="pdfedit-iconbtn" id="pdfEditNext" onclick="pdftoolsEditGo(pdftoolsEdit.page + 1)" aria-label="Próxima página" title="Próxima página">${PDFEDIT_ICO.down}</button>
+                  </div>
+                  <span class="pdfedit-sep"></span>
+                  <div class="pdfedit-nav" role="group" aria-label="Zoom">
+                    <button type="button" class="pdfedit-iconbtn" onclick="pdftoolsEditZoom(-0.25)" aria-label="Diminuir o zoom" title="Diminuir o zoom">${PDFEDIT_ICO.minus}</button>
+                    <span class="pdfedit-zoom" id="pdfEditZoomLabel">100%</span>
+                    <button type="button" class="pdfedit-iconbtn" onclick="pdftoolsEditZoom(0.25)" aria-label="Aumentar o zoom" title="Aumentar o zoom">${PDFEDIT_ICO.plus}</button>
+                    <button type="button" class="pdfedit-iconbtn" onclick="pdftoolsEditZoomFit()" aria-label="Ajustar à largura" title="Ajustar a página à largura da tela">${PDFEDIT_ICO.fit}</button>
+                  </div>
+                  <span class="pdfedit-sep"></span>
+                  <button type="button" class="pdfedit-iconbtn" id="pdfEditUndo" onclick="pdftoolsEditUndo()" disabled title="Desfazer (Ctrl+Z)" aria-label="Desfazer">${PDFEDIT_ICO.undo}</button>
+                  <button type="button" class="pdfedit-iconbtn" id="pdfEditRedo" onclick="pdftoolsEditRedo()" disabled title="Refazer (Ctrl+Shift+Z)" aria-label="Refazer">${PDFEDIT_ICO.redo}</button>
+                  <span class="pdfedit-sep"></span>
+                  <button type="button" class="pdfedit-iconbtn" id="pdfEditPropsBtn" onclick="pdftoolsEditTogglePanel('props')" aria-pressed="true" title="Mostrar ou esconder o painel de propriedades" aria-label="Propriedades">${PDFEDIT_ICO.sliders}</button>
+                  <button type="button" class="pdfedit-iconbtn" id="pdfEditFullBtn" onclick="pdftoolsEditToggleFull()" aria-pressed="false" title="Tela cheia (Esc para sair)" aria-label="Tela cheia">${PDFEDIT_ICO.full}</button>
+                  <button type="button" class="pdfedit-save" id="pdfEditTopSave" onclick="pdftoolsEditExport()" disabled title="Baixar o PDF com as edições">${PDFEDIT_ICO.download}<span>Baixar</span></button>
+                </div>
+                <div class="pdfedit-toolbar" role="toolbar" aria-label="Ferramentas de edição">
+                  <button type="button" class="pdfedit-tool is-active" data-tool="move" aria-pressed="true" onclick="pdftoolsEditSetTool('move')" title="Selecionar, mover e editar textos e imagens (V)">${PDFEDIT_ICO.move}<span>Selecionar</span></button>
+                  <span class="pdfedit-sep"></span>
+                  <button type="button" class="pdfedit-tool" data-tool="edittext" aria-pressed="false" onclick="pdftoolsEditSetTool('edittext')" title="Clicar num texto que já existe no PDF e reescrevê-lo">${PDFEDIT_ICO.edittext}<span>Editar texto</span></button>
+                  <button type="button" class="pdfedit-tool" data-tool="text" aria-pressed="false" onclick="pdftoolsEditSetTool('text')" title="Adicionar um texto na página">${PDFEDIT_ICO.text}<span>Adicionar texto</span></button>
+                  <button type="button" class="pdfedit-tool" data-tool="img" aria-pressed="false" onclick="pdftoolsEditSetTool('img')" title="Colocar uma imagem ou assinatura">${PDFEDIT_ICO.img}<span>Imagem</span></button>
+                  <button type="button" class="pdfedit-tool" data-tool="form" aria-pressed="false" onclick="pdftoolsEditSetTool('form')" title="Preencher os campos de formulário do próprio PDF">${PDFEDIT_ICO.form}<span>Formulário</span></button>
+                  <span class="pdfedit-sep"></span>
+                  <button type="button" class="pdfedit-tool" data-tool="hl" aria-pressed="false" onclick="pdftoolsEditSetTool('hl')" title="Realçar, sublinhar ou riscar um trecho">${PDFEDIT_ICO.hl}<span>Realçar</span></button>
+                  <button type="button" class="pdfedit-tool" data-tool="pen" aria-pressed="false" onclick="pdftoolsEditSetTool('pen')" title="Desenhar à mão livre">${PDFEDIT_ICO.pen}<span>Desenhar</span></button>
+                  <button type="button" class="pdfedit-tool" data-tool="box" aria-pressed="false" onclick="pdftoolsEditSetTool('box')" title="Desenhar uma caixa (só o contorno)">${PDFEDIT_ICO.box}<span>Caixa</span></button>
+                  <button type="button" class="pdfedit-tool" data-tool="line" aria-pressed="false" onclick="pdftoolsEditSetTool('line')" title="Desenhar uma linha reta">${PDFEDIT_ICO.line}<span>Linha</span></button>
+                  <button type="button" class="pdfedit-tool" data-tool="stamp" aria-pressed="false" onclick="pdftoolsEditSetTool('stamp')" title="Carimbos prontos: certo, errado, bolinha e data de hoje">${PDFEDIT_ICO.stamp}<span>Carimbo</span></button>
+                  <span class="pdfedit-sep"></span>
+                  <button type="button" class="pdfedit-tool" data-tool="cover" aria-pressed="false" onclick="pdftoolsEditSetTool('cover')" title="Cobrir um trecho com uma caixa de cor (só esconde: o texto continua no arquivo)">${PDFEDIT_ICO.cover}<span>Tarja</span></button>
+                  <button type="button" class="pdfedit-tool" data-tool="erase" aria-pressed="false" onclick="pdftoolsEditSetTool('erase')" title="Apagar um item que você adicionou">${PDFEDIT_ICO.erase}<span>Apagar</span></button>
+                </div>
+                <div class="pdfedit-body">
+                  <aside class="pdfedit-thumbs" id="pdfEditThumbs" aria-label="Miniaturas das páginas"></aside>
+                  <div class="pdfedit-center">
+                    <p class="pdfedit-hint" id="pdfEditHint" aria-live="polite"></p>
+                    <div class="pdfedit-wrap" id="pdfEditWrap">
+                      <div class="pdfedit-stage" id="pdfEditStage" data-tool="move">
+                        <canvas id="pdfEditCanvas"></canvas>
+                        <svg id="pdfEditSvg" class="pdfedit-svg" aria-hidden="true"></svg>
+                        <div id="pdfEditLayer" class="pdfedit-layer" onpointerdown="pdftoolsEditDown(event)" onpointermove="pdftoolsEditMove(event)" onpointerup="pdftoolsEditUp(event)" onpointercancel="pdftoolsEditUp(event)" onclick="pdftoolsEditClick(event)"></div>
+                        <div id="pdfEditForm" class="pdfedit-form"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <aside class="pdfedit-props" id="pdfEditProps" aria-label="Propriedades">
+                    <div class="pdfedit-props-title">Propriedades</div>
+                    <div class="pdfedit-field-group">
+                      <span class="pdfedit-label">Cor</span>
+                      <div class="pdfedit-swatches" id="pdfEditSwatches" role="group" aria-label="Cor">
+                        <button type="button" data-c="#000000" style="--c:#000000" title="Preto" aria-label="Preto" onclick="pdftoolsEditPickColor('#000000')"></button>
+                        <button type="button" data-c="#1d4ed8" style="--c:#1d4ed8" title="Azul" aria-label="Azul" onclick="pdftoolsEditPickColor('#1d4ed8')"></button>
+                        <button type="button" data-c="#dc2626" style="--c:#dc2626" title="Vermelho" aria-label="Vermelho" onclick="pdftoolsEditPickColor('#dc2626')"></button>
+                        <button type="button" data-c="#16a34a" style="--c:#16a34a" title="Verde" aria-label="Verde" onclick="pdftoolsEditPickColor('#16a34a')"></button>
+                        <button type="button" data-c="#facc15" style="--c:#facc15" title="Amarelo" aria-label="Amarelo" onclick="pdftoolsEditPickColor('#facc15')"></button>
+                        <button type="button" data-c="#ffffff" style="--c:#ffffff" title="Branco" aria-label="Branco" onclick="pdftoolsEditPickColor('#ffffff')"></button>
+                      </div>
+                      <select id="pdfEditColor" class="tools-input pdfedit-sr" aria-label="Cor" onchange="pdftoolsEditOptChange()">
+                        <option value="#000000">Preto</option><option value="#1d4ed8">Azul</option><option value="#dc2626">Vermelho</option><option value="#16a34a">Verde</option><option value="#facc15">Amarelo</option><option value="#ffffff">Branco</option>
+                      </select>
+                    </div>
+                    <label class="pdfedit-field-group">
+                      <span class="pdfedit-label">Tamanho / espessura</span>
+                      <select id="pdfEditSize" class="tools-input" onchange="pdftoolsEditOptChange()">
+                        <option value="p">Pequeno</option><option value="m" selected>Médio</option><option value="g">Grande</option>
+                      </select>
+                    </label>
+                    <label class="pdfedit-field-group" id="pdfEditHlWrap" hidden>
+                      <span class="pdfedit-label">Estilo do realce</span>
+                      <select id="pdfEditHlMode" class="tools-input" onchange="pdftoolsEditHlModeChange()"><option value="hl">Realce</option><option value="under">Sublinhado</option><option value="strike">Riscado</option></select>
+                    </label>
+                    <label class="pdfedit-field-group">
+                      <span class="pdfedit-label">Fonte</span>
+                      <select id="pdfEditFont" class="tools-input" onchange="pdftoolsEditOptChange()"><option value="h">Arial</option><option value="t">Times</option><option value="c">Courier</option></select>
+                    </label>
+                    <div class="pdfedit-fmt" role="group" aria-label="Estilo do texto">
+                      <label class="pdfedit-fmtbtn" title="Negrito"><input type="checkbox" id="pdfEditBold" onchange="pdftoolsEditOptChange()"><strong>B</strong></label>
+                      <label class="pdfedit-fmtbtn" title="Itálico"><input type="checkbox" id="pdfEditItalic" onchange="pdftoolsEditOptChange()"><em>I</em></label>
+                    </div>
+                    <div class="pdfedit-field-group" id="pdfEditImgBar" hidden>
+                      <span class="pdfedit-label">Imagem ou assinatura</span>
+                      <button type="button" class="pdftools-btn-ghost pdfedit-mini" onclick="document.getElementById('pdfEditImgInput').click()">Escolher imagem...</button>
+                      <input type="file" id="pdfEditImgInput" accept="image/png,image/jpeg,image/webp,image/gif" hidden onchange="pdftoolsEditPickImage(this.files[0], this)">
+                      <label class="pdfedit-check"><input type="checkbox" id="pdfEditImgBg"> Tornar o fundo branco transparente (para assinatura em foto)</label>
+                      <span class="pdfedit-imgname" id="pdfEditImgName"></span>
+                    </div>
+                    <div class="pdfedit-field-group" id="pdfEditFormBar" hidden>
+                      <span class="pdfedit-label">Formulário</span>
+                      <label class="pdfedit-check"><input type="checkbox" id="pdfEditFlatten"> Travar o formulário ao baixar (os campos deixam de ser editáveis)</label>
+                    </div>
+                    <div class="pdfedit-field-group" id="pdfEditStampBar" hidden>
+                      <span class="pdfedit-label">Carimbo</span>
+                      <select id="pdfEditStamp" class="tools-input"><option value="check">✓ Marcar (certo)</option><option value="cross">✗ Cruz (errado)</option><option value="dot">● Bolinha (marcar opção)</option><option value="date">Data de hoje</option></select>
+                    </div>
+                  </aside>
                 </div>
               </div>
-              <p class="pdfedit-note"><strong>Atenção:</strong> "Cobrir" esconde o trecho na tela, mas o texto original continua dentro do arquivo. Para sigilo de verdade, depois de editar use "Reduzir tamanho", que transforma as páginas em imagens.</p>
+              <p class="pdfedit-note"><strong>Atenção:</strong> "Tarja" esconde o trecho na tela, mas o texto original continua dentro do arquivo. Para sigilo de verdade, depois de editar use "Reduzir tamanho", que transforma as páginas em imagens.</p>
             </div>
 
             <div class="pdftools-actions">
@@ -25853,6 +25920,8 @@ function pdfEditUpdateButtons() {
   if (r) r.disabled = !st.redo.length;
   const b = pdfEditEl('pdftoolsEditBtn');
   if (b) b.disabled = st.busy || !st.pdf;
+  const ts = pdfEditEl('pdfEditTopSave');
+  if (ts) ts.disabled = st.busy || !st.pdf;
   const p = pdfEditEl('pdfEditPrev'), n = pdfEditEl('pdfEditNext');
   if (p) p.disabled = st.page <= 1;
   if (n) n.disabled = st.page >= st.pages;
@@ -25899,6 +25968,7 @@ function pdftoolsEditBind() {
     if (st.dirty && (st.items.length || Object.keys(st.formValues).length)) { ev.preventDefault(); ev.returnValue = ''; }
   });
   document.addEventListener('keydown', ev => {
+    if (ev.key === 'Escape' && pdfEditEl('pdfEditApp') && pdfEditEl('pdfEditApp').classList.contains('is-full')) { pdftoolsEditSetFull(false); return; }
     const stage = pdfEditEl('pdfEditStage');
     if (!st.pdf || !stage || !stage.offsetParent) return;
     if (!(ev.ctrlKey || ev.metaKey) || String(ev.key).toLowerCase() !== 'z') return;
@@ -25945,7 +26015,9 @@ function pdftoolsEditShowEditor() {
   if (info && st.file) info.textContent = st.file.name + ' · ' + st.pages + (st.pages === 1 ? ' página' : ' páginas') + ' · ' + pdftoolsFormatBytes(st.file.size);
   const pg = pdfEditEl('pdfEditPage'); if (pg) pg.max = String(st.pages);
   const tot = pdfEditEl('pdfEditPageTotal'); if (tot) tot.textContent = 'de ' + st.pages;
+  const fn = pdfEditEl('pdfEditFileName'); if (fn && st.file) { fn.textContent = st.file.name; fn.title = st.file.name; }
   pdftoolsEditBind();
+  pdftoolsEditBuildThumbs();
   pdftoolsEditSetTool(st.tool || 'move');
   pdfEditUpdateButtons();
   pdftoolsEditRender();
@@ -25964,6 +26036,9 @@ function pdftoolsEditClear() {
   if (st.pdf && st.pdf.destroy) { try { st.pdf.destroy(); } catch (e) { /* segue */ } }
   Object.assign(st, { file: null, bytes: null, pdf: null, pages: 0, page: 1, items: [], undo: [], redo: [], infos: {}, images: {}, pendingImg: null, geom: null, fresh: null, activeText: null, textCache: {}, fieldCache: {}, formValues: {}, dirty: false, renderTask: null, renderTok: st.renderTok + 1 });
   const ed = pdfEditEl('pdfEditor'); if (ed) ed.hidden = true;
+  pdftoolsEditSetFull(false);
+  pdfEditThumbs.tok++;
+  const th = pdfEditEl('pdfEditThumbs'); if (th) th.textContent = '';
   const info = pdfEditEl('pdftoolsEditInfo'); if (info) info.textContent = '';
   const nm = pdfEditEl('pdfEditImgName'); if (nm) nm.textContent = '';
   pdftoolsSetStatus('pdftoolsEditStatus', '', 'info');
@@ -25999,12 +26074,13 @@ function pdftoolsEditSetTool(tool) {
   if (tool === 'hl' && hlm && colorSel && !colorSel.disabled) colorSel.value = st.colors.hl || PDFEDIT_HL_COLOR[hlm.value];
   const bar = pdfEditEl('pdfEditImgBar'); if (bar) bar.hidden = tool !== 'img';
   const hint = pdfEditEl('pdfEditHint'); if (hint) hint.textContent = PDFEDIT_HINTS[tool] || '';
+  pdfEditSyncSwatches();
   if (tool === 'edittext') pdftoolsEditLoadText(st.page).then(() => { if (pdftoolsEdit.tool === 'edittext') pdftoolsEditDrawItems(); });
   else if (tool === 'form') {
     pdftoolsEditLoadFields(st.page).then(list => {
       if (pdftoolsEdit.tool !== 'form') return;
       pdftoolsEditDrawItems();
-      if (!list.length) { const h = pdfEditEl('pdfEditHint'); if (h) h.textContent = 'Esta página não tem campos de formulário preenchíveis. Use "Texto" para escrever sobre o PDF.'; }
+      if (!list.length) { const h = pdfEditEl('pdfEditHint'); if (h) h.textContent = 'Esta página não tem campos de formulário preenchíveis. Use "Adicionar texto" para escrever sobre o PDF.'; }
     });
   }
   else pdftoolsEditDrawItems();
@@ -26017,6 +26093,7 @@ function pdftoolsEditHlModeChange() {
   if (!m) return;
   st.colors.hl = PDFEDIT_HL_COLOR[m.value];
   if (cs) cs.value = st.colors.hl;
+  pdfEditSyncSwatches();
 }
 
 function pdftoolsEditOptChange() {
@@ -26029,6 +26106,7 @@ function pdftoolsEditOptChange() {
   const fontSel = pdfEditEl('pdfEditFont'), itBox = pdfEditEl('pdfEditItalic');
   if (fontSel && !fontSel.disabled) st.font = fontSel.value;
   if (itBox && !itBox.disabled) st.italic = itBox.checked;
+  pdfEditSyncSwatches();
   const a = st.activeText;
   if (!a || !st.items.includes(a) || !['move', 'text', 'edittext'].includes(st.tool)) return;
   pdfEditPushUndo(pdfEditSnap());
@@ -26041,6 +26119,115 @@ function pdftoolsEditOptChange() {
   if (box && st.geom) { box.style.color = a.color; box.style.fontSize = (a.size * st.geom.scale) + 'px'; box.style.fontWeight = a.bold ? '700' : '400'; box.style.fontStyle = a.italic ? 'italic' : 'normal'; box.style.fontFamily = PDFEDIT_FONT_CSS[a.font || 'h']; }
 }
 
+/* ---- painéis laterais, miniaturas e tela cheia (estilo Adobe Acrobat) ---- */
+const pdfEditThumbs = { tok: 0, home: null };
+
+function pdfEditSyncSwatches() {
+  const sel = pdfEditEl('pdfEditColor'), box = pdfEditEl('pdfEditSwatches');
+  if (!sel || !box) return;
+  const off = sel.disabled;
+  box.classList.toggle('is-disabled', off);
+  box.querySelectorAll('button').forEach(b => {
+    const on = !off && b.dataset.c === String(sel.value).toLowerCase();
+    b.classList.toggle('is-active', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.disabled = off;
+  });
+}
+
+function pdftoolsEditPickColor(hex) {
+  const sel = pdfEditEl('pdfEditColor');
+  if (!sel || sel.disabled) return;
+  sel.value = hex;
+  pdftoolsEditOptChange();
+}
+
+function pdftoolsEditTogglePanel(which) {
+  const app = pdfEditEl('pdfEditApp');
+  if (!app) return;
+  const cls = which === 'thumbs' ? 'hide-thumbs' : 'hide-props';
+  const hidden = app.classList.toggle(cls);
+  const btn = pdfEditEl(which === 'thumbs' ? 'pdfEditThumbsBtn' : 'pdfEditPropsBtn');
+  if (btn) btn.setAttribute('aria-pressed', hidden ? 'false' : 'true');
+  setTimeout(() => { if (pdftoolsEdit.pdf) pdftoolsEditRender(); }, 60);
+}
+
+function pdftoolsEditSetFull(on) {
+  const app = pdfEditEl('pdfEditApp');
+  if (!app) return;
+  // Ao abrir em tela cheia o editor sai do cartão (que pode ter transformações CSS que prendem o "fixed") e vai para o <body>; ao sair, volta ao lugar.
+  if (on && !pdfEditThumbs.home) {
+    pdfEditThumbs.home = document.createComment('pdfedit-home');
+    app.parentNode.insertBefore(pdfEditThumbs.home, app);
+    document.body.appendChild(app);
+  } else if (!on && pdfEditThumbs.home) {
+    const h = pdfEditThumbs.home;
+    pdfEditThumbs.home = null;
+    if (h.parentNode) h.parentNode.insertBefore(app, h);
+    if (h.parentNode) h.parentNode.removeChild(h);
+  }
+  app.classList.toggle('is-full', !!on);
+  document.documentElement.classList.toggle('pdfedit-lock', !!on);
+  const btn = pdfEditEl('pdfEditFullBtn');
+  if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  if (pdftoolsEdit.pdf) setTimeout(() => { if (pdftoolsEdit.pdf) pdftoolsEditRender(); }, 60);
+}
+function pdftoolsEditToggleFull() {
+  const app = pdfEditEl('pdfEditApp');
+  if (app) pdftoolsEditSetFull(!app.classList.contains('is-full'));
+}
+
+function pdfEditMarkThumb(scroll) {
+  const box = pdfEditEl('pdfEditThumbs');
+  if (!box) return;
+  const cur = pdftoolsEdit.page;
+  box.querySelectorAll('.pdfedit-thumb').forEach(b => {
+    const on = Number(b.dataset.p) === cur;
+    b.classList.toggle('is-active', on);
+    if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+    if (on && scroll && box.offsetParent) {
+      const top = b.offsetTop, bot = top + b.offsetHeight;
+      if (top < box.scrollTop || bot > box.scrollTop + box.clientHeight) box.scrollTop = Math.max(0, top - 8);
+    }
+  });
+}
+
+async function pdftoolsEditBuildThumbs() {
+  const st = pdftoolsEdit, box = pdfEditEl('pdfEditThumbs');
+  if (!box || !st.pdf) return;
+  const tok = ++pdfEditThumbs.tok;
+  box.textContent = '';
+  for (let n = 1; n <= st.pages; n++) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'pdfedit-thumb';
+    b.dataset.p = String(n);
+    b.setAttribute('aria-label', 'Ir para a página ' + n);
+    b.innerHTML = '<span class="pdfedit-thumb-img"><canvas></canvas></span><span class="pdfedit-thumb-n">' + n + '</span>';
+    b.onclick = () => pdftoolsEditGo(n);
+    box.appendChild(b);
+  }
+  pdfEditMarkThumb(false);
+  const pdf = st.pdf;
+  for (let n = 1; n <= st.pages; n++) {
+    if (tok !== pdfEditThumbs.tok || st.pdf !== pdf) return;
+    try {
+      const page = await pdf.getPage(n);
+      const base = page.getViewport({ scale: 1 });
+      const scale = 120 / base.width;
+      const vp = page.getViewport({ scale: scale * Math.min(window.devicePixelRatio || 1, 2) });
+      const cv = box.querySelector('.pdfedit-thumb[data-p="' + n + '"] canvas');
+      if (!cv) continue;
+      cv.width = Math.ceil(vp.width); cv.height = Math.ceil(vp.height);
+      cv.style.aspectRatio = base.width + ' / ' + base.height;
+      const g = cv.getContext('2d');
+      g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+      await page.render({ canvasContext: g, viewport: vp }).promise;
+    } catch (e) { /* miniatura é só um adorno: segue para a próxima */ }
+    if (n % 4 === 0) await new Promise(r => setTimeout(r, 0));
+  }
+}
+
 function pdftoolsEditGo(n) {
   const st = pdftoolsEdit;
   if (!st.pdf) return;
@@ -26048,6 +26235,7 @@ function pdftoolsEditGo(n) {
   st.page = n;
   const pg = pdfEditEl('pdfEditPage'); if (pg) pg.value = String(n);
   pdfEditUpdateButtons();
+  pdfEditMarkThumb(true);
   pdftoolsEditRender();
 }
 
@@ -26090,7 +26278,9 @@ async function pdftoolsEditRender() {
     const page = await st.pdf.getPage(pn);
     if (tok !== st.renderTok) return;
     st.lastW = wrap.clientWidth;
-    const fit = Math.min(Math.max(240, (wrap.clientWidth || 320) - 4), 1100);
+    const wcs = getComputedStyle(wrap);
+    const wpad = (parseFloat(wcs.paddingLeft) || 0) + (parseFloat(wcs.paddingRight) || 0);
+    const fit = Math.min(Math.max(240, (wrap.clientWidth || 320) - wpad - 2), 1100);
     const cssW = fit * st.zoom;
     const scale = cssW / info.Wd;
     const cssH = info.Hd * scale;
@@ -26496,7 +26686,7 @@ async function pdftoolsEditStartTextEdit(p) {
   const info = st.infos[pn];
   const runs = await pdftoolsEditLoadText(pn);
   if (!info || pn !== st.page) return;
-  if (!runs.length) { pdftoolsSetStatus('pdftoolsEditStatus', 'Esta página não tem texto selecionável (parece escaneada). Use "Cobrir" e depois "Texto".', 'error'); return; }
+  if (!runs.length) { pdftoolsSetStatus('pdftoolsEditStatus', 'Esta página não tem texto selecionável (parece escaneada). Use "Tarja" e depois "Adicionar texto".', 'error'); return; }
   const best = pdfEditFindRun(runs, p, info);
   if (!best) return;
   const layer = pdfEditEl('pdfEditLayer');
@@ -26728,7 +26918,16 @@ async function pdftoolsEditExport() {
           if (f instanceof PDFLib.PDFTextField) f.setText(String(v));
           else if (f instanceof PDFLib.PDFCheckBox) { if (v) f.check(); else f.uncheck(); }
           else if (f instanceof PDFLib.PDFRadioGroup || f instanceof PDFLib.PDFDropdown || f instanceof PDFLib.PDFOptionList) {
-            if (v === '' || v == null) { if (f.clear) f.clear(); } else f.select(v);
+            if (v === '' || v == null) { if (f.clear) f.clear(); }
+            else {
+              // Em PDFs com lista /Opt o leitor informa a posição da opção ("1"), mas a pdf-lib quer o nome dela.
+              let val = v;
+              if (f.getOptions) {
+                const opts = f.getOptions();
+                if (!opts.includes(val) && /^\d+$/.test(String(val)) && opts[Number(val)] !== undefined) val = opts[Number(val)];
+              }
+              f.select(val);
+            }
           } else formFail++;
         } catch (e) { formFail++; }
       });
@@ -26808,7 +27007,7 @@ async function pdftoolsEditExport() {
     pdftoolsDownloadBlob(out, pdftoolsBaseName(st.file) + '-editado.pdf');
     const total = st.items.length + formNames.length;
     let msg = 'PDF editado baixado · ' + total + (total === 1 ? ' edição' : ' edições') + ' · ' + pdftoolsFormatBytes(out.size) + '.';
-    if (st.items.some(a => a.type === 'cover')) msg += ' Atenção: "Cobrir" só esconde — o texto por baixo continua no arquivo e pode ser copiado. Para eliminá-lo de vez (ex.: NIS, endereço), passe o arquivo por "Reduzir tamanho", que transforma as páginas em imagem.';
+    if (st.items.some(a => a.type === 'cover')) msg += ' Atenção: "Tarja" só esconde — o texto por baixo continua no arquivo e pode ser copiado. Para eliminá-lo de vez (ex.: NIS, endereço), passe o arquivo por "Reduzir tamanho", que transforma as páginas em imagem.';
     if (badChars) msg += ' ' + badChars + ' caractere(s) que a fonte do PDF não aceita foram trocados por "?".';
     if (formFail) msg += ' Alguns campos do formulário não puderam ser gravados (' + formFail + ').';
     st.dirty = false;
