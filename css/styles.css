@@ -9131,3 +9131,69 @@ button.card-quick-btn { font-family: inherit; cursor: pointer; }
 .noticias-sources { display: flex; flex-direction: column; gap: 0.55rem; }
 .noticias-level-name { display: block; margin: 0 0 0.25rem 0.1rem; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
 .noticias-tag-level { background: transparent !important; color: var(--text-muted) !important; border: 1px solid var(--border-ui); font-weight: 700; }
+
+
+/* =====================================================================
+   REFINAMENTO VISUAL — revisão de design e erros (login + app)
+   Bloco final de propósito: ajusta sem mexer nas regras antigas acima.
+   ===================================================================== */
+
+/* ---- Tela de login ---- */
+/* O texto de apoio quebrava em 30ch (3 linhas curtas ao lado do título largo). */
+#loginScreen .login-sub { max-width: 40ch; line-height: 1.55; text-wrap: pretty; }
+@media (max-width: 760px) { #loginScreen .login-sub { max-width: none; } }
+/* Dica "use só em aparelho seu": 0,68rem (~11px) era pequena demais para ler. */
+#loginScreen .login-remember-hint { font-size: 0.75rem; opacity: 1; color: var(--text-muted); }
+/* O erro agora aparece logo abaixo do campo: respiro até as opções. */
+#loginScreen .login-field + .login-error { margin: 0.7rem 0 0; }
+#loginScreen .login-error.visible + .login-options-row { margin-top: 0.9rem; }
+/* Campo com erro: borda e halo vermelhos também no modo escuro. */
+#loginScreen #loginPassword[aria-invalid="true"] { caret-color: #DC2626; }
+/* Em telas baixas (celular na horizontal / 320px) o painel rola por inteiro,
+   sem cortar o botão Entrar nem a faixa de status. */
+#loginScreen { overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+/* Botão Entrar: estado de carregamento visível e sem "pulo" de largura. */
+#loginScreen .login-submit { min-height: 48px; }
+#loginScreen .login-submit:disabled { cursor: progress; filter: saturate(0.85); }
+#loginScreen .login-submit:not(:disabled):active { transform: translateY(1px); }
+
+/* ---- Foco visível coerente em todo o app (teclado / leitor de tela) ---- */
+:where(a, button, summary, input, select, textarea, [role="button"], [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid var(--brand-primary-light);
+  outline-offset: 2px;
+}
+
+/* ---- Tipografia ---- */
+h1, h2, h3 { text-wrap: balance; }
+.hero-stat-value, .hero-stat-label, .tech-card .card-top h3 { font-variant-numeric: tabular-nums; }
+.tech-card p, .informe-card p { text-wrap: pretty; }
+
+/* ---- Cartões: elevação suave ao passar o mouse (só em telas com mouse) ---- */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .tech-card { transition: box-shadow 0.2s var(--ease), transform 0.2s var(--ease), border-color 0.2s var(--ease); }
+  .tech-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+}
+
+/* ---- Celular ---- */
+@media (max-width: 640px) {
+  /* O botão flutuante do Argo cobria botões dos cartões e o fim da lista:
+     fica menor, mais no canto, e a página ganha folga embaixo. */
+  html body .argo-assistant-fab { width: 52px; height: 52px; left: max(10px, env(safe-area-inset-left)); bottom: calc(10px + env(safe-area-inset-bottom)); opacity: 0.94; }
+  html body .argo-assistant-fab .argo-mascot-icon { width: 34px; height: 34px; }
+  #appRoot[data-locked="false"] { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+  /* Fileiras de atalhos que rolam de lado: sugerem que há mais itens. */
+  .quick-nav { scrollbar-width: none; }
+  .quick-nav::-webkit-scrollbar { display: none; }
+}
+
+/* ---- Movimento reduzido: respeita a preferência do aparelho ---- */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .tech-card, .tech-card:hover { transition: none; transform: none; }
+}
+
+/* ---- Central de PDF: selo "novo" no canto do cartão ----
+   Dentro do título ele quebrava para uma linha própria e deixava o cartão
+   "Recortar margens" mais alto que os vizinhos. */
+.pdfhub-tool { position: relative; }
+.pdfhub-tool .pdfhub-new { position: absolute; top: -0.5rem; right: 0.7rem; box-shadow: 0 0 0 2px var(--bg-card); margin: 0; line-height: 1.3; }
