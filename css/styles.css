@@ -9197,3 +9197,284 @@ h1, h2, h3 { text-wrap: balance; }
    "Recortar margens" mais alto que os vizinhos. */
 .pdfhub-tool { position: relative; }
 .pdfhub-tool .pdfhub-new { position: absolute; top: -0.5rem; right: 0.7rem; box-shadow: 0 0 0 2px var(--bg-card); margin: 0; line-height: 1.3; }
+
+
+/* ==========================================================================
+   Editor de PDF no estilo do Adobe Acrobat
+   Barra superior (arquivo, páginas, zoom, desfazer, baixar) · faixa de
+   ferramentas com ícone e rótulo · miniaturas à esquerda · página no centro
+   sobre fundo cinza · painel de propriedades à direita · tela cheia.
+   ========================================================================== */
+html.pdfedit-lock { overflow: hidden; }
+.pdfedit-app {
+  display: flex;
+  flex-direction: column;
+  height: min(86vh, 880px);
+  min-height: 520px;
+  border: 1px solid var(--border-ui);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-card);
+}
+.pdfedit-app.is-full {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  height: 100vh;
+  height: 100dvh;
+  border-radius: 0;
+  border: 0;
+}
+.pdfedit-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.pdfedit-sep { flex: 0 0 1px; align-self: stretch; margin: 6px 4px; background: var(--border-ui); }
+
+/* barra superior */
+.pdfedit-topbar {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.6rem;
+  border-bottom: 1px solid var(--border-ui);
+  background: var(--bg-card);
+  flex: 0 0 auto;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.pdfedit-topbar::-webkit-scrollbar { display: none; }
+.pdfedit-filename {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-main);
+  max-width: 18rem;
+  min-width: 3rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-left: 0.2rem;
+}
+.pdfedit-app .pdfedit-nav { display: inline-flex; align-items: center; gap: 0.15rem; margin: 0; flex-wrap: nowrap; }
+.pdfedit-app .pdfedit-pagelabel { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+.pdfedit-app .pdfedit-pagelabel input { width: 3.1rem; padding: 0.25rem 0.3rem; font-size: 0.82rem; text-align: center; }
+.pdfedit-app .pdfedit-zoom { min-width: 3rem; font-size: 0.8rem; font-weight: 600; color: var(--text-main); text-align: center; }
+.pdfedit-iconbtn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: background 0.12s var(--ease);
+}
+.pdfedit-iconbtn:hover:not(:disabled) { background: rgba(29, 78, 216, 0.1); color: var(--brand-pdftools); }
+.pdfedit-iconbtn[aria-pressed="true"] { background: rgba(29, 78, 216, 0.12); color: var(--brand-pdftools); }
+.pdfedit-iconbtn:disabled { opacity: 0.35; cursor: default; }
+.pdfedit-iconbtn:focus-visible, .pdfedit-tool:focus-visible, .pdfedit-save:focus-visible, .pdfedit-thumb:focus-visible { outline: 2px solid var(--brand-pdftools-light); outline-offset: 1px; }
+.pdfedit-save {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 0 0 auto;
+  margin-left: 0.3rem;
+  padding: 0.38rem 0.9rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--brand-pdftools);
+  color: #fff;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pdfedit-save svg { width: 17px; height: 17px; }
+.pdfedit-save:hover:not(:disabled) { filter: brightness(1.1); }
+.pdfedit-save:disabled { opacity: 0.45; cursor: default; }
+
+/* faixa de ferramentas (ícone em cima, rótulo embaixo) */
+.pdfedit-app .pdfedit-toolbar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 2px;
+  margin: 0;
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid var(--border-ui);
+  background: var(--bg-main);
+  overflow-x: auto;
+  flex: 0 0 auto;
+  scrollbar-width: thin;
+}
+.pdfedit-app .pdfedit-tool {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  flex: 0 0 auto;
+  min-width: 62px;
+  padding: 0.35rem 0.4rem 0.3rem;
+  border: 0;
+  border-bottom: 2.5px solid transparent;
+  border-radius: 7px 7px 0 0;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.pdfedit-app .pdfedit-tool:hover { background: rgba(29, 78, 216, 0.08); color: var(--brand-pdftools); border-color: transparent; }
+.pdfedit-app .pdfedit-tool.is-active {
+  background: rgba(29, 78, 216, 0.14);
+  border-bottom-color: var(--brand-pdftools);
+  color: var(--brand-pdftools);
+}
+
+/* corpo: miniaturas | página | propriedades */
+.pdfedit-body { display: flex; flex: 1 1 auto; min-height: 0; }
+.pdfedit-thumbs {
+  flex: 0 0 148px;
+  overflow-y: auto;
+  padding: 0.7rem 0.5rem;
+  border-right: 1px solid var(--border-ui);
+  background: var(--bg-main);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+.pdfedit-thumb {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  width: 100%;
+  padding: 0.3rem 0.2rem;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pdfedit-thumb:hover { background: rgba(29, 78, 216, 0.07); }
+.pdfedit-thumb.is-active { border-color: var(--brand-pdftools-light); background: rgba(29, 78, 216, 0.1); color: var(--brand-pdftools); }
+.pdfedit-thumb-img { display: block; width: 100%; max-width: 110px; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3); line-height: 0; min-height: 60px; }
+.pdfedit-thumb-img canvas { width: 100%; height: auto; display: block; }
+.pdfedit-center { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; background: #4b5058; }
+.pdfedit-app .pdfedit-hint {
+  margin: 0;
+  padding: 0.4rem 0.8rem;
+  min-height: 0;
+  font-size: 0.76rem;
+  color: #e5e7eb;
+  background: #2f343b;
+  flex: 0 0 auto;
+}
+.pdfedit-app .pdfedit-hint:empty { display: none; }
+.pdfedit-app .pdfedit-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+  background: #4b5058;
+  padding: 1rem 0.8rem 2rem;
+}
+.pdfedit-props {
+  flex: 0 0 224px;
+  overflow-y: auto;
+  padding: 0.8rem 0.85rem;
+  border-left: 1px solid var(--border-ui);
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.pdfedit-props-title { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.pdfedit-field-group { display: flex; flex-direction: column; gap: 0.35rem; margin: 0; }
+.pdfedit-field-group[hidden] { display: none; }
+.pdfedit-label { font-size: 0.74rem; font-weight: 700; color: var(--text-muted); }
+.pdfedit-props select { width: 100%; }
+.pdfedit-props .pdfedit-check { align-items: flex-start; line-height: 1.35; }
+.pdfedit-swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+.pdfedit-swatches button {
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--border-ui);
+  background: var(--c);
+  cursor: pointer;
+  padding: 0;
+  box-shadow: inset 0 0 0 2px var(--bg-card);
+}
+.pdfedit-swatches button:hover:not(:disabled) { border-color: var(--brand-pdftools-light); }
+.pdfedit-swatches button.is-active { border-color: var(--brand-pdftools); box-shadow: inset 0 0 0 2px var(--bg-card), 0 0 0 2px var(--brand-pdftools-light); }
+.pdfedit-swatches.is-disabled { opacity: 0.4; }
+.pdfedit-swatches button:disabled { cursor: default; }
+.pdfedit-fmt { display: flex; gap: 6px; }
+.pdfedit-fmtbtn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 32px;
+  border: 1.5px solid var(--border-ui);
+  border-radius: 7px;
+  color: var(--text-main);
+  cursor: pointer;
+  user-select: none;
+}
+.pdfedit-fmtbtn input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.pdfedit-fmtbtn:has(input:checked) { background: var(--brand-pdftools); border-color: var(--brand-pdftools); color: #fff; }
+.pdfedit-fmtbtn:has(input:disabled) { opacity: 0.4; cursor: default; }
+.pdfedit-fmtbtn:has(input:focus-visible) { outline: 2px solid var(--brand-pdftools-light); outline-offset: 1px; }
+
+/* recolher painéis */
+.pdfedit-app.hide-thumbs .pdfedit-thumbs { display: none; }
+.pdfedit-app.hide-props .pdfedit-props { display: none; }
+
+/* celular e telas estreitas: miniaturas viram uma faixa, propriedades vão para baixo */
+@media (max-width: 860px) {
+  .pdfedit-app { height: auto; min-height: 0; }
+  .pdfedit-app.is-full { height: 100dvh; }
+  .pdfedit-body { flex-direction: column; }
+  .pdfedit-thumbs { flex: 0 0 auto; flex-direction: row; overflow-x: auto; overflow-y: hidden; border-right: 0; border-bottom: 1px solid var(--border-ui); padding: 0.45rem 0.5rem; }
+  .pdfedit-thumb { width: 64px; flex: 0 0 auto; }
+  .pdfedit-center { flex: 1 1 auto; }
+  .pdfedit-app .pdfedit-wrap { height: 68vh; flex: 0 0 auto; padding: 0.6rem 0.4rem 1rem; }
+  .pdfedit-app.is-full .pdfedit-wrap { height: auto; flex: 1 1 auto; }
+  .pdfedit-app.is-full .pdfedit-body { flex: 1 1 auto; }
+  .pdfedit-props { flex: 0 0 auto; border-left: 0; border-top: 1px solid var(--border-ui); flex-direction: row; flex-wrap: wrap; align-items: flex-end; gap: 0.7rem; max-height: 38vh; }
+  .pdfedit-props-title { display: none; }
+  .pdfedit-field-group { min-width: 120px; }
+  .pdfedit-filename { display: none; }
+}
+
+/* Reorganizar páginas: grade de miniaturas no estilo "Organizar páginas" do Acrobat */
+.pdforg-grid { background: #4b5058; padding: 0.9rem; border-radius: 10px; gap: 0.9rem; }
+.pdforg-card { background: transparent; border: 2px solid transparent; border-radius: 8px; position: relative; }
+.pdforg-card:hover { border-color: var(--brand-pdftools-light); background: rgba(255, 255, 255, 0.06); }
+.pdforg-label, .pdforg-label small { color: #e5e7eb; }
+.pdforg-thumb { background: transparent; }
+.pdforg-thumb img { box-shadow: 0 1px 6px rgba(0, 0, 0, 0.45); }
+.pdforg-btns { opacity: 0.0; transition: opacity 0.12s; }
+.pdforg-card:hover .pdforg-btns, .pdforg-card:focus-within .pdforg-btns { opacity: 1; }
+@media (hover: none) { .pdforg-btns { opacity: 1; } }
+@media (max-width: 520px) {
+  .pdfedit-topbar .pdfedit-spacer { flex: 0 0 0; }
+  .pdfedit-save span { display: none; }
+  .pdfedit-save { padding: 0.4rem 0.6rem; }
+  .pdfedit-app .pdfedit-zoom { min-width: 2.6rem; }
+}
