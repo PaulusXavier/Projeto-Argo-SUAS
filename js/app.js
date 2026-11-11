@@ -620,13 +620,24 @@ function initAuth() {
         if (errorCountdownEl) errorCountdownEl.textContent = '';
         pwField.setAttribute('aria-invalid', 'false');
         if (capsHintEl) capsHintEl.classList.remove('visible');
-        if (STRONG_AUTH) {
-          sessionEncKey = strongKeys.encKey;
-          sessionLegacyKey = await deriveSessionKey(value);
-          migrateLegacyEncryption();
-        } else {
-          sessionEncKey = await deriveSessionKey(value);
-          sessionLegacyKey = null;
+        try {
+          if (STRONG_AUTH) {
+            sessionEncKey = strongKeys.encKey;
+            sessionLegacyKey = await deriveSessionKey(value);
+            migrateLegacyEncryption();
+          } else {
+            sessionEncKey = await deriveSessionKey(value);
+            sessionLegacyKey = null;
+          }
+        } catch (err) {
+          // Senha certa, mas o navegador falhou ao preparar a cifragem: não deixa o
+          // botão preso em "Verificando…" e não entra sem chave (os dados ficariam ilegíveis).
+          console.error('Argo SUAS: falha ao preparar a chave de cifragem', err);
+          sessionEncKey = null; sessionLegacyKey = null;
+          setLoading(false);
+          showError('Não foi possível preparar a proteção dos dados neste navegador. Recarregue a página e tente de novo.', { quiet: true });
+          pwField.focus({ preventScroll: true });
+          return;
         }
         // Grava (ou limpa) o "manter conectado" de acordo com a caixinha no
         // momento do login — assim, desmarcá-la também derruba um "lembrar"
@@ -761,14 +772,23 @@ function initAuth() {
     window.addEventListener('offline', paintStatus);
   }
   if (versionEl && window.caches && typeof caches.keys === 'function') {
+    // O build carimba o cache como "rede-apoio-bv-b<hash ou data>" (antes era
+    // "-v<número>", por isso a versão nunca aparecia). O cache "-runtime" é outro.
     caches.keys().then(function(keys) {
-      let best = 0;
-      keys.forEach(function(k) {
-        const m = /^rede-apoio-bv-v(\d+)$/.exec(k);
-        if (m && Number(m[1]) > best) best = Number(m[1]);
-      });
-      if (best) versionEl.textContent = 'Versão v' + best;
+      const found = keys
+        .map(function(k) { return /^rede-apoio-bv-(?!runtime$)(.+)$/.exec(k); })
+        .filter(Boolean)
+        .map(function(m) { return m[1]; });
+      if (found.length) versionEl.textContent = 'Versão ' + found[found.length - 1];
+      else {
+        // Sem versão para mostrar: esconde o separador "·" em vez de deixá-lo solto.
+        const sep = document.querySelector('#loginStatus .login-status-sep');
+        if (sep) sep.hidden = true;
+      }
     }).catch(function() { /* sem cache: não mostra versão */ });
+  } else {
+    const sep = document.querySelector('#loginStatus .login-status-sep');
+    if (sep) sep.hidden = true;
   }
 }
 
@@ -3655,7 +3675,7 @@ function updateChipCounts() {
 // Liga/desliga a busca principal conforme a aba aberta. Ao desligar, limpa o
 // texto para que uma pesquisa antiga não volte filtrando a lista quando o
 // usuário retornar para uma aba de equipamentos.
-const MAIN_SEARCH_PLACEHOLDER = 'Pesquisar por unidade, bairro ou serviço técnico...';
+const MAIN_SEARCH_PLACEHOLDER = 'Buscar unidade, bairro ou serviço…';
 /* ===================== Motor de busca =====================
    Substitui o antigo "texto digitado está contido no texto da ficha".
    Agora a busca:
