@@ -17,7 +17,7 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://upload.wikimedia.org https://*.tile.openstreetmap.org https://server.arcgisonline.com; connect-src 'self' https://api.mymemory.translated.net https://nominatim.openstreetmap.org https://www.gov.br https://setrabes.rr.gov.br https://boavista.rr.gov.br https://www.boavista.rr.gov.br https://portal.rr.gov.br https://saude.rr.gov.br https://educacao.rr.gov.br https://api.allorigins.win https://corsproxy.io https://firestore.googleapis.com https://www.googleapis.com https://*.workers.dev; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'; upgrade-insecure-requests;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://upload.wikimedia.org https://*.tile.openstreetmap.org https://server.arcgisonline.com; connect-src 'self' https://api.mymemory.translated.net https://nominatim.openstreetmap.org https://www.gov.br https://setrabes.rr.gov.br https://boavista.rr.gov.br https://www.boavista.rr.gov.br https://portal.rr.gov.br https://saude.rr.gov.br https://educacao.rr.gov.br https://api.allorigins.win https://corsproxy.io https://api.codetabs.com https://firestore.googleapis.com https://www.googleapis.com https://*.workers.dev; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'; upgrade-insecure-requests;">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <script>
   // Anti-clickjacking: o cabeçalho frame-ancestors não funciona em <meta>,
@@ -132,6 +132,14 @@
           </div>
         </div>
 
+        <div id="loginError" class="login-error" role="alert" aria-atomic="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span>
+            <span id="loginErrorText">Senha incorreta. Tente novamente.</span>
+            <span id="loginErrorCountdown" class="login-error-countdown" aria-hidden="true"></span>
+          </span>
+        </div>
+
         <div class="login-options-row">
           <label class="login-remember" for="loginRemember">
             <input type="checkbox" id="loginRemember">
@@ -145,13 +153,6 @@
           <p>Se você esqueceu a senha, procure a coordenação da sua unidade ou quem administra o Argo SUAS para recebê-la novamente. <kbd>Esc</kbd> fecha este aviso.</p>
         </div>
 
-        <div id="loginError" class="login-error" role="alert" aria-atomic="true">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <span>
-            <span id="loginErrorText">Senha incorreta. Tente novamente.</span>
-            <span id="loginErrorCountdown" class="login-error-countdown" aria-hidden="true"></span>
-          </span>
-        </div>
 
         <button type="submit" class="login-submit">
           <svg class="login-submit-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
@@ -299,7 +300,7 @@
     <div class="search-wrapper">
       <div class="search-input-wrapper">
         <label for="mainSearch" class="sr-only">Pesquisar unidade, bairro ou serviço</label>
-        <input type="text" id="mainSearch" class="search-input" placeholder="Pesquisar por unidade, bairro ou serviço técnico..." aria-label="Pesquisar unidade, bairro ou serviço">
+        <input type="text" id="mainSearch" class="search-input" placeholder="Buscar unidade, bairro ou serviço…" aria-label="Pesquisar unidade, bairro ou serviço">
         <button type="button" id="searchClearBtn" class="search-clear-btn" title="Limpar busca" aria-label="Limpar busca">✕</button>
       </div>
       <button type="button" class="btn-tech btn-secondary btn-proximity" id="proximityBtn" onclick="toggleProximitySort()" title="Ordenar os equipamentos exibidos pela distância até sua localização atual" aria-pressed="false">
