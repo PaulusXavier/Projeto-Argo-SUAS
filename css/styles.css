@@ -106,34 +106,40 @@
      cobrem o desenho, que aparece só nas margens e entre os cartões. */
   :root {
     --argo-bg-image:
-      radial-gradient(900px 520px at 92% -6%, rgba(0, 145, 194, 0.13), transparent 70%),
-      radial-gradient(760px 520px at -6% 12%, rgba(232, 172, 61, 0.10), transparent 70%),
-      linear-gradient(180deg, #F7FAFC 0%, #EDF3F7 100%);
+      radial-gradient(1100px 640px at 96% -8%, rgba(0, 145, 194, 0.22), transparent 70%),
+      radial-gradient(900px 620px at -8% 16%, rgba(232, 172, 61, 0.18), transparent 70%),
+      radial-gradient(1000px 560px at 55% 112%, rgba(15, 118, 110, 0.16), transparent 70%),
+      radial-gradient(640px 520px at 88% 72%, rgba(108, 92, 231, 0.08), transparent 70%),
+      linear-gradient(180deg, #F9FCFE 0%, #E8F0F6 100%);
     --argo-star-color: #0B6E8F;
-    --argo-star-opacity: 0.2;
-    --argo-wave-opacity: 0.13;
+    --argo-star-opacity: 0.34;
+    --argo-wave-opacity: 0.22;
   }
 
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --argo-bg-image:
-        radial-gradient(900px 520px at 92% -6%, rgba(41, 171, 226, 0.16), transparent 70%),
-        radial-gradient(760px 520px at -6% 12%, rgba(232, 172, 61, 0.10), transparent 70%),
-        linear-gradient(180deg, #08101F 0%, #050912 100%);
-      --argo-star-color: #A9DDF2;
-      --argo-star-opacity: 0.26;
-      --argo-wave-opacity: 0.22;
+        radial-gradient(1100px 640px at 96% -8%, rgba(41, 171, 226, 0.26), transparent 70%),
+        radial-gradient(900px 620px at -8% 16%, rgba(232, 172, 61, 0.15), transparent 70%),
+        radial-gradient(1000px 560px at 55% 112%, rgba(20, 150, 136, 0.18), transparent 70%),
+        radial-gradient(640px 520px at 88% 72%, rgba(139, 123, 240, 0.12), transparent 70%),
+        linear-gradient(180deg, #0A1428 0%, #050912 100%);
+      --argo-star-color: #BFE6F7;
+      --argo-star-opacity: 0.42;
+      --argo-wave-opacity: 0.32;
     }
   }
 
   :root[data-theme="dark"] {
     --argo-bg-image:
-      radial-gradient(900px 520px at 92% -6%, rgba(41, 171, 226, 0.16), transparent 70%),
-      radial-gradient(760px 520px at -6% 12%, rgba(232, 172, 61, 0.10), transparent 70%),
-      linear-gradient(180deg, #08101F 0%, #050912 100%);
-    --argo-star-color: #A9DDF2;
-    --argo-star-opacity: 0.26;
-    --argo-wave-opacity: 0.22;
+      radial-gradient(1100px 640px at 96% -8%, rgba(41, 171, 226, 0.26), transparent 70%),
+      radial-gradient(900px 620px at -8% 16%, rgba(232, 172, 61, 0.15), transparent 70%),
+      radial-gradient(1000px 560px at 55% 112%, rgba(20, 150, 136, 0.18), transparent 70%),
+      radial-gradient(640px 520px at 88% 72%, rgba(139, 123, 240, 0.12), transparent 70%),
+      linear-gradient(180deg, #0A1428 0%, #050912 100%);
+    --argo-star-color: #BFE6F7;
+    --argo-star-opacity: 0.42;
+    --argo-wave-opacity: 0.32;
   }
 
   body {
@@ -169,14 +175,24 @@
     inset: 0;
     background: var(--argo-star-color);
     opacity: var(--argo-star-opacity);
-    -webkit-mask-image: url('../assets/img/argo-bg-stars.svg'), linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.25) 100%);
-    mask-image: url('../assets/img/argo-bg-stars.svg'), linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.25) 100%);
+    -webkit-mask-image: url('../assets/img/argo-bg-stars.svg'), linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.45) 100%);
+    mask-image: url('../assets/img/argo-bg-stars.svg'), linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.45) 100%);
     -webkit-mask-size: 720px 720px, 100% 100%;
     mask-size: 720px 720px, 100% 100%;
     -webkit-mask-repeat: repeat, no-repeat;
     mask-repeat: repeat, no-repeat;
     -webkit-mask-composite: source-in;
     mask-composite: intersect;
+    animation: argo-bg-twinkle 7s ease-in-out infinite alternate;
+  }
+
+  @keyframes argo-bg-twinkle {
+    from { opacity: var(--argo-star-opacity); }
+    to   { opacity: calc(var(--argo-star-opacity) * 0.62); }
+  }
+
+  @media (prefers-reduced-motion: reduce), (pointer: coarse) {
+    body::before { animation: none; }
   }
 
   /* Ondas no pé da janela, em degradê azul → dourado → azul. */
@@ -184,13 +200,13 @@
     left: 0;
     right: 0;
     bottom: 0;
-    height: 120px;
-    background: linear-gradient(90deg, #0091C2 0%, #E8AC3D 50%, #0091C2 100%);
+    height: 170px;
+    background: linear-gradient(90deg, #0091C2 0%, #29ABE2 30%, #E8AC3D 55%, #0091C2 100%);
     opacity: var(--argo-wave-opacity);
     -webkit-mask-image: url('../assets/img/argo-bg-waves.svg'), linear-gradient(180deg, transparent 0%, #000 70%);
     mask-image: url('../assets/img/argo-bg-waves.svg'), linear-gradient(180deg, transparent 0%, #000 70%);
-    -webkit-mask-size: 600px 120px, 100% 100%;
-    mask-size: 600px 120px, 100% 100%;
+    -webkit-mask-size: 600px 170px, 100% 100%;
+    mask-size: 600px 170px, 100% 100%;
     -webkit-mask-repeat: repeat-x, no-repeat;
     mask-repeat: repeat-x, no-repeat;
     -webkit-mask-position: left bottom, 0 0;
@@ -201,7 +217,7 @@
 
   @media (max-width: 760px) {
     body::before { -webkit-mask-size: 520px 520px, 100% 100%; mask-size: 520px 520px, 100% 100%; }
-    body::after { height: 84px; -webkit-mask-size: 420px 84px, 100% 100%; mask-size: 420px 84px, 100% 100%; }
+    body::after { height: 120px; -webkit-mask-size: 420px 120px, 100% 100%; mask-size: 420px 120px, 100% 100%; }
   }
 
   @media print {
@@ -9477,4 +9493,129 @@ html.pdfedit-lock { overflow: hidden; }
   .pdfedit-save span { display: none; }
   .pdfedit-save { padding: 0.4rem 0.6rem; }
   .pdfedit-app .pdfedit-zoom { min-width: 2.6rem; }
+}
+
+
+/* =====================================================================
+   Cabeçalho (hero) — acabamento v3
+   - Título maior, com brilho dourado e "SUAS" em selo de vidro.
+   - Foto do navio recuada para a esquerda e bem esmaecida: não passa mais
+     por trás do texto nem do painel "Seu dia" (sumia o "ARGO NAVIS" cortado).
+   - Ondas douradas na base (o mesmo desenho do fundo do app) ligando o
+     cabeçalho à faixa de bandeira.
+   - Cartões de números com divisórias finas e número maior.
+   Fica por último de propósito: vence o v2 e os ajustes antigos.
+   ===================================================================== */
+header.hero {
+  padding: 2rem 0 1.7rem;
+  background:
+    radial-gradient(46% 120% at 96% -20%, rgba(242, 203, 126, 0.20) 0%, rgba(242, 203, 126, 0) 62%),
+    radial-gradient(52% 120% at -4% 108%, rgba(41, 171, 226, 0.20) 0%, rgba(41, 171, 226, 0) 68%),
+    radial-gradient(40% 90% at 52% 118%, rgba(20, 150, 136, 0.22) 0%, rgba(20, 150, 136, 0) 70%),
+    linear-gradient(158deg, #15665A 0%, #0B3C35 46%, #04201B 100%);
+  box-shadow: inset 0 -1px 0 rgba(242, 203, 126, 0.5), 0 10px 30px -18px rgba(4, 32, 27, 0.7);
+}
+
+/* Foto do navio: só no canto esquerdo e mais apagada; some antes do texto. */
+header.hero .hero-ship-photo {
+  width: min(42%, 560px);
+  opacity: 0.2;
+  background-position: center 30%;
+  -webkit-mask-image: radial-gradient(120% 110% at 0% 40%, #000 0%, rgba(0, 0, 0, 0.55) 45%, transparent 78%);
+  mask-image: radial-gradient(120% 110% at 0% 40%, #000 0%, rgba(0, 0, 0, 0.55) 45%, transparent 78%);
+  -webkit-mask-composite: source-over;
+  mask-composite: add;
+}
+@media (max-width: 760px) {
+  header.hero .hero-ship-photo { width: 100%; opacity: 0.13; }
+}
+
+/* Ondas douradas na base, atrás do conteúdo. */
+header.hero::after {
+  height: 54px;
+  z-index: 0;
+  background: linear-gradient(90deg, rgba(242, 203, 126, 0) 0%, #E8AC3D 22%, #FBE3A6 52%, #E8AC3D 80%, rgba(242, 203, 126, 0) 100%);
+  box-shadow: none;
+  opacity: 0.2;
+  -webkit-mask-image: url('../assets/img/argo-bg-waves.svg'), linear-gradient(180deg, transparent 0%, #000 100%);
+  mask-image: url('../assets/img/argo-bg-waves.svg'), linear-gradient(180deg, transparent 0%, #000 100%);
+  -webkit-mask-size: 360px 54px, 100% 100%;
+  mask-size: 360px 54px, 100% 100%;
+  -webkit-mask-repeat: repeat-x, no-repeat;
+  mask-repeat: repeat-x, no-repeat;
+  -webkit-mask-position: left bottom, 0 0;
+  mask-position: left bottom, 0 0;
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+
+/* Título com mais presença. */
+header.hero h1 { font-size: clamp(2.6rem, 5.4vw, 3.7rem); line-height: 1.05; }
+header.hero .hero-title-line { gap: 0.4em; }
+header.hero .brand-mark-suas {
+  font-size: 0.5em;
+  padding: 0.12em 0.55em;
+  letter-spacing: 0.12em;
+  border-color: rgba(242, 203, 126, 0.55);
+  color: #FFF3D2;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04));
+  box-shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+header.hero .brand-sub {
+  font-size: 1rem;
+  color: #D5E9E3;
+  margin-top: 0.35rem;
+}
+header.hero .hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.9rem;
+  padding: 0.28rem 0.75rem 0.28rem 0.6rem;
+  background: rgba(242, 203, 126, 0.08);
+  border: 1px solid rgba(242, 203, 126, 0.28);
+  border-radius: 999px;
+  color: #F6DDA0;
+}
+header.hero .hero-eyebrow { width: fit-content; max-width: 100%; justify-self: start; }
+header.hero .brand-mark:not(.brand-mark-suas) { padding-bottom: 0.14em; margin-bottom: -0.14em; }
+header.hero .hero-lead { color: #E6F1EE; max-width: 540px; }
+
+/* Painel "Seu dia" mais nítido. */
+@media (min-width: 1000px) {
+  header.hero > .container > .hero-today:not([hidden]) {
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.13) 0%, rgba(255, 255, 255, 0.04) 100%);
+    border-color: rgba(242, 203, 126, 0.34);
+    border-radius: 20px;
+    box-shadow: 0 22px 44px -22px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+}
+
+/* Números: divisórias finas entre os cartões e valor maior. */
+header.hero .hero-stats {
+  margin-top: 1.25rem;
+  gap: 0;
+  padding: 0.3rem;
+  background: linear-gradient(180deg, rgba(3, 24, 20, 0.62), rgba(3, 24, 20, 0.45));
+  border-radius: 16px;
+}
+header.hero .hero-stat { padding: 0.55rem 1rem; border-radius: 12px; }
+header.hero .hero-stat + .hero-stat-divider + .hero-stat { box-shadow: inset 1px 0 0 rgba(242, 203, 126, 0.16); }
+header.hero .hero-stat-metric .hero-stat-value { font-size: 2.6rem; line-height: 1; }
+header.hero .hero-stat-unit .hero-stat-value { font-size: 1.7rem; }
+header.hero .hero-stat-label { color: #D5E9E3; }
+
+@media (max-width: 640px) {
+  header.hero { padding: 1.15rem 0 1.05rem; }
+  header.hero h1 { font-size: 2.4rem; }
+  header.hero .hero-stats { gap: 0.2rem; padding: 0.25rem; }
+  header.hero .hero-stat { padding: 0.45rem 0.6rem; }
+  header.hero .hero-stat + .hero-stat-divider + .hero-stat { box-shadow: none; }
+  header.hero .hero-stat-metric .hero-stat-value { font-size: 1.7rem; }
+  header.hero .hero-stat-unit .hero-stat-value { font-size: 1.35rem; }
+  header.hero::after { height: 40px; -webkit-mask-size: 280px 40px, 100% 100%; mask-size: 280px 40px, 100% 100%; }
+}
+
+@media print {
+  header.hero::after { display: none; }
 }
