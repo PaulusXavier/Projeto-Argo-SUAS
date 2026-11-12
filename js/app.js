@@ -24360,9 +24360,22 @@ async function pdftoolsExtraPick(kind, file, inputEl) {
     const info = document.getElementById('pdftools' + kind + 'Info');
     if (info) info.textContent = '';
     const msgErro = String((e && (e.message || e.name)) || '');
-    pdftoolsSetStatus(statusId, /encrypt|password|senha/i.test(msgErro)
-      ? 'Este PDF está protegido por senha. Abra-o, salve uma cópia sem senha e escolha o arquivo de novo.'
+    const comSenha = /encrypt|password|senha/i.test(msgErro);
+    pdftoolsSetStatus(statusId, comSenha
+      ? 'Este PDF está protegido por senha. Remova a senha e use o arquivo livre nesta ferramenta.'
       : 'Não foi possível ler este PDF. O arquivo pode estar danificado ou não ser um PDF de verdade.', 'error');
+    if (comSenha && typeof pdfhubSend === 'function') {
+      const st = document.getElementById(statusId);
+      if (st) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'pdftools-again';
+        b.textContent = 'Remover a senha agora';
+        b.onclick = () => pdfhubSend('Unlock', [file]);
+        st.appendChild(document.createTextNode(' '));
+        st.appendChild(b);
+      }
+    }
   } finally {
     if (inputEl) inputEl.value = '';
   }
@@ -29051,17 +29064,64 @@ function pdfhubPick(list, inputEl) {
   const total = ok.reduce((s, f) => s + f.size, 0);
   const name = ok.length === 1 ? escapeHtmlAttr(ok[0].name) : ok.length + ' arquivos';
   const skipped = files.length - ok.length;
+  pdfhub.chooser = { name, total, hint, keys, skipped, info: '' };
+  pdfhubDrawChooser();
+  if (nPdf === 1 && ok.length === 1) pdfhubInspect(ok[0]);
+}
+
+// Desenha o quadro "O que fazer com este arquivo?". Separado de pdfhubPick para poder ser
+// redesenhado quando a leitura do PDF (páginas, senha) termina.
+function pdfhubDrawChooser() {
+  const box = document.getElementById('pdfhubChooser');
+  const c = pdfhub.chooser;
+  if (!box || !c) return;
+  const primaryMax = 4;
   box.hidden = false;
   box.innerHTML = `
     <div class="pdfhub-chooser-head">
-      <span class="pdfhub-chooser-file">${ICONS.pdf}<strong>${name}</strong><small>${pdftoolsFormatBytes(total)}</small></span>
+      <span class="pdfhub-chooser-file">${ICONS.pdf}<strong>${c.name}</strong><small>${c.info ? escapeHtmlAttr(c.info) : pdftoolsFormatBytes(c.total)}</small></span>
       <button type="button" class="pdfhub-clear" onclick="pdfhubClearFiles()" aria-label="Tirar os arquivos escolhidos">Trocar</button>
     </div>
-    <div class="pdfhub-chooser-hint">${hint}${skipped ? ' (' + skipped + ' arquivo(s) de outro tipo foram ignorados.)' : ''}</div>
-    <div class="pdfhub-chooser-chips">${keys.map((k, i) => { const t = PDFHUB_TOOLS.find(x => x.key === k); return `<button type="button" class="pdfhub-chip${i === 0 && keys.length < 4 ? ' is-primary' : ''}" onclick="pdfhubSendPicked('${k}')">${t.name}</button>`; }).join('')}</div>`;
+    <div class="pdfhub-chooser-hint" aria-live="polite">${c.hint}${c.skipped ? ' (' + c.skipped + ' arquivo(s) de outro tipo foram ignorados.)' : ''}</div>
+    <div class="pdfhub-chooser-chips">${c.keys.map((k, i) => { const t = PDFHUB_TOOLS.find(x => x.key === k); return `<button type="button" class="pdfhub-chip${i === 0 && c.keys.length < primaryMax ? ' is-primary' : ''}" onclick="pdfhubSendPicked('${k}')">${t.name}</button>`; }).join('')}</div>`;
+}
+
+// Lê o PDF escolhido só para mostrar páginas e tamanho e avisar se pede senha (antes a pessoa
+// só descobria o problema depois de abrir uma ferramenta e ver a mensagem de erro).
+async function pdfhubInspect(file) {
+  const tok = pdfhub.inspectTok = (pdfhub.inspectTok || 0) + 1;
+  let doc = null;
+  try {
+    if (file.size > 60 * 1024 * 1024) return;
+    const pdfjs = await ensurePdfJs();
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let pages = 0, locked = false;
+    try {
+      doc = await pdfjs.getDocument({ data: bytes }).promise;
+      pages = doc.numPages;
+    } catch (e) {
+      if (e && e.name === 'PasswordException') locked = true; else return;
+    }
+    if (tok !== pdfhub.inspectTok || !pdfhub.chooser || pdfhub.files[0] !== file) return;
+    const c = pdfhub.chooser;
+    if (locked) {
+      c.info = pdftoolsFormatBytes(file.size) + ' · pede senha';
+      c.hint = 'Este PDF pede senha para abrir. Primeiro remova a senha (você precisa saber qual é); depois as outras ferramentas funcionam:';
+      c.keys = ['Unlock'];
+    } else {
+      c.info = pages + (pages === 1 ? ' página' : ' páginas') + ' · ' + pdftoolsFormatBytes(file.size);
+    }
+    pdfhubDrawChooser();
+  } catch (e) {
+    /* a leitura é só um extra: se falhar, o quadro segue como estava */
+  } finally {
+    if (doc && doc.destroy) { try { doc.destroy(); } catch (e) { /* já liberado */ } }
+  }
 }
 function pdfhubClearFiles() {
   pdfhub.files = [];
+  pdfhub.chooser = null;
+  pdfhub.inspectTok = (pdfhub.inspectTok || 0) + 1;
   const box = document.getElementById('pdfhubChooser');
   if (box) { box.hidden = true; box.innerHTML = ''; }
 }
@@ -29083,7 +29143,7 @@ function pdfhubSend(key, files) {
 }
 
 /* ---- "Continuar com este arquivo" (usado em pdftoolsSetStatus) ---- */
-const PDFHUB_NEXT = ['Compress', 'Number', 'Mark', 'Crop', 'Organize', 'Edit', 'Split'];
+const PDFHUB_NEXT = ['Compress', 'Meta', 'Number', 'Mark', 'Crop', 'Organize', 'Edit', 'Split'];
 function pdfhubChainEl(fromKey, out) {
   const wrap = document.createElement('span');
   wrap.className = 'pdfhub-next';
@@ -29091,7 +29151,7 @@ function pdfhubChainEl(fromKey, out) {
   lab.className = 'pdfhub-next-label';
   lab.textContent = 'Continuar com este arquivo:';
   wrap.appendChild(lab);
-  PDFHUB_NEXT.filter(k => k !== fromKey).slice(0, 5).forEach(k => {
+  PDFHUB_NEXT.filter(k => k !== fromKey).slice(0, 6).forEach(k => {
     const t = PDFHUB_TOOLS.find(x => x.key === k);
     const b = document.createElement('button');
     b.type = 'button';
@@ -29118,7 +29178,27 @@ function pdftoolsJump(id) {
   setTimeout(() => el.classList.remove('pdftools-tool-flash'), 1400);
 }
 
+// Colar arquivos (Ctrl+V / ⌘+V) com a Central de PDF na tela: vão para o quadro "Comece pelo arquivo".
+// Ignora campos de texto e quando uma ferramenta já está aberta (para não trocar o arquivo dela sem querer).
+let pdfhubPasteBound = false;
+function pdfhubBindPaste() {
+  if (pdfhubPasteBound) return;
+  pdfhubPasteBound = true;
+  document.addEventListener('paste', ev => {
+    const hubEl = document.getElementById('pdfhub');
+    if (!hubEl || !hubEl.offsetParent) return;
+    const t = ev.target;
+    if (t && (t.isContentEditable || /^(input|textarea|select)$/i.test(t.tagName || ''))) return;
+    if (hubEl.closest('.pdftools-card.is-focus')) return;
+    const files = Array.from((ev.clipboardData && ev.clipboardData.files) || []).filter(f => pdfhubKind(f));
+    if (!files.length) return;
+    ev.preventDefault();
+    pdfhubPick(files, null);
+  });
+}
+
 function initPdfToolsPanel() {
+  pdfhubBindPaste();
   pdftoolsPrefsInit();
   pdftoolsEditRestore();
   pdftoolsRenderMergeList();
