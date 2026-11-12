@@ -27051,6 +27051,236 @@ async function pdftoolsEditExport() {
   }
 }
 
+/* ---------- Fidelidade PDF ⇄ Word ----------
+   Um PDF é "papel digital" (posições fixas); um .docx é texto que se reorganiza. Nenhuma conversão consegue
+   reproduzir os dois sentidos com 100% de fidelidade (nem o Word: ao abrir um PDF ele refaz o fluxo do texto e
+   pode mudar o layout). Por isso o Argo faz duas coisas para não perder dado nenhum:
+   1) PDF → Word: gera o .docx editável E guarda dentro dele, em "attachments/", o PDF original (byte a byte) e um
+      manifesto (argo-origem.json) com o que o Word não representa (links, campos, marcadores, metadados) e as
+      impressões digitais (SHA-256) do PDF e do texto do Word.
+   2) Word → PDF: se o .docx traz o original e o texto não foi mudado, devolve o PDF original idêntico; se foi
+      editado, refaz o PDF a partir do Word (com título/autor do documento) e avisa o que não coube na fonte padrão.
+   Tudo no navegador. Teste: npm run test:pdf-word */
+/* Marcadores (índice lateral do leitor de PDF) a partir dos títulos: items = [{ title, level, pageIndex, x, y }].
+   Respeita a hierarquia (H2 dentro de H1 etc.). Devolve quantos marcadores criou. */
+function pdftoolsAddOutline(doc, items) {
+  items = (items || []).filter(it => it && String(it.title || '').trim());
+  if (!items.length) return 0;
+  const { PDFName, PDFHexString } = PDFLib;
+  const ctx = doc.context, pages = doc.getPages();
+  const root = { level: 0, children: [] };
+  const stack = [root];
+  items.forEach(it => {
+    const node = { it, level: it.level || 1, children: [] };
+    while (stack.length > 1 && stack[stack.length - 1].level >= node.level) stack.pop();
+    stack[stack.length - 1].children.push(node);
+    stack.push(node);
+  });
+  const N = k => PDFName.of(k);
+  const build = (children, parentRef) => {
+    const refs = children.map(() => ctx.nextRef());
+    let total = 0;
+    children.forEach((n, i) => {
+      const page = pages[Math.max(0, Math.min(n.it.pageIndex || 0, pages.length - 1))];
+      const d = ctx.obj({});
+      d.set(N('Title'), PDFHexString.fromText(String(n.it.title).trim().slice(0, 200)));
+      d.set(N('Parent'), parentRef);
+      d.set(N('Dest'), ctx.obj([page.ref, N('XYZ'), null, Math.round(n.it.x || 0), Math.round(n.it.y || 0), null]));
+      if (i > 0) d.set(N('Prev'), refs[i - 1]);
+      if (i < children.length - 1) d.set(N('Next'), refs[i + 1]);
+      let sub = 0;
+      if (n.children.length) {
+        const r = build(n.children, refs[i]);
+        d.set(N('First'), r.first); d.set(N('Last'), r.last); d.set(N('Count'), ctx.obj(r.total));
+        sub = r.total;
+      }
+      ctx.assign(refs[i], d);
+      total += 1 + sub;
+    });
+    return { first: refs[0], last: refs[refs.length - 1], total };
+  };
+  const outlinesRef = ctx.nextRef();
+  const r = build(root.children, outlinesRef);
+  const od = ctx.obj({});
+  od.set(N('Type'), N('Outlines')); od.set(N('First'), r.first); od.set(N('Last'), r.last); od.set(N('Count'), ctx.obj(r.total));
+  ctx.assign(outlinesRef, od);
+  doc.catalog.set(N('Outlines'), outlinesRef);
+  doc.catalog.set(N('PageMode'), N('UseOutlines'));
+  return r.total;
+}
+
+/* Link clicável: links = [{ page (objeto da pdf-lib), x, y, w, h, href }]. Só http(s) e mailto. */
+function pdftoolsAddLinks(doc, links) {
+  const { PDFName, PDFString } = PDFLib;
+  let n = 0;
+  (links || []).forEach(l => {
+    if (!l || !/^(https?:|mailto:)/i.test(l.href || '')) return;
+    const uri = encodeURI(decodeURI(l.href)).replace(/[^\x20-\x7e]/g, '');
+    const a = doc.context.obj({ Type: 'Annot', Subtype: 'Link', Rect: [l.x, l.y, l.x + l.w, l.y + l.h], Border: [0, 0, 0] });
+    a.set(PDFName.of('A'), doc.context.obj({ Type: 'Action', S: 'URI', URI: PDFString.of(uri) }));
+    l.page.node.addAnnot(doc.context.register(a));
+    n++;
+  });
+  return n;
+}
+
+const PDFTOOLS_REL_ORIGINAL = 'urn:argo-suas:relationships:pdf-original';
+const PDFTOOLS_REL_ORIGEM = 'urn:argo-suas:relationships:origem';
+const PDFTOOLS_ORIGEM_VERSAO = 1;
+const PDFTOOLS_ORIGINAL_MAX = 45e6;   // acima disso o .docx não leva o PDF original junto (ficaria enorme)
+
+function pdftoolsXmlUnescape(s) {
+  return String(s)
+    .replace(/&#x([0-9a-f]+);/gi, (m, h) => { try { return String.fromCodePoint(parseInt(h, 16)); } catch (e) { return ''; } })
+    .replace(/&#(\d+);/g, (m, d) => { try { return String.fromCodePoint(Number(d)); } catch (e) { return ''; } })
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+}
+
+/* Texto de um XML do Word (document.xml, cabeçalho, rodapé): só o que se lê (w:t), com tabulação, quebra e fim de parágrafo. */
+function pdftoolsDocxText(xml) {
+  const re = /<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>|<w:tab\/>|<w:br\/>|<\/w:p>/g;
+  let out = '', m;
+  xml = String(xml || '');
+  while ((m = re.exec(xml))) {
+    if (m[1] !== undefined) out += pdftoolsXmlUnescape(m[1]);
+    else if (m[0] === '<w:tab/>') out += '\t';
+    else out += '\n';
+  }
+  return out;
+}
+
+/* Texto sem espaços/quebras: serve para saber se o texto do Word foi mudado (reformatar não muda; digitar muda). */
+function pdftoolsTextoChave(s) {
+  return String(s || '').normalize('NFC').replace(/[\s ­​-‍﻿]+/g, '');
+}
+
+async function pdftoolsSha256(data) {
+  const buf = typeof data === 'string' ? new TextEncoder().encode(data) : data;
+  const subtle = globalThis.crypto && globalThis.crypto.subtle;
+  if (subtle) {
+    const h = await subtle.digest('SHA-256', buf);
+    return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  let h1 = 0x811c9dc5, h2 = 0x01000193;   // sem crypto.subtle (página sem HTTPS): impressão FNV-1a dupla
+  for (let i = 0; i < buf.length; i++) { h1 = Math.imul(h1 ^ buf[i], 16777619) >>> 0; h2 = Math.imul(h2 + buf[i] + i, 2246822519) >>> 0; }
+  return 'fnv-' + h1.toString(16).padStart(8, '0') + h2.toString(16).padStart(8, '0');
+}
+
+/* Confere se o texto do PDF foi para o Word: conta, palavra por palavra, quantas do PDF existem no Word.
+   Números de até 3 dígitos ficam de fora (números de página viram campo no rodapé do Word). */
+function pdftoolsCompareText(pdfText, docxText) {
+  const palavras = t => (String(t || '').normalize('NFC').toLowerCase().match(/[\p{L}\p{N}]+/gu) || []).filter(w => !/^\d{1,3}$/.test(w));
+  const a = palavras(pdfText), b = palavras(docxText);
+  const falta = new Map();
+  b.forEach(w => falta.set(w, (falta.get(w) || 0) + 1));
+  let found = 0;
+  const missing = [];
+  a.forEach(w => {
+    const n = falta.get(w) || 0;
+    if (n > 0) { falta.set(w, n - 1); found++; } else if (missing.length < 8) missing.push(w);
+  });
+  const total = a.length;
+  return { total, found, pct: total ? Math.round(found / total * 1000) / 10 : 100, missing };
+}
+
+/* "D:20240131120000-04'00'" (data do PDF) → "2024-01-31T16:00:00Z" (data do Word). */
+function pdftoolsPdfDate(s) {
+  const m = /^D?:?(\d{4})(\d{2})?(\d{2})?(\d{2})?(\d{2})?(\d{2})?(?:(Z)|([+-])(\d{2})'?(\d{2})?'?)?/.exec(String(s || '').trim());
+  if (!m) return null;
+  const t = Date.UTC(+m[1], (+m[2] || 1) - 1, +m[3] || 1, +m[4] || 0, +m[5] || 0, +m[6] || 0);
+  if (!isFinite(t)) return null;
+  const off = m[8] ? (m[8] === '-' ? 1 : -1) * ((+m[9] || 0) * 60 + (+m[10] || 0)) * 60000 : 0;
+  return new Date(t + off).toISOString().replace(/\.\d{3}Z$/, 'Z');
+}
+
+function pdftoolsCorePropsXml(meta) {
+  meta = meta || {};
+  const agora = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+  const e = pdftoolsEscapeXml;
+  const criado = pdftoolsPdfDate(meta.created) || agora;
+  let x = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">';
+  if (meta.title) x += '<dc:title>' + e(meta.title) + '</dc:title>';
+  if (meta.subject) x += '<dc:subject>' + e(meta.subject) + '</dc:subject>';
+  x += '<dc:creator>' + e(meta.author || 'Argo SUAS') + '</dc:creator>';
+  if (meta.keywords) x += '<cp:keywords>' + e(meta.keywords) + '</cp:keywords>';
+  x += '<cp:lastModifiedBy>Argo SUAS</cp:lastModifiedBy>';
+  x += '<dcterms:created xsi:type="dcterms:W3CDTF">' + criado + '</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">' + agora + '</dcterms:modified></cp:coreProperties>';
+  return x;
+}
+
+/* Soma, página a página, o que o Word não representa: links, campos de formulário, comentários/realces. */
+function pdftoolsContaAnotacoes(anots, extras, pagina) {
+  (anots || []).forEach(a => {
+    if (!a) return;
+    if (a.subtype === 'Link') {
+      if (a.url || a.unsafeUrl) { if (extras.links.length < 500) extras.links.push({ pagina, url: String(a.url || a.unsafeUrl).slice(0, 500) }); else extras.linksExtra++; }
+      else extras.linksInternos++;
+    } else if (a.fieldType || a.subtype === 'Widget') extras.campos++;
+    else if (a.subtype && a.subtype !== 'Popup') extras.notas++;
+  });
+}
+function pdftoolsContaMarcadores(items) {
+  let n = 0;
+  (items || []).forEach(it => { n += 1 + pdftoolsContaMarcadores(it && it.items); });
+  return n;
+}
+async function pdftoolsColetaExtrasPdf(pdf) {
+  const extras = { meta: {}, links: [], linksExtra: 0, linksInternos: 0, campos: 0, notas: 0, marcadores: 0, anexos: 0 };
+  try {
+    const i = ((await pdf.getMetadata()) || {}).info || {};
+    extras.meta = { title: i.Title, author: i.Author, subject: i.Subject, keywords: i.Keywords, creator: i.Creator, producer: i.Producer, created: i.CreationDate, modified: i.ModDate };
+  } catch (e) { /* PDF sem metadados */ }
+  try { extras.marcadores = pdftoolsContaMarcadores(await pdf.getOutline()); } catch (e) { /* sem marcadores */ }
+  try { const a = await pdf.getAttachments(); extras.anexos = a ? Object.keys(a).length : 0; } catch (e) { /* sem anexos */ }
+  return extras;
+}
+
+/* Manifesto gravado dentro do .docx (attachments/argo-origem.json). */
+function pdftoolsMontaOrigem(o) {
+  return {
+    gerador: 'Argo SUAS', versao: PDFTOOLS_ORIGEM_VERSAO, criadoEm: new Date().toISOString(),
+    arquivo: o.nome || '', paginas: o.paginas || 0, bytes: o.bytes || 0, pdfSha256: o.pdfSha256 || '',
+    textoSha256: o.textoSha256 || '', pdf: o.meta || {},
+    naoRepresentadoNoWord: {
+      links: o.extras ? o.extras.links : [], linksOmitidos: o.extras ? o.extras.linksExtra : 0,
+      linksInternos: o.extras ? o.extras.linksInternos : 0, camposDeFormulario: o.extras ? o.extras.campos : 0,
+      comentariosERealces: o.extras ? o.extras.notas : 0, marcadores: o.extras ? o.extras.marcadores : 0,
+      anexosDoPdf: o.extras ? o.extras.anexos : 0
+    },
+    conferencia: o.conferencia || null
+  };
+}
+
+/* Lê um .docx (já aberto no JSZip): propriedades, texto do corpo e, se o Argo o gerou, o PDF original e o manifesto. */
+async function pdftoolsLeDocx(zip) {
+  const texto = async nome => { const f = zip.file(nome); return f ? await f.async('string') : ''; };
+  const body = await texto('word/document.xml');
+  const core = await texto('docProps/core.xml');
+  const tag = n => { const m = new RegExp('<' + n + '(?:\\s[^>]*)?>([\\s\\S]*?)</' + n + '>').exec(core); return m ? pdftoolsXmlUnescape(m[1]).trim() : ''; };
+  const props = { title: tag('dc:title'), creator: tag('dc:creator'), subject: tag('dc:subject'), keywords: tag('cp:keywords'), created: tag('dcterms:created') };
+  let origem = null, original = null;
+  try {
+    const mf = zip.file('attachments/argo-origem.json'), pf = zip.file('attachments/original.pdf');
+    if (mf && pf) { origem = JSON.parse(await mf.async('string')); original = await pf.async('uint8array'); }
+  } catch (e) { origem = null; original = null; }
+  return { body, props, origem, original };
+}
+
+/* Word → PDF: o texto do Word é o mesmo de quando o Argo o gerou a partir de um PDF?
+   'original' = sim, e o PDF guardado dentro confere (devolver o PDF idêntico); 'editado' = o texto mudou; 'novo' = o .docx não veio de um PDF do Argo;
+   'adulterado' = o PDF guardado não bate com a impressão digital (não é usado). */
+async function pdftoolsDecideWordPdf(zip) {
+  const d = await pdftoolsLeDocx(zip);
+  const res = { modo: 'novo', props: d.props, original: null, origem: d.origem };
+  if (!d.origem || !d.original || d.origem.gerador !== 'Argo SUAS') return res;
+  const pdfOk = d.origem.pdfSha256 && (await pdftoolsSha256(d.original)) === d.origem.pdfSha256;
+  if (!pdfOk) { res.modo = 'adulterado'; return res; }
+  const atual = await pdftoolsSha256(pdftoolsTextoChave(pdftoolsDocxText(d.body)));
+  res.modo = atual === d.origem.textoSha256 ? 'original' : 'editado';
+  if (res.modo === 'original') res.original = d.original;
+  return res;
+}
+
 /* ---------- PDF → Word ---------- */
 function pdftoolsEscapeXml(s) {
   return String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, '')
@@ -27915,7 +28145,9 @@ function pdftoolsPageBodyXml(info, geo, ctx, pageIdx) {
   return xml;
 }
 
-async function pdftoolsBuildDocx(pageXmls, hf, geo, media) {
+async function pdftoolsBuildDocx(pageXmls, hf, geo, media, extras) {
+  extras = extras || {};
+  const hfXml = [];
   const JSZipLib = await ensureJSZip();
   const zip = new JSZipLib();
   zip.file('[Content_Types].xml', '');
@@ -27939,6 +28171,7 @@ async function pdftoolsBuildDocx(pageXmls, hf, geo, media) {
       : pdftoolsBuildHeaderFooterXml(tag, zone, geo.W, textWidthTw, idState);
     const file = kind + relId + '.xml';
     wordFolder.file(file, built.xml);
+    hfXml.push(built.xml);
     if (built.rels.length) {
       hasPng = true;
       wordFolder.folder('_rels').file(file + '.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${built.rels.map(r => `<Relationship Id="${r.id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${r.name}"/>`).join('')}</Relationships>`);
@@ -27966,6 +28199,7 @@ async function pdftoolsBuildDocx(pageXmls, hf, geo, media) {
     docRels.push(`<Relationship Id="${m.rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${m.name}"/>`);
     exts.set(m.ext, m.ext === 'jpg' ? 'image/jpeg' : 'image/' + m.ext);
   });
+  if (extras.original) { exts.set('pdf', 'application/pdf'); exts.set('json', 'application/json'); }
   const extCt = Array.from(exts).map(([e, ct]) => `\n<Default Extension="${e}" ContentType="${ct}"/>`).join('');
 
   wordFolder.file('styles.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -27987,11 +28221,12 @@ ${ctOverrides.join('\n')}
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
 <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
-<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>
+<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>${extras.original ? `
+<Relationship Id="rId4" Type="${PDFTOOLS_REL_ORIGINAL}" Target="attachments/original.pdf"/>
+<Relationship Id="rId5" Type="${PDFTOOLS_REL_ORIGEM}" Target="attachments/argo-origem.json"/>` : ''}
 </Relationships>`);
 
-  zip.folder('docProps').file('core.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:creator>Argo SUAS</dc:creator><cp:lastModifiedBy>Argo SUAS</cp:lastModifiedBy></cp:coreProperties>`);
+  zip.folder('docProps').file('core.xml', pdftoolsCorePropsXml(extras.meta));
   zip.folder('docProps').file('app.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Argo SUAS</Application></Properties>`);
 
@@ -28004,20 +28239,37 @@ ${ctOverrides.join('\n')}
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><w:body>${pageXmls.join('')}<w:sectPr>${refs}<w:pgSz w:w="${pgWtw}" w:h="${pgHtw}"${orient}/><w:pgMar w:top="${mTop}" w:right="${mR}" w:bottom="${mBot}" w:left="${mL}" w:header="567" w:footer="567" w:gutter="0"/>${titlePg ? '<w:titlePg/>' : ''}</w:sectPr></w:body></w:document>`;
   wordFolder.file('document.xml', documentXml);
 
+  // PDF original e manifesto dentro do .docx (ver "Fidelidade PDF ⇄ Word")
+  const bodyText = pdftoolsDocxText(documentXml);
+  const conferencia = extras.pdfText != null ? pdftoolsCompareText(extras.pdfText, bodyText + '\n' + hfXml.map(pdftoolsDocxText).join('\n')) : null;
+  if (extras.original) {
+    const origem = pdftoolsMontaOrigem({
+      nome: extras.nome, paginas: extras.paginas, bytes: extras.original.length, meta: extras.meta, extras: extras.extras,
+      pdfSha256: await pdftoolsSha256(extras.original), textoSha256: await pdftoolsSha256(pdftoolsTextoChave(bodyText)), conferencia
+    });
+    zip.folder('attachments').file('original.pdf', extras.original, { compression: 'STORE' });
+    zip.folder('attachments').file('argo-origem.json', JSON.stringify(origem, null, 1));
+    if (extras.out) extras.out.origem = origem;
+  }
+  if (extras.out) extras.out.conferencia = conferencia;
+
   return zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 }
 
 /* Converte os bytes de um PDF em um Blob .docx. Separado da tela para poder ser reutilizado/testado. */
-async function pdftoolsPdfToDocxBlob(bytes, onProgress) {
+async function pdftoolsPdfToDocxBlob(bytes, onProgress, opts) {
   const holder = {};
-  try { return await pdftoolsPdfToDocxBlobImpl(bytes, onProgress, holder); }
+  try { return await pdftoolsPdfToDocxBlobImpl(bytes, onProgress, holder, opts || {}); }
   finally { try { if (holder.pdf && holder.pdf.destroy) holder.pdf.destroy(); } catch (e) { /* já liberado */ } }
 }
-async function pdftoolsPdfToDocxBlobImpl(bytes, onProgress, holder) {
+async function pdftoolsPdfToDocxBlobImpl(bytes, onProgress, holder, opts) {
   const pdfjsLib = await ensurePdfJs();
   await ensureJSZip();
+  // cópia dos bytes ANTES de abrir: o pdf.js pode "consumir" o buffer; a cópia é o PDF original que vai dentro do .docx
+  const copia = bytes instanceof ArrayBuffer ? new Uint8Array(bytes.slice(0)) : Uint8Array.from(bytes);
   const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
   holder.pdf = pdf;
+  const extras = await pdftoolsColetaExtrasPdf(pdf);
   const N = pdf.numPages;
   const pageInfos = [];
   const S = N <= 40 ? 2 : 1.5;
@@ -28032,6 +28284,7 @@ async function pdftoolsPdfToDocxBlobImpl(bytes, onProgress, holder) {
     const list = await page.getOperatorList();
     const content = await page.getTextContent();
     content.items = pdftoolsDropGhostText(content.items);
+    try { pdftoolsContaAnotacoes(await page.getAnnotations(), extras, i); } catch (e) { /* sem anotações */ }
     const fontCache = {};
     const fontOf = id => fontCache[id] || (fontCache[id] = pdftoolsFontInfo(page, id));
     const rot = content.items.filter(it => it.str && it.str.trim() && Math.abs(it.transform[1]) > Math.abs(it.transform[0]) * 0.5).length;
@@ -28088,6 +28341,7 @@ async function pdftoolsPdfToDocxBlobImpl(bytes, onProgress, holder) {
       }
       info.lines.forEach(l => l.parts.forEach(p => { if (p.color) stats.colors++; }));
     }
+    info.rawText = content.items.map(it => it.str || '').join(' ');
     pageInfos.push(info);
     if (onProgress) onProgress(i, N);
   }
@@ -28130,13 +28384,19 @@ async function pdftoolsPdfToDocxBlobImpl(bytes, onProgress, holder) {
   const media = [];
   const ctx = { media, idState: geo.idState, stats };
   const pageXmls = pageInfos.map((info, idx) => pdftoolsPageBodyXml(info, geo, ctx, idx));
-  const blob = await pdftoolsBuildDocx(pageXmls, hf, geo, media);
+  // texto das páginas que viraram texto no Word (as escaneadas/giradas entram como imagem e não contam)
+  const pdfText = pageInfos.filter(info => !info.scan && !info.skip).map(info => info.rawText).join('\n');
+  const out = {};
+  const guarda = opts.anexarOriginal !== false && copia.length <= PDFTOOLS_ORIGINAL_MAX;
+  const blob = await pdftoolsBuildDocx(pageXmls, hf, geo, media, {
+    original: guarda ? copia : null, nome: opts.nome || '', paginas: N, meta: extras.meta, extras, pdfText, out
+  });
   try { if (pdf.destroy) pdf.destroy(); } catch (e) { /* já liberado */ }
   return {
     blob,
     hasHeader: !!(hf.header.lines.length || hf.header.images.some(i => i.bytes)),
     hasFooter: !!(hf.footer.lines.length || hf.footer.images.some(i => i.bytes)),
-    stats
+    stats, pdfExtras: extras, conferencia: out.conferencia || null, originalAnexado: guarda, paginas: N
   };
 }
 
@@ -28370,7 +28630,7 @@ async function pdftoolsRunPdfToWord(file, inputEl) {
     const res = await pdftoolsPdfToDocxBlob(bytes, (i, n) => {
       pdftoolsSetProgress('PdfWord', i, n);
       pdftoolsSetStatus('pdftoolsPdfWordStatus', `Extraindo texto (${i}/${n})...`, 'info');
-    });
+    }, { nome: file.name });
     pdftoolsDownloadBlob(res.blob, pdftoolsSafeName(file.name, 'documento') + '.docx');
     const st = res.stats || {};
     const kept = ['fontes, cores, negrito, itálico e sublinhado', 'alinhamento e recuos'];
@@ -28380,9 +28640,24 @@ async function pdftoolsRunPdfToWord(file, inputEl) {
     if (st.tables) kept.push(st.tables + (st.tables === 1 ? ' tabela' : ' tabelas'));
     if (st.images) kept.push(st.images + (st.images === 1 ? ' imagem' : ' imagens'));
     let msg = 'Documento Word gerado, com ' + kept.join(', ') + ' preservados!';
+    let aviso = false;
+    const cf = res.conferencia;
+    if (cf && cf.total) {
+      if (cf.pct >= 99.5) msg += ' Conferência do texto: todas as palavras do PDF estão no Word.';
+      else { aviso = true; msg += ' Conferência do texto: ' + cf.pct.toString().replace('.', ',') + '% das palavras do PDF estão no Word (conferir: ' + cf.missing.slice(0, 5).join(', ') + ').'; }
+    }
+    const ex = res.pdfExtras || {};
+    const fora = [];
+    if (ex.links && ex.links.length + (ex.linksExtra || 0)) fora.push((ex.links.length + ex.linksExtra) + ' link(s)');
+    if (ex.campos) fora.push(ex.campos + ' campo(s) de formulário');
+    if (ex.marcadores) fora.push(ex.marcadores + ' marcador(es)');
+    if (ex.notas) fora.push(ex.notas + ' comentário(s)/realce(s)');
+    if (res.originalAnexado) msg += ' O PDF original vai guardado dentro do .docx' + (fora.length ? ' (inclusive ' + fora.join(', ') + ', que o Word não reproduz)' : '') + ': ao converter este Word de volta em PDF sem mexer no texto, você recebe o PDF idêntico ao original.';
+    else if (fora.length) msg += ' O Word não reproduz: ' + fora.join(', ') + '.';
+    if (!res.originalAnexado) msg += ' O PDF é grande demais para ir junto dentro do Word; guarde o original.';
     if (st.scanPages) msg += ' ' + st.scanPages + (st.scanPages === 1 ? ' página escaneada entrou como imagem' : ' páginas escaneadas entraram como imagem') + ' (o texto delas não é editável).';
     if (st.skippedImages) msg += ' ' + st.skippedImages + ' imagem(ns) ficaram de fora por causa do tamanho do arquivo.';
-    pdftoolsSetStatus('pdftoolsPdfWordStatus', msg, 'success');
+    pdftoolsSetStatus('pdftoolsPdfWordStatus', msg, aviso ? 'warn' : 'success');
   } catch (e) {
     pdftoolsSetStatus('pdftoolsPdfWordStatus', pdftoolsPdfErrorMsg(e, 'Não foi possível converter este PDF.'), 'error');
   } finally {
@@ -28412,9 +28687,20 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
     // figura guardada em resolução dobrada (como as que o conversor PDF→Word grava) saía com o dobro do tamanho no PDF.
     const imgSizes = [];
     let docBuf = bytes;
+    let propsDocx = {}, modoOrigem = 'novo';
     try {
       const JSZip = await ensureJSZip();
       const zip = await JSZip.loadAsync(bytes);
+      // .docx que o próprio Argo gerou de um PDF: se o texto não mudou, devolve o PDF original, idêntico
+      try {
+        const dec = await pdftoolsDecideWordPdf(zip);
+        propsDocx = dec.props || {}; modoOrigem = dec.modo;
+        if (dec.modo === 'original') {
+          pdftoolsDownloadBlob(new Blob([dec.original], { type: 'application/pdf' }), pdftoolsSafeName((dec.origem && dec.origem.arquivo) || file.name, 'documento') + '.pdf');
+          pdftoolsSetStatus('pdftoolsWordPdfStatus', 'Este Word veio de um PDF convertido aqui e o texto não foi alterado: devolvi o PDF original, idêntico ao de antes (nada se perdeu).', 'success');
+          return;
+        }
+      } catch (e) { /* segue com a conversão normal */ }
       const docXml = await zip.file('word/document.xml').async('string');
       (docXml.match(/<wp:(?:inline|anchor)\b[\s\S]*?<\/wp:(?:inline|anchor)>/g) || []).forEach(d => {
         if (!/<a:blip\b[^>]*r:embed=/.test(d)) return;
@@ -28493,13 +28779,14 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
       }
       return charOk.get(ch);
     };
+    const trocados = new Set();
     const sanitize = t => Array.from(String(t)
       .replace(/\t/g, '    ')
       .replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' ')
       .replace(/[\u00AD\u200B-\u200D\u2060\uFEFF]/g, '')
       .replace(/[\u2010\u2011\u2012\u2212]/g, '-')
       .replace(/\u201B/g, '\u2018').replace(/\u201F/g, '\u201C'))
-      .map(ch => (ch >= ' ' && ch !== '\x7f' && fontAceita(ch)) ? ch : '?').join('');
+      .map(ch => (ch >= ' ' && ch !== '\x7f' && fontAceita(ch)) ? ch : (trocados.add(ch), '?')).join('');
 
     function ensureSpace(height) {
       if (ctx.y - height < margin) {
@@ -28516,19 +28803,19 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
     }
 
     // Extrai o texto de um nó preservando negrito/itálico por trecho (run).
-    function extractRuns(node, bold, italic, skipLists) {
+    function extractRuns(node, bold, italic, skipLists, href) {
       const runs = [];
       node.childNodes.forEach(child => {
         if (child.nodeType === 3) {
-          if (child.textContent) runs.push({ text: child.textContent, bold, italic });
+          if (child.textContent) runs.push({ text: child.textContent, bold, italic, href });
         } else if (child.nodeType === 1) {
           const tag = child.tagName.toLowerCase();
           if (tag === 'img') return;
           if (skipLists && (tag === 'ul' || tag === 'ol')) return;
-          if (tag === 'br') { runs.push({ text: '\n', bold, italic }); return; }
+          if (tag === 'br') { runs.push({ text: '\n', bold, italic, href }); return; }
           const nb = bold || tag === 'strong' || tag === 'b';
           const ni = italic || tag === 'em' || tag === 'i';
-          runs.push(...extractRuns(child, nb, ni, skipLists));
+          runs.push(...extractRuns(child, nb, ni, skipLists, tag === 'a' && child.getAttribute('href') ? child.getAttribute('href') : href));
         }
       });
       return runs;
@@ -28541,7 +28828,7 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
       const tokens = [];
       runs.forEach(run => {
         run.text.split(/(\n|\s+)/).forEach(p => {
-          if (p !== '') tokens.push({ text: p, bold: run.bold, italic: run.italic });
+          if (p !== '') tokens.push({ text: p, bold: run.bold, italic: run.italic, href: run.href });
         });
       });
       const lines = [];
@@ -28561,12 +28848,12 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
           let pedaco = '';
           for (const ch of Array.from(tok.text)) {
             if (pedaco && font.widthOfTextAtSize(sanitize(pedaco + ch), size) > width) {
-              lines.push([{ text: pedaco, bold: tok.bold, italic: tok.italic }]);
+              lines.push([{ text: pedaco, bold: tok.bold, italic: tok.italic, href: tok.href }]);
               pedaco = '';
             }
             pedaco += ch;
           }
-          if (pedaco) { line = [{ text: pedaco, bold: tok.bold, italic: tok.italic }]; lineW = font.widthOfTextAtSize(sanitize(pedaco), size); }
+          if (pedaco) { line = [{ text: pedaco, bold: tok.bold, italic: tok.italic, href: tok.href }]; lineW = font.widthOfTextAtSize(sanitize(pedaco), size); }
           return;
         }
         if (lineW + w > width && line.length) {
@@ -28584,6 +28871,20 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
       return lines;
     }
 
+    const linksDoc = [], marcadoresDoc = [];
+    // desenha um trecho; se for link, pinta de azul, sublinha e registra a área clicável
+    function drawTok(tok, x, yBase, size, font, text) {
+      const ehLink = tok.href && /^(https?:|mailto:)/i.test(tok.href) && text.trim();
+      ctx.page.drawText(text, ehLink ? { x, y: yBase, size, font, color: PDFLib.rgb(0.02, 0.27, 0.78) } : { x, y: yBase, size, font });
+      if (ehLink) {
+        const w = font.widthOfTextAtSize(text, size);
+        ctx.page.drawLine({ start: { x, y: yBase - 1.5 }, end: { x: x + w, y: yBase - 1.5 }, thickness: 0.5, color: PDFLib.rgb(0.02, 0.27, 0.78) });
+        const ult = linksDoc[linksDoc.length - 1];
+        if (ult && ult.page === ctx.page && ult.href === tok.href && Math.abs(ult.y - (yBase - 2)) < 0.5 && Math.abs(ult.x + ult.w - x) < 0.5) ult.w += w;
+        else linksDoc.push({ page: ctx.page, x, y: yBase - 2, w, h: size + 3, href: tok.href });
+      }
+    }
+
     function drawWrappedLines(lines, size, x0, lineHeight, indent) {
       lines.forEach(line => {
         ensureSpace(lineHeight);
@@ -28591,7 +28892,7 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
         line.forEach(tok => {
           const font = pickFont(tok.bold, tok.italic);
           const text = sanitize(tok.text);
-          ctx.page.drawText(text, { x, y: ctx.y - size, size, font });
+          drawTok(tok, x, ctx.y - size, size, font, text);
           x += font.widthOfTextAtSize(text, size);
         });
         ctx.y -= lineHeight;
@@ -28658,7 +28959,7 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
             line.forEach(tok => {
               const font = pickFont(tok.bold, tok.italic);
               const text = sanitize(tok.text);
-              ctx.page.drawText(text, { x: lx, y: ly - fontSize, size: fontSize, font });
+              drawTok(tok, lx, ly - fontSize, fontSize, font, text);
               lx += font.widthOfTextAtSize(text, fontSize);
             });
             ly -= lineH;
@@ -28693,7 +28994,7 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
           line.forEach(tok => {
             const font = pickFont(tok.bold, tok.italic);
             const text = sanitize(tok.text);
-            ctx.page.drawText(text, { x, y: ctx.y - size, size, font });
+            drawTok(tok, x, ctx.y - size, size, font, text);
             x += font.widthOfTextAtSize(text, size);
           });
           ctx.y -= size + 5;
@@ -28725,6 +29026,10 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
           const lineHeight = size + (isHeading ? 6 : 5);
           const runs = extractRuns(node, isHeading, false);
           const lines = wrapRuns(runs, size, maxWidth);
+          if (isHeading && lines.length) {
+            ensureSpace(lineHeight);
+            marcadoresDoc.push({ title: text.replace(/\s+/g, ' '), level: Number(tag.charAt(1)), pageIndex: doc.getPages().indexOf(ctx.page), x: margin, y: ctx.y });
+          }
           drawWrappedLines(lines, size, margin, lineHeight);
           ctx.y -= isHeading ? 8 : 6;
           continue;
@@ -28746,9 +29051,31 @@ async function pdftoolsRunWordToPdf(file, inputEl) {
       return;
     }
 
+    let nLinks = 0, nMarc = 0;
+    try { nLinks = pdftoolsAddLinks(doc, linksDoc); } catch (e) { /* PDF segue sem os links */ }
+    try { nMarc = pdftoolsAddOutline(doc, marcadoresDoc); } catch (e) { /* PDF segue sem marcadores */ }
+    // propriedades do documento Word → propriedades do PDF (como o "Salvar como PDF" do Word faz)
+    try {
+      const nomeBase = pdftoolsSafeName(file.name, 'documento');
+      doc.setTitle(propsDocx.title || nomeBase);
+      if (propsDocx.creator) doc.setAuthor(propsDocx.creator);
+      if (propsDocx.subject) doc.setSubject(propsDocx.subject);
+      if (propsDocx.keywords) doc.setKeywords(propsDocx.keywords.split(/[;,]\s*/).filter(Boolean));
+      doc.setCreator('Argo SUAS'); doc.setProducer('Argo SUAS');
+      if (propsDocx.created && isFinite(Date.parse(propsDocx.created))) doc.setCreationDate(new Date(propsDocx.created));
+    } catch (e) { /* metadados são opcionais */ }
     const pdfBytes = await doc.save();
     pdftoolsDownloadBlob(new Blob([pdfBytes], { type: 'application/pdf' }), pdftoolsSafeName(file.name, 'documento') + '.pdf');
-    pdftoolsSetStatus('pdftoolsWordPdfStatus', 'PDF gerado, com títulos, negrito/itálico, listas, tabelas e imagens preservados!', 'success');
+    let msgPdf = 'PDF gerado, com títulos, negrito/itálico, listas, tabelas e imagens preservados!';
+    if (nLinks || nMarc) msgPdf += ' ' + [nLinks ? nLinks + ' link(s) clicável(is)' : '', nMarc ? nMarc + ' marcador(es) criados a partir dos títulos' : ''].filter(Boolean).join(' e ') + '.';
+    if (modoOrigem === 'editado') msgPdf = 'O texto do Word foi alterado depois da conversão, então refiz o PDF a partir do Word. ' + msgPdf;
+    if (modoOrigem === 'adulterado') msgPdf = 'O PDF guardado dentro deste Word não confere com o registro dele, então não o usei: refiz o PDF a partir do Word. ' + msgPdf;
+    const avisos = [];
+    if (trocados.size) avisos.push(trocados.size + ' tipo(s) de caractere que a fonte padrão do PDF não tem (' + Array.from(trocados).slice(0, 6).join(' ') + ') saíram como "?"');
+    const msgs = (result.messages || []).filter(m => m && m.type === 'warning');
+    if (msgs.length) avisos.push(msgs.length + ' elemento(s) do Word sem equivalente (ex.: caixas de texto, campos ou formatos especiais) podem ter ficado de fora');
+    if (avisos.length) msgPdf += ' Atenção: ' + avisos.join('; ') + '. Confira o PDF antes de enviar.';
+    pdftoolsSetStatus('pdftoolsWordPdfStatus', msgPdf, avisos.length ? 'warn' : 'success');
   } catch (e) {
     pdftoolsSetStatus('pdftoolsWordPdfStatus', 'Não foi possível converter este documento.', 'error');
   } finally {
