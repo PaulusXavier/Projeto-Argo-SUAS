@@ -25979,6 +25979,23 @@ function pdftoolsEditBind() {
   });
 }
 
+// Carrega no editor da aba "Editar PDF" um PDF que já está na memória (resultado de um pedido feito no chat do mascote).
+// Mesmo estado que pdftoolsEditPick cria, só que sem pedir confirmação (quem chama já confirmou).
+async function pdftoolsEditLoadBytes(bytes, name, keepPage) {
+  const st = pdftoolsEdit;
+  const PDFLib = await ensurePdfLib();
+  const pdfjs = await ensurePdfJs();
+  const buf = bytes instanceof ArrayBuffer ? bytes : bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  await PDFLib.PDFDocument.load(buf);
+  const pdf = await pdfjs.getDocument({ data: new Uint8Array(buf.slice(0)) }).promise;
+  const file = new File([buf], name || 'documento.pdf', { type: 'application/pdf' });
+  if (st.renderTask) { try { st.renderTask.cancel(); } catch (e) { /* segue */ } }
+  if (st.pdf && st.pdf.destroy) { try { st.pdf.destroy(); } catch (e) { /* segue */ } }
+  Object.assign(st, { file, bytes: buf, pdf, pages: pdf.numPages, page: Math.min(Math.max(1, keepPage || 1), pdf.numPages), items: [], undo: [], redo: [], infos: {}, images: {}, pendingImg: null, zoom: 1, geom: null, fresh: null, activeText: null, textCache: {}, fieldCache: {}, formValues: {}, dirty: false });
+  pdftoolsEditShowEditor();
+  pdftoolsSetStatus('pdftoolsEditStatus', 'PDF atualizado por um pedido no chat do mascote. Continue editando ou baixe o arquivo.', 'info');
+}
+
 async function pdftoolsEditPick(file, inputEl) {
   const st = pdftoolsEdit;
   const sid = 'pdftoolsEditStatus';
@@ -30472,7 +30489,7 @@ function argoBrain() {
     // Paulus (js/paulus.v1.js): faz a ida à IA e traz a base de normas offline (assets/conhecimento.json).
     // Se o arquivo não carregar, o app segue com o transporte antigo do ArgoCerebro.
     if (typeof Paulus !== 'undefined' && ARGO_IA.url) {
-      Paulus.init({ app: 'argo', endpoint: ARGO_IA.url, conhecimentoUrl: 'assets/conhecimento.json' });
+      Paulus.init({ app: 'argo', endpoint: ARGO_IA.url, conhecimentoUrl: 'assets/conhecimento.json', pdfLibUrl: 'assets/vendor/pdf-lib.min.js' });
     }
     // Os trechos agregados do Censo SUAS 2025 vêm do mesmo pacote leve usado pela busca offline do Paulus.
     // O Argo seleciona apenas os trechos pertinentes a perguntas sobre psicólogos/equipes e os envia como baseApp.
@@ -30616,6 +30633,8 @@ function argoAssistantAskHybrid(rawText, meta) {
     (() => { const t = argoConversaTipo(texto); return !!t && argoConversaLocal(t); })() ||
     // traduzir, medir distância e calcular têm leitura própria: a reescrita da pergunta poderia mexer no texto a traduzir ou nos números
     argoHabReconhece(texto) ||
+    // pedido de edição de PDF: feito no aparelho com as palavras da pessoa (pode ter nome em campo de ficha); nada disso vai à IA
+    argoPdfReconhece(texto) ||
     // pedido de rota ("traçar rota saindo do CRAS X: A, B e C"): o Paulus lê com as palavras da pessoa; reescrever a pergunta perderia paradas
     (typeof Paulus !== 'undefined' && Paulus.rota && typeof Paulus.rota.ler === 'function' && !!Paulus.rota.ler(texto)) ||
     (typeof B.psi === 'function' && B.psi(texto).score >= 3) ||
@@ -30728,6 +30747,13 @@ function argoAssistantAskHybridCore(rawText, meta) {
   const tab = argoActiveTabInfo();
   const keep = (res, units) => { B.remember(rawText, res.reply, units); return res; };
   const questionLike = /\?|^(como|o que|qual|quais|quando|posso|devo|por que|porque|quem|existe|ha|há)\b/i.test(rawText.trim()) || rawText.trim().split(/\s+/).length >= 6;
+
+  // Edição de PDF pelo chat (Paulus v0.14.0+): roda no aparelho, sem IA, no PDF aberto na aba "Editar PDF".
+  // Vem ANTES do filtro de dado pessoal porque preencher um campo de ficha exige o nome no texto. O socorro continua primeiro.
+  if (!B.crisis(rawText)) {
+    const pdfAnswer = argoPdfAsk(rawText);
+    if (pdfAnswer) return pdfAnswer;
+  }
 
   // Dado pessoal na pergunta: avisa na hora (a pergunta só sai do aparelho se for à IA,
   // mas o ideal é nem digitar nomes e documentos aqui). Pedido de socorro tem prioridade.
@@ -31359,6 +31385,103 @@ function argoRotaChipLocalizar(rawText, paradas) {
   } catch (e) { return null; }
 }
 
+// ---- Edição de PDF pelo chat do mascote ↔ aba "Editar PDF" da Central de PDF ----
+// O Paulus (v0.14.0+) lê o pedido em português ("remover as páginas 2 e 5", "numerar no rodapé", "marca d'água CÓPIA",
+// "preencher o campo Nome com ...") e edita o arquivo NO APARELHO (pdf-lib), sem IA e sem enviar o PDF a servidor.
+// Aqui o arquivo é o PDF aberto na aba "Editar PDF": o resultado volta para ela (dá para continuar editando ali, desfazer ou baixar).
+// Teste: npm run test:pdf-chat
+const ARGO_PDF_ENCAMINHA = {   // o que o Paulus não faz sozinho, mas a Central de PDF faz: [ferramenta da Central, nome]
+  tarja: ['Edit', 'Editar e assinar (Cobrir)'], texto: ['Edit', 'Editar e assinar (Editar texto)'], assinatura: ['Edit', 'Editar e assinar'],
+  comprimir: ['Compress', 'Reduzir tamanho'], converter: ['PdfWord', 'PDF → Word'], senha: ['#criptografia', 'Criptografia']
+};
+
+function argoPdfLerPedido(rawText, temArquivo) {
+  try {
+    if (typeof Paulus === 'undefined' || !Paulus.pdf || typeof Paulus.pdf.ler !== 'function') return null;
+    return Paulus.pdf.ler(rawText, { temArquivo: !!temArquivo });
+  } catch (e) { return null; }
+}
+function argoPdfReconhece(rawText) {
+  return !!argoPdfLerPedido(rawText, !!pdftoolsEdit.bytes);
+}
+
+// Abre a Central de PDF já na ferramenta pedida (chave do PDFHUB_TOOLS, ex.: 'Edit', 'Merge') ou numa aba ('#criptografia').
+function argoPdfIrPara(chave) {
+  if (String(chave).charAt(0) === '#') { argoAssistantGoTo(String(chave).slice(1)); return; }
+  argoAssistantGoTo('pdftools');
+  let tentativas = 0;
+  const ir = () => {
+    if (typeof pdfhubOpen === 'function' && document.getElementById('pdfhub')) { try { pdfhubOpen(chave); } catch (e) { /* segue na Central */ } return; }
+    if (++tentativas < 20) setTimeout(ir, 60);
+  };
+  ir();
+}
+
+function argoPdfAsk(rawText) {
+  const st = pdftoolsEdit;
+  const temArquivo = !!(st.pdf && st.bytes);
+  const pedido = argoPdfLerPedido(rawText, temArquivo);
+  if (!pedido) return null;
+  const juntar = (pedido.operacoes || []).some(o => o && o.op === 'juntar');
+  const irEditar = { label: '✏️ Abrir Editar PDF', run: () => argoPdfIrPara(juntar ? 'Merge' : 'Edit'), reply: juntar ? 'Abri a ferramenta Unir.' : 'Abri a aba Editar PDF.', mood: 'success' };
+  const avisos = (pedido.avisosDoPedido || []).filter(Boolean);
+  const encaminhar = (pedido.naoSuporta || []).map(c => ARGO_PDF_ENCAMINHA[c]).filter(Boolean).slice(0, 2)
+    .map(([chave, nome]) => ({ label: '🧰 ' + nome, run: () => argoPdfIrPara(chave), reply: 'Abri "' + nome + '" na Central de PDF.', mood: 'success' }));
+  const dicaCentral = encaminhar.length ? '\n\nAqui no Argo, a Central de PDF faz isso por outro caminho: use o botão abaixo.' : '';
+
+  // Só recusa/explica (ex.: "comprimir o PDF"): nada a editar.
+  if (!(pedido.operacoes || []).length) {
+    return { reply: avisos.join('\n\n') + dicaCentral, mood: 'notfound', badge: 'PDF', quickActions: encaminhar.concat([irEditar]) };
+  }
+  // Sem PDF aberto na aba: leva a pessoa até ela.
+  if (!temArquivo) {
+    return {
+      reply: (juntar ? 'Consigo juntar aqui no aparelho. Na ferramenta **Unir** da Central de PDF você escolhe os arquivos (PDFs e fotos) e a ordem.'
+        : 'Consigo fazer isso aqui no aparelho, mas preciso do PDF aberto na aba **Editar PDF**. Abra o arquivo lá (botão abaixo) e peça de novo por aqui.') +
+        (avisos.length ? '\n\n' + avisos.join('\n\n') : '') + dicaCentral,
+      mood: 'info', badge: 'PDF', quickActions: [irEditar].concat(encaminhar)
+    };
+  }
+  // Edições feitas à mão na aba e ainda não baixadas seriam perdidas: confirma antes.
+  if ((st.items.length || Object.keys(st.formValues).length) &&
+      !confirm('O PDF aberto tem edições feitas na aba que ainda não foram baixadas. Aplicar o pedido do chat as descarta. Continuar?')) {
+    return { reply: 'Tudo bem, não mexi no arquivo. Baixe as edições da aba (ou continue nelas) e peça de novo.', mood: 'info', quickActions: [irEditar] };
+  }
+  return argoPdfExecutar(rawText, pedido, irEditar, encaminhar);
+}
+
+async function argoPdfExecutar(rawText, pedido, irEditar, encaminhar) {
+  const st = pdftoolsEdit;
+  const antes = { bytes: st.bytes, nome: st.file ? st.file.name : 'documento.pdf', pagina: st.page };
+  let r = null;
+  try {
+    await ensurePdfLib();   // deixa a pdf-lib local em window.PDFLib: o Paulus a encontra sem baixar nada
+    r = await Paulus.pdf.responder(rawText, [{ nome: antes.nome, bytes: new Uint8Array(antes.bytes.slice(0)) }], {});
+  } catch (e) { r = null; }
+  const note = 'Editado neste aparelho, sem IA: o PDF não foi enviado a nenhum servidor. Confira o resultado antes de usar.';
+  if (!r) return { reply: 'Não consegui aplicar esse pedido a este PDF. Ele pode estar protegido por senha ou danificado. Tente pelas ferramentas da aba.', mood: 'error', badge: 'PDF', quickActions: [irEditar] };
+  const arquivos = r.arquivos || [];
+  const texto = String(r.texto || '').trim() || (r.ok ? 'Pronto.' : 'Não consegui fazer isso.');
+  const extra = (r.naoSuporta || []).length && encaminhar.length ? '\n\nAqui no Argo, a Central de PDF faz o que faltou por outro caminho: use o botão abaixo.' : '';
+  if (!r.ok || !arquivos.length) {
+    return { reply: texto + extra, mood: r.ok ? 'success' : 'notfound', badge: 'PDF', note: arquivos.length ? note : '', quickActions: encaminhar.concat([irEditar]) };
+  }
+  const baixar = a => ({ label: '⬇️ ' + (arquivos.length > 1 ? a.nome : 'Baixar PDF editado'), run: () => pdftoolsDownloadBlob(new Blob([a.bytes], { type: 'application/pdf' }), a.nome), reply: 'Baixando ' + a.nome + '.', mood: 'success' });
+  // Vários arquivos (dividir): não há "o PDF" para continuar editando; só baixar cada um.
+  if (arquivos.length > 1) {
+    return { reply: texto + extra, mood: 'success', badge: 'PDF', note, quickActions: arquivos.slice(0, 6).map(baixar) };
+  }
+  // Um arquivo: vira o PDF aberto na aba (dá para continuar editando e desfazer).
+  const a = arquivos[0];
+  try { await pdftoolsEditLoadBytes(a.bytes, a.nome, antes.pagina); }
+  catch (e) { return { reply: texto + '\n\nO arquivo ficou pronto, mas não consegui abri-lo na aba. Baixe pelo botão.', mood: 'success', badge: 'PDF', note, quickActions: [baixar(a)] }; }
+  const desfazer = {
+    label: '↩️ Desfazer', reply: 'Voltei ao PDF de antes do pedido.', mood: 'success',
+    run: () => { pdftoolsEditLoadBytes(antes.bytes, antes.nome, antes.pagina).catch(() => argoAviso('Não consegui restaurar o PDF anterior.', 'error')); }
+  };
+  return { reply: texto + (extra || '') + '\n\nO resultado já está aberto na aba **Editar PDF**.', mood: 'success', badge: 'PDF', note, quickActions: [baixar(a), irEditar, desfazer].concat(encaminhar) };
+}
+
 // Pedido de rota para o mascote. Devolve o resultado no formato da interface do mascote ou null (a pergunta segue o fluxo normal).
 // Só assume pedido com duas paradas ou mais, ou recusa de endereço de residência; "como chegar ao CRAS X" continua com o cartão do diretório.
 function argoRotaAsk(rawText) {
@@ -31405,6 +31528,7 @@ function argoStreamIA(B, rawText, payload, hooks) {
   return Paulus.perguntar(rawText, {
     aba: payload.pagina,
     semAcoes: true,                 // "abrir/buscar" já foram tratados pelo Argo antes de chegar aqui
+    semPdf: true,                   // edição de PDF é tratada pelo Argo (argoPdfAsk), na aba Editar PDF
     // A IA pode PROPOR estas telas como botões (Paulus v0.4.0); nada abre sozinho.
     // São ~49 (abas + ferramentas) e o Paulus só leva 20: escolhe as que combinam com a pergunta e a aba.
     acoes: argoEscolherAcoesIA(ARGO_ACOES_IA.concat(argoAcoesFerramentas()), rawText, payload.pagina, 20)
