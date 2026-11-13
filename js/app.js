@@ -16542,7 +16542,7 @@ async function pdfDataUrlToImages(dataUrl) {
   const binary = atob(dataUrl.slice(commaIndex + 1));
   const pdfBytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) pdfBytes[i] = binary.charCodeAt(i);
-  const pdf = await window.pdfjsLib.getDocument({ data: pdfBytes }).promise;
+  const pdf = await window.pdfjsLib.getDocument({ isEvalSupported: false, data: pdfBytes }).promise;
   const images = [];
   for (let p = 1; p <= pdf.numPages; p++) {
     const page = await pdf.getPage(p);
@@ -23286,12 +23286,24 @@ const PDFTOOLS_CDN = {
   mammoth: 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.12.2/mammoth.browser.min.js'
 };
 
+// Integridade (SRI) das cópias do cdnjs, usadas só quando a cópia local falta: se o arquivo
+// do CDN vier alterado, o navegador recusa executá-lo. Os hashes são os dos pacotes oficiais do
+// npm nas versões fixadas acima, idênticos aos de assets/vendor/. Ao trocar a versão de uma
+// biblioteca, refaça o hash (openssl dgst -sha384 -binary arquivo | openssl base64 -A).
+const PDFTOOLS_SRI = {
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js': 'sha384-weMABwrltA6jWR8DDe9Jp5blk+tZQh7ugpCsF3JwSA53WZM9/14PjS5LAJNHNjAI',
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js': 'sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e',
+  'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js': 'sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG',
+  'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.12.2/mammoth.browser.min.js': 'sha384-DYoASd6UI7j/h+Qtb74PSAmuACrSKT3zuAFTlrgfDUHIR2vT0pHrg8EtI95fBv/G',
+  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js': 'sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw'
+};
 const pdftoolsScriptPromises = {};
 function pdftoolsLoadScript(url) {
   if (pdftoolsScriptPromises[url]) return pdftoolsScriptPromises[url];
   pdftoolsScriptPromises[url] = new Promise((resolve, reject) => {
     const s = document.createElement('script');
     s.src = url;
+    if (PDFTOOLS_SRI[url]) { s.integrity = PDFTOOLS_SRI[url]; s.crossOrigin = 'anonymous'; }
     s.onload = () => resolve();
     s.onerror = () => { delete pdftoolsScriptPromises[url]; reject(new Error('Falha ao carregar ' + url)); };
     document.head.appendChild(s);
@@ -23562,6 +23574,16 @@ function pdftoolsParsePageRange(text, total) {
   return { indices: out };
 }
 
+// Quantos campos de formulário (AcroForm) o PDF tem. A pdf-lib NÃO leva os campos junto quando
+// copia páginas para outro arquivo (Unificar, Dividir/extrair, Reorganizar): o desenho de cada
+// campo fica na página, mas ele deixa de ser um campo preenchível. Por isso o app avisa.
+function pdftoolsFormFieldCount(doc) {
+  try { return doc.getForm().getFields().length; } catch (e) { return 0; }
+}
+function pdftoolsFormLostNote(qtd) {
+  return qtd + (qtd === 1 ? ' campo de formulário deixa' : ' campos de formulário deixam') + ' de ser preenchível(is) no arquivo novo (o que já estava escrito continua visível). Preencha antes, em \"Editar PDF\" › Formulário.';
+}
+
 // Junta os avisos de uma rodada de arquivos adicionados em uma única
 // mensagem (até 3 avisos, o resto vira "e mais N").
 function pdftoolsNoticeFromProblems(problems) {
@@ -23634,7 +23656,9 @@ async function pdftoolsAddMergeFiles(fileList) {
           problems.push({ kind: 'error', text: `"${file.name}" tem proteção por senha. Abra o arquivo, salve uma cópia sem senha e adicione de novo.` });
           continue;
         }
-        pdftoolsMergeState.files.push({ id, kind: 'pdf', name: file.name, size: file.size, pages: doc.getPageCount(), range: '', rotation: 0, bytes });
+        const campos = pdftoolsFormFieldCount(doc);
+        if (campos) problems.push({ kind: 'warn', text: `"${file.name}": ${pdftoolsFormLostNote(campos)}` });
+        pdftoolsMergeState.files.push({ id, kind: 'pdf', name: file.name, size: file.size, pages: doc.getPageCount(), range: '', rotation: 0, bytes, campos });
       } catch (e) {
         problems.push({ kind: 'error', text: `Não foi possível ler "${file.name}" (arquivo corrompido).` });
       }
@@ -23874,7 +23898,7 @@ async function pdftoolsMakeThumb(f) {
       } finally { URL.revokeObjectURL(src); }
     } else if (f.bytes) {
       const pdfjs = await ensurePdfJs();
-      const doc = await pdfjs.getDocument({ data: new Uint8Array(f.bytes.slice(0)) }).promise;
+      const doc = await pdfjs.getDocument({ isEvalSupported: false, data: new Uint8Array(f.bytes.slice(0)) }).promise;
       const page = await doc.getPage(1);
       const base = page.getViewport({ scale: 1 });
       const vp = page.getViewport({ scale: H / Math.max(base.width, base.height) });
@@ -23990,7 +24014,8 @@ async function pdftoolsMergePdfs() {
     const outBlob = new Blob([bytes], { type: 'application/pdf' });
     pdftoolsDownloadBlob(outBlob, `${base}.pdf`);
     pdftoolsMergeState.last = { blob: outBlob, name: `${base}.pdf`, pages: merged.getPageCount() };
-    notice = { message: `Pronto! "${base}.pdf" foi baixado — ${merged.getPageCount()} páginas · ${pdftoolsFormatBytes(bytes.length)}.`, kind: 'success', result: true };
+    const camposPerdidos = items.reduce((t, f) => t + (f.kind === 'pdf' && f.campos ? f.campos : 0), 0);
+    notice = { message: `Pronto! "${base}.pdf" foi baixado — ${merged.getPageCount()} páginas · ${pdftoolsFormatBytes(bytes.length)}.` + (camposPerdidos ? ' Atenção: ' + pdftoolsFormLostNote(camposPerdidos) : ''), kind: 'success', result: true };
   } catch (e) {
     notice = {
       message: currentName
@@ -24379,6 +24404,9 @@ async function pdftoolsRunJpgToPdf() {
 }
 
 /* ---------- PDF → JPG ---------- */
+// Todas as imagens ficam na memória até o .zip ficar pronto; sem limite, um PDF escaneado
+// de centenas de páginas travava o navegador do celular.
+const PDFTOOLS_PDFJPG_MAX_PAGES = 150;
 async function pdftoolsRunPdfToJpg(file, inputEl) {
   if (!file) return;
   if (!pdftoolsCheckSingleFileSize(file, 'pdftoolsPdfJpgStatus', inputEl)) return;
@@ -24391,7 +24419,11 @@ async function pdftoolsRunPdfToJpg(file, inputEl) {
     const pdfjsLib = await ensurePdfJs();
     const JSZipLib = await ensureJSZip();
     const bytes = await file.arrayBuffer();
-    pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+    pdf = await pdfjsLib.getDocument({ isEvalSupported: false, data: bytes }).promise;
+    if (pdf.numPages > PDFTOOLS_PDFJPG_MAX_PAGES) {
+      pdftoolsSetStatus('pdftoolsPdfJpgStatus', `Este PDF tem ${pdf.numPages} páginas e o limite é ${PDFTOOLS_PDFJPG_MAX_PAGES} por vez (as imagens ficam na memória do aparelho). Use "Dividir / extrair páginas" para separar o arquivo em partes e converta uma de cada vez.`, 'error');
+      return;
+    }
     const baseName = pdftoolsSafeName(file.name, 'documento');
     const zip = new JSZipLib();
     const jpgScale = pdf.numPages > 40 ? 1.5 : 2; // PDF longo: imagens um pouco menores para não estourar a memória do aparelho
@@ -24464,10 +24496,12 @@ async function pdftoolsExtraPick(kind, file, inputEl) {
     const PDFLib = await ensurePdfLib();
     const bytes = await file.arrayBuffer();
     const doc = await PDFLib.PDFDocument.load(bytes);
-    pdftoolsExtra[kind] = { file, bytes, pages: doc.getPageCount() };
+    pdftoolsExtra[kind] = { file, bytes, pages: doc.getPageCount(), campos: pdftoolsFormFieldCount(doc) };
     const info = document.getElementById('pdftools' + kind + 'Info');
     if (info) info.textContent = file.name + ' · ' + doc.getPageCount() + (doc.getPageCount() === 1 ? ' página' : ' páginas') + ' · ' + pdftoolsFormatBytes(file.size);
-    pdftoolsSetStatus(statusId, 'Arquivo pronto. Ajuste as opções e toque no botão.', 'info');
+    const camposAviso = (kind === 'Split' || kind === 'Organize') ? pdftoolsExtra[kind].campos : 0;
+    if (camposAviso) pdftoolsSetStatus(statusId, 'Arquivo pronto. Atenção: ' + pdftoolsFormLostNote(camposAviso), 'warn');
+    else pdftoolsSetStatus(statusId, 'Arquivo pronto. Ajuste as opções e toque no botão.', 'info');
     pdftoolsExtraRefreshBtn(kind);
     if (PDFTOOLS_PICKER_INPUT[kind]) pdftoolsRenderPagePicker(kind);
     if (kind === 'Organize') pdftoolsOrgStart();
@@ -24567,7 +24601,7 @@ async function pdftoolsRenderPagePicker(kind) {
   };
   try {
     const pdfjs = await ensurePdfJs();
-    const doc = await pdfjs.getDocument({ data: new Uint8Array(st.bytes.slice(0)) }).promise;
+    const doc = await pdfjs.getDocument({ isEvalSupported: false, data: new Uint8Array(st.bytes.slice(0)) }).promise;
     const H = 84;
     const n = Math.min(st.pages, PDFTOOLS_PICKER_THUMBS_MAX);
     for (let i = 0; i < n; i++) {
@@ -24637,7 +24671,7 @@ async function pdftoolsRunSplit() {
       const out = await PDFLib.PDFDocument.create();
       (await out.copyPages(src, indices)).forEach(pg => out.addPage(pg));
       pdftoolsDownloadBlob(new Blob([await out.save()], { type: 'application/pdf' }), base + '-paginas.pdf');
-      pdftoolsSetStatus(id, indices.length + (indices.length === 1 ? ' página extraída.' : ' páginas extraídas.'), 'success');
+      pdftoolsSetStatus(id, indices.length + (indices.length === 1 ? ' página extraída.' : ' páginas extraídas.') + (st.campos ? ' Atenção: ' + pdftoolsFormLostNote(st.campos) : ''), 'success');
     } else {
       const JSZipLib = await ensureJSZip();
       const zip = new JSZipLib();
@@ -24651,7 +24685,7 @@ async function pdftoolsRunSplit() {
         pdftoolsSetStatus(id, 'Separando páginas (' + (i + 1) + '/' + st.pages + ')...', 'info');
       }
       pdftoolsDownloadBlob(await zip.generateAsync({ type: 'blob' }), base + '-paginas.zip');
-      pdftoolsSetStatus(id, st.pages + ' arquivos gerados no .zip.', 'success');
+      pdftoolsSetStatus(id, st.pages + ' arquivos gerados no .zip.' + (st.campos ? ' Atenção: ' + pdftoolsFormLostNote(st.campos) : ''), 'success');
     }
   } catch (e) {
     pdftoolsSetStatus(id, 'Não foi possível dividir este PDF.', 'error');
@@ -24676,7 +24710,7 @@ async function pdftoolsRunCompress() {
   try {
     const [pdfjsLib, PDFLib] = await Promise.all([ensurePdfJs(), ensurePdfLib()]);
     // pdf.js pode "consumir" o buffer; trabalha numa cópia para manter o original.
-    pdf = await pdfjsLib.getDocument({ data: new Uint8Array(st.bytes.slice(0)) }).promise;
+    pdf = await pdfjsLib.getDocument({ isEvalSupported: false, data: new Uint8Array(st.bytes.slice(0)) }).promise;
     const out = await PDFLib.PDFDocument.create();
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
@@ -24898,7 +24932,7 @@ async function pdftoolsOrgStart() {
   pdftoolsOrgRender();
   try {
     const pdfjs = await ensurePdfJs();
-    const doc = await pdfjs.getDocument({ data: new Uint8Array(st.bytes.slice(0)) }).promise;
+    const doc = await pdfjs.getDocument({ isEvalSupported: false, data: new Uint8Array(st.bytes.slice(0)) }).promise;
     const H = 84;
     const n = Math.min(st.pages, PDFTOOLS_ORG_THUMBS_MAX);
     for (let i = 0; i < n; i++) {
@@ -24945,7 +24979,7 @@ async function pdftoolsRunOrganize() {
     });
     const blob = new Blob([await out.save()], { type: 'application/pdf' });
     pdftoolsDownloadBlob(blob, pdftoolsBaseName(st.file) + '-organizado.pdf');
-    pdftoolsSetStatus(id, items.length + (items.length === 1 ? ' página' : ' páginas') + ' no novo PDF · ' + pdftoolsFormatBytes(blob.size) + '.', 'success');
+    pdftoolsSetStatus(id, items.length + (items.length === 1 ? ' página' : ' páginas') + ' no novo PDF · ' + pdftoolsFormatBytes(blob.size) + '.' + (st.campos ? ' Atenção: ' + pdftoolsFormLostNote(st.campos) : ''), 'success');
   } catch (e) {
     pdftoolsSetStatus(id, 'Não foi possível reorganizar este PDF.', 'error');
   } finally {
@@ -25096,6 +25130,7 @@ function pdftoolsProtectToggleShow(show) {
   ['pdftoolsProtectPass', 'pdftoolsProtectPass2'].forEach(fid => { const el = document.getElementById(fid); if (el) el.type = show ? 'text' : 'password'; });
 }
 
+const PDFTOOLS_PROTECT_MIN_LEN = 8;
 function pdftoolsProtectStrength() {
   const el = document.getElementById('pdftoolsProtectStrength');
   const pw = (document.getElementById('pdftoolsProtectPass') || {}).value || '';
@@ -25127,7 +25162,7 @@ async function pdftoolsRunProtect() {
   const pw = document.getElementById('pdftoolsProtectPass').value;
   const pw2 = document.getElementById('pdftoolsProtectPass2').value;
   if (!pw) { pdftoolsSetStatus(id, 'Digite a senha que o PDF vai pedir para abrir.', 'error'); return; }
-  if (pw.length < 4) { pdftoolsSetStatus(id, 'Use uma senha com pelo menos 4 caracteres.', 'error'); return; }
+  if (pw.length < PDFTOOLS_PROTECT_MIN_LEN) { pdftoolsSetStatus(id, 'Use uma senha com pelo menos ' + PDFTOOLS_PROTECT_MIN_LEN + ' caracteres: senhas curtas são adivinhadas em minutos.', 'error'); return; }
   if (pw !== pw2) { pdftoolsSetStatus(id, 'As duas senhas não são iguais. Digite de novo.', 'error'); return; }
   // Letras acentuadas na senha são lidas de formas diferentes conforme o leitor de PDF
   // (Acrobat, Chrome, celulares), e o arquivo poderia não abrir em algum deles.
@@ -25233,7 +25268,7 @@ function pdftoolsProtectReadOptions(statusId) {
   const pw = document.getElementById('pdftoolsProtectPass').value;
   const pw2 = document.getElementById('pdftoolsProtectPass2').value;
   if (!pw) { pdftoolsSetStatus(statusId, 'Digite a senha que os PDFs vão pedir para abrir.', 'error'); return null; }
-  if (pw.length < 4) { pdftoolsSetStatus(statusId, 'Use uma senha com pelo menos 4 caracteres.', 'error'); return null; }
+  if (pw.length < PDFTOOLS_PROTECT_MIN_LEN) { pdftoolsSetStatus(statusId, 'Use uma senha com pelo menos ' + PDFTOOLS_PROTECT_MIN_LEN + ' caracteres: senhas curtas são adivinhadas em minutos.', 'error'); return null; }
   if (pw !== pw2) { pdftoolsSetStatus(statusId, 'As duas senhas não são iguais. Digite de novo.', 'error'); return null; }
   if (/[^\u0020-\u007E]/.test(pw)) { pdftoolsSetStatus(statusId, 'Use na senha só letras sem acento, números e símbolos comuns (ex.: Familia2026). Acentos e emojis podem impedir o PDF de abrir em alguns leitores.', 'error'); return null; }
   const canPrint = document.getElementById('pdftoolsProtectPrint').checked;
@@ -25841,7 +25876,7 @@ async function pdftoolsUnlockPick(file, inputEl) {
     const pdfjs = await ensurePdfJs();
     let precisaSenha = false, pages = 0;
     try {
-      const doc = await pdfjs.getDocument({ data: new Uint8Array(bytes.slice(0)) }).promise;
+      const doc = await pdfjs.getDocument({ isEvalSupported: false, data: new Uint8Array(bytes.slice(0)) }).promise;
       pages = doc.numPages;
       if (doc.destroy) doc.destroy();
     } catch (e) {
@@ -25879,7 +25914,7 @@ async function pdftoolsRunUnlock() {
   try {
     const [pdfjsLib, PDFLib] = await Promise.all([ensurePdfJs(), ensurePdfLib()]);
     try {
-      pdf = await pdfjsLib.getDocument({ data: new Uint8Array(st.bytes.slice(0)), password: senha || undefined }).promise;
+      pdf = await pdfjsLib.getDocument({ isEvalSupported: false, data: new Uint8Array(st.bytes.slice(0)), password: senha || undefined }).promise;
     } catch (e) {
       if (e && e.name === 'PasswordException') {
         pdftoolsSetStatus(id, e.code === 2 ? 'Senha incorreta. Confira e tente de novo.' : 'Este PDF pede senha. Digite a senha e tente de novo.', 'error');
@@ -25947,7 +25982,7 @@ async function pdftoolsRunText() {
   pdftoolsSetStatus(id, 'Lendo o texto...', 'info');
   try {
     const pdfjs = await ensurePdfJs();
-    const doc = await pdfjs.getDocument({ data: new Uint8Array(st.bytes.slice(0)) }).promise;
+    const doc = await pdfjs.getDocument({ isEvalSupported: false, data: new Uint8Array(st.bytes.slice(0)) }).promise;
     const blocos = [];
     let chars = 0;
     for (let i = 1; i <= doc.numPages; i++) {
@@ -26115,7 +26150,7 @@ async function pdftoolsEditLoadBytes(bytes, name, keepPage) {
   const pdfjs = await ensurePdfJs();
   const buf = bytes instanceof ArrayBuffer ? bytes : bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
   await PDFLib.PDFDocument.load(buf);
-  const pdf = await pdfjs.getDocument({ data: new Uint8Array(buf.slice(0)) }).promise;
+  const pdf = await pdfjs.getDocument({ isEvalSupported: false, data: new Uint8Array(buf.slice(0)) }).promise;
   const file = new File([buf], name || 'documento.pdf', { type: 'application/pdf' });
   if (st.renderTask) { try { st.renderTask.cancel(); } catch (e) { /* segue */ } }
   if (st.pdf && st.pdf.destroy) { try { st.pdf.destroy(); } catch (e) { /* segue */ } }
@@ -26137,7 +26172,7 @@ async function pdftoolsEditPick(file, inputEl) {
     const pdfjs = await ensurePdfJs();
     const bytes = await file.arrayBuffer();
     await PDFLib.PDFDocument.load(bytes); // falha cedo se estiver protegido por senha ou danificado
-    const pdf = await pdfjs.getDocument({ data: new Uint8Array(bytes.slice(0)) }).promise;
+    const pdf = await pdfjs.getDocument({ isEvalSupported: false, data: new Uint8Array(bytes.slice(0)) }).promise;
     if (st.pdf && st.pdf.destroy) { try { st.pdf.destroy(); } catch (e) { /* segue */ } }
     Object.assign(st, { file, bytes, pdf, pages: pdf.numPages, page: 1, items: [], undo: [], redo: [], infos: {}, images: {}, pendingImg: null, zoom: 1, geom: null, fresh: null, activeText: null, textCache: {}, fieldCache: {}, formValues: {}, dirty: false });
     const info = pdfEditEl('pdftoolsEditInfo');
@@ -26145,7 +26180,22 @@ async function pdftoolsEditPick(file, inputEl) {
     pdftoolsEditShowEditor();
     pdftoolsSetStatus(sid, 'Arquivo pronto. Escolha uma ferramenta, edite e toque em "Baixar PDF editado".', 'info');
   } catch (e) {
-    pdftoolsSetStatus(sid, 'Não foi possível abrir este PDF. Ele pode estar protegido por senha ou danificado.', 'error');
+    const comSenha = /encrypt|password|senha/i.test(String((e && (e.message || e.name)) || ''));
+    pdftoolsSetStatus(sid, comSenha
+      ? 'Este PDF está protegido por senha. Remova a senha e abra o arquivo livre no editor.'
+      : 'Não foi possível abrir este PDF. Ele pode estar protegido por senha ou danificado.', 'error');
+    if (comSenha && typeof pdfhubSend === 'function') {
+      const stEl = document.getElementById(sid);
+      if (stEl) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'pdftools-again';
+        b.textContent = 'Remover a senha agora';
+        b.onclick = () => pdfhubSend('Unlock', [file]);
+        stEl.appendChild(document.createTextNode(' '));
+        stEl.appendChild(b);
+      }
+    }
   } finally {
     if (inputEl) inputEl.value = '';
   }
@@ -28382,7 +28432,7 @@ async function pdftoolsPdfToDocxBlobImpl(bytes, onProgress, holder, opts) {
   await ensureJSZip();
   // cópia dos bytes ANTES de abrir: o pdf.js pode "consumir" o buffer; a cópia é o PDF original que vai dentro do .docx
   const copia = bytes instanceof ArrayBuffer ? new Uint8Array(bytes.slice(0)) : Uint8Array.from(bytes);
-  const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+  const pdf = await pdfjsLib.getDocument({ isEvalSupported: false, data: bytes }).promise;
   holder.pdf = pdf;
   const extras = await pdftoolsColetaExtrasPdf(pdf);
   const N = pdf.numPages;
@@ -29226,7 +29276,7 @@ async function pdftoolsRunCrop() {
   try {
     const [PDFLib, pdfjsLib] = await Promise.all([ensurePdfLib(), ensurePdfJs()]);
     const doc = await PDFLib.PDFDocument.load(st.bytes);
-    src = await pdfjsLib.getDocument({ data: new Uint8Array(st.bytes.slice(0)) }).promise;
+    src = await pdfjsLib.getDocument({ isEvalSupported: false, data: new Uint8Array(st.bytes.slice(0)) }).promise;
     const pages = doc.getPages();
     let changed = 0, blank = 0, removedSum = 0;
     for (let i = 0; i < pages.length; i++) {
@@ -29539,7 +29589,7 @@ async function pdfhubInspect(file) {
     const bytes = new Uint8Array(await file.arrayBuffer());
     let pages = 0, locked = false;
     try {
-      doc = await pdfjs.getDocument({ data: bytes }).promise;
+      doc = await pdfjs.getDocument({ isEvalSupported: false, data: bytes }).promise;
       pages = doc.numPages;
     } catch (e) {
       if (e && e.name === 'PasswordException') locked = true; else return;
