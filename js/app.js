@@ -20961,7 +20961,7 @@ async function agendaQuickSubmit(ev) {
     agendaToast(outcome === 'ok' ? 'Anotado em ' + agendaQuickDateLabel(d) + (p.time ? ' às ' + p.time : '') + '.' : 'Sem resposta do servidor. A anotação já aparece aqui e será enviada quando a conexão voltar; mantenha o app aberto.', outcome === 'ok' ? '' : 'error');
   } catch (e) {
     console.error(e);
-    agendaToast('Não foi possível guardar na nuvem. Verifique a internet e tente de novo.', 'error');
+    agendaToast('Não foi possível guardar na nuvem: ' + agendaSyncErrText(e) + '.', 'error');
   } finally {
     agendaBusy = false;
     if (btn) btn.disabled = false;
@@ -22683,6 +22683,13 @@ function agendaCloseNoteModal() {
 // fica na fila.
 let agendaUndecryptableDays = new Set();
 
+// As regras do Firestore exigem createdAt numérico e text cifrado; notas antigas podem vir sem createdAt.
+function agendaEntryForCloud(e) {
+  const o = Object.assign({}, e, { text: encryptForStorage(e.text) });
+  if (typeof o.createdAt !== 'number') o.createdAt = Date.now();
+  return o;
+}
+
 async function agendaCommitEntries(key, entries) {
   if (agendaUndecryptableDays.has(key)) throw new Error('dia-com-notas-de-outra-senha'); // não sobrescreve o que não conseguimos ler
   const ref = agendaDb.collection('agendas').doc(agendaSyncCode).collection('notes').doc(key);
@@ -22693,7 +22700,7 @@ async function agendaCommitEntries(key, entries) {
     throw new Error('app-trancado'); // os chamadores já mostram o aviso de erro
   }
   const op = (entries && entries.length)
-    ? ref.set({ entries: entries.map(e => Object.assign({}, e, { text: encryptForStorage(e.text) })) })
+    ? ref.set({ entries: entries.map(agendaEntryForCloud) })
     : ref.delete();
   op.catch(() => { /* tratado abaixo ou depois do prazo */ });
   const outcome = await Promise.race([
@@ -22711,7 +22718,7 @@ async function agendaCommitBatch(updates) {
   const col = agendaDb.collection('agendas').doc(agendaSyncCode).collection('notes');
   updates.forEach((u) => {
     const ref = col.doc(u.key);
-    if (u.entries && u.entries.length) batch.set(ref, { entries: u.entries.map(e => Object.assign({}, e, { text: encryptForStorage(e.text) })) });
+    if (u.entries && u.entries.length) batch.set(ref, { entries: u.entries.map(agendaEntryForCloud) });
     else batch.delete(ref);
   });
   const op = batch.commit();
@@ -22776,7 +22783,7 @@ async function agendaDeleteSeries(idx) {
     else agendaToast('Sem resposta do servidor. A exclusão será enviada quando a conexão voltar; mantenha o app aberto.', 'error');
   } catch (e) {
     console.error(e);
-    agendaToast('Não foi possível apagar na nuvem. Verifique a internet e tente de novo.', 'error');
+    agendaToast('Não foi possível apagar na nuvem: ' + agendaSyncErrText(e) + '.', 'error');
   } finally {
     agendaBusy = false;
   }
@@ -22838,7 +22845,7 @@ async function agendaSaveNote() {
     else agendaToast('Sem resposta do servidor. A anotação já aparece aqui e será enviada quando a conexão voltar; mantenha o app aberto.', 'error');
   } catch (e) {
     console.error(e);
-    agendaToast('Não foi possível guardar na nuvem. Verifique a internet e tente de novo.', 'error');
+    agendaToast('Não foi possível guardar na nuvem: ' + agendaSyncErrText(e) + '.', 'error');
   } finally {
     agendaBusy = false;
     save.disabled = false;
@@ -22878,7 +22885,7 @@ async function agendaDeleteEntry(idx) {
     else agendaToast('Sem resposta do servidor. A exclusão será enviada quando a conexão voltar; mantenha o app aberto.', 'error');
   } catch (e) {
     console.error(e);
-    agendaToast('Não foi possível apagar na nuvem. Verifique a internet e tente de novo.', 'error');
+    agendaToast('Não foi possível apagar na nuvem: ' + agendaSyncErrText(e) + '.', 'error');
   } finally {
     agendaBusy = false;
   }
@@ -22895,6 +22902,18 @@ function agendaUpdateSyncIndicator(connected) {
     btn.title = t;
     btn.setAttribute('aria-label', t);
   }
+}
+
+// Traduz o erro do Firestore numa mensagem que diz a causa real (antes tudo virava "verifique a internet").
+function agendaSyncErrText(e) {
+  const c = e && e.code ? String(e.code) : '';
+  if (c === 'permission-denied') return 'o Firebase recusou o acesso (regras do Firestore vencidas ou fechadas)';
+  if (c === 'unauthenticated') return 'o Firebase exige login (regras do Firestore)';
+  if (c === 'resource-exhausted') return 'cota do Firebase esgotada hoje';
+  if (c === 'unavailable') return 'sem conexão com o Firebase (internet, bloqueio de rede ou extensão)';
+  if (e && e.message === 'app-trancado') return 'o app está trancado; entre com a senha';
+  if (e && e.message === 'dia-com-notas-de-outra-senha') return 'este dia tem notas feitas com outra senha';
+  return c || (e && e.message) || 'erro desconhecido';
 }
 
 let agendaConnectingCode = '';
@@ -22935,7 +22954,10 @@ async function agendaConnectSync(code, force) {
 
   agendaUnsubscribe = agendaDb.collection('agendas').doc(agendaSyncCode).collection('notes')
     .onSnapshot(snapshot => {
-      if (!sessionEncKey) return; // trancado: não decifra nem mexe no cache
+      if (!sessionEncKey) { // trancado: não decifra nem mexe no cache
+        agendaSetSyncStatus('<span style="color:#6f6551">● Conectado, mas o app está trancado (entre com a senha para ver as notas)</span>', 'ok');
+        return;
+      }
       agendaNotesCache = {};
       agendaUndecryptableDays = new Set();
       snapshot.forEach(doc => {
@@ -22973,7 +22995,7 @@ async function agendaConnectSync(code, force) {
       agendaUnsubscribe = null;
       agendaConnectingCode = '';
       agendaUpdateSyncIndicator(false);
-      agendaSetSyncStatus('<span style="color:var(--red-ink,#b3413a)">● Erro de conexão</span>', 'error');
+      agendaSetSyncStatus('<span style="color:var(--red-ink,#b3413a)">● Erro de sincronização: ' + escapeHtml(agendaSyncErrText(err)) + '</span>', 'error');
     });
 }
 
@@ -23025,6 +23047,12 @@ function agendaUseSyncCode() {
   // não são aceitos ali e deixariam a conexão travada em "Conectando…".
   if (/[\/\\]/.test(val) || val === '.' || val === '..') {
     agendaToast('O código não pode ter barras nem ser só pontos.', 'error');
+    input.focus();
+    return;
+  }
+  const norm = val.toLowerCase().replace(/\s+/g, '-');
+  if (norm.length < 12 || norm.length > 80) {
+    agendaToast('O código precisa ter de 12 a 80 caracteres (regra de segurança do Firebase). Use "Gerar código".', 'error');
     input.focus();
     return;
   }
