@@ -1996,6 +1996,7 @@ function toggleProximitySort() {
     const visible = DATA.filter(i => (cat === 'all' || i.cat.includes(cat)) &&
       !i.cat.includes('cas') && !i.cat.includes('cras'));
 
+    await mapaRedeLoadBaseCoords(); // pinos prontos do projeto: só o que falta vai ao Nominatim
     await ensureGeocodedFor(visible, (done, total) => {
       setProximityButtonLabel(`Localizando (${done}/${total})...`);
     });
@@ -15459,24 +15460,40 @@ async function mapaRedeLocateOne(id) {
 }
 
 // Coordenadas prontas do projeto (assets/coordenadas.json): entram no cache do
-// aparelho só para equipamentos que ainda não têm posição própria.
-let mapaRedeBaseLoaded = false;
-async function mapaRedeLoadBaseCoords() {
-  if (mapaRedeBaseLoaded) return;
-  mapaRedeBaseLoaded = true;
-  try {
-    const res = await fetch('assets/coordenadas.json', { cache: 'no-cache' });
-    if (!res.ok) return;
-    const base = await res.json();
-    const cache = getGeocodeCache();
-    let added = 0;
-    Object.keys(base || {}).forEach(id => {
-      const c = base[id];
-      if (!cache[id] && c && isFinite(c.lat) && isFinite(c.lon)) { cache[id] = c; added++; }
-    });
-    if (added) { try { localStorage.setItem(GEOCODE_CACHE_KEY, JSON.stringify(cache)); } catch (e) { /* segue em memória */ } }
-  } catch (e) { /* sem o arquivo: usa só o que o aparelho já localizou */ }
+// aparelho só para equipamentos que ainda não têm posição própria. Carrega UMA
+// vez (promessa guardada, então quem chega durante a leitura espera por ela) e
+// é chamada logo após a abertura do app, no "perto de mim" e no mapa: assim os
+// pinos prontos valem também para a ordenação por proximidade, para a distância
+// nos cartões e para as rotas do mascote, sem precisar abrir o mapa antes.
+// Entrada fora de Roraima é descartada (pino errado vira rota errada).
+const MAPA_REDE_RORAIMA_BBOX = { south: -1.7, north: 5.4, west: -64.9, east: -58.8 };
+let mapaRedeBasePromise = null;
+function mapaRedeLoadBaseCoords() {
+  if (mapaRedeBasePromise) return mapaRedeBasePromise;
+  mapaRedeBasePromise = (async () => {
+    try {
+      const res = await fetch('assets/coordenadas.json', { cache: 'no-cache' });
+      if (!res.ok) return;
+      const base = await res.json();
+      const cache = getGeocodeCache();
+      const B = MAPA_REDE_RORAIMA_BBOX;
+      let added = 0;
+      Object.keys(base || {}).forEach(id => {
+        const c = base[id];
+        if (cache[id] || !c || !isFinite(c.lat) || !isFinite(c.lon)) return;
+        if (c.lat < B.south || c.lat > B.north || c.lon < B.west || c.lon > B.east) return;
+        cache[id] = c; added++;
+      });
+      if (added) { try { localStorage.setItem(GEOCODE_CACHE_KEY, JSON.stringify(cache)); } catch (e) { /* segue em memória */ } }
+    } catch (e) { /* sem o arquivo: usa só o que o aparelho já localizou */ }
+  })();
+  return mapaRedeBasePromise;
 }
+// Leitura em segundo plano, sem atrasar a abertura do app.
+(function mapaRedeBaseNaAbertura() {
+  const go = () => setTimeout(() => { mapaRedeLoadBaseCoords(); }, 1500);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go();
+})();
 
 function mapaRedeExportCoords() {
   const cache = getGeocodeCache();
