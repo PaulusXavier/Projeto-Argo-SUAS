@@ -329,6 +329,7 @@ function finishUnlockAfterRender() {
       if (typeof renderQuickNav === 'function') renderQuickNav();
       if (typeof applyHashRoute === 'function') applyHashRoute();
       if (typeof toolsAlarmsBoot === 'function') toolsAlarmsBoot();
+      if (typeof argoPrazosAtualizarBadge === 'function') argoPrazosAtualizarBadge();
       setTimeout(() => {
         const alreadyMutedToday = (typeof argoGreetingMutedToday === 'function') && argoGreetingMutedToday();
         if (!alreadyMutedToday && typeof argoShowGreeting === 'function') argoShowGreeting();
@@ -8891,6 +8892,7 @@ function render() {
     noticias: { rootId: 'noticiasList',      render: renderNewsCard,       init: initNewsPanel },
     mapa:     { rootId: 'mapaRedeMapContainer', render: renderMapCard,     init: initMapPanel },
     agenda:   { rootId: 'agendaCalendarGrid', render: renderAgendaCard,    init: initAgendaPanel },
+    prazos:   { rootId: 'prazosRoot',         render: renderPrazosCard,    init: initPrazosPanel },
     appsext:  { rootId: 'appsExternosGrid',  render: renderExternalAppsCard, init: initExternalAppsPanel },
     ferramentas: { rootId: 'toolsRoot', render: renderToolsCard, init: initToolsPanel }
   };
@@ -17707,7 +17709,7 @@ const NAV_RECENT_KEY = 'argo_recent_tabs_v1';
 // Acesso rápido fixo: são as ferramentas que saíram da grade lateral.
 const NAV_DEFAULT_SHORTCUTS = ['agenda', 'mapa', 'tradutor', 'pdftools', 'appsext', 'noticias'];
 const NAV_SHORT_LABELS = {
-  agenda: 'Agenda Argo', mapa: 'Mapa dos Equipamentos', tradutor: 'Tradutor (Es / En / Fr)',
+  agenda: 'Agenda Argo', prazos: 'Prazos e alertas do SUAS', mapa: 'Mapa dos Equipamentos', tradutor: 'Tradutor (Es / En / Fr)',
   pdftools: 'Central de PDF', criptografia: 'Criptografia', appsext: 'Aplicativos', ferramentas: 'Ferramentas', noticias: 'Notícias do MDS, MEC, Saúde e Roraima',
   saude: 'RAPS', hospitalar: 'Hospitais', social: 'SUAS', informes: 'Programas', cas: 'CAS', cras: 'CRAS'
 };
@@ -17715,6 +17717,7 @@ const NAV_QUICK_MAX = 6;
 // Acesso rápido: título curto + subtítulo (mantém o texto completo no tooltip e no leitor de tela).
 const NAV_QUICK_META = {
   agenda:   { title: 'Agenda Argo',           sub: 'Calendário e lembretes' },
+  prazos:   { title: 'Prazos',                sub: 'CadÚnico, PBF, Censo' },
   mapa:     { title: 'Mapa dos Equipamentos', sub: 'Rede em Boa Vista' },
   tradutor: { title: 'Tradutor',              sub: 'Es · En · Fr' },
   pdftools: { title: 'Central de PDF',         sub: 'Unir, dividir, converter' },
@@ -18487,6 +18490,13 @@ const ARGO_ASSISTANT_INTENTS = [
     action: { label: 'Abrir a Central de PDF', run: () => argoAssistantGoTo('pdftools'), reply: 'Abri a Central de PDF para você.', mood: 'success' }
   },
   {
+    keys: ['prazos', 'prazo do mds', 'prazos do mds', 'prazos do suas', 'o que vence', 'vence essa semana', 'vencimentos', 'proximos prazos', 'rev26', 'ave26'],
+    reply: () => (typeof ArgoPrazos !== 'undefined' && typeof argoPrazosLer === 'function')
+      ? ArgoPrazos.fraseSemana(argoPrazosItens(), argoPrazosLer().done, new Date())
+      : 'Na aba Prazos você vê o que vence do CadÚnico, do Bolsa Família e do Censo SUAS.',
+    action: { label: 'Abrir Prazos', run: () => argoAssistantGoTo('prazos'), reply: 'Abri a aba Prazos e alertas do SUAS.', mood: 'success' }
+  },
+  {
     keys: ['agenda', 'calendario', 'lembrete', 'pagamento', 'feriado', 'hoje'],
     reply: () => argoAgendaIntroReply(),
     actions: () => argoAgendaIntroActions()
@@ -19005,6 +19015,7 @@ function argoAssistantDefaultQuickActions() {
    ============================================================ */
 const ARGO_TAB_ALIASES = [
   ['agenda', ['agenda', 'agenda argo', 'calendario']],
+  ['prazos', ['prazos', 'prazo', 'prazos do suas', 'prazos do mds', 'alertas do suas', 'alertas']],
   ['mapa', ['mapa', 'mapas', 'mapa dos equipamentos']],
   ['tradutor', ['tradutor', 'traducao', 'traduzir']],
   ['pdftools', ['pdf', 'pdfs', 'central de pdf', 'ferramentas de pdf']],
@@ -31368,6 +31379,7 @@ function argoFontesTexto(fontes) {
 const ARGO_ACOES_IA = [
   { id: 'mapa', cat: 'mapa', rotulo: 'Mapa dos Equipamentos', descricao: 'Mapa com a localização das unidades' },
   { id: 'agenda', cat: 'agenda', rotulo: 'Agenda Argo', descricao: 'Agenda e compromissos' },
+  { id: 'prazos', cat: 'prazos', rotulo: 'Prazos e alertas do SUAS', descricao: 'Prazos do CadÚnico, Bolsa Família, Censo SUAS e prazos próprios' },
   { id: 'recentes', cat: 'recentes', rotulo: 'Recentes', descricao: 'Últimas unidades abertas' },
   { id: 'ferramentas', cat: 'ferramentas', rotulo: 'Ferramentas e Anotações', descricao: 'Relógio, cálculos, planilha e bloco de notas' },
   { id: 'cras', cat: 'cras', rotulo: 'Registro de Atendimento (CRAS)', descricao: 'Registro de atendimentos do CRAS' },
@@ -32109,7 +32121,7 @@ function argoAskAI(rawText, tab, fallbackResult) {
   /* ---- deslizar para trocar de aba (celular, modo destaque) ---- */
   const SWIPE_BLOCK = 'input, textarea, select, button, a, summary, label, table, pre, canvas, [contenteditable], ' +
     '.leaflet-container, [data-no-swipe], #agendaBook, #agendaCalendarGrid, .pdftools-fileitem, .tab-focus-bar, #notesRoot, .tech-card.is-expanded';
-  const LIST_ONLY = ['pdftools', 'criptografia', 'tradutor', 'noticias', 'mapa', 'agenda', 'appsext', 'ferramentas', 'anotacoes'];
+  const LIST_ONLY = ['pdftools', 'criptografia', 'tradutor', 'noticias', 'mapa', 'agenda', 'prazos', 'appsext', 'ferramentas', 'anotacoes'];
   let sx = 0, sy = 0, st = 0, tracking = false;
 
   function scrollsSideways(el) {
@@ -32165,7 +32177,7 @@ function argoAskAI(rawText, tab, fallbackResult) {
 /* MASCOTE-IA:início — funções puras (testadas em scripts/teste-mascote-ia.mjs) */
 // Abas em que o balão de seleção NÃO aparece: têm registro de atendimento, anotações, agenda ou arquivos do usuário.
 function argoMascoteAbaPermitida(cat) {
-  return ['cas', 'cras', 'anotacoes', 'agenda', 'ferramentas', 'criptografia', 'pdftools'].indexOf(String(cat || '')) < 0;
+  return ['cas', 'cras', 'anotacoes', 'agenda', 'prazos', 'ferramentas', 'criptografia', 'pdftools'].indexOf(String(cat || '')) < 0;
 }
 // Espaços em um só, sem caracteres de controle, cortado em `max` (com reticências).
 function argoMascoteLimpar(raw, max) {
