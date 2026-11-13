@@ -9619,3 +9619,100 @@ header.hero .hero-stat-label { color: #D5E9E3; }
 @media print {
   header.hero::after { display: none; }
 }
+
+/* ===== Aba "Prazos e alertas do SUAS" (js/prazos.js) — acento verde-azulado ===== */
+:root { --brand-prazos: #0F766E; --brand-prazos-light: #14B8A6; }
+.prazos-card { border-top: none; grid-column: 1 / -1; }
+.prazos-card::before { background: linear-gradient(90deg, var(--brand-prazos), var(--brand-prazos-light)); }
+.prazos-card .card-top { background: linear-gradient(180deg, rgba(15, 118, 110, 0.08), rgba(15, 118, 110, 0) 80%); }
+.prazos-card .card-top h2 { color: var(--brand-prazos); }
+.prazos-badge { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: 9px; background: rgba(15, 118, 110, 0.12); font-size: 1.1rem; }
+
+.prazos-resumo { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; margin-bottom: 1rem; }
+.prazos-num { display: flex; flex-direction: column; align-items: center; padding: 0.7rem 0.4rem; border: 1px solid var(--border-ui); border-radius: 12px; background: var(--bg-card); }
+.prazos-num b { font-size: 1.6rem; line-height: 1.1; color: var(--text-main); }
+.prazos-num span { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: var(--text-muted); }
+.prazos-num.is-atrasado b { color: #b45309; }
+.prazos-num.is-hoje b { color: #dc2626; }
+.prazos-num.is-semana b { color: var(--brand-prazos); }
+
+.prazos-barra { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin-bottom: 0.7rem; }
+.prazos-busca { flex: 1 1 14rem; min-height: 40px; box-sizing: border-box; padding: 0.4rem 0.8rem; font: inherit; font-size: 0.9rem; color: var(--text-main); background: var(--bg-card); border: 1.5px solid var(--border-ui); border-radius: 10px; }
+.prazos-busca:focus { outline: 2px solid var(--brand-prazos-light); outline-offset: 1px; }
+.prazos-seg { display: inline-flex; border: 1.5px solid var(--border-ui); border-radius: 999px; overflow: hidden; }
+.prazos-seg button { border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: 0.78rem; font-weight: 700; padding: 0.3rem 0.8rem; cursor: pointer; min-height: 38px; }
+.prazos-seg button.is-active { background: var(--brand-prazos); color: #fff; }
+
+.prazos-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.8rem; }
+.prazos-chip { font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer; min-height: 34px; padding: 0.25rem 0.75rem; border-radius: 999px; color: var(--text-muted); background: transparent; border: 1.5px solid var(--border-ui); }
+.prazos-chip:hover { border-color: var(--brand-prazos); color: var(--brand-prazos); }
+.prazos-chip.is-active { background: var(--brand-prazos); border-color: var(--brand-prazos); color: #fff; }
+
+.prazos-ferramentas { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem; }
+.prazos-espaco { flex: 1 1 0; }
+.prazos-check { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; color: var(--text-muted); cursor: pointer; }
+.prazos-btn { display: inline-flex; align-items: center; gap: 0.3rem; font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer; text-decoration: none; color: var(--text-muted); background: transparent; border: 1.5px solid var(--border-ui); border-radius: 8px; padding: 0.35rem 0.65rem; min-height: 36px; box-sizing: border-box; }
+.prazos-btn:hover { border-color: var(--brand-prazos); color: var(--brand-prazos); }
+.prazos-btn.is-on { color: #fff; background: var(--brand-prazos); border-color: var(--brand-prazos); }
+.prazos-btn-ok { color: #fff; background: var(--brand-prazos); border-color: var(--brand-prazos); }
+.prazos-btn-ok:hover { color: #fff; filter: brightness(1.1); }
+.prazos-btn-del:hover { border-color: #dc2626; color: #dc2626; }
+
+.prazos-form { display: flex; flex-direction: column; gap: 0.6rem; padding: 0.9rem 1rem; margin-bottom: 0.9rem; border: 1.5px dashed var(--brand-prazos-light); border-radius: 12px; background: rgba(15, 118, 110, 0.05); }
+.prazos-form[hidden] { display: none; }
+.prazos-form label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); }
+.prazos-form input { font: inherit; font-size: 0.9rem; min-height: 40px; box-sizing: border-box; padding: 0.35rem 0.7rem; color: var(--text-main); background: var(--bg-card); border: 1.5px solid var(--border-ui); border-radius: 8px; }
+.prazos-form-linha { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: flex-end; }
+.prazos-form-grande { flex: 1 1 14rem; }
+.prazos-aviso, .prazos-rodape, .prazos-msg { margin: 0; font-size: 0.76rem; color: var(--text-muted); }
+.prazos-msg { min-height: 1.1em; margin-bottom: 0.4rem; font-weight: 700; color: var(--brand-prazos); }
+.prazos-rodape { margin-top: 1rem; }
+
+.prazos-grupo { display: flex; align-items: center; gap: 0.5rem; margin: 1.1rem 0 0.5rem; font-size: 0.8rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); }
+.prazos-grupo small { font-size: 0.72rem; padding: 0.05rem 0.5rem; border-radius: 999px; background: rgba(15, 118, 110, 0.12); color: var(--brand-prazos); }
+.prazos-grupo-atrasado { color: #b45309; }
+.prazos-grupo-hoje { color: #dc2626; }
+.prazos-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.prazos-item { display: flex; gap: 0.8rem; padding: 0.75rem 0.9rem; border: 1px solid var(--border-ui); border-left: 4px solid var(--brand-prazos-light); border-radius: 10px; background: var(--bg-card); box-shadow: var(--shadow-xs); }
+.prazos-item.is-atrasado { border-left-color: #d97706; background: rgba(217, 119, 6, 0.06); }
+.prazos-item.is-hoje { border-left-color: #dc2626; background: rgba(220, 38, 38, 0.06); }
+.prazos-item.is-semana { border-left-color: var(--brand-prazos); }
+.prazos-item.is-depois { border-left-color: var(--border-ui); }
+.prazos-item.is-feito { opacity: 0.6; }
+.prazos-item.is-feito .prazos-texto { text-decoration: line-through; }
+.prazos-data { flex: 0 0 2.8rem; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
+.prazos-data b { font-size: 1.35rem; color: var(--text-main); }
+.prazos-data span { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); }
+.prazos-corpo { flex: 1 1 auto; min-width: 0; }
+.prazos-linha1 { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.6rem; margin-bottom: 0.2rem; }
+.prazos-cat { font-size: 0.68rem; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase; padding: 0.1rem 0.5rem; border-radius: 999px; color: var(--brand-prazos); background: rgba(15, 118, 110, 0.12); }
+.prazos-cat-cond { color: #1d4ed8; background: rgba(29, 78, 216, 0.1); }
+.prazos-cat-rev, .prazos-cat-ave { color: #7c3aed; background: rgba(124, 58, 237, 0.1); }
+.prazos-cat-censo { color: #b45309; background: rgba(217, 119, 6, 0.12); }
+.prazos-cat-meu { color: #be185d; background: rgba(190, 24, 93, 0.1); }
+.prazos-quando { font-size: 0.78rem; font-weight: 700; color: var(--text-muted); }
+.prazos-texto { margin: 0; font-size: 0.92rem; font-weight: 600; color: var(--text-main); overflow-wrap: anywhere; }
+.prazos-obs { margin: 0.2rem 0 0; font-size: 0.8rem; color: var(--text-muted); }
+.prazos-acoes { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.55rem; }
+.prazos-vazio { padding: 1.2rem; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-ui); border-radius: 10px; }
+
+@media (max-width: 560px) {
+  .prazos-resumo { grid-template-columns: repeat(2, 1fr); }
+  .prazos-acoes .prazos-btn { flex: 1 1 auto; justify-content: center; min-height: 44px; }
+  .prazos-ferramentas .prazos-btn { flex: 1 1 100%; justify-content: center; min-height: 44px; }
+  .prazos-espaco { display: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .prazos-item { transition: border-color 0.2s, box-shadow 0.2s; }
+  .prazos-item:hover { box-shadow: var(--shadow-sm); }
+}
+
+/* Aba Prazos: aviso de datas desatualizadas, painel de atualização e seletor de repetição */
+.prazos-alerta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.8rem; margin-bottom: 0.9rem; padding: 0.7rem 0.9rem; border-radius: 12px; font-size: 0.86rem; font-weight: 600; color: var(--text-main); border: 1.5px solid #d97706; background: rgba(217, 119, 6, 0.1); }
+.prazos-alerta.is-vencido, .prazos-alerta.is-vazio { border-color: #dc2626; background: rgba(220, 38, 38, 0.08); }
+.prazos-alerta.is-velho { border-color: var(--border-ui); background: transparent; font-weight: 500; }
+.prazos-atualizar { margin-top: 1.1rem; border: 1px solid var(--border-ui); border-radius: 12px; background: var(--bg-card); }
+.prazos-atualizar summary { cursor: pointer; padding: 0.75rem 1rem; font-size: 0.85rem; font-weight: 700; color: var(--brand-prazos); min-height: 44px; box-sizing: border-box; display: flex; align-items: center; }
+.prazos-atualizar-corpo { padding: 0 1rem 1rem; font-size: 0.82rem; color: var(--text-muted); }
+.prazos-atualizar-corpo p { margin: 0.4rem 0; }
+.prazos-form select { font: inherit; font-size: 0.9rem; min-height: 40px; box-sizing: border-box; padding: 0.35rem 0.6rem; color: var(--text-main); background: var(--bg-card); border: 1.5px solid var(--border-ui); border-radius: 8px; }
