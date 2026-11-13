@@ -14,6 +14,7 @@
     "test:leitura": "node scripts/teste-leitura.mjs",
     "build": "node scripts/build.mjs",
     "gerar:municipios": "node scripts/gerar-municipios-rr.mjs",
+    "test:prazos": "node scripts/teste-prazos.mjs",
     "test:voz": "node scripts/teste-voz.mjs",
     "test:zip": "node scripts/teste-zip.mjs",
     "test:pdf": "node scripts/teste-pdf.mjs",
