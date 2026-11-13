@@ -23,7 +23,8 @@ const CRITICAL_ASSETS = [
   './js/datas-cras-mds.js',
   './js/equipe-cras-cristiana.js',
   './js/login-matrix.js',
-  './js/paulus.v1.js'
+  './js/paulus.v1.js',
+  './js/prazos.js'
 ];
 
 // Tudo que deve ficar disponível offline desde a instalação (os não críticos que falharem são ignorados).
@@ -76,7 +77,15 @@ const ASSETS = [
   './ferramentas/mapa-vila-jardim.html',
   './ferramentas/pagamento-pbf.html',
   './ferramentas/registro-atendimento-planilha.html',
-  './ferramentas/rma-formulario.html'
+  './ferramentas/rma-formulario.html',
+  './js/prazos.js',
+  './assets/informes/cadunico-es.pdf',
+  './assets/informes/cadunico-pt.pdf',
+  './assets/informes/condicionalidades-es.pdf',
+  './assets/informes/condicionalidades-pt.pdf',
+  './assets/informes/consulta-pbf-pt.pdf',
+  './assets/informes/endereco-cras-cristiana.pdf',
+  './assets/informes/enderecos-cras-boa-vista.pdf'
 ];
 
 self.addEventListener('install', event => {
