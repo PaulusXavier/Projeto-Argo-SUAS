@@ -3,6 +3,8 @@
 // essa mudança de versão é o que dispara a atualização nos aparelhos. Não precisa editar.
 // Arquivo novo que o app precise offline: inclua em ASSETS (e em CRITICAL_ASSETS se o app não abre sem ele).
 const CACHE_VERSION = 'dev';
+// Data da publicação (AAAA-MM-DD), carimbada pelo build junto com o CACHE_VERSION: aparece no rodapé do app.
+const BUILD_DATA = 'dev';
 const CACHE_NAME = `rede-apoio-bv-${CACHE_VERSION}`;
 // Cache sem número de versão para conteúdo de fora do domínio (cdnjs, tiles do mapa, SDK do Firebase):
 // sobrevive entre publicações para não baixar tudo de novo a cada atualização.
@@ -103,7 +105,12 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('message', event => {
-  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
+  const tipo = event.data && event.data.type;
+  if (tipo === 'SKIP_WAITING') self.skipWaiting();
+  // O rodapé do app pergunta qual versão está em uso.
+  if (tipo === 'GET_VERSION' && event.source && event.source.postMessage) {
+    event.source.postMessage({ type: 'VERSION', version: CACHE_VERSION, buildData: BUILD_DATA });
+  }
 });
 
 self.addEventListener('activate', event => {
@@ -144,13 +151,21 @@ self.addEventListener('fetch', event => {
   }
 
   // Resposta imediata do cache e, em paralelo, busca a versão nova para a próxima abertura.
+  // O waitUntil mantém o service worker vivo até essa busca (e a gravação no cache) terminar: sem ele o navegador podia
+  // encerrá-lo logo após responder e a cópia nova se perdia, deixando o aparelho uma abertura atrás.
+  let encerra;
+  event.waitUntil(new Promise(r => { encerra = r; }));
   event.respondWith(
     caches.match(req).then(cached => {
+      let gravacao = Promise.resolve();
       const rede = fetch(req).then(res => {
-        if (res && (res.ok || res.type === 'opaque')) { const cp = res.clone(); caches.open(alvo).then(c => c.put(req, cp)); }
+        // A resposta segue para a página na hora; só o service worker espera a gravação terminar.
+        if (res && (res.ok || res.type === 'opaque')) { const cp = res.clone(); gravacao = caches.open(alvo).then(c => c.put(req, cp)).catch(() => {}); }
         return res;
       }).catch(() => cached || (req.mode === 'navigate' ? caches.match('./index.html') : null) || offlineFallback());
+      rede.then(() => gravacao).then(encerra, encerra);
       return cached || rede;
-    })
+    }, () => { encerra(); return fetch(req); })
   );
+
 });
