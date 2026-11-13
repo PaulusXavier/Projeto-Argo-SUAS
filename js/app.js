@@ -29926,6 +29926,20 @@ initAuth();
 applyStoredTheme();
 updateHeaderFooterStats();
 syncCategoryToggleLabel();
+// Barco do fundo: o mesmo desenho do mascote, só decoração (atrás de tudo, sem foco e escondido de leitores de tela).
+// Em celular/tela pequena o CSS o esconde; aqui nem chega a ser montado para não gastar à toa.
+function initArgoBgShip() {
+  try {
+    if (typeof ArgoMascot === 'undefined' || typeof ArgoMascot.icon !== 'function' || document.getElementById('argoBgShip')) return;
+    if (window.matchMedia && window.matchMedia('(max-width: 899px), (pointer: coarse)').matches) return;
+    const host = document.createElement('div');
+    host.id = 'argoBgShip';
+    host.setAttribute('aria-hidden', 'true');
+    host.innerHTML = ArgoMascot.icon('info', 260);
+    document.body.appendChild(host);
+  } catch (e) { /* decoração: sem ela o app segue igual */ }
+}
+initArgoBgShip();
 initArgoAssistant();
 initLoginMascot();
 initLoginMascotFX();
@@ -31367,33 +31381,55 @@ function argoAprendizadoAsk(rawText) {
   if (!kind) return null;
   const A = argoAprender();
   if (!A) return null;
+  // Memória do Paulus (estilo de resposta, temas, perguntas que se repetem, respostas aprovadas com 👍): também só neste aparelho.
+  const PM = (typeof Paulus !== 'undefined' && Paulus.memoria) ? Paulus.memoria : null;
+  const pm = PM ? (() => { try { return PM.resumo(); } catch (e) { return null; } })() : null;
   const apagar = {
     label: 'Sim, apagar tudo',
-    run: () => A.apagar(),
+    run: () => { A.apagar(); try { if (PM) PM.esquecer(); } catch (e) { /* sem memória do Paulus */ } },
     reply: 'Pronto, apaguei tudo o que aprendi neste aparelho. Começo do zero a partir de agora.',
     mood: 'success'
   };
   if (kind === 'apagar') {
     return {
-      reply: 'Posso apagar tudo o que aprendi com o uso neste aparelho: unidades preferidas, apelidos de palavras e perguntas repetidas. As fichas do diretório não mudam. Quer apagar?',
+      reply: 'Posso apagar tudo o que aprendi com o uso neste aparelho: unidades preferidas, apelidos de palavras, perguntas repetidas' + (PM ? ', o estilo de resposta que você prefere e as respostas que você aprovou com 👍' : '') + '. As fichas do diretório não mudam. Quer apagar?',
       mood: 'info',
       quickActions: [apagar, { label: 'Não, manter', run: () => {}, reply: 'Tudo bem, mantive o que aprendi.', mood: 'success' }]
     };
   }
   const r = A.resumo();
   const comoFunciona = 'Como eu aprendo: quando você toca em 👍, liga, abre a ficha, o mapa ou copia os dados de uma unidade, eu passo a mostrar essa unidade mais para cima em buscas parecidas; o 👎 faz o contrário. Quando você usa uma palavra que eu não conheço e depois confirma a resposta, guardo a palavra como apelido. Tudo fica só neste aparelho, sem nomes de pessoas, e nada vai para a internet.';
+  // Botões da memória do Paulus: ligar/desligar o aprendizado e fazer cópia de segurança (JSON, só o que está nesta tela).
+  const botoesPaulus = () => {
+    if (!PM || !pm) return [];
+    const lista = [];
+    lista.push(pm.ativa
+      ? { label: 'Pausar o aprendizado', run: () => { try { PM.ligar(false); } catch (e) { /* ignora */ } }, reply: 'Pausei: deixo de aprender e de usar o que aprendi. O que já está guardado continua aqui até você apagar.', mood: 'success' }
+      : { label: 'Voltar a aprender', run: () => { try { PM.ligar(true); } catch (e) { /* ignora */ } }, reply: 'Voltei a aprender com o uso, só neste aparelho.', mood: 'success' });
+    if (!pm.vazia) lista.push({
+      label: 'Baixar cópia do que aprendi',
+      run: () => { try { pdftoolsTriggerDownload(new Blob([PM.exportar()], { type: 'application/json' }), 'paulus-memoria.json'); } catch (e) { argoAviso('Não consegui gerar a cópia.', 'error'); } },
+      reply: 'Baixei a cópia. Ela não tem nome nem dado de ninguém atendido.', mood: 'success'
+    });
+    return lista;
+  };
+  const linhasPaulus = pm && !pm.vazia ? ['O que o Paulus aprendeu com o seu jeito de perguntar (só neste aparelho):\n- ' + pm.linhas.slice(0, 8).join('\n- ')] : [];
+  if (!r.n && !r.apelidos.length && !r.frequentes.length && linhasPaulus.length) {
+    return { reply: linhasPaulus.join('\n\n') + '\n\n' + comoFunciona, mood: 'info', quickActions: botoesPaulus().concat([{ label: 'Apagar o que aprendi', run: () => {}, ask: 'apague o que você aprendeu' }]) };
+  }
   if (!r.n && !r.apelidos.length && !r.frequentes.length) {
     return {
       reply: 'Ainda não aprendi nada com você neste aparelho. Depois de uma busca, toque em 👍 ou 👎 na resposta, ou ligue/abra a ficha da unidade certa, e eu vou ajustando.\n\n' + comoFunciona,
-      mood: 'info', quickActions: []
+      mood: 'info', quickActions: botoesPaulus()
     };
   }
   const linhas = ['Até agora aprendi com ' + r.n + (r.n === 1 ? ' avaliação' : ' avaliações') + ' (' + r.bons + ' positivas, ' + r.ruins + ' negativas).'];
   if (r.preferidas.length) linhas.push('Unidades que você mais confirma: ' + r.preferidas.map(x => x.nome).join('; ') + '.');
   if (r.apelidos.length) linhas.push('Palavras que aprendi: ' + r.apelidos.map(x => '"' + x.de + '" → ' + x.para.join(', ')).join('; ') + '.');
   if (r.frequentes.length) linhas.push('Perguntas que você repete: ' + r.frequentes.map(x => '"' + x.texto + '" (' + x.vezes + '×)').join('; ') + '.');
+  linhas.push(...linhasPaulus);
   linhas.push(comoFunciona);
-  return { reply: linhas.join('\n\n'), mood: 'info', quickActions: [{ label: 'Apagar o que aprendi', run: () => {}, ask: 'apague o que você aprendeu' }] };
+  return { reply: linhas.join('\n\n'), mood: 'info', quickActions: botoesPaulus().concat([{ label: 'Apagar o que aprendi', run: () => {}, ask: 'apague o que você aprendeu' }]) };
 }
 
 // Ponto de entrada do mascote: primeiro a IA INTERPRETA a pergunta (lê a conversa, completa o que ficou
