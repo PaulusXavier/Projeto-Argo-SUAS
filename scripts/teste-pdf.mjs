@@ -172,4 +172,64 @@ function contem(bytes, texto) {
   passa('hub: PDF com senha leva direto a "Remover senha"; PDF normal mostra páginas e tamanho');
 }
 
+// 8) Unificar/Dividir/Reorganizar: copyPages não leva os campos de formulário. O app tem de contá-los
+//    (para avisar) e a contagem precisa acompanhar o que a pdf-lib realmente faz.
+{
+  vm.runInThisContext(['pdftoolsFormFieldCount', 'pdftoolsFormLostNote'].map(extrai).join('\n'));
+  const d = await PDFDocument.create();
+  const pg = d.addPage([300, 300]);
+  const f = d.getForm();
+  f.createTextField('nome').addToPage(pg, { x: 20, y: 200, width: 200, height: 24 });
+  const cb = f.createCheckBox('ok'); cb.addToPage(pg, { x: 20, y: 150, width: 20, height: 20 });
+  const origem = await PDFDocument.load(await d.save());
+  assert.equal(pdftoolsFormFieldCount(origem), 2);
+  const copia = await PDFDocument.create();
+  (await copia.copyPages(origem, [0])).forEach(p => copia.addPage(p));
+  const lida = await PDFDocument.load(await copia.save());
+  assert.equal(pdftoolsFormFieldCount(lida), 0, 'se a pdf-lib passar a copiar os campos, o aviso deixa de ser necessário');
+  assert.equal(pdftoolsFormFieldCount(await PDFDocument.create()), 0);
+  assert.match(pdftoolsFormLostNote(1), /^1 campo de formulário deixa de ser/);
+  assert.match(pdftoolsFormLostNote(3), /^3 campos de formulário deixam de ser/);
+  passa('formulário: campos contados e avisados antes de Unificar/Dividir/Reorganizar');
+}
+
+// 9) pdf.js: nenhuma chamada de getDocument pode deixar o eval de fontes ligado (CVE-2024-4367).
+{
+  const chamadas = app.match(/getDocument\(\{[^}]*\}/g) || [];
+  assert.ok(chamadas.length >= 14, 'getDocument não encontrado');
+  for (const c of chamadas) assert.match(c, /isEvalSupported: false/, c);
+  passa('pdf.js: ' + chamadas.length + ' chamadas de getDocument com isEvalSupported: false');
+}
+
+// 10) SRI do cdnjs: o hash de cada URL tem de ser o da cópia local de assets/vendor/ (mesma versão).
+{
+  const { createHash } = await import('node:crypto');
+  const mapa = { 'pdf-lib.min.js': 'pdf-lib/1.17.1', 'pdf.min.js': 'pdf.js/3.11.174', 'jszip.min.js': 'jszip/3.10.1', 'mammoth.browser.min.js': 'mammoth/1.12.2' };
+  for (const [arq, trecho] of Object.entries(mapa)) {
+    const m = app.match(new RegExp("'https://cdnjs\\.cloudflare\\.com/ajax/libs/" + trecho.replace('.', '\\.') + "/[^']+': '(sha384-[^']+)'"));
+    assert.ok(m, 'sem SRI para ' + arq);
+    const h = 'sha384-' + createHash('sha384').update(readFileSync(new URL('../assets/vendor/' + arq, import.meta.url))).digest('base64');
+    assert.equal(m[1], h, 'SRI de ' + arq + ' não confere com a cópia local');
+  }
+  assert.match(app, /s\.integrity = PDFTOOLS_SRI\[url\]/);
+  passa('SRI: hashes do cdnjs conferem com assets/vendor/');
+}
+
+// 11) Proteger com senha: mínimo de 8 caracteres (as duas telas: um PDF e vários).
+{
+  assert.match(app, /const PDFTOOLS_PROTECT_MIN_LEN = 8;/);
+  assert.equal((app.match(/pw\.length < PDFTOOLS_PROTECT_MIN_LEN/g) || []).length, 2);
+  assert.doesNotMatch(app, /pw\.length < 4\) \{ pdftools/);
+  passa('Proteger: senha de pelo menos 8 caracteres nas duas telas');
+}
+
+// 12) PDF → JPG: limite de páginas, conferido antes de gerar qualquer imagem.
+{
+  assert.match(app, /const PDFTOOLS_PDFJPG_MAX_PAGES = 150;/);
+  const i = app.indexOf('async function pdftoolsRunPdfToJpg');
+  const corpo = app.slice(i, app.indexOf('\n}\n', i));
+  assert.ok(corpo.indexOf('PDFTOOLS_PDFJPG_MAX_PAGES') < corpo.indexOf('page.render'), 'o limite tem de vir antes de renderizar');
+  passa('PDF → JPG: limite de 150 páginas antes de renderizar');
+}
+
 console.log('\n' + ok + ' verificações ok');
