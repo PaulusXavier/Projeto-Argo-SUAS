@@ -19,6 +19,17 @@
       anteriores podem ficar. A agenda só mostra o ano corrente.
    Quando o MDS publicar nova edição da IN Conjunta / novo Informe, confira os
    links em "fontes" e ajuste as linhas marcadas com prev: true.
+
+   ROTINA ANUAL (leva uns 10 minutos, de preferência em novembro/dezembro)
+   a) Abra o calendário novo de condicionalidades, o Informe da base do CadÚnico,
+      a IN de revisão/averiguação e o aviso do Censo SUAS do ano seguinte.
+   b) Acrescente as linhas do ano novo no fim de "datas" (as do ano velho ficam).
+   c) Se mudou o nome das campanhas (REV26 → REV27, AVE26 → AVE27), ajuste os textos em
+      "categorias"; novas fontes entram em "fontes".
+   d) Troque "atualizadoEm" pela data de hoje e publique.
+   A aba Prazos avisa sozinha quando as datas oficiais estão acabando (60 dias antes) e
+   quando já acabaram. Para atualizar SÓ no seu aparelho, sem publicar, use na aba Prazos
+   o painel "Atualizar datas oficiais" (importa um .csv ou .json com as datas novas).
    ============================================================================ */
 window.ARGO_MDS = {
   atualizadoEm: '2026-11-06',
