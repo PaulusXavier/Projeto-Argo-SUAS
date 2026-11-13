@@ -22293,6 +22293,7 @@ function agendaEnsureModals() {
           <button type="button" onclick="agendaGenerateSyncCode()" class="agenda-btn-secondary">Gerar novo</button>
         </div>
         <button type="button" id="agendaCopyBtn" onclick="agendaCopySyncCode()" class="agenda-btn-link" hidden>Copiar código atual</button>
+        <button type="button" id="agendaMigrateBtn" onclick="agendaMigrateToNewCode()" class="agenda-btn-link" hidden>Migrar notas para um código novo e seguro</button>
       </div>
     </div>
     <style>
@@ -23008,6 +23009,8 @@ function agendaRefreshSyncModal() {
     else display.style.display = 'none';
   }
   if (copy) copy.hidden = !agendaSyncCode;
+  const mig = document.getElementById('agendaMigrateBtn');
+  if (mig) mig.hidden = !(agendaSyncCode && agendaSyncCode.length < 12);
   if (hint) hint.hidden = !agendaPendingSave;
 }
 
@@ -23076,6 +23079,65 @@ function agendaGenerateSyncCode() {
   const code = 'agenda-' + Array.from(bytes, b => 'abcdefghijkmnpqrstuvwxyz23456789'[b % 32]).join('');
   document.getElementById('agendaSyncCodeInput').value = code;
   agendaConnectSync(code);
+}
+
+// Copia todas as notas do código atual (curto, fácil de adivinhar) para um código
+// novo de 17 caracteres e passa a usar o novo. Copia os documentos como estão na
+// nuvem (já cifrados), então dias "de outra senha" também vão intactos. Nada é
+// apagado do código antigo; ele fica guardado no aparelho como reserva.
+let agendaMigrating = false;
+async function agendaMigrateToNewCode() {
+  if (agendaMigrating) return;
+  if (!agendaDb || !agendaSyncCode) { agendaToast('Ainda conectando à nuvem. Tente de novo em alguns segundos.'); return; }
+  if (!sessionEncKey) { agendaToast('Entre com a senha do app antes de migrar.', 'error'); return; }
+  if (!window.confirm('Copiar todas as suas notas para um código novo e passar a usá-lo? As notas do código antigo não são apagadas.')) return;
+  agendaMigrating = true;
+  const oldCode = agendaSyncCode;
+  const bytes = new Uint8Array(10);
+  (window.crypto || window.msCrypto).getRandomValues(bytes);
+  const newCode = 'agenda-' + Array.from(bytes, b => 'abcdefghijkmnpqrstuvwxyz23456789'[b % 32]).join('');
+  try {
+    agendaToast('Copiando as notas…');
+    const oldCol = agendaDb.collection('agendas').doc(oldCode).collection('notes');
+    const newCol = agendaDb.collection('agendas').doc(newCode).collection('notes');
+    const snap = await oldCol.get({ source: 'server' });
+    const docs = [];
+    snap.forEach((d) => {
+      const data = d.data() || {};
+      let entries = null;
+      if (Array.isArray(data.entries)) {
+        entries = data.entries.filter(e => e && e.text).map((e) => {
+          const o = Object.assign({}, e);
+          if (typeof o.createdAt !== 'number') o.createdAt = Date.now();
+          return o;
+        });
+      } else if (data.text) { // formato antigo: uma nota só por dia
+        const ts = (data.updatedAt && typeof data.updatedAt.toMillis === 'function') ? data.updatedAt.toMillis() : Date.now();
+        const raw = String(data.text);
+        entries = [{ text: raw.indexOf('enc1:') === 0 ? raw : encryptForStorage(raw), createdAt: ts }];
+      }
+      if (entries && entries.length) docs.push({ id: d.id, entries });
+    });
+    if (!docs.length) { agendaToast('Não há notas neste código para migrar.', 'error'); return; }
+    for (let i = 0; i < docs.length; i += 400) {
+      const batch = agendaDb.batch();
+      docs.slice(i, i + 400).forEach(x => batch.set(newCol.doc(x.id), { entries: x.entries }));
+      await batch.commit();
+    }
+    const check = await newCol.get({ source: 'server' });
+    if (check.size < docs.length) throw new Error('A conferência encontrou menos dias do que o esperado (' + check.size + ' de ' + docs.length + ').');
+    localStorage.setItem('argo_agenda_old_code', oldCode);
+    const input = document.getElementById('agendaSyncCodeInput');
+    if (input) input.value = newCode;
+    await agendaConnectSync(newCode, true);
+    try { await navigator.clipboard.writeText(newCode); } catch (e) { /* sem permissão da área de transferência */ }
+    agendaToast(docs.length + ' dia(s) copiados. Novo código: ' + newCode + ' (copiado). Use-o nos outros aparelhos.');
+  } catch (e) {
+    console.error(e);
+    agendaToast('A migração falhou: ' + agendaSyncErrText(e) + '. Nada foi alterado no código antigo.', 'error');
+  } finally {
+    agendaMigrating = false;
+  }
 }
 
 // ======= Notificações (lembrete do dia) =======
