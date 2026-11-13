@@ -57,6 +57,7 @@ const ASSETS = [
   './assets/img/argo-constellation-bg.svg',
   './assets/img/argo-bg-stars.svg',
   './assets/img/argo-bg-waves.svg',
+  './assets/img/argo-bg-dust.svg',
   './assets/img/argo-navis-historico.jpg',
   './assets/img/icon-192.png',
   './assets/img/icon-512.png',
