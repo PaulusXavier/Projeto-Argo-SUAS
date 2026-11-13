@@ -114,8 +114,8 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Endereços em que a rede vem primeiro (notícias do gov.br e repassadores, Firestore); o cache só entra sem internet.
-const NETWORK_FIRST_HOSTS = ['www.gov.br', 'api.allorigins.win', 'corsproxy.io', 'api.codetabs.com', 'firestore.googleapis.com'];
+// Endereços em que a rede vem primeiro (notícias do gov.br e repassadores); o cache só entra sem internet.
+const NETWORK_FIRST_HOSTS = ['www.gov.br', 'api.allorigins.win', 'corsproxy.io', 'api.codetabs.com'];
 
 function offlineFallback() {
   return new Response('Sem conexão com a internet e nenhuma cópia salva deste conteúdo.',
@@ -128,6 +128,8 @@ self.addEventListener('fetch', event => {
   const url = new URL(req.url);
   // O dicionário do corretor (≈5 MB) tem cache próprio e não passa por aqui.
   if (url.origin === self.location.origin && url.pathname.includes('/assets/spell/')) return;
+  // Firestore usa conexão longa (streaming): passar pelo service worker (clone + cache) podia travar a escuta. Vai direto à rede.
+  if (url.hostname === 'firestore.googleapis.com') return;
   const mesmaOrigem = url.origin === self.location.origin;
   const alvo = mesmaOrigem ? CACHE_NAME : RUNTIME_CACHE_NAME;
 
