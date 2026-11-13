@@ -397,7 +397,7 @@ function lockApp(reason) {
   document.body.style.overflow = 'hidden';
   // Havia uma versão nova esperando (ver controllerchange): ao trancar, é o
   // momento seguro para recarregar sem atrapalhar ninguém.
-  if (window.__argoUpdatePending) window.location.reload();
+  if (window.__argoUpdatePending && typeof argoAplicarAtualizacao === 'function') argoAplicarAtualizacao();
 }
 
 function initAuth() {
@@ -18020,19 +18020,110 @@ function updateHeaderFooterStats() {
   }
 }
 
+/* ============================================================
+   ATUALIZAÇÃO DO APP — como uma versão nova chega ao aparelho
+   1. O build carimba o sw.js (CACHE_VERSION e BUILD_DATA); sw.js diferente = versão nova.
+   2. O navegador baixa a versão nova em segundo plano: ao abrir, ao voltar para a aba e a cada 30 minutos.
+   3. Ela fica ESPERANDO. Nada troca enquanto a pessoa trabalha (antes ativava na hora e arquivos novos podiam se
+      misturar com o código antigo que já estava aberto na tela).
+   4. Entra em ação quando o app está trancado (tela de senha: na hora) ou, com o app em uso, quando a pessoa toca em
+      "Atualizar" no aviso, ou na próxima vez que o app for trancado.
+   5. O rodapé mostra a versão em uso e o botão "Verificar atualização" (confere agora, sem esperar os 30 minutos).
+   ============================================================ */
+// ATUALIZACAO:inicio
+const ARGO_UPDATE = { waiting: null, requested: false };
+
+function argoAppEmUso() {
+  const root = document.getElementById('appRoot');
+  return !!root && root.dataset.locked === 'false';
+}
+
+// Uma versão nova terminou de baixar e está esperando.
+function argoUpdateEncontrada(worker) {
+  ARGO_UPDATE.waiting = worker;
+  window.__argoUpdatePending = true;
+  if (!argoAppEmUso()) { argoAplicarAtualizacao(); return; } // trancado: troca sem atrapalhar ninguém
+  const greeting = document.getElementById('argoGreetingModal');
+  // Com o cartão de abertura na tela, o aviso espera ele ser fechado (ver argoDismissGreeting).
+  if (!(greeting && greeting.classList.contains('visible'))) argoShowUpdateToast();
+}
+
+// Ativa a versão que está esperando; o recarregamento acontece quando o navegador avisa a troca (controllerchange).
+function argoAplicarAtualizacao() {
+  ARGO_UPDATE.requested = true;
+  const w = ARGO_UPDATE.waiting;
+  if (w && w.state === 'installed') {
+    // Trava contra ciclo de recargas: o plano B só vale se não houve outra tentativa no último minuto.
+    let recente = false;
+    try {
+      recente = Date.now() - (Number(sessionStorage.getItem('argo_update_tentativa')) || 0) < 60000;
+      sessionStorage.setItem('argo_update_tentativa', String(Date.now()));
+    } catch (e) { /* sem sessionStorage: segue sem a trava */ }
+    w.postMessage({ type: 'SKIP_WAITING' });
+    if (!recente) setTimeout(() => window.location.reload(), 4000); // plano B, se o aviso de troca não vier
+  } else {
+    window.location.reload(); // a versão nova já foi ativada (por outra aba, por exemplo)
+  }
+}
+
+function argoEsperarWorker(worker, ms) {
+  return new Promise(resolve => {
+    const pronto = () => worker.state === 'installed' || worker.state === 'activated' || worker.state === 'redundant';
+    if (pronto()) return resolve(worker.state);
+    const t = setTimeout(() => resolve('timeout'), ms || 60000);
+    worker.addEventListener('statechange', () => { if (pronto()) { clearTimeout(t); resolve(worker.state); } });
+  });
+}
+
+// Botão "Verificar atualização" do rodapé.
+async function argoVerificarAtualizacao(btn) {
+  if (!('serviceWorker' in navigator)) { argoAviso('Este navegador não atualiza o app sozinho. Recarregue a página.', 'info'); return; }
+  if (navigator.onLine === false) { argoAviso('Sem internet agora. Tente de novo quando estiver conectado.', 'info'); return; }
+  const rotulo = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Verificando…'; }
+  try {
+    if (ARGO_UPDATE.waiting && ARGO_UPDATE.waiting.state === 'installed') {
+      argoShowUpdateToast();
+      argoAviso('Já há uma versão nova pronta. Toque em "Atualizar".', 'info');
+      return;
+    }
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (!reg) { argoAviso('O app ainda não foi guardado neste aparelho. Recarregue a página e tente de novo.', 'info'); return; }
+    await reg.update();
+    const w = reg.installing || reg.waiting;
+    if (!w) { argoAviso('Você já está na versão mais recente.', 'success'); return; }
+    const estado = await argoEsperarWorker(w);
+    if (estado === 'installed' || estado === 'activated') argoAviso('Baixei uma versão nova. Toque em "Atualizar" no aviso.', 'info');
+    else argoAviso('Não consegui baixar a versão nova agora. Confira a internet e tente de novo.', 'error');
+  } catch (e) {
+    argoAviso('Não consegui verificar agora. Confira a internet e tente de novo.', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = rotulo; }
+  }
+}
+
+// Texto do rodapé: "Versão 3f2a1c9 · 13/11/2026" (sem carimbo, é a cópia de desenvolvimento).
+function argoUpdateTextoVersao(versao, data) {
+  if (!versao || versao === 'dev') return 'Versão de desenvolvimento';
+  const dia = /^\d{4}-\d{2}-\d{2}$/.test(data || '') ? ' · ' + data.split('-').reverse().join('/') : '';
+  return 'Versão ' + String(versao).replace(/^b/, '') + dia;
+}
+// ATUALIZACAO:fim
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').then(reg => {
 
       // Já existe uma atualização baixada esperando para entrar em ação?
-      if (reg.waiting) ativarAtualizacao(reg.waiting);
+      if (reg.waiting) argoUpdateEncontrada(reg.waiting);
 
       // Fica de olho em novas atualizações encontradas a partir de agora
       reg.addEventListener('updatefound', () => {
         const novoWorker = reg.installing;
+        if (!novoWorker) return;
         novoWorker.addEventListener('statechange', () => {
           if (novoWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            ativarAtualizacao(novoWorker);
+            argoUpdateEncontrada(novoWorker);
           }
         });
       });
@@ -18050,39 +18141,51 @@ if ('serviceWorker' in navigator) {
       setInterval(() => {
         if (document.visibilityState === 'visible') reg.update().catch(() => {});
       }, 30 * 60 * 1000); // a cada 30 minutos, só quando a aba está em foco
+
+      // Pergunta ao service worker qual versão está em uso (aparece no rodapé).
+      navigator.serviceWorker.ready.then(r => {
+        const sw = navigator.serviceWorker.controller || r.active;
+        if (sw) sw.postMessage({ type: 'GET_VERSION' });
+      }).catch(() => {});
     }).catch(() => {
+    });
+
+    navigator.serviceWorker.addEventListener('message', e => {
+      if (!e.data || e.data.type !== 'VERSION') return;
+      const el = document.getElementById('footerVersion');
+      if (el) el.textContent = argoUpdateTextoVersao(e.data.version, e.data.buildData);
     });
 
     // Quando o novo Service Worker assume o controle:
     //  • primeira instalação (a página ainda não tinha Service Worker): não há
     //    versão nova a carregar, então não recarrega — antes recarregava já na
     //    primeira visita;
-    //  • app trancado (tela de senha): recarrega na hora, sem custo;
-    //  • app em uso: NÃO recarrega no meio do trabalho (isso jogava a pessoa
-    //    de volta na tela de senha). Mostra um aviso discreto com o botão
-    //    "Atualizar" e recarrega sozinho na próxima vez que o app for trancado.
+    //  • a pessoa pediu a atualização (botão "Atualizar") ou o app está trancado
+    //    (tela de senha): recarrega na hora;
+    //  • app em uso e a troca veio de outra aba: NÃO recarrega no meio do trabalho
+    //    (isso jogava a pessoa de volta na tela de senha). Mostra o aviso com o
+    //    botão "Atualizar" e recarrega sozinho na próxima vez que o app for trancado.
     const jaTinhaControlador = !!navigator.serviceWorker.controller;
     let jaRecarregou = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!jaTinhaControlador || jaRecarregou) return;
-      const appRoot = document.getElementById('appRoot');
-      const emUso = appRoot && appRoot.dataset.locked === 'false';
-      if (!emUso) {
+      if (jaRecarregou) return;
+      if (!jaTinhaControlador && !ARGO_UPDATE.requested) return;
+      if (!argoAppEmUso() || ARGO_UPDATE.requested) {
         jaRecarregou = true;
         window.location.reload();
         return;
       }
       window.__argoUpdatePending = true;
       const greeting = document.getElementById('argoGreetingModal');
-      // Com o cartão de abertura na tela, o aviso espera ele ser fechado
-      // (ver argoDismissGreeting) para não ficar por cima dos botões.
       if (!(greeting && greeting.classList.contains('visible'))) argoShowUpdateToast();
     });
   });
-}
 
-function ativarAtualizacao(worker) {
-  worker.postMessage({ type: 'SKIP_WAITING' });
+  // Botão "Verificar atualização" do rodapé.
+  document.addEventListener('click', e => {
+    const b = e.target && e.target.closest ? e.target.closest('#footerCheckUpdate') : null;
+    if (b) argoVerificarAtualizacao(b);
+  });
 }
 
 // Aviso discreto de "nova versão disponível" (ver controllerchange acima).
@@ -18094,7 +18197,7 @@ function argoShowUpdateToast() {
   el.style.cssText = 'position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:1300;width:max-content;max-width:calc(100vw - 24px);display:flex;align-items:center;gap:12px;padding:9px 10px 9px 16px;border-radius:14px;background:#0c2946;color:#f6e7bd;border:1px solid rgba(243,213,138,.45);box-shadow:0 12px 30px -8px rgba(0,0,0,.6);font:600 13px Inter,system-ui,sans-serif;';
   el.innerHTML = '<span>Nova versão do Argo disponível.</span>' +
     '<button type="button" style="flex-shrink:0;border:none;border-radius:10px;padding:7px 14px;background:linear-gradient(135deg,#29ABE2,#0091C2);color:#fff;font:700 13px Inter,system-ui,sans-serif;cursor:pointer;">Atualizar</button>';
-  el.querySelector('button').addEventListener('click', () => window.location.reload());
+  el.querySelector('button').addEventListener('click', () => argoAplicarAtualizacao());
   document.body.appendChild(el);
 }
 
