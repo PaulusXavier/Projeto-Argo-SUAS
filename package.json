@@ -25,7 +25,10 @@
     "test:rota": "node scripts/teste-rota.mjs",
     "test:habilidades": "node scripts/teste-habilidades.mjs",
     "test:mascote-ia": "node scripts/teste-mascote-ia.mjs",
-    "test:coordenadas": "node scripts/teste-coordenadas.mjs"
+    "test:coordenadas": "node scripts/teste-coordenadas.mjs",
+    "test:atualizacao": "node scripts/teste-atualizacao.mjs",
+    "test:cadunico": "node scripts/teste-cadunico.mjs",
+    "test:qualidade": "node scripts/teste-qualidade.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.24.0"
