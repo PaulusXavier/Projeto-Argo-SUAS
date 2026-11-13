@@ -24,7 +24,8 @@
     "test:aprendizado": "node scripts/teste-aprendizado.mjs",
     "test:rota": "node scripts/teste-rota.mjs",
     "test:habilidades": "node scripts/teste-habilidades.mjs",
-    "test:mascote-ia": "node scripts/teste-mascote-ia.mjs"
+    "test:mascote-ia": "node scripts/teste-mascote-ia.mjs",
+    "test:coordenadas": "node scripts/teste-coordenadas.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.24.0"
