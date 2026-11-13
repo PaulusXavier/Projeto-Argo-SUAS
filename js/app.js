@@ -8894,7 +8894,8 @@ function render() {
     agenda:   { rootId: 'agendaCalendarGrid', render: renderAgendaCard,    init: initAgendaPanel },
     prazos:   { rootId: 'prazosRoot',         render: renderPrazosCard,    init: initPrazosPanel },
     appsext:  { rootId: 'appsExternosGrid',  render: renderExternalAppsCard, init: initExternalAppsPanel },
-    ferramentas: { rootId: 'toolsRoot', render: renderToolsCard, init: initToolsPanel }
+    ferramentas: { rootId: 'toolsRoot', render: renderToolsCard, init: initToolsPanel },
+    informesimp: { rootId: 'informesImpRoot', render: renderInformesImpCard, init: initInformesImpPanel }
   };
 
   if (PANEL_TABS[cat]) {
@@ -12238,6 +12239,105 @@ function renderExternalAppsCard() {
 
 // Painel só de links externos; só precisa mostrar o convite de instalação.
 function initExternalAppsPanel() { appsextRefreshInstall(); appsextRefreshOnline(); }
+
+/* ===== Informes: documentos prontos para imprimir (PDFs em assets/informes/) ===== */
+const INFORMES_IMP = [
+  { id: 'cadunico-pt', grupo: 'CadÚnico', lang: 'PT', titulo: 'CadÚnico — documentos para inclusão', desc: 'Documentos necessários para a inclusão cadastral e regra de renda per capita. Frente e verso (endereço do CRAS).', file: 'assets/informes/cadunico-pt.pdf', pags: 2 },
+  { id: 'cadunico-es', grupo: 'CadÚnico', lang: 'ES', titulo: 'Registro Único (CadÚnico) — documentos', desc: 'Versão em espanhol, para atendimento de imigrantes.', file: 'assets/informes/cadunico-es.pdf', pags: 2 },
+  { id: 'cond-pt', grupo: 'Bolsa Família', lang: 'PT', titulo: 'Bolsa Família — condicionalidades', desc: 'Frequência escolar (60% / 75%) e acompanhamento de saúde.', file: 'assets/informes/condicionalidades-pt.pdf', pags: 2 },
+  { id: 'cond-es', grupo: 'Bolsa Família', lang: 'ES', titulo: 'Bolsa Familia — condicionalidades', desc: 'Versão em espanhol, para atendimento de imigrantes.', file: 'assets/informes/condicionalidades-es.pdf', pags: 2 },
+  { id: 'consulta-pbf', grupo: 'Bolsa Família', lang: 'PT', titulo: 'Como sei se fui selecionada para receber o benefício?', desc: 'Central MDS 121, WhatsApp (61) 4042-1552 e aplicativo Bolsa Família.', file: 'assets/informes/consulta-pbf-pt.pdf', pags: 1 },
+  { id: 'end-cras-todos', grupo: 'Endereços dos CRAS', lang: 'PT', titulo: 'Endereços de todos os CRAS de Boa Vista', desc: 'Endereço, telefone e abrangência (bairros) de cada CRAS.', file: 'assets/informes/enderecos-cras-boa-vista.pdf', pags: 1 },
+  { id: 'end-cras-cristiana', grupo: 'Endereços dos CRAS', lang: 'PT', titulo: 'CRAS Cristiana Vicente Nunes', desc: 'Endereço, telefone e abrangência: 16 cópias por folha.', file: 'assets/informes/endereco-cras-cristiana.pdf', pags: 1 }
+];
+
+function informesImpCardHtml(d, i) {
+  return `
+    <article class="inf-card" data-inf="${i}">
+      <div class="inf-card-top">
+        <span class="inf-lang inf-lang-${d.lang.toLowerCase()}" title="${d.lang === 'ES' ? 'Espanhol' : 'Português'}">${d.lang}</span>
+        <span class="inf-pags">${d.pags} ${d.pags === 1 ? 'página' : 'páginas'} · A4</span>
+      </div>
+      <h4 class="inf-title">${d.titulo}</h4>
+      <p class="inf-desc">${d.desc}</p>
+      <div class="inf-actions">
+        <button type="button" class="inf-btn inf-btn-primary" onclick="informesImpPrint(${i}, this)">🖨️ Imprimir</button>
+        <a class="inf-btn" href="${d.file}" target="_blank" rel="noopener">👁️ Visualizar<span class="sr-only"> (abre em outra aba)</span></a>
+        <a class="inf-btn" href="${d.file}" download>⬇️ Baixar</a>
+      </div>
+    </article>`;
+}
+
+function renderInformesImpCard() {
+  const grupos = [];
+  INFORMES_IMP.forEach((d, i) => {
+    let g = grupos.find(x => x.nome === d.grupo);
+    if (!g) { g = { nome: d.grupo, itens: [] }; grupos.push(g); }
+    g.itens.push(informesImpCardHtml(d, i));
+  });
+  return `
+    <div class="tech-card inf-root" id="informesImpRoot">
+      <div class="card-top">
+        <h2 style="margin:0;">Informes</h2>
+        <span class="subtitle">🖨️ Documentos prontos para imprimir e entregar às famílias</span>
+      </div>
+      <div class="card-body">
+        <p class="inf-hint">Cada folha traz várias cópias do mesmo informe: imprima em A4, escala 100% (sem “ajustar à página”), e recorte nas linhas. Os de 2 páginas são <strong>frente e verso</strong>: escolha impressão frente e verso, virando pela borda longa.</p>
+        <div class="inf-status" id="informesImpStatus" role="status" aria-live="polite" hidden></div>
+        ${grupos.map(g => `<h3 class="inf-group">${g.nome}</h3><div class="inf-grid">${g.itens.join('')}</div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function informesImpStatus(msg) {
+  const box = document.getElementById('informesImpStatus');
+  if (!box) return;
+  box.textContent = msg || '';
+  box.hidden = !msg;
+}
+
+// Imprime o PDF sem sair do app (iframe oculto); se o navegador não deixar, abre em outra aba.
+async function informesImpPrint(i, btn) {
+  const d = INFORMES_IMP[i];
+  if (!d) return;
+  // Celular e tablet: imprimir um PDF dentro de um quadro oculto costuma sair em branco (ou imprimir
+  // a página do app). Lá o PDF abre na própria aba do navegador, que tem o botão de imprimir.
+  const touch = /android|iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (touch) {
+    informesImpStatus('Abri o PDF em outra aba: use o botão de imprimir (ou Compartilhar → Imprimir) do visualizador.');
+    window.open(d.file, '_blank', 'noopener');
+    return;
+  }
+  const old = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Preparando…'; }
+  const restore = () => { if (btn) { btn.disabled = false; btn.innerHTML = old; } };
+  try {
+    const res = await fetch(d.file);
+    if (!res.ok) throw new Error('http ' + res.status);
+    const url = URL.createObjectURL(await res.blob());
+    const fr = document.createElement('iframe');
+    fr.setAttribute('aria-hidden', 'true');
+    fr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0';
+    fr.onload = () => {
+      setTimeout(() => {
+        try { fr.contentWindow.focus(); fr.contentWindow.print(); }
+        catch (e) { window.open(d.file, '_blank', 'noopener'); }
+        restore();
+        setTimeout(() => { fr.remove(); URL.revokeObjectURL(url); }, 60000);
+      }, 400);
+    };
+    fr.src = url;
+    document.body.appendChild(fr);
+    informesImpStatus('');
+  } catch (e) {
+    restore();
+    informesImpStatus('Não consegui preparar a impressão aqui. Abri o PDF em outra aba — use Ctrl+P por lá.');
+    window.open(d.file, '_blank', 'noopener');
+  }
+}
+
+function initInformesImpPanel() { informesImpStatus(''); }
+
 
 function renderTranslatorCard() {
   const langOptions = (selected) => Object.entries(TRADUTOR_LANGS).map(([code, l]) =>
@@ -17707,13 +17807,13 @@ function scrollActiveChipIntoView() {
 /* ---- 2) acesso rápido: recentes + padrão ---- */
 const NAV_RECENT_KEY = 'argo_recent_tabs_v1';
 // Acesso rápido fixo: são as ferramentas que saíram da grade lateral.
-const NAV_DEFAULT_SHORTCUTS = ['agenda', 'mapa', 'tradutor', 'pdftools', 'appsext', 'noticias'];
+const NAV_DEFAULT_SHORTCUTS = ['agenda', 'mapa', 'tradutor', 'pdftools', 'appsext', 'noticias', 'ferramentas', 'informesimp'];
 const NAV_SHORT_LABELS = {
   agenda: 'Agenda Argo', prazos: 'Prazos e alertas do SUAS', mapa: 'Mapa dos Equipamentos', tradutor: 'Tradutor (Es / En / Fr)',
-  pdftools: 'Central de PDF', criptografia: 'Criptografia', appsext: 'Aplicativos', ferramentas: 'Ferramentas', noticias: 'Notícias do MDS, MEC, Saúde e Roraima',
+  pdftools: 'Central de PDF', criptografia: 'Criptografia', appsext: 'Aplicativos', ferramentas: 'Ferramentas', informesimp: 'Informes', noticias: 'Notícias do MDS, MEC, Saúde e Roraima',
   saude: 'RAPS', hospitalar: 'Hospitais', social: 'SUAS', informes: 'Programas', cas: 'CAS', cras: 'CRAS'
 };
-const NAV_QUICK_MAX = 6;
+const NAV_QUICK_MAX = 8;
 // Acesso rápido: título curto + subtítulo (mantém o texto completo no tooltip e no leitor de tela).
 const NAV_QUICK_META = {
   agenda:   { title: 'Agenda Argo',           sub: 'Calendário e lembretes' },
@@ -17723,7 +17823,9 @@ const NAV_QUICK_META = {
   pdftools: { title: 'Central de PDF',         sub: 'Unir, dividir, converter' },
   criptografia: { title: 'Criptografia',        sub: 'Senha em PDF, Word, .zip' },
   appsext:  { title: 'Aplicativos',           sub: 'Toth, Umbrela, Verbus…' },
-  noticias: { title: 'Notícias',              sub: 'MDS, MEC, Saúde e Roraima' }
+  noticias: { title: 'Notícias',              sub: 'MDS, MEC, Saúde e Roraima' },
+  ferramentas: { title: 'Ferramentas',        sub: 'Relógio, cálculos, planilhas e notas' },
+  informesimp: { title: 'Informes',            sub: 'Documentos para imprimir' }
 };
 
 function navReadRecent() {
@@ -18926,6 +19028,7 @@ const ARGO_TAB_TIPS = {
   pdftools: 'Una até 20 arquivos, divida ou extraia páginas, reduza o tamanho de um PDF, numere as páginas e converta entre PDF, Word e JPG. Para pôr senha, use a aba Criptografia. Nada sai do seu navegador.',
   criptografia: 'Coloque senha em PDF, documento do Word/Excel/PowerPoint, arquivo de texto ou pasta inteira (saída em .zip). Tudo é feito neste aparelho; anote a senha, pois ela não pode ser recuperada.',
   appsext: 'Cada atalho abre um app do autor em nova aba, com login e sincronização independentes.',
+  informesimp: 'Folhas prontas para imprimir e recortar (CadÚnico, condicionalidades, consulta do Bolsa Família e endereços dos CRAS), em português e espanhol. Toque em Imprimir, Visualizar ou Baixar.',
   ferramentas: 'Relógio de Boa Vista com cronômetro, temporizador e alarmes que repetem e ficam salvos, calculadora com memória, porcentagens, soma e média de listas, renda per capita, idade, QR Code, contador de atendimentos, prazos em dias úteis, conferência de NIS e CPF, valor por extenso, link de WhatsApp, formatador de texto, analisador de planilha (duplicados, NIS/CPF e datas) e bloco de notas cifrado neste aparelho.',
   noticias: 'Toque num tema rápido (Bolsa Família, CadÚnico…), filtre por Normativos ou por período e use a estrela para salvar o que quer ler depois.',
   cras: 'Procure por bairro para saber qual equipe de referência atende. A planilha de atendimentos abre em tela cheia.',
@@ -19019,6 +19122,7 @@ const ARGO_TAB_ALIASES = [
   ['mapa', ['mapa', 'mapas', 'mapa dos equipamentos']],
   ['tradutor', ['tradutor', 'traducao', 'traduzir']],
   ['pdftools', ['pdf', 'pdfs', 'central de pdf', 'ferramentas de pdf']],
+  ['informesimp', ['informes', 'informe', 'folheto', 'folhetos', 'documentos para imprimir', 'imprimir informe']],
   ['criptografia', ['criptografia', 'criptografar', 'senha no pdf', 'senha no word', 'senha no docx', 'senha em pasta', 'proteger pdf', 'zip com senha']],
   ['appsext', ['aplicativos', 'aplicativo', 'apps']],
   ['noticias', ['noticias', 'noticia', 'novidades']],
@@ -31410,7 +31514,8 @@ const ARGO_ACOES_IA = [
   { id: 'defesacivil', cat: 'defesacivil', rotulo: 'Defesa Civil e Situações de Emergência', descricao: 'Emergências e Defesa Civil' },
   { id: 'informes', cat: 'informes', rotulo: 'Programas, Projetos e Serviços', descricao: 'Informes sobre programas e projetos' },
   { id: 'criptografia', cat: 'criptografia', rotulo: 'Criptografia', descricao: 'Senha em PDF, Office, texto e pastas .zip' },
-  { id: 'appsext', cat: 'appsext', rotulo: 'Aplicativos', descricao: 'Outros aplicativos do autor' }
+  { id: 'appsext', cat: 'appsext', rotulo: 'Aplicativos', descricao: 'Outros aplicativos do autor' },
+  { id: 'informesimp', cat: 'informesimp', rotulo: 'Informes', descricao: 'Documentos para imprimir (CadÚnico, Bolsa Família, endereços dos CRAS)' }
 ];
 
 // Abre UMA ferramenta da aba Ferramentas (renda per capita, prazos, NIS/CPF...): troca de aba, mostra só o cartão
@@ -32121,7 +32226,7 @@ function argoAskAI(rawText, tab, fallbackResult) {
   /* ---- deslizar para trocar de aba (celular, modo destaque) ---- */
   const SWIPE_BLOCK = 'input, textarea, select, button, a, summary, label, table, pre, canvas, [contenteditable], ' +
     '.leaflet-container, [data-no-swipe], #agendaBook, #agendaCalendarGrid, .pdftools-fileitem, .tab-focus-bar, #notesRoot, .tech-card.is-expanded';
-  const LIST_ONLY = ['pdftools', 'criptografia', 'tradutor', 'noticias', 'mapa', 'agenda', 'prazos', 'appsext', 'ferramentas', 'anotacoes'];
+  const LIST_ONLY = ['pdftools', 'criptografia', 'tradutor', 'noticias', 'mapa', 'agenda', 'prazos', 'appsext', 'ferramentas', 'informesimp', 'anotacoes'];
   let sx = 0, sy = 0, st = 0, tracking = false;
 
   function scrollsSideways(el) {
@@ -32177,7 +32282,7 @@ function argoAskAI(rawText, tab, fallbackResult) {
 /* MASCOTE-IA:início — funções puras (testadas em scripts/teste-mascote-ia.mjs) */
 // Abas em que o balão de seleção NÃO aparece: têm registro de atendimento, anotações, agenda ou arquivos do usuário.
 function argoMascoteAbaPermitida(cat) {
-  return ['cas', 'cras', 'anotacoes', 'agenda', 'prazos', 'ferramentas', 'criptografia', 'pdftools'].indexOf(String(cat || '')) < 0;
+  return ['cas', 'cras', 'anotacoes', 'agenda', 'prazos', 'ferramentas', 'criptografia', 'pdftools', 'informesimp'].indexOf(String(cat || '')) < 0;
 }
 // Espaços em um só, sem caracteres de controle, cortado em `max` (com reticências).
 function argoMascoteLimpar(raw, max) {
