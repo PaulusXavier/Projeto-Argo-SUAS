@@ -23050,12 +23050,6 @@ function agendaUseSyncCode() {
     input.focus();
     return;
   }
-  const norm = val.toLowerCase().replace(/\s+/g, '-');
-  if (norm.length < 12 || norm.length > 80) {
-    agendaToast('O código precisa ter de 12 a 80 caracteres (regra de segurança do Firebase). Use "Gerar código".', 'error');
-    input.focus();
-    return;
-  }
   agendaConnectSync(val);
 }
 async function agendaCopySyncCode() {
