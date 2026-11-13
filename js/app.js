@@ -21403,8 +21403,27 @@ function agendaComputeStats(scope) {
     if (!st.busiest || entries.length > st.busiest.n) st.busiest = { key, n: entries.length };
   });
   st.rate = st.total ? Math.round(st.done / st.total * 100) : 0;
-  // Taxa de conclusão por mês (só no ano todo): feitas / total de cada mês.
-  if (scope !== 'month') st.monthRate = st.series.map(b => { const t = b.done + b.pending + b.late; return t ? { rate: Math.round(b.done / t * 100), total: t, done: b.done } : null; });
+  // Taxa de conclusão por mês (só no ano todo): feitas / (feitas + atrasadas), ou seja, só o que JÁ VENCEU.
+  // Anotação de dia futuro ainda não "falhou": contá-la derrubava a linha de novembro/dezembro a 0%.
+  if (scope !== 'month') st.monthRate = st.series.map(b => { const t = b.done + b.late; return t ? { rate: Math.round(b.done / t * 100), total: t, done: b.done } : null; });
+  // Destaques: período mais cheio (mês no ano, dia no mês) e sequência de dias com tudo concluído (de hoje para trás).
+  const tot = b => b.done + b.pending + b.late;
+  st.bestIdx = -1;
+  st.series.forEach((b, i) => { if (tot(b) && (st.bestIdx < 0 || tot(b) > tot(st.series[st.bestIdx]))) st.bestIdx = i; });
+  st.streak = 0;
+  Object.keys(agendaNotesCache).filter(k => k <= todayKey).sort().reverse().some(k => {
+    const es = (agendaNotesCache[k] || []).filter(e => e && e.text);
+    if (!es.length) return false;
+    if (es.every(e => e.done)) { st.streak++; return false; }
+    return k !== todayKey;            // hoje ainda tem o dia todo: não quebra a sequência
+  });
+  // Comparação com o mês anterior (só na visão do mês).
+  st.prevTotal = null;
+  if (scope === 'month' && agendaCurrentMonth > 0) {
+    const pp = AGENDA_YEAR + '-' + String(agendaCurrentMonth).padStart(2, '0') + '-';
+    st.prevTotal = 0;
+    Object.keys(agendaNotesCache).forEach(k => { if (k.indexOf(pp) === 0) st.prevTotal += (agendaNotesCache[k] || []).filter(e => e && e.text).length; });
+  }
   return st;
 }
 
@@ -21434,16 +21453,26 @@ function agendaStatsDonut(st) {
     row('done', st.done, 'Concluídas') + row('pending', st.pending - st.late, 'A fazer') + row('late', st.late, 'Atrasadas') + '</ul></div>';
 }
 
-// Barras empilhadas (feitas / a fazer / atrasadas), com linha de referência da média.
-function agendaStatsBarsSvg(series, labels, titles) {
-  const W = 560, H = 200, padL = 28, padB = 26, padT = 10;
+// Barras empilhadas (feitas / a fazer / atrasadas): topo arredondado, total em cima de cada barra, faixa para "hoje",
+// fim de semana mais claro (visão do mês) e linha da média com o valor.
+// opts: { today: índice da barra de hoje (ou -1), weekend: [bool por barra] }
+function agendaStatsBarsSvg(series, labels, titles, opts) {
+  const o = opts || {};
+  const W = 560, H = 210, padL = 28, padB = 26, padT = 18;
   const totals = series.map(b => b.done + b.pending + b.late);
   const max = Math.max(1, ...totals);
   const step = Math.max(1, Math.ceil(max / 4));
   const top = Math.ceil(max / step) * step;
   const iw = W - padL - 6, ih = H - padB - padT;
   const bw = iw / series.length;
-  let g = '';
+  const many = series.length > 12;
+  let g = '<defs><linearGradient id="astBarShine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".08"/></linearGradient></defs>';
+  // faixas de fundo: fim de semana e hoje
+  series.forEach((b, i) => {
+    const x = padL + i * bw;
+    if (o.weekend && o.weekend[i]) g += '<rect x="' + x.toFixed(1) + '" y="' + padT + '" width="' + bw.toFixed(1) + '" height="' + ih + '" class="ast-wkband"/>';
+    if (o.today === i) g += '<rect x="' + x.toFixed(1) + '" y="' + (padT - 4) + '" width="' + bw.toFixed(1) + '" height="' + (ih + 4) + '" rx="4" class="ast-todayband"/>';
+  });
   for (let v = 0; v <= top; v += step) {
     const y = padT + ih - (v / top) * ih;
     g += '<line x1="' + padL + '" x2="' + (W - 6) + '" y1="' + y + '" y2="' + y + '" class="ast-grid"/><text x="' + (padL - 5) + '" y="' + (y + 3.5) + '" text-anchor="end" class="ast-axis">' + v + '</text>';
@@ -21452,19 +21481,30 @@ function agendaStatsBarsSvg(series, labels, titles) {
     const x = padL + i * bw + bw * 0.14, w = bw * 0.72, tot = totals[i];
     const tip = tot ? (titles || labels)[i] + ': ' + tot + (tot === 1 ? ' anotação' : ' anotações') +
       ' — ' + b.done + ' concluída(s), ' + (b.pending) + ' a fazer, ' + b.late + ' atrasada(s)' : '';
+    const parts = [['done', b.done], ['pending', b.pending], ['late', b.late]].filter(p => p[1]);
     let y = padT + ih, inner = '';
-    [['done', b.done], ['pending', b.pending], ['late', b.late]].forEach(([k, n]) => {
-      if (!n) return;
-      const h = (n / top) * ih; y -= h;
-      inner += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + Math.max(h, 1).toFixed(1) + '" rx="2" class="ast-' + k + '"/>';
+    parts.forEach(([k, n], pi) => {
+      const h = Math.max((n / top) * ih, 2); y -= h;
+      const isTop = pi === parts.length - 1, r = Math.min(many ? 2.5 : 4, h);
+      const xs = x.toFixed(1), ys = y.toFixed(1), xe = (x + w).toFixed(1), ye = (y + h).toFixed(1);
+      const d = isTop
+        ? 'M' + xs + ' ' + ye + ' V' + (y + r).toFixed(1) + ' Q' + xs + ' ' + ys + ' ' + (x + r).toFixed(1) + ' ' + ys + ' H' + (x + w - r).toFixed(1) + ' Q' + xe + ' ' + ys + ' ' + xe + ' ' + (y + r).toFixed(1) + ' V' + ye + ' Z'
+        : 'M' + xs + ' ' + ys + ' H' + xe + ' V' + ye + ' H' + xs + ' Z';
+      inner += '<path d="' + d + '" class="ast-' + k + ' ast-seg2"/><path d="' + d + '" fill="url(#astBarShine)" pointer-events="none"/>';
     });
-    if (tot) g += '<g class="ast-bar" style="--i:' + i + '" data-tip="' + escapeHtml(tip) + '">' + inner +
-      '<rect x="' + (padL + i * bw).toFixed(1) + '" y="' + padT + '" width="' + bw.toFixed(1) + '" height="' + ih + '" class="ast-hit"/></g>';
-    const showLabel = series.length <= 12 || (i + 1) % 5 === 0 || i === 0;
-    if (showLabel) g += '<text x="' + (padL + i * bw + bw / 2).toFixed(1) + '" y="' + (H - 7) + '" text-anchor="middle" class="ast-axis">' + escapeHtml(labels[i]) + '</text>';
+    if (tot) {
+      g += '<g class="ast-bar" style="--i:' + i + '" data-tip="' + escapeHtml(tip) + '">' + inner +
+        '<rect x="' + (padL + i * bw).toFixed(1) + '" y="' + padT + '" width="' + bw.toFixed(1) + '" height="' + ih + '" class="ast-hit"/></g>';
+      g += '<text x="' + (padL + i * bw + bw / 2).toFixed(1) + '" y="' + (y - 3).toFixed(1) + '" text-anchor="middle" class="ast-bt' + (many ? ' ast-bt-sm' : '') + '">' + tot + '</text>';
+    }
+    const showLabel = !many || (i + 1) % 5 === 0 || i === 0 || o.today === i;
+    if (showLabel) g += '<text x="' + (padL + i * bw + bw / 2).toFixed(1) + '" y="' + (H - 7) + '" text-anchor="middle" class="ast-axis' + (o.today === i ? ' ast-axis-now' : '') + '">' + escapeHtml(labels[i]) + '</text>';
   });
   const avg = totals.reduce((a, n) => a + n, 0) / series.length;
-  if (avg > 0) { const ay = padT + ih - (avg / top) * ih; g += '<line x1="' + padL + '" x2="' + (W - 6) + '" y1="' + ay.toFixed(1) + '" y2="' + ay.toFixed(1) + '" class="ast-avg"/>'; }
+  if (avg > 0) {
+    const ay = padT + ih - (avg / top) * ih;
+    g += '<line x1="' + padL + '" x2="' + (W - 6) + '" y1="' + ay.toFixed(1) + '" y2="' + ay.toFixed(1) + '" class="ast-avg"/>';
+  }
   return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Gráfico de barras: anotações por ' + (series.length === 12 ? 'mês' : 'dia') + '" class="ast-svg">' + g + '</svg>';
 }
 
@@ -21476,16 +21516,22 @@ function agendaStatsRateLine(monthRate) {
     const y = padT + ih - v / 100 * ih;
     g += '<line x1="' + padL + '" x2="' + (W - 12) + '" y1="' + y + '" y2="' + y + '" class="ast-grid"/><text x="' + (padL - 5) + '" y="' + (y + 3.5) + '" text-anchor="end" class="ast-axis">' + v + '%</text>';
   });
-  let pts = '';
+  let pts = '', area = '', run = [];
+  const base = padT + ih, flush = () => {
+    if (run.length > 1) area += '<path d="M' + run[0][0].toFixed(1) + ' ' + base + ' ' + run.map(q => 'L' + q[0].toFixed(1) + ' ' + q[1].toFixed(1)).join(' ') + ' L' + run[run.length - 1][0].toFixed(1) + ' ' + base + ' Z" class="ast-area"/>';
+    run = [];
+  };
   monthRate.forEach((m, i) => {
     const x = padL + i * bw + bw / 2;
+    if (m) run.push([x, padT + ih - m.rate / 100 * ih]); else flush();
     g += '<text x="' + x.toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" class="ast-axis">' + AGENDA_MONTH_NAMES[i].slice(0, 3).toLowerCase() + '</text>';
     if (!m) return;
     const y = padT + ih - m.rate / 100 * ih;
-    pts += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="4.5" class="ast-dot" data-tip="' + escapeHtml(AGENDA_MONTH_NAMES[i] + ': ' + m.rate + '% concluídas (' + m.done + ' de ' + m.total + ')') + '"/>' +
+    pts += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="4.5" class="ast-dot" data-tip="' + escapeHtml(AGENDA_MONTH_NAMES[i] + ': ' + m.rate + '% do que já venceu foi concluído (' + m.done + ' de ' + m.total + ')') + '"/>' +
       '<text x="' + x.toFixed(1) + '" y="' + (y - 8).toFixed(1) + '" text-anchor="middle" class="ast-pt">' + m.rate + '</text>';
   });
-  return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Linha: taxa de conclusão por mês" class="ast-svg"><path d="' + monthLinePath(monthRate, padL, bw, padT, ih) + '" class="ast-line"/>' + g + pts + '</svg>';
+  flush();
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Linha: taxa de conclusão por mês" class="ast-svg"><defs><linearGradient id="astAreaG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3f7d55" stop-opacity=".30"/><stop offset="1" stop-color="#3f7d55" stop-opacity="0"/></linearGradient></defs>' + g + area + '<path d="' + monthLinePath(monthRate, padL, bw, padT, ih) + '" class="ast-line"/>' + pts + '</svg>';
 }
 function monthLinePath(monthRate, padL, bw, padT, ih) {
   let d = '', pen = false;
@@ -21512,9 +21558,9 @@ function agendaStatsHeatYear(byDay) {
   ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].forEach((l, r) => { if (r % 2) g += '<text x="' + (padL - 7) + '" y="' + (padT + r * step + cell - 1) + '" text-anchor="end" class="ast-axis ast-axis-sm">' + l + '</text>'; });
   for (let i = 0; i < days; i++) {
     const d = new Date(AGENDA_YEAR, 0, 1 + i), idx = startOffset + i, c = Math.floor(idx / 7), r = idx % 7;
-    const key = agendaIsoKey(d), n = byDay[key] || 0;
+    const key = agendaIsoKey(d), n = byDay[key] || 0, isNow = key === agendaIsoKey(new Date());
     if (d.getMonth() !== lastMonth && (d.getDate() <= 7)) { lastMonth = d.getMonth(); g += '<text x="' + (padL + c * step) + '" y="10" class="ast-axis ast-axis-sm">' + AGENDA_MONTH_NAMES[lastMonth].slice(0, 3).toLowerCase() + '</text>'; }
-    g += '<rect x="' + (padL + c * step) + '" y="' + (padT + r * step) + '" width="' + cell + '" height="' + cell + '" rx="2.5" class="ast-h' + agendaHeatLevel(n) + '" data-tip="' + escapeHtml(agendaHeatTip(key, n)) + '"/>';
+    g += '<rect x="' + (padL + c * step) + '" y="' + (padT + r * step) + '" width="' + cell + '" height="' + cell + '" rx="2.5" class="ast-h' + agendaHeatLevel(n) + (isNow ? ' ast-now' : '') + '" data-tip="' + escapeHtml(agendaHeatTip(key, n)) + '"/>';
   }
   const W = padL + cols * step, H = padT + 7 * step;
   return '<div class="ast-scroll"><svg viewBox="0 0 ' + W + ' ' + H + '" style="min-width:' + Math.min(W, 520) + 'px" class="ast-svg" role="img" aria-label="Mapa de calor: anotações por dia do ano">' + g + '</svg></div>';
@@ -21525,16 +21571,16 @@ function agendaStatsHeatMonth(byDay) {
   for (let i = 0; i < first.getDay(); i++) h += '<span></span>';
   for (let d = 1; d <= n; d++) {
     const key = AGENDA_YEAR + '-' + String(agendaCurrentMonth + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0'), c = byDay[key] || 0;
-    h += '<span class="ast-mcell ast-h' + agendaHeatLevel(c) + '" data-tip="' + escapeHtml(agendaHeatTip(key, c)) + '">' + d + '</span>';
+    h += '<span class="ast-mcell ast-h' + agendaHeatLevel(c) + (key === agendaIsoKey(new Date()) ? ' ast-now' : '') + '" data-tip="' + escapeHtml(agendaHeatTip(key, c)) + '">' + d + '</span>';
   }
   return h + '</div>';
 }
 function agendaStatsHeatLegend() {
-  return '<div class="ast-heatleg">menos <i class="ast-h0"></i><i class="ast-h1"></i><i class="ast-h2"></i><i class="ast-h3"></i><i class="ast-h4"></i> mais</div>';
+  return '<div class="ast-heatleg"><span class="ast-nowkey"></span>hoje <span class="ast-heatsp"></span>menos <i class="ast-h0"></i><i class="ast-h1"></i><i class="ast-h2"></i><i class="ast-h3"></i><i class="ast-h4"></i> mais</div>';
 }
 
 function agendaStatsHBars(rows, max, colorFn) {
-  return rows.map((r, i) => '<div class="ast-hrow" data-tip="' + escapeHtml(r.label + ': ' + r.n) + '"><span class="ast-hlabel">' + escapeHtml(r.label) + '</span>' +
+  return rows.map((r, i) => '<div class="ast-hrow' + (r.n && r.n === max ? ' is-top' : '') + '" data-tip="' + escapeHtml(r.label + ': ' + r.n) + '"><span class="ast-hlabel">' + escapeHtml(r.label) + '</span>' +
     '<span class="ast-htrack"><i style="width:' + (max ? Math.max(r.n ? 3 : 0, Math.round(r.n / max * 100)) : 0) + '%;' + (r.color ? 'background:' + r.color : '') + '"></i></span>' +
     '<b class="ast-hval">' + r.n + '</b></div>').join('');
 }
@@ -21574,8 +21620,20 @@ function agendaRenderStats() {
     body.innerHTML = '<p class="ast-empty">Ainda não há anotações em ' + escapeHtml(scopeName) + '. Quando você anotar atividades nos dias do calendário, as estatísticas aparecem aqui.</p>';
     return;
   }
-  const tile = (n, l, cls) => '<div class="ast-tile ' + (cls || '') + '"><b>' + n + '</b><span>' + l + '</span></div>';
+  const tile = (n, l, cls, sub) => '<div class="ast-tile ' + (cls || '') + '"><b>' + n + '</b><span>' + l + '</span>' + (sub ? '<em>' + sub + '</em>' : '') + '</div>';
   const isMonth = agendaStatsScope === 'month';
+  const realNow = new Date();
+  const todayIdx = isMonth ? (realNow.getFullYear() === AGENDA_YEAR && realNow.getMonth() === agendaCurrentMonth ? realNow.getDate() - 1 : -1)
+    : (realNow.getFullYear() === AGENDA_YEAR ? realNow.getMonth() : -1);
+  const weekend = isMonth ? st.series.map((_, i) => { const wd = new Date(AGENDA_YEAR, agendaCurrentMonth, i + 1).getDay(); return wd === 0 || wd === 6; }) : null;
+  let trend = '';
+  if (st.prevTotal !== null) { const df = st.total - st.prevTotal; trend = df > 0 ? '▲ ' + df + ' vs mês anterior' : (df < 0 ? '▼ ' + (-df) + ' vs mês anterior' : '= mês anterior'); }
+  const bt = b => b.done + b.pending + b.late;
+  const chips = [];
+  if (st.bestIdx >= 0) chips.push(['🏆', isMonth ? 'Dia mais cheio' : 'Mês mais cheio', (isMonth ? 'dia ' + (st.bestIdx + 1) : AGENDA_MONTH_NAMES[st.bestIdx].toLowerCase()) + ' · ' + bt(st.series[st.bestIdx]) + (bt(st.series[st.bestIdx]) === 1 ? ' anotação' : ' anotações')]);
+  if (st.streak > 0) chips.push(['🔥', 'Sequência em dia', st.streak + (st.streak === 1 ? ' dia' : ' dias') + ' com tudo concluído']);
+  chips.push(st.late > 0 ? ['⏰', 'Para resolver', st.late + (st.late === 1 ? ' atrasada' : ' atrasadas')] : ['✅', 'Tudo em dia', 'nenhuma atrasada']);
+  const chipsHtml = '<div class="ast-chips">' + chips.map(c => '<div class="ast-chip"><span class="ast-chip-i" aria-hidden="true">' + c[0] + '</span><div><small>' + c[1] + '</small><b>' + escapeHtml(c[2]) + '</b></div></div>').join('') + '</div>';
   const labels = isMonth ? st.series.map((_, i) => String(i + 1)) : AGENDA_MONTH_NAMES.map(m => m.slice(0, 3).toLowerCase());
   const titles = isMonth ? labels.map(l => 'Dia ' + l) : AGENDA_MONTH_NAMES;
   const wdMax = Math.max(...st.byWeekday);
@@ -21596,13 +21654,14 @@ function agendaRenderStats() {
   const srRows = st.series.map((b, i) => '<tr><th scope="row">' + escapeHtml(titles[i]) + '</th><td>' + b.done + '</td><td>' + b.pending + '</td><td>' + b.late + '</td></tr>').join('');
   body.innerHTML =
     '<div class="ast-tiles">' +
-      tile(st.total, 'anotações') + tile(st.done, 'concluídas', 'is-done') + tile(st.pending - st.late, 'a fazer', 'is-pend') + tile(st.late, 'atrasadas', st.late ? 'is-late' : '') +
+      tile(st.total, 'anotações', '', trend) + tile(st.done, 'concluídas', 'is-done') + tile(st.pending - st.late, 'a fazer', 'is-pend') + tile(st.late, 'atrasadas', st.late ? 'is-late' : '') +
     '</div>' +
+    chipsHtml +
     '<div class="ast-card">' + agendaStatsDonut(st) + '</div>' +
     '<h4 class="ast-h">' + (isMonth ? 'Por dia — ' : 'Por mês — ') + escapeHtml(scopeName) + '</h4>' +
-    '<div class="ast-card">' + agendaStatsBarsSvg(st.series, labels, titles) +
-    '<div class="ast-legend"><span><i class="ast-done"></i>Concluídas</span><span><i class="ast-pending"></i>A fazer</span><span><i class="ast-late"></i>Atrasadas</span><span><i class="ast-avgkey"></i>Média</span></div></div>' +
-    (hasRate ? '<h4 class="ast-h">Taxa de conclusão por mês</h4><div class="ast-card">' + agendaStatsRateLine(st.monthRate) + '</div>' : '') +
+    '<div class="ast-card">' + agendaStatsBarsSvg(st.series, labels, titles, { today: todayIdx, weekend: weekend }) +
+    '<div class="ast-legend"><span><i class="ast-done"></i>Concluídas</span><span><i class="ast-pending"></i>A fazer</span><span><i class="ast-late"></i>Atrasadas</span><span><i class="ast-avgkey"></i>Média (' + (Math.round(st.total / st.series.length * 10) / 10).toString().replace('.', ',') + (isMonth ? ' por dia' : ' por mês') + ')</span>' + (todayIdx >= 0 ? '<span><i class="ast-todaykey"></i>Hoje</span>' : '') + (isMonth ? '<span><i class="ast-wkkey"></i>Fim de semana</span>' : '') + '</div></div>' +
+    (hasRate ? '<h4 class="ast-h">Taxa de conclusão por mês <small class="ast-h-sub">só do que já venceu</small></h4><div class="ast-card">' + agendaStatsRateLine(st.monthRate) + '</div>' : '') +
     '<h4 class="ast-h">' + (isMonth ? 'Calendário de calor do mês' : 'Mapa de calor do ano') + '</h4>' +
     '<div class="ast-card">' + (isMonth ? agendaStatsHeatMonth(st.byDay) : agendaStatsHeatYear(st.byDay)) + agendaStatsHeatLegend() + '</div>' +
     '<div class="ast-two">' +
@@ -21612,7 +21671,7 @@ function agendaRenderStats() {
     '<h4 class="ast-h">Por período do dia</h4>' + agendaStatsHBars([
         { label: 'Manhã', n: per.manha }, { label: 'Tarde', n: per.tarde }, { label: 'Noite', n: per.noite }, { label: 'Sem horário', n: per.sem }], perMax) +
     '<table class="agenda-sr-only"><caption>Anotações por ' + (isMonth ? 'dia' : 'mês') + '</caption><thead><tr><th>Período</th><th>Concluídas</th><th>A fazer</th><th>Atrasadas</th></tr></thead><tbody>' + srRows + '</tbody></table>' +
-    '<p class="ast-note">' + (insight || '') + (insight ? ' ' : '') + 'Em ' + st.daysWithNotes + (st.daysWithNotes === 1 ? ' dia' : ' dias') + ' com anotações. Os números contam as anotações no dia a que pertencem; "atrasadas" são as não concluídas de dias que já passaram. Toque ou passe o mouse nos gráficos para ver os valores. Calculado neste aparelho.</p>';
+    '<p class="ast-note">' + (insight || '') + (insight ? ' ' : '') + 'Em ' + st.daysWithNotes + (st.daysWithNotes === 1 ? ' dia' : ' dias') + ' com anotações. Os números contam as anotações no dia a que pertencem; "atrasadas" são as não concluídas de dias que já passaram, e a taxa por mês só conta o que já venceu. Toque ou passe o mouse nos gráficos para ver os valores. Calculado neste aparelho.</p>';
 }
 
 function agendaSetStatsScope(scope) { agendaStatsScope = scope; agendaRenderStats(); }
@@ -21672,6 +21731,30 @@ function agendaOpenStats() {
       .ast-pt { font:700 11px 'Lora', Georgia, 'Times New Roman', serif; fill:#2c2620; pointer-events:none; }
       .ast-axis-sm { font-size:10px; }
       .ast-scroll { overflow-x:auto; padding-bottom:4px; }
+      .ast-tile em { display:block; margin-top:3px; font-size:10.5px; font-style:normal; font-weight:700; line-height:1.25; color:#6f6551; }
+      .ast-chips { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; margin-bottom:10px; }
+      .ast-chip { display:flex; align-items:center; gap:9px; background:linear-gradient(135deg, rgba(255,255,255,0.75), rgba(255,246,220,0.55)); border:1px solid #d3c495; border-radius:12px; padding:8px 10px; min-width:0; }
+      .ast-chip-i { font-size:22px; line-height:1; flex:none; }
+      .ast-chip small { display:block; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:#8a7e66; }
+      .ast-chip b { display:block; font-size:13.5px; line-height:1.25; color:#2c2620; }
+      .ast-seg2 { stroke:rgba(255,255,255,.55); stroke-width:1; }
+      .ast-bt { font:800 12px 'Lora', Georgia, serif; fill:#2c2620; pointer-events:none; paint-order:stroke; stroke:#fffdf6; stroke-width:3px; stroke-linejoin:round; }
+      .ast-bt-sm { font-size:9.5px; }
+      .ast-avgl { font:700 11px 'Lora', Georgia, serif; fill:#6f6551; paint-order:stroke; stroke:#fffdf6; stroke-width:3px; stroke-linejoin:round; }
+      .ast-wkband { fill:rgba(111,101,81,.07); }
+      .ast-todayband { fill:rgba(232,172,61,.18); stroke:rgba(201,115,15,.45); stroke-width:1; }
+      .ast-axis-now { font-weight:900; fill:#2c2620; }
+      .ast-area { fill:url(#astAreaG); }
+      .ast-h-sub { font-size:11.5px; font-weight:600; font-style:normal; color:#8a7e66; margin-left:6px; }
+      .ast-now { stroke:#2c2620; stroke-width:1.6; }
+      .ast-mcell.ast-now { outline:2px solid #2c2620; outline-offset:1px; stroke:none; }
+      .ast-nowkey { display:inline-block; width:12px; height:12px; border-radius:3px; border:2px solid #2c2620; margin-right:4px; box-sizing:border-box; }
+      .ast-heatsp { display:inline-block; width:10px; }
+      .ast-todaykey { background:rgba(232,172,61,.45) !important; border:1px solid rgba(201,115,15,.6); }
+      .ast-wkkey { background:rgba(111,101,81,.18) !important; }
+      .ast-hrow.is-top .ast-hlabel, .ast-hrow.is-top .ast-hval { color:#1f6b46; }
+      .ast-hrow.is-top .ast-htrack i { box-shadow:0 0 0 1px rgba(31,107,70,.35); }
+      .ast-htrack i { transition:width .5s cubic-bezier(.2,.7,.2,1); }
       .ast-h0 { fill:#e6dbb8; background:#e6dbb8; } .ast-h1 { fill:#b9d6b0; background:#b9d6b0; } .ast-h2 { fill:#7fb78f; background:#7fb78f; } .ast-h3 { fill:#4a9264; background:#4a9264; } .ast-h4 { fill:#1f6b46; background:#1f6b46; }
       .ast-scroll rect[data-tip] { cursor:pointer; } .ast-scroll rect[data-tip]:hover { stroke:#2c2620; stroke-width:1; }
       .ast-heatleg { display:flex; align-items:center; justify-content:flex-end; gap:4px; font-size:12px; font-weight:700; color:#6f6551; margin-top:6px; }
@@ -21701,7 +21784,7 @@ function agendaOpenStats() {
       .ast-hval { text-align:right; color:#2c2620; }
       .ast-note { margin:14px 0 0; font-size:12.5px; line-height:1.5; color:#6f6551; }
       .ast-empty { font-style:italic; line-height:1.5; color:#6f6551; margin:8px 0 4px; }
-      @media (max-width:520px) { .ast-two { grid-template-columns:1fr; } .ast-tile b { font-size:22px; } }
+      @media (max-width:520px) { .ast-two { grid-template-columns:1fr; } .ast-tile b { font-size:22px; } .ast-chips { grid-template-columns:1fr; } .ast-tiles { grid-template-columns:repeat(2, minmax(0,1fr)); } }
     </style>`;
     document.body.appendChild(wrap);
     m = document.getElementById('agendaStatsModal');
