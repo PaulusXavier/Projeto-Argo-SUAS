@@ -5,6 +5,7 @@
   "scripts": {
     "check": "node scripts/verificar.mjs",
     "test:territorio": "node scripts/teste-territorio.mjs",
+    "test:territorio-cras": "node scripts/teste-territorio-cras.mjs",
     "test:conversa": "node scripts/teste-conversa.mjs",
     "test:manual": "node scripts/teste-manual.mjs",
     "test:paif": "node scripts/teste-paif.mjs",
