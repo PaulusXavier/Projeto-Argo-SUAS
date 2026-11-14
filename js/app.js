@@ -19409,6 +19409,8 @@ function argoAssistantDefaultQuickActions() {
     if (cat !== 'all' && B && B.aiOn() && navigator.onLine !== false && typeof argoMascotePerguntaAba === 'function') {
       list.push({ label: '✨ Explicar esta aba', run: () => argoMascoteAsk(argoMascotePerguntaAba(tab.name), { forceAI: true }) });
     }
+    // vale em qualquer aba (inclusive o início): roteiros de escrita do Paulus, só com a IA ligada
+    if (B && B.aiOn() && navigator.onLine !== false) list.push({ label: '✍️ Escrever com o Paulus', run: () => argoAssistantAskInline('tarefas do paulus') });
   } catch (e) { /* atalho opcional */ }
   list.push(
     { label: 'Buscar equipamento', run: () => argoAssistantFocusSearch(), reply: 'Pronto! O cursor já está na busca 🔍', mood: 'success' },
@@ -19839,6 +19841,29 @@ function argoOpenSiteAsk(rawText) {
   };
 }
 
+// Menu "✍️ Escrever com o Paulus": oferece as tarefas de trabalho que a IA sabe fazer (habilidades do Worker).
+// Cada botão só faz UMA pergunta pronta, sem dado de pessoa, pelo mesmo caminho de sempre (filtro, socorro, limite de uso).
+function argoTarefasAsk(norm) {
+  const cmd = argoTarefasComando(norm);
+  if (!cmd) return null;
+  let aiOn = false;
+  try { const B = argoBrain(); aiOn = !!(B && B.aiOn && B.aiOn()) && navigator.onLine !== false; } catch (e) { aiOn = false; }
+  if (!aiOn) return { reply: 'Esses roteiros de escrita usam a IA do Argo, que está desligada ou sem internet agora. Quando ela estiver ativa, é só pedir de novo.', mood: 'info', quickActions: [] };
+  const chip = t => ({ label: t.rotulo, run: () => argoMascoteAsk(t.pergunta, { forceAI: true }) });
+  if (cmd === 'menu') {
+    return {
+      reply: 'Posso te ajudar a **escrever**, **preparar** o trabalho ou **entender** uma regra. Em todos eu devolvo estrutura e modelo com lacunas: **não escreva nome, documento nem endereço de pessoa atendida**. Por onde começamos?',
+      mood: 'info', badge: 'Paulus',
+      quickActions: [
+        { label: '✍️ Escrever um texto', run: () => argoAssistantAskInline('tarefas de escrever') },
+        { label: '🧭 Preparar o trabalho', run: () => argoAssistantAskInline('tarefas de preparar') },
+        { label: '📖 Entender uma regra', run: () => argoAssistantAskInline('tarefas de entender') }
+      ]
+    };
+  }
+  return { reply: 'Escolha uma. Eu monto o roteiro e um modelo com lacunas para você preencher.', mood: 'info', badge: 'Paulus', quickActions: argoTarefasIA().filter(t => t.grupo === cmd).map(chip) };
+}
+
 // Casamento por palavra-chave (não é IA). Cada intenção pontua pelas
 // palavras-chave encontradas (inteiras ou como início de palavra, para
 // aceitar plurais e conjugações); a de maior pontuação vence e, em empate,
@@ -19847,6 +19872,8 @@ function argoOpenSiteAsk(rawText) {
 function argoAssistantAsk(rawText) {
   const norm = argoNorm(rawText);
   if (!norm) return null;
+  const tarefasAnswer = argoTarefasAsk(norm);
+  if (tarefasAnswer) return tarefasAnswer;
   const agendaAnswer = argoAgendaAsk(rawText);
   if (agendaAnswer) return agendaAnswer;
   const themeAnswer = argoThemeAsk(rawText);
@@ -32989,6 +33016,41 @@ function argoMascotePerguntaErro(msg, aba) {
     ? 'Apareceu este aviso de erro' + onde + ' do app: "' + m + '". O que pode ser e o que eu faço?'
     : 'Apareceu um aviso de erro' + onde + ' do app. O que pode ser e o que eu faço?';
 }
+// Prazo oficial (texto público de js/datas-cras-mds.js): pergunta o que fazer, quem faz e onde conferir.
+function argoMascotePerguntaPrazo(texto, categoria, dataBR, prevista) {
+  const t = argoMascoteLimpar(texto, 160).replace(/[«»]/g, '"');
+  if (!t) return '';
+  const cat = argoMascoteLimpar(categoria, 60);
+  const quando = dataBR ? ' (' + argoMascoteLimpar(dataBR, 12) + (prevista ? ', data prevista' : '') + ')' : '';
+  return 'Explique este prazo do SUAS para quem trabalha no CRAS: «' + t + '»' + quando + (cat ? ', do tema ' + cat : '') +
+    '. O que precisa ser feito, por quem e onde confiro a norma?';
+}
+
+// Tarefas de escrita e de trabalho que o Paulus sabe fazer (habilidades do Worker). O menu do painel só OFERECE a pergunta;
+// ninguém digita dado de pessoa aqui: cada pergunta pede estrutura e modelo com lacunas, sem nome, documento ou endereço.
+const ARGO_TAREFAS_IA = [
+  { id: 'registro',   grupo: 'Escrever',  rotulo: 'Registro técnico de atendimento', pergunta: 'Me ajude a escrever um registro técnico de atendimento: quais campos usar e como redigir cada um, com um modelo com lacunas para eu preencher, sem nomes nem dados de pessoas.' },
+  { id: 'relatorio',  grupo: 'Escrever',  rotulo: 'Relatório técnico (Judiciário, MP, Conselho)', pergunta: 'Preciso de um modelo de relatório técnico para o Ministério Público ou o Judiciário: estrutura, o que incluir e o que evitar, com lacunas para eu preencher, sem dados de pessoas.' },
+  { id: 'oficio',     grupo: 'Escrever',  rotulo: 'Ofício e encaminhamento', pergunta: 'Me ajude a escrever um ofício de encaminhamento e de contrarreferência para a rede: estrutura e um modelo com lacunas, sem dados de pessoas.' },
+  { id: 'ata',        grupo: 'Escrever',  rotulo: 'Pauta e ata de reunião de equipe', pergunta: 'Me ajude a montar a pauta e a ata de uma reunião de equipe do CRAS, com um modelo com lacunas para preencher.' },
+  { id: 'paf',        grupo: 'Escrever',  rotulo: 'Plano de Acompanhamento Familiar (PAF)', pergunta: 'Me explique como construir um Plano de Acompanhamento Familiar (PAF): metas, estratégias, revisão e linguagem do registro, com um modelo com lacunas, sem dados de famílias.' },
+  { id: 'plano-anual', grupo: 'Escrever', rotulo: 'Plano de ação anual do CRAS', pergunta: 'Me ajude a montar o plano de ação anual de um CRAS: estrutura, o que incluir e como organizar as metas, com um modelo com lacunas.' },
+  { id: 'visita',     grupo: 'Preparar',  rotulo: 'Visita domiciliar', pergunta: 'Me ajude a preparar uma visita domiciliar: roteiro antes, durante e depois e cuidados de segurança, sem dados de pessoas.' },
+  { id: 'caso',       grupo: 'Preparar',  rotulo: 'Discussão de caso em equipe', pergunta: 'Me ajude a conduzir uma discussão de caso em equipe: roteiro e perguntas-guia, sem dados de pessoas.' },
+  { id: 'oficina',    grupo: 'Preparar',  rotulo: 'Grupo, oficina ou SCFV', pergunta: 'Me ajude a planejar um grupo ou oficina com famílias no CRAS ou no SCFV: objetivo, encontros, dinâmica e como avaliar.' },
+  { id: 'recurso',    grupo: 'Entender',  rotulo: 'Condicionalidades: recurso passo a passo', pergunta: 'Explique, passo a passo, como funciona o recurso de condicionalidades do Bolsa Família e como orientar a família no atendimento.' },
+  { id: 'dados',      grupo: 'Entender',  rotulo: 'Analisar uma planilha com Python ou R', pergunta: 'Quero analisar uma planilha do serviço com Python: como pensar a pergunta e escrever o código, usando só nomes de colunas, sem dados de pessoas.' }
+];
+function argoTarefasIA() { return ARGO_TAREFAS_IA.map(t => ({ id: t.id, grupo: t.grupo, rotulo: t.rotulo, pergunta: t.pergunta })); }
+// Mensagem normalizada (sem acento, minúscula) → '' | 'menu' | 'Escrever' | 'Preparar' | 'Entender'.
+// Só vale a frase INTEIRA: "me ajude a escrever um relatório" não é comando de menu, é um pedido e vai à IA.
+function argoTarefasComando(norm) {
+  const n = String(norm || '').trim();
+  if (['tarefas', 'tarefas do paulus', 'tarefas do argo', 'menu de tarefas', 'ajuda para escrever', 'escrever com o paulus', 'escrever com o argo', 'o que voce escreve'].indexOf(n) > -1) return 'menu';
+  const m = /^tarefas de (escrever|preparar|entender)$/.exec(n);
+  return m ? m[1].charAt(0).toUpperCase() + m[1].slice(1) : '';
+}
+function argoTarefaIAPorId(id) { return ARGO_TAREFAS_IA.find(t => t.id === id) || null; }
 /* MASCOTE-IA:fim */
 
 // Abre o painel do Argo e faz a pergunta. { forceAI: true } pula as respostas prontas e vai direto à IA.
