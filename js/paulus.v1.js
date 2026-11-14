@@ -4996,7 +4996,8 @@ async function pdfLerArquivos(lista) {
   for (let i = 0; i < (lista || []).length; i++) {
     const a = lista[i];
     if (!a) continue;
-    if (a.bytes) saida.push({ nome: a.nome || a.name || 'documento', bytes: a.bytes });
+    // Navegadores atuais dão a File/Blob um MÉTODO bytes(): só vale como bytes se NÃO for função (senão cai no arrayBuffer()).
+    if (a.bytes && typeof a.bytes !== 'function') saida.push({ nome: a.nome || a.name || 'documento', bytes: a.bytes });
     else if (typeof a.arrayBuffer === 'function') saida.push({ nome: a.name || a.nome || 'documento', bytes: new Uint8Array(await a.arrayBuffer()) });
   }
   return saida;
