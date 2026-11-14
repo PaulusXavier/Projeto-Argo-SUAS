@@ -14961,10 +14961,18 @@ function renderMapCard() {
             <input type="search" id="mapaRedeSearch" class="tools-input" placeholder="Buscar no mapa por nome ou endereço…" aria-label="Buscar equipamento no mapa" autocomplete="off" oninput="mapaRedeSearchInput(this.value)" onkeydown="mapaRedeSearchKey(event)">
             <div id="mapaRedeSearchResults" class="mapa-rede-hits" aria-live="polite"></div>
           </div>
-          <details class="mapa-rede-bairro">
-            <summary>Qual CRAS/CREAS atende o bairro?</summary>
-            <input type="search" id="mapaRedeBairro" class="tools-input" list="mapaRedeBairroList" placeholder="Digite o bairro…" aria-label="Bairro" autocomplete="off" oninput="mapaRedeBairroInput(this.value)">
+          <details class="mapa-rede-bairro" id="mapaRedeTerrDetails">
+            <summary>Qual CRAS/CREAS atende este endereço ou bairro?</summary>
+            <div class="mapa-rede-terr-form">
+              <input type="search" id="mapaRedeBairro" class="tools-input" list="mapaRedeBairroList" placeholder="Bairro ou endereço (ex.: Rua X, 123, Caimbé)" aria-label="Bairro ou endereço" autocomplete="off" oninput="mapaRedeBairroInput(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();mapaRedeTerrBuscar();}">
+              <div class="mapa-rede-terr-btns">
+                <button type="button" class="btn-tech btn-primary" id="mapaRedeTerrBtn" onclick="mapaRedeTerrBuscar()">Localizar</button>
+                <button type="button" class="btn-tech btn-secondary" id="mapaRedeTerrGpsBtn" onclick="mapaRedeTerrUsarGps()">${ICONS.map} Usar minha localização</button>
+              </div>
+            </div>
             <datalist id="mapaRedeBairroList"></datalist>
+            <p class="mapa-rede-hint">Para não enviar nenhum endereço a serviço externo, digite só o bairro. Endereço completo e localização são enviados ao mapa público (OpenStreetMap) apenas para achar o ponto, e nada fica guardado. Não digite nome da pessoa.</p>
+            <div id="mapaRedeTerrOut" class="mapa-rede-terr-out" aria-live="polite"></div>
             <div id="mapaRedeBairroOut" class="mapa-rede-hits" aria-live="polite"></div>
           </details>
         </div>
@@ -15282,7 +15290,7 @@ async function initMapPanel() {
     mapaRedeMap = null;
   }
   if (mapaRedeResizeObserver) { mapaRedeResizeObserver.disconnect(); mapaRedeResizeObserver = null; }
-  mapaRedeUserMarker = null; mapaRedeAccCircle = null; mapaRedeRadiusCircle = null; mapaRedePulseMarker = null;
+  mapaRedeUserMarker = null; mapaRedeAccCircle = null; mapaRedeRadiusCircle = null; mapaRedePulseMarker = null; mapaRedeTerrLayer = null;
 
   const center = proximityState.active
     ? [proximityState.lat, proximityState.lon]
@@ -15905,7 +15913,7 @@ function mapaRedeBairroInput(v) {
   const out = document.getElementById('mapaRedeBairroOut');
   if (!out) return;
   const q = argoNorm(v || '');
-  if (q.length < 2) { out.innerHTML = ''; return; }
+  if (q.length < 2 || /\d/.test(v || '')) { out.innerHTML = ''; return; } // com número é endereço: use "Localizar"
   const idx = mapaRedeBairroIndex();
   const entries = idx.has(q) ? [[q, idx.get(q)]] : Array.from(idx.entries()).filter(([k]) => k.indexOf(q) > -1).slice(0, 4);
   const cache = getGeocodeCache();
@@ -15928,7 +15936,7 @@ function mapaRedeBairroInput(v) {
           : '<p class="mapa-rede-hint">Nenhum equipamento do diretório tem endereço neste bairro.</p>';
         return '<div class="mapa-rede-bairro-hit"><strong>' + escapeHtml(e.label) + '</strong>' + unitsHtml + itemsHtml + '</div>';
       }).join('')
-    : '<p class="mapa-rede-hint">Bairro não encontrado. Confira a grafia ou consulte a coordenação.</p>';
+    : '<p class="mapa-rede-hint">Bairro não encontrado na lista. Se for um endereço, toque em "Localizar".</p>';
 }
 
 async function mapaRedeFocusUnit(kind, i) {
@@ -15942,6 +15950,209 @@ async function mapaRedeFocusUnit(kind, i) {
   mapaRedeMap.setView([u.lat, u.lng], 16);
   mapaRedeShowUnitDetail({ ...u, tipo: kind === 'cras' ? 'CRAS' : 'CREAS' });
   mapaRedePulse(u.lat, u.lng, MAPA_REDE_COLOR_HEX[u.color]);
+  mapaRedeScrollToMap();
+}
+
+// ---- Qual CRAS/CREAS atende este endereço? (endereço/GPS -> bairro -> unidade de referência + rota no mapa)
+// A regra pura (bairro -> unidade, estimativa por distância) fica em js/territorio-cras.js.
+// Nada do que for digitado ou localizado é guardado: o resultado vive só na tela.
+let mapaRedeTerrLayer = null;
+let mapaRedeTerr = null; // { lat, lon, label, aproximado } — origem da última busca
+
+function mapaRedeTerrOut(html) {
+  const el = document.getElementById('mapaRedeTerrOut');
+  if (el) el.innerHTML = html || '';
+}
+
+function mapaRedeTerrBusy(on) {
+  ['mapaRedeTerrBtn', 'mapaRedeTerrGpsBtn'].forEach(id => { const b = document.getElementById(id); if (b) b.disabled = !!on; });
+}
+
+// Bairro/região devolvido pelo OpenStreetMap para um ponto (vários campos, do mais ao menos específico).
+async function mapaRedeTerrReverso(lat, lon) {
+  const url = 'https://nominatim.openstreetmap.org/reverse?format=json&zoom=17&addressdetails=1&accept-language=pt-BR&lat=' + lat + '&lon=' + lon;
+  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  if (!res.ok) throw new Error('reverso');
+  const d = await res.json();
+  const a = (d && d.address) || {};
+  return [a.suburb, a.neighbourhood, a.quarter, a.city_district, a.residential, a.hamlet, a.village]
+    .filter(Boolean);
+}
+
+function mapaRedeTerrHorario(nome) {
+  const it = DATA.find(x => x.name === nome && Array.isArray(x.cat) && x.cat.includes('social'));
+  return it && it.hours ? it.hours : '';
+}
+
+async function mapaRedeTerrBuscar() {
+  const inp = document.getElementById('mapaRedeBairro');
+  const texto = String((inp && inp.value) || '').trim();
+  if (texto.length < 3) { mapaRedeTerrOut('<p class="mapa-rede-hint">Digite o bairro ou o endereço (rua, número e bairro).</p>'); return; }
+  const bo = document.getElementById('mapaRedeBairroOut'); if (bo) bo.innerHTML = '';
+  const T = window.ArgoTerritorio;
+  if (!T) { mapaRedeTerrOut('<p class="mapa-rede-hint">Módulo de território não carregado. Atualize o aplicativo.</p>'); return; }
+
+  const idx = T.indexar(UNITS_CRAS_CREAS);
+  const pareceEndereco = /\d/.test(texto) || /^(r\.?|rua|av\.?|avenida|tv\.?|travessa|al\.?|alameda|pç\.?|praça|estrada|rodovia|br)\s/i.test(texto);
+  const soBairro = !pareceEndereco ? T.acharBairro([texto], idx) : null;
+
+  mapaRedeTerrBusy(true);
+  mapaRedeTerrOut('<p class="mapa-rede-hint">Localizando…</p>');
+  try {
+    let lat = null, lon = null, aproximado = false, candidatos = [texto];
+    if (soBairro && soBairro.exato) {
+      // Só o bairro: não precisa de serviço externo para achar o CRAS. O ponto no mapa é tentado por último.
+      candidatos = [soBairro.label];
+      try {
+        const c = await geocodeAddress(soBairro.label + ', Boa Vista-RR');
+        if (c) { lat = c.lat; lon = c.lon; aproximado = true; }
+      } catch (e) { /* sem internet: mostra só o texto */ }
+    } else {
+      const c = await geocodeAddress(texto + ', Boa Vista-RR');
+      if (!c) {
+        mapaRedeTerrOut('<p class="mapa-rede-hint">Não achei esse endereço em Boa Vista. Confira a grafia, tente só a rua e o bairro, ou digite só o bairro.</p>');
+        return;
+      }
+      lat = c.lat; lon = c.lon; aproximado = !!c.approx;
+      await new Promise(r => setTimeout(r, 1100)); // limite de ~1 pedido por segundo do Nominatim
+      try { candidatos = (await mapaRedeTerrReverso(lat, lon)).concat([texto]); } catch (e) { candidatos = [texto]; }
+    }
+    mapaRedeTerrMostrar({ lat, lon, aproximado, candidatos, textoLivre: texto, label: texto });
+  } catch (e) {
+    mapaRedeTerrOut('<p class="mapa-rede-hint">Não foi possível localizar agora (sem internet ou serviço de mapas fora do ar). Digite só o bairro: ele funciona sem internet.</p>');
+  } finally {
+    mapaRedeTerrBusy(false);
+  }
+}
+
+function mapaRedeTerrUsarGps() {
+  if (!navigator.geolocation) { argoAviso('Este navegador não permite obter a localização atual.', 'error'); return; }
+  const T = window.ArgoTerritorio;
+  if (!T) return;
+  mapaRedeTerrBusy(true);
+  mapaRedeTerrOut('<p class="mapa-rede-hint">Obtendo sua localização…</p>');
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const lat = pos.coords.latitude, lon = pos.coords.longitude;
+    let candidatos = [];
+    try { candidatos = await mapaRedeTerrReverso(lat, lon); } catch (e) { /* offline: cai na estimativa por distância */ }
+    mapaRedeTerrBusy(false);
+    mapaRedeTerrMostrar({ lat, lon, aproximado: pos.coords.accuracy > 150, candidatos, textoLivre: '', label: 'Sua localização atual' });
+  }, (err) => {
+    mapaRedeTerrBusy(false);
+    const code = err && err.code;
+    mapaRedeTerrOut('<p class="mapa-rede-hint">' + (code === 1
+      ? 'A localização foi bloqueada. Libere a permissão para este site nas configurações do navegador, ou digite o bairro.'
+      : code === 3 ? 'A localização demorou demais. Tente em lugar aberto ou digite o bairro.'
+      : 'Não foi possível obter a localização agora. Digite o bairro.') + '</p>');
+  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+}
+
+function mapaRedeTerrMostrar(ent) {
+  const T = window.ArgoTerritorio;
+  const r = T.resolver({ candidatos: ent.candidatos, lat: ent.lat, lon: ent.lon, textoLivre: ent.textoLivre }, UNITS_CRAS_CREAS);
+  const temPonto = isFinite(ent.lat) && isFinite(ent.lon);
+  mapaRedeTerr = temPonto ? { lat: ent.lat, lon: ent.lon, label: ent.label, aproximado: !!ent.aproximado } : null;
+
+  const unidadeHtml = (kind, e) => {
+    const u = UNITS_CRAS_CREAS[kind][e.i];
+    const rotulo = kind === 'cras' ? 'CRAS de referência' : 'CREAS de referência';
+    const hor = mapaRedeTerrHorario(u.name);
+    const tel = u.phone && String(u.phone).toUpperCase() !== 'N/A' ? u.phone : '';
+    const aviso = e.modo === 'estimativa'
+      ? '<p class="mapa-rede-terr-aviso">Bairro não identificado na lista oficial. Esta é a unidade <strong>mais próxima em linha reta</strong>' + (e.km != null ? ' (' + mapaRedeFmtKm(e.km) + ')' : '') + ', <strong>não</strong> necessariamente a de referência do território. Confirme com a coordenação.</p>'
+      : '';
+    const dist = e.modo === 'bairro' && e.km != null ? ' · ' + mapaRedeFmtKm(e.km) + ' em linha reta' : '';
+    const gmaps = temPonto
+      ? 'https://www.google.com/maps/dir/?api=1&origin=' + ent.lat + ',' + ent.lon + '&destination=' + u.lat + ',' + u.lng + '&travelmode=driving'
+      : 'https://www.google.com/maps/dir/?api=1&destination=' + u.lat + ',' + u.lng + '&travelmode=driving';
+    return '<div class="mapa-rede-terr-unit' + (e.modo === 'estimativa' ? ' is-estimativa' : '') + '">'
+      + '<span class="mapa-rede-terr-tag">' + rotulo + (e.modo === 'estimativa' ? ' (estimativa)' : '') + '</span>'
+      + '<strong>' + escapeHtml(u.name) + '</strong>'
+      + '<small>' + escapeHtml(u.address) + dist + '</small>'
+      + (hor || tel ? '<small>' + escapeHtml([hor, tel].filter(Boolean).join(' · ')) + '</small>' : '')
+      + aviso
+      + '<div class="mapa-rede-terr-acoes">'
+      + '<button type="button" class="mapa-rede-unit-btn" onclick="mapaRedeFocusUnit(\'' + kind + '\',' + e.i + ')">Ver no mapa</button>'
+      + (temPonto ? '<button type="button" class="mapa-rede-unit-btn" onclick="mapaRedeTerrRota(\'' + kind + '\',' + e.i + ')">Traçar rota no mapa</button>' : '')
+      + '<a class="mapa-rede-unit-btn" href="' + gmaps + '" target="_blank" rel="noopener noreferrer">Google Maps</a>'
+      + '</div></div>';
+  };
+
+  let html = '<div class="mapa-rede-terr-res">';
+  html += '<div class="mapa-rede-terr-head"><strong>' + escapeHtml(ent.label) + '</strong>'
+    + (r.bairro ? '<span>Bairro: <strong>' + escapeHtml(r.bairro.label) + '</strong>' + (r.bairro.exato ? '' : ' <em>(correspondência aproximada)</em>') + '</span>'
+                : '<span>Bairro não identificado</span>')
+    + (ent.aproximado && temPonto ? '<small>Ponto aproximado no mapa.</small>' : '') + '</div>';
+  if (r.itinerante > -1) {
+    const it = UNITS_CRAS_CREAS.cras[r.itinerante];
+    html += '<div class="mapa-rede-terr-unit"><span class="mapa-rede-terr-tag">Zona rural / comunidade indígena</span><strong>' + escapeHtml(it.name) + '</strong><small>' + escapeHtml(it.bairros) + '. Itinerário a confirmar com a coordenação.</small></div>';
+  }
+  r.cras.forEach(e => { html += unidadeHtml('cras', e); });
+  r.creas.forEach(e => { html += unidadeHtml('creas', e); });
+  if (!r.cras.length && !r.creas.length) html += '<p class="mapa-rede-hint">Sem unidade para indicar. Digite o bairro.</p>';
+  html += '<div id="mapaRedeTerrRotaInfo" class="mapa-rede-terr-rota" role="status"></div></div>';
+  mapaRedeTerrOut(html);
+
+  // Pino do ponto pesquisado e enquadramento no mapa.
+  if (temPonto && mapaRedeMap && window.L) {
+    mapaRedeTerrLimparCamada();
+    mapaRedeTerrLayer = window.L.layerGroup().addTo(mapaRedeMap);
+    const ic = window.L.divIcon({
+      className: 'mapa-rede-terr-pin',
+      html: '<div style="width:18px;height:18px;border-radius:50%;background:#f59e0b;border:3px solid #fff;box-shadow:0 0 0 2px #b45309;"></div>',
+      iconSize: [18, 18], iconAnchor: [9, 9]
+    });
+    window.L.marker([ent.lat, ent.lon], { icon: ic, zIndexOffset: 900, title: ent.label, keyboard: false })
+      .bindPopup(escapeHtml(ent.label) + (ent.aproximado ? '<br><small>ponto aproximado</small>' : '')).addTo(mapaRedeTerrLayer);
+    const alvo = (r.cras[0] && UNITS_CRAS_CREAS.cras[r.cras[0].i]) || null;
+    if (alvo) mapaRedeMap.fitBounds([[ent.lat, ent.lon], [alvo.lat, alvo.lng]], { padding: [40, 40], maxZoom: 15 });
+    else mapaRedeMap.setView([ent.lat, ent.lon], 15);
+  }
+}
+
+function mapaRedeTerrLimparCamada() {
+  if (mapaRedeTerrLayer && mapaRedeMap) { try { mapaRedeMap.removeLayer(mapaRedeTerrLayer); } catch (e) { /* mapa recriado */ } }
+  mapaRedeTerrLayer = null;
+}
+
+// Desenha a rota no mapa: pelas ruas (OSRM público, carro) e, se falhar, em linha reta tracejada.
+async function mapaRedeTerrRota(kind, i) {
+  const u = UNITS_CRAS_CREAS[kind] && UNITS_CRAS_CREAS[kind][i];
+  const o = mapaRedeTerr;
+  const info = document.getElementById('mapaRedeTerrRotaInfo');
+  if (!u || !o || !mapaRedeMap || !window.L) {
+    if (info) info.textContent = 'O mapa ainda não está disponível. Use o botão "Google Maps".';
+    return;
+  }
+  const L = window.L;
+  if (info) info.textContent = 'Traçando rota…';
+  // Mantém o pino do ponto, troca só a linha da rota anterior.
+  if (!mapaRedeTerrLayer) mapaRedeTerrLayer = L.layerGroup().addTo(mapaRedeMap);
+  mapaRedeTerrLayer.eachLayer(l => { if (l instanceof L.Polyline) mapaRedeTerrLayer.removeLayer(l); });
+
+  let linha = null, texto = '';
+  try {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 9000);
+    const url = 'https://router.project-osrm.org/route/v1/driving/' + o.lon + ',' + o.lat + ';' + u.lng + ',' + u.lat + '?overview=full&geometries=geojson';
+    const res = await fetch(url, { signal: ctl.signal });
+    clearTimeout(t);
+    if (!res.ok) throw new Error('rota');
+    const d = await res.json();
+    const rt = d && d.routes && d.routes[0];
+    if (!rt) throw new Error('sem rota');
+    linha = L.polyline(rt.geometry.coordinates.map(c => [c[1], c[0]]), { color: '#0067a3', weight: 5, opacity: 0.85 });
+    const min = Math.max(1, Math.round(rt.duration / 60));
+    texto = 'Rota de carro até ' + u.name + ': ' + mapaRedeFmtKm(rt.distance / 1000) + ', cerca de ' + min + ' min (sem trânsito).';
+  } catch (e) {
+    linha = L.polyline([[o.lat, o.lon], [u.lat, u.lng]], { color: '#0067a3', weight: 4, opacity: 0.8, dashArray: '8 8' });
+    texto = 'Sem rota pelas ruas agora (sem internet ou serviço fora do ar). A linha tracejada é reta, ' + mapaRedeFmtKm(L.latLng(o.lat, o.lon).distanceTo(L.latLng(u.lat, u.lng)) / 1000) + ' até ' + u.name + '. Use o botão "Google Maps" para a rota real.';
+  }
+  linha.addTo(mapaRedeTerrLayer);
+  mapaRedeMap.fitBounds(linha.getBounds(), { padding: [40, 40] });
+  mapaRedePulse(u.lat, u.lng, MAPA_REDE_COLOR_HEX[u.color]);
+  const info2 = document.getElementById('mapaRedeTerrRotaInfo');
+  if (info2) info2.textContent = texto;
   mapaRedeScrollToMap();
 }
 
@@ -31669,6 +31880,10 @@ function argoAssistantAskHybridCore(rawText, meta) {
   const rotaAnswer = argoRotaAsk(rawText);
   if (rotaAnswer) return rotaAnswer;
 
+  // "Qual CRAS atende o Caimbé?" / "moro na Rua X, qual o meu CRAS?": resposta no aparelho (lista oficial de bairros) e botões que abrem o mapa.
+  const terrAnswer = argoTerritorioAsk(rawText);
+  if (terrAnswer) return terrAnswer;
+
   // Perguntas sobre a Agenda são respondidas aqui, com os dados do aparelho: nunca vão à IA
   // nem entram na memória da conversa (podem citar anotações pessoais).
   const agendaAnswer = argoAgendaAsk(rawText);
@@ -32389,6 +32604,81 @@ async function argoPdfExecutar(rawText, pedido, irEditar, encaminhar) {
 
 // Pedido de rota para o mascote. Devolve o resultado no formato da interface do mascote ou null (a pergunta segue o fluxo normal).
 // Só assume pedido com duas paradas ou mais, ou recusa de endereço de residência; "como chegar ao CRAS X" continua com o cartão do diretório.
+// Abre o Mapa da Rede, espera ele ficar pronto e abre o painel "Qual CRAS atende...?" para a ação pedida.
+function argoTerritorioNoMapa(acao) {
+  argoAssistantGoTo('mapa');
+  let n = 0;
+  const t = setInterval(() => {
+    n++;
+    const inp = document.getElementById('mapaRedeBairro');
+    const pronto = inp && typeof mapaRedeMap !== 'undefined' && mapaRedeMap;
+    if (pronto || (inp && n > 40)) {
+      clearInterval(t);
+      const d = document.getElementById('mapaRedeTerrDetails');
+      if (d) d.open = true;
+      try { acao(inp); } catch (e) { /* o painel segue utilizável à mão */ }
+    } else if (n > 60) clearInterval(t);
+  }, 150);
+}
+
+function argoTerritorioAsk(rawText) {
+  const T = window.ArgoTerritorio;
+  if (!T || typeof T.entender !== 'function') return null;
+  let e = null;
+  try { e = T.entender(rawText, UNITS_CRAS_CREAS); } catch (err) { return null; }
+  if (!e) return null;
+
+  const buscar = (txt) => argoTerritorioNoMapa(inp => { inp.value = txt; mapaRedeTerrBuscar(); });
+  const gps = () => argoTerritorioNoMapa(() => mapaRedeTerrUsarGps());
+  const chipGps = { label: '📍 Usar minha localização', run: gps, reply: 'Abri o mapa e pedi sua localização. Se o navegador perguntar, toque em permitir.', mood: 'success' };
+
+  if (e.tipo === 'endereco') {
+    return {
+      reply: 'Para achar o CRAS desse endereço eu preciso localizá-lo no mapa. O texto vai ao mapa público (OpenStreetMap) só para achar o ponto, e nada fica guardado. Toque no botão para eu buscar' + (e.bairro ? ' (o bairro **' + e.bairro + '** também aparece na sua frase).' : '.'),
+      mood: 'success', badge: 'Território',
+      quickActions: [{ label: '🔎 Localizar no mapa', run: () => buscar(e.endereco), reply: 'Abri o mapa e estou localizando o endereço.', mood: 'success' }]
+        .concat(e.bairro ? [{ label: 'Só pelo bairro ' + e.bairro, run: () => buscar(e.bairro), reply: 'Abri o mapa com o bairro.', mood: 'success' }] : [])
+    };
+  }
+
+  if (e.tipo === 'bairro') {
+    const r = T.resolver({ candidatos: [e.bairro] }, UNITS_CRAS_CREAS);
+    const linha = (kind, ent) => {
+      const u = UNITS_CRAS_CREAS[kind][ent.i];
+      const hor = mapaRedeTerrHorario(u.name);
+      const tel = u.phone && String(u.phone).toUpperCase() !== 'N/A' ? u.phone : '';
+      return '**' + u.name + '** — ' + u.address + (hor ? ' · ' + hor : '') + (tel ? ' · ' + tel : '');
+    };
+    const cras = r.cras.filter(x => x.modo === 'bairro'), creas = r.creas.filter(x => x.modo === 'bairro');
+    if (!cras.length) return null; // bairro só da lista de CREAS: deixa o fluxo normal responder
+    const linhas = ['O bairro **' + (r.bairro ? r.bairro.label : e.bairro) + '** é atendido por:',
+      ...cras.map(x => '- CRAS: ' + linha('cras', x)),
+      ...creas.map(x => '- CREAS: ' + linha('creas', x))];
+    return {
+      reply: linhas.join('\n'),
+      mood: 'success', badge: 'Território',
+      note: 'Pela lista de bairros de referência das unidades de Boa Vista. Em bairro de divisa ou para endereço exato, confirme com a coordenação.',
+      quickActions: [
+        { label: '🗺️ Ver ' + UNITS_CRAS_CREAS.cras[cras[0].i].name + ' no mapa', run: () => argoTerritorioNoMapa(() => mapaRedeFocusUnit('cras', cras[0].i)), reply: 'Abri o mapa na unidade.', mood: 'success' },
+        { label: '🧭 Rota desde onde estou', run: gps, reply: 'Abri o mapa e pedi sua localização para traçar a rota. Se o navegador perguntar, toque em permitir.', mood: 'success' },
+        { label: '🏠 Rota desde um endereço', run: () => argoTerritorioNoMapa(inp => { inp.focus(); mapaRedeTerrOut('<p class="mapa-rede-hint">Digite o endereço e toque em Localizar; depois use "Traçar rota no mapa".</p>'); }), reply: 'Abri a busca por endereço no mapa.', mood: 'success' }
+      ],
+      followups: ['Qual o horário desse CRAS?']
+    };
+  }
+
+  if (e.tipo === 'gps') {
+    return { reply: 'Posso ver pela sua localização atual qual é o CRAS de referência e traçar a rota no mapa. Sua posição só é usada para isso e não fica guardada.', mood: 'success', badge: 'Território', quickActions: [chipGps] };
+  }
+
+  // Sem lugar na frase.
+  return {
+    reply: 'Me diga o **bairro** (por exemplo "qual CRAS atende o Caimbé?"), ou a **rua e o número**, ou use sua **localização**. Aí eu indico o CRAS e o CREAS de referência e traço a rota no mapa.',
+    mood: 'success', badge: 'Território',
+    quickActions: [chipGps, { label: '🔎 Abrir busca no mapa', run: () => argoTerritorioNoMapa(inp => inp.focus()), reply: 'Abri a busca por bairro ou endereço no mapa.', mood: 'success' }]
+  };
+}
+
 function argoRotaAsk(rawText) {
   if (typeof Paulus === 'undefined' || !Paulus.rota || typeof Paulus.rota.responder !== 'function') return null;
   let r = null;
