@@ -27,7 +27,8 @@ const CRITICAL_ASSETS = [
   './js/grafia-link.js',
   './js/login-matrix.js',
   './js/paulus.v1.js',
-  './js/prazos.js'
+  './js/prazos.js',
+  './js/territorio-cras.js'
 ];
 
 // Tudo que deve ficar disponível offline desde a instalação (os não críticos que falharem são ignorados).
@@ -51,6 +52,7 @@ const ASSETS = [
   './js/grafia-link.js',
   './js/login-matrix.js',
   './js/paulus.v1.js',
+  './js/territorio-cras.js',
   './assets/cid11.json',
   './assets/conhecimento.json',
   './assets/coordenadas.json',
