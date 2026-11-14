@@ -131,5 +131,50 @@
     return out;
   }
 
-  root.ArgoTerritorio = { norm, indexar, acharBairro, maisProximo, pedeItinerante, resolver, km };
+
+  // Só minúsculas e sem acento (não troca "dr"/"ns"): para reconhecer a INTENÇÃO da frase.
+  function leve(s) {
+    return String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+
+  // Entende um pedido do mascote do tipo "qual CRAS atende o Caimbé?", "moro na Rua X, 10, qual o meu CRAS?"
+  // ou "qual o CRAS da minha localização?". Devolve null quando a frase é sobre outra coisa
+  // (ex.: "o que é o CRAS?", "qual CRAS atende idosos?", "CRAS Cauamé atende quais bairros?").
+  //  { tipo: 'endereco'|'bairro'|'gps'|'pergunta', bairro?, endereco? }
+  function entender(texto, units) {
+    const l = ' ' + leve(texto) + ' ';
+    if (!/ (cras|creas) /.test(l)) return null;
+    if (/ (o que e|como funciona|para que serve|quem pode|o que faz) /.test(l)) return null;
+    if (/ (cras|creas) (cristiana|pintolandia|nova cidade|dr silvio|doutor silvio|silvio leite|cauame|sao francisco|uniao|itinerante|centenario|centro) /.test(l) && !/ bairro /.test(l)) return null;
+
+    const pergunta = / (qual|quais|onde|em qual|de qual|a qual|que) /.test(l) || /\?/.test(String(texto));
+    const sinal = / (atende|atendem|referencia|pertence|pertencem|cobre|abrangencia|territorio|bairro|endereco|moro|mora|moramos|rua|avenida|casa|regiao|area|localizacao) /.test(l);
+    if (!pergunta || !sinal) return null;
+
+    // Endereço: trecho que começa em "Rua/Avenida/Travessa..." até o fim da frase.
+    let endereco = '';
+    const m = String(texto).match(/\b(?:rua|r\.|avenida|av\.|travessa|tv\.|alameda|estrada|rodovia)\s[^?\n]*/i);
+    if (m) endereco = m[0].replace(/[\s,.;:!]+$/, '').slice(0, 120);
+
+    // Bairro: maior trecho (até 5 palavras) que seja exatamente um bairro da lista oficial.
+    const idx = indexar(units);
+    const w = norm(l.replace(/ centro de referencia( de assistencia social)? /g, ' ')).split(' ').filter(Boolean);
+    let bairro = null;
+    for (let n = Math.min(5, w.length); n >= 1 && !bairro; n--) {
+      for (let i = 0; i + n <= w.length && !bairro; i++) {
+        const g = w.slice(i, i + n).join(' ');
+        if (g.length >= 4 && g !== 'cras' && g !== 'creas' && idx.has(g)) bairro = idx.get(g).label;
+      }
+    }
+
+    if (endereco) return { tipo: 'endereco', endereco, bairro };
+    if (bairro) return { tipo: 'bairro', bairro };
+    if (/ (minha localizacao|onde estou|onde eu estou|perto de mim|meu local|minha posicao|aqui) /.test(l)) return { tipo: 'gps' };
+    // Sem lugar na frase: só entra se for claramente sobre o território da própria pessoa.
+    const forte = / (meu bairro|minha rua|minha casa|meu endereco|minha regiao|minha area|moro|mora|moramos|referencia|pertence|abrangencia|territorio) /.test(l)
+      || / (de qual|em qual|a qual) (cras|creas) /.test(l) || / (cras|creas) (do|da|de) (meu|minha|bairro|rua|endereco) /.test(l);
+    return forte ? { tipo: 'pergunta' } : null;
+  }
+
+  root.ArgoTerritorio = { norm, indexar, acharBairro, maisProximo, pedeItinerante, resolver, entender, km };
 })(typeof window !== 'undefined' ? window : this);
