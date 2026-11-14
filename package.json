@@ -29,7 +29,8 @@
     "test:coordenadas": "node scripts/teste-coordenadas.mjs",
     "test:atualizacao": "node scripts/teste-atualizacao.mjs",
     "test:cadunico": "node scripts/teste-cadunico.mjs",
-    "test:qualidade": "node scripts/teste-qualidade.mjs"
+    "test:qualidade": "node scripts/teste-qualidade.mjs",
+    "test:ia-extra": "node scripts/teste-ia-extra.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.24.0"
