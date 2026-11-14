@@ -325,6 +325,7 @@ function argoPrazosItemHtml(it) {
   h += '<button type="button" class="prazos-btn' + (it.feito ? ' is-on' : '') + '" data-pz="feito" aria-pressed="' + (it.feito ? 'true' : 'false') + '">' + (it.feito ? '↩ Desmarcar' : '✓ Feito') + '</button>';
   if (it.d.slice(0, 4) === String(new Date().getFullYear())) h += '<button type="button" class="prazos-btn" data-pz="agenda">📅 Na agenda</button>';
   if (it.fonte && /^https:\/\//.test(it.fonte.url)) h += '<a class="prazos-btn" href="' + argoPrazosEsc(it.fonte.url) + '" target="_blank" rel="noopener noreferrer" title="' + argoPrazosEsc(it.fonte.nome) + '">Fonte ↗<span class="sr-only"> (abre em outra aba)</span></a>';
+  if (!it.proprio && typeof argoMascoteAsk === 'function' && typeof argoMascotePerguntaPrazo === 'function') h += '<button type="button" class="prazos-btn prazos-btn-ia" data-pz="explicar" title="Pedir ao Argo que explique este prazo: o que fazer, quem faz e onde conferir">✨ Explicar</button>';
   if (it.proprio) h += '<button type="button" class="prazos-btn prazos-btn-del" data-pz="apagar">' + (it.rep ? 'Excluir a série' : 'Excluir') + '</button>';
   h += '</div></div></li>';
   return h;
@@ -495,6 +496,14 @@ function initPrazosPanel() {
       var alvo = vol && vol.querySelector('[data-pz="feito"]');
       (alvo || $('prazosBusca')).focus();
       argoPrazosMsg(st.done[id] ? 'Marcado como feito.' : 'Marcação desfeita.');
+      return;
+    }
+    if (t.dataset.pz === 'explicar' && id) {
+      var alvoIA = argoPrazosItens().filter(function (x) { return x.id === id; })[0];
+      if (!alvoIA || alvoIA.proprio) return;   // prazo próprio nunca vai à IA
+      var dataBR = alvoIA.d.slice(8, 10) + '/' + alvoIA.d.slice(5, 7) + '/' + alvoIA.d.slice(0, 4);
+      var perg = argoMascotePerguntaPrazo(alvoIA.t, alvoIA.catNome, dataBR, !!alvoIA.prev);
+      if (!perg || !argoMascoteAsk(perg, { forceAI: true })) argoPrazosMsg('O Argo não está disponível agora. Tente de novo em instantes.');
       return;
     }
     if (t.dataset.pz === 'agenda' && id) {
