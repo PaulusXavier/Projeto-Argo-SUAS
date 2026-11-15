@@ -18679,6 +18679,21 @@ function agendaJoinPt(parts) {
 // tanto o formato novo ({entries: [...]}) quanto o formato antigo de uma
 // nota só por dia ({text, updatedAt}), usado antes desta versão — assim,
 // anotações já sincronizadas por outros aparelhos não somem.
+// Textos cifrados não mudam entre sincronizações: guarda o resultado de cada um
+// (texto cifrado → texto claro) e só decifra o que é novo. A memória é descartada
+// quando a chave da sessão muda (trancou, trocou de senha). Falhas não são guardadas.
+let agendaDecryptMemo = new Map(), agendaDecryptMemoKey = null;
+let agendaLastSnapSig = '';
+function agendaDecryptCached(stored) {
+  if (typeof stored !== 'string' || !stored.startsWith('enc')) return decryptFromStorage(stored);
+  if (agendaDecryptMemoKey !== sessionEncKey) { agendaDecryptMemo = new Map(); agendaDecryptMemoKey = sessionEncKey; }
+  let v = agendaDecryptMemo.get(stored);
+  if (v === undefined) {
+    v = decryptFromStorage(stored);
+    if (v) { if (agendaDecryptMemo.size > 5000) agendaDecryptMemo.clear(); agendaDecryptMemo.set(stored, v); }
+  }
+  return v;
+}
 function agendaEntriesFromDocData(data) {
   if (!data) return [];
   // Textos novos chegam cifrados ("enc1:...", ver agendaCommitEntries); textos
@@ -18686,12 +18701,12 @@ function agendaEntriesFromDocData(data) {
   if (Array.isArray(data.entries)) {
     return data.entries
       .filter(e => e && e.text)
-      .map(e => Object.assign({}, e, { text: decryptFromStorage(e.text) }))
+      .map(e => Object.assign({}, e, { text: agendaDecryptCached(e.text) }))
       .filter(e => e.text);
   }
   if (data.text) {
     const ts = (data.updatedAt && typeof data.updatedAt.toMillis === 'function') ? data.updatedAt.toMillis() : null;
-    const t = decryptFromStorage(data.text);
+    const t = agendaDecryptCached(data.text);
     return t ? [{ text: t, createdAt: ts }] : [];
   }
   return [];
@@ -20976,8 +20991,17 @@ function renderAgendaCard() {
 
 // Visual escolhido neste aparelho: tamanho das letras e modo "só calendário".
 const AGENDA_ZOOM_STEPS = [0.9, 1, 1.15, 1.3, 1.5, 1.75];
+let agendaViewRaw = null, agendaViewParsed = null;
 function agendaViewLoad() {
-  try { const v = JSON.parse(localStorage.getItem('argoAgendaView') || '{}'); return { zoom: AGENDA_ZOOM_STEPS.includes(v.zoom) ? v.zoom : 1, calfocus: !!v.calfocus, week: !!v.week, showDone: v.doneHidden !== true, narrowWe: !!v.narrowWe, sideTab: ['month', 'pend', 'up'].includes(v.sideTab) ? v.sideTab : 'month' }; }
+  // Só interpreta o JSON de novo quando o texto guardado mudou; devolve cópia porque quem chama altera o objeto.
+  try {
+    const raw = localStorage.getItem('argoAgendaView') || '{}';
+    if (raw === agendaViewRaw && agendaViewParsed) return Object.assign({}, agendaViewParsed);
+    const v = JSON.parse(raw);
+    agendaViewParsed = { zoom: AGENDA_ZOOM_STEPS.includes(v.zoom) ? v.zoom : 1, calfocus: !!v.calfocus, week: !!v.week, showDone: v.doneHidden !== true, narrowWe: !!v.narrowWe, sideTab: ['month', 'pend', 'up'].includes(v.sideTab) ? v.sideTab : 'month' };
+    agendaViewRaw = raw;
+    return Object.assign({}, agendaViewParsed);
+  }
   catch (e) { return { zoom: 1, calfocus: false, week: false, showDone: true, narrowWe: false, sideTab: 'month' }; }
 }
 function agendaViewSave(v) { try { localStorage.setItem('argoAgendaView', JSON.stringify(v)); } catch (e) { /* sem armazenamento: vale só nesta sessão */ } }
@@ -21341,6 +21365,41 @@ function agendaDaysInMonth(month) {
   return new Date(AGENDA_YEAR, month + 1, 0).getDate();
 }
 
+// Um único conjunto de ouvintes na grade (antes eram 3 por dia, recriados a cada
+// sincronização). O dia vem do data-day da célula; o mês, de agendaCurrentMonth.
+function agendaBindGridEvents(grid) {
+  if (grid.dataset.agendaBound) return;
+  grid.dataset.agendaBound = '1';
+  const cellOf = (ev) => {
+    const c = ev.target && ev.target.closest ? ev.target.closest('.agenda-day-cell') : null;
+    return (c && c.dataset.day && grid.contains(c)) ? c : null;
+  };
+  grid.addEventListener('click', (ev) => {
+    const cell = cellOf(ev); if (!cell) return;
+    const d = Number(cell.dataset.day);
+    const chk = ev.target.closest('.agenda-cell-check');
+    if (chk) { ev.stopPropagation(); agendaQuickDone(chk.dataset.key, Number(chk.dataset.idx), chk); return; }
+    agendaFocusDay = d; agendaOpenNoteModal(agendaKeyFor(agendaCurrentMonth, d));
+  });
+  grid.addEventListener('focusin', (ev) => {
+    const cell = cellOf(ev); if (!cell || ev.target !== cell) return;
+    agendaFocusDay = Number(cell.dataset.day);
+    grid.querySelectorAll('.agenda-day-cell[tabindex="0"]').forEach(c => { if (c !== cell) c.setAttribute('tabindex', '-1'); });
+    cell.setAttribute('tabindex', '0');
+  });
+  grid.addEventListener('keydown', (ev) => {
+    const cell = cellOf(ev); if (!cell) return;
+    if (ev.target.closest('.agenda-cell-check')) return;   // teclas dentro do ○ de concluir seguem o padrão do botão
+    const d = Number(cell.dataset.day);
+    if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); agendaFocusDay = d; agendaOpenNoteModal(agendaKeyFor(agendaCurrentMonth, d)); return; }
+    const moves = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
+    if (moves[ev.key] !== undefined) { ev.preventDefault(); agendaMoveFocus(d, moves[ev.key]); }
+    else if (ev.key === 't' || ev.key === 'T') { ev.preventDefault(); agendaGoToday(); requestAnimationFrame(() => { const t = grid.querySelector('.agenda-is-today'); if (t) t.focus(); }); }
+    else if (ev.key === 'PageUp') { ev.preventDefault(); agendaChangeMonth(-1, d); }
+    else if (ev.key === 'PageDown') { ev.preventDefault(); agendaChangeMonth(1, d); }
+  });
+}
+
 function agendaRenderCalendar() {
   if (typeof argoRenderHeroToday === 'function') argoRenderHeroToday();   // faixa do cabeçalho
   const grid = document.getElementById('agendaCalendarGrid');
@@ -21354,6 +21413,9 @@ function agendaRenderCalendar() {
 
   agendaApplyView();
   grid.innerHTML = '';
+  agendaBindGridEvents(grid);
+  const frag = document.createDocumentFragment();   // a grade entra no DOM de uma vez só
+  const showDoneView = agendaViewLoad().showDone;    // lido 1x (antes era 1x por dia)
   display.textContent = AGENDA_MONTH_NAMES[agendaCurrentMonth];
 
   const today = new Date();
@@ -21416,7 +21478,7 @@ function agendaRenderCalendar() {
       else if (note) html += '<i class="agenda-note-dot" aria-hidden="true"></i>';
       {
         // Anotações do dia completas (horário primeiro). Cada uma em aberto tem um ○ para concluir ali mesmo.
-        const showDone = agendaViewLoad().showDone;
+        const showDone = showDoneView;
         const q = argoNorm(agendaSearchQuery);
         let hits = 0;
         const all = (entries || []).map((e, i) => ({ e, i })).filter(x => x.e);
@@ -21461,25 +21523,6 @@ function agendaRenderCalendar() {
       if (mdsL) ariaLabel += ', MDS: ' + mdsL.map(agendaMdsText).join('; ');
       if (note) ariaLabel += (cell.classList.contains('agenda-has-late') ? ', pendência atrasada' : '') + ', com anotação: ' + note;
       cell.setAttribute('aria-label', ariaLabel);
-      cell.addEventListener('click', (ev) => {
-        const chk = ev.target.closest ? ev.target.closest('.agenda-cell-check') : null;
-        if (chk) { ev.stopPropagation(); agendaQuickDone(chk.dataset.key, Number(chk.dataset.idx), chk); return; }
-        agendaFocusDay = d; agendaOpenNoteModal(key);
-      });
-      cell.addEventListener('focus', () => {
-        agendaFocusDay = d;
-        grid.querySelectorAll('.agenda-day-cell[tabindex="0"]').forEach(c => { if (c !== cell) c.setAttribute('tabindex', '-1'); });
-        cell.setAttribute('tabindex', '0');
-      });
-      cell.addEventListener('keydown', (ev) => {
-        if (ev.target.closest && ev.target.closest('.agenda-cell-check')) return;
-        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); agendaFocusDay = d; agendaOpenNoteModal(key); return; }
-        const moves = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
-        if (moves[ev.key] !== undefined) { ev.preventDefault(); agendaMoveFocus(d, moves[ev.key]); }
-        else if (ev.key === 't' || ev.key === 'T') { ev.preventDefault(); agendaGoToday(); requestAnimationFrame(() => { const t = grid.querySelector('.agenda-is-today'); if (t) t.focus(); }); }
-        else if (ev.key === 'PageUp') { ev.preventDefault(); agendaChangeMonth(-1, d); }
-        else if (ev.key === 'PageDown') { ev.preventDefault(); agendaChangeMonth(1, d); }
-      });
     } else {
       // Dia do mês vizinho: só completa a semana (esmaecido e sem clique).
       const outDate = new Date(AGENDA_YEAR, agendaCurrentMonth, d);
@@ -21487,8 +21530,9 @@ function agendaRenderCalendar() {
       cell.innerHTML = '<span class="agenda-day-num">' + outDate.getDate() + '</span>';
       cell.setAttribute('aria-hidden', 'true');
     }
-    grid.appendChild(cell);
+    frag.appendChild(cell);
   }
+  grid.appendChild(frag);
 
   if (typeof grafiaDecorateGrid === 'function') grafiaDecorateGrid(grid);   // chips das notas do Grafia (js/grafia-link.js)
 
@@ -23415,10 +23459,18 @@ async function agendaConnectSync(code, force) {
       // Registra o horário aqui (e não só em agendaRenderTodayBanner), pois a
       // sincronização agora pode conectar antes de a aba da agenda existir.
       agendaLastSyncAt = new Date();
-      agendaRenderCalendar();
-      // A notificação da sincronização agora fica num card dentro da agenda
-      // (antes disparava uma notificação do sistema a cada sincronização).
-      agendaRenderTodayBanner(true);
+      // O Firestore repete o snapshot (eco da própria gravação, depois a confirmação do servidor)
+      // com o mesmo conteúdo: se nada mudou desde a última vez (e ainda é o mesmo dia), não
+      // refaz o calendário e as listas laterais à toa.
+      const snapSig = new Date().toDateString() + '|' + JSON.stringify(agendaNotesCache) + '|' + Array.from(agendaUndecryptableDays).join(',');
+      const snapSame = snapSig === agendaLastSnapSig && !!document.getElementById('agendaCalendarGrid')?.firstChild;
+      agendaLastSnapSig = snapSig;
+      if (!snapSame) {
+        agendaRenderCalendar();
+        // A notificação da sincronização agora fica num card dentro da agenda
+        // (antes disparava uma notificação do sistema a cada sincronização).
+        agendaRenderTodayBanner(true);
+      }
       agendaRefreshSyncModal();
       agendaSetSyncStatus('<span style="color:var(--green-ink,#3f7d55)">● Conectado</span>', 'ok');
       // Anotação que estava esperando a conexão: guarda agora e fecha a
@@ -30260,7 +30312,8 @@ function initArgoBgShip() {
     document.body.appendChild(host);
   } catch (e) { /* decoração: sem ela o app segue igual */ }
 }
-initArgoBgShip();
+// Montado quando o navegador está ocioso: não disputa a thread com o login nem com o primeiro render.
+(window.requestIdleCallback ? window.requestIdleCallback(initArgoBgShip, { timeout: 3000 }) : setTimeout(initArgoBgShip, 800));
 initArgoAssistant();
 initLoginMascot();
 initLoginMascotFX();
