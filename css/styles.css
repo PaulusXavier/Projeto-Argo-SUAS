@@ -151,21 +151,24 @@
   body {
     margin: 0;
     background-color: var(--bg-main);
-    background-image: var(--argo-bg-image);
-    background-repeat: no-repeat;
-    background-size: 100% 100%;
-    background-attachment: fixed;
     color: var(--text-main);
     font-family: var(--font-sans);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
   }
 
-  /* background-attachment: fixed repinta a cada rolagem e trava celulares:
-     lá o degradê rola com a página (as camadas ::before/::after já são fixas
-     e leves, pois só têm opacidade/máscara estáticas). */
-  @media (max-width: 899px), (pointer: coarse) {
-    body { background-attachment: scroll; background-size: 100% 100vh; }
+  /* Degradê/aurora numa camada fixa própria (html::after) em vez de
+     background-attachment: fixed no body: aquele modo repinta o fundo inteiro a
+     cada rolagem (trava celular e notebook fraco). A camada é pintada uma vez e
+     só é composta pela GPU. Vale igual para celular e desktop. */
+  html::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background: var(--argo-bg-image) no-repeat 0 0 / 100% 100%;
+    contain: strict;
   }
 
   body::before,
@@ -174,6 +177,7 @@
     position: fixed;
     pointer-events: none;
     z-index: -1;
+    contain: strict;
   }
 
   /* Constelações: máscara repetida; a segunda máscara faz sumir para baixo. */
@@ -220,13 +224,19 @@
     -webkit-mask-composite: source-in;
     mask-composite: intersect;
     --argo-wave-w: 600px;
+    /* A camada tem 1 ladrilho a mais de largura e desliza por transform
+       (só composição na GPU). Animar mask-position, como antes, obrigava a
+       repintar a faixa inteira a 60 quadros por segundo. */
+    right: auto;
+    width: calc(100% + var(--argo-wave-w));
+    will-change: transform;
     animation: argo-bg-drift 70s linear infinite;
   }
 
   /* As ondas deslizam devagar, uma largura de desenho por volta (emenda sem salto). */
   @keyframes argo-bg-drift {
-    from { -webkit-mask-position: 0 bottom, 0 0; mask-position: 0 bottom, 0 0; }
-    to   { -webkit-mask-position: calc(-1 * var(--argo-wave-w)) bottom, 0 0; mask-position: calc(-1 * var(--argo-wave-w)) bottom, 0 0; }
+    from { transform: translate3d(0, 0, 0); }
+    to   { transform: translate3d(calc(-1 * var(--argo-wave-w)), 0, 0); }
   }
 
   @media (prefers-reduced-motion: reduce), (pointer: coarse) {
@@ -259,21 +269,15 @@
     mask-repeat: repeat, no-repeat;
     -webkit-mask-composite: source-in;
     mask-composite: intersect;
-    animation: argo-bg-dust 300s linear infinite;
-  }
-  @keyframes argo-bg-dust {
-    from { -webkit-mask-position: 0 0, 0 0; mask-position: 0 0, 0 0; }
-    to   { -webkit-mask-position: -1100px 1100px, 0 0; mask-position: -1100px 1100px, 0 0; }
+    contain: strict;
+    /* Sem animação: a deriva de 300 s (~4 px/s) era imperceptível, mas animar
+       mask-position repintava a tela inteira a cada quadro. */
   }
   @media (max-width: 899px), (pointer: coarse) {
     #argoBgShip { display: none; }
-    html::before { animation: none; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    html::before { animation: none; }
   }
   @media print {
-    html::before, #argoBgShip { display: none; }
+    html::before, html::after, #argoBgShip { display: none; }
   }
 
   @media print {
@@ -8275,16 +8279,14 @@ header.hero .hero-stat-label { font-size: 0.66rem; line-height: 1.25; }
   transform: translateY(-38%);
 }
 @media (prefers-reduced-motion: no-preference) {
-  #loginScreen::before { animation: loginGridDrift 18s linear infinite, loginGridPulse 5s ease-in-out infinite alternate; }
+  /* Só opacity: antes também animava filter: drop-shadow e background-position
+     numa camada de tela cheia (repintura a cada quadro, sem efeito visível). */
+  #loginScreen::before { animation: loginGridPulse 5s ease-in-out infinite alternate; }
   #loginScreen::after { animation: loginBackgroundScan 8s ease-in-out 0.8s infinite; }
 }
-@keyframes loginGridDrift {
-  from { background-position: center 0, center 0, center; }
-  to { background-position: center 42px, center 42px, center; }
-}
 @keyframes loginGridPulse {
-  from { opacity: 0.48; filter: drop-shadow(0 0 4px rgba(0, 175, 255, 0.3)); }
-  to { opacity: 0.82; filter: drop-shadow(0 0 11px rgba(0, 210, 255, 0.62)); }
+  from { opacity: 0.6; }
+  to { opacity: 1; }
 }
 @keyframes loginBackgroundScan {
   0%, 15% { opacity: 0; transform: translateY(-38%); }
