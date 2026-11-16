@@ -11,6 +11,8 @@
   // copiado com drawImage (barato, acelerado por GPU). O movimento usa o relógio (não a
   // contagem de quadros), limitado a ~30 fps: igual em telas de 60 e 120 Hz e mais leve.
   const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+  // Economia de dados ativada no aparelho: desenha as estrelas paradas, sem animar.
+  const saveData = !!(navigator.connection && navigator.connection.saveData);
   const lowEnd = (navigator.hardwareConcurrency || 4) <= 4 || (navigator.deviceMemory || 4) <= 2;
   const FRAME_MS = 1000 / 30;
   let width = 0, height = 0, dpr = 1, raf = 0, last = 0, t = 0, resizeRaf = 0;
@@ -93,7 +95,7 @@
     }
     ctx.globalAlpha = 1;
   };
-  const canRun = () => !prefersReduced.matches && !screen.hidden && !document.hidden;
+  const canRun = () => !prefersReduced.matches && !saveData && !screen.hidden && !document.hidden;
   const tick = (now) => {
     raf = 0;
     if (!canRun()) return;
@@ -106,7 +108,7 @@
   };
   const start = () => { if (canRun() && !raf) { last = performance.now(); raf = requestAnimationFrame(tick); } };
   const stop = () => { if (raf) cancelAnimationFrame(raf); raf = 0; };
-  const reducedChange = () => { stop(); draw(prefersReduced.matches); start(); };
+  const reducedChange = () => { stop(); draw(prefersReduced.matches || saveData); start(); };
   const sync = () => {
     if (canRun()) { resize(); start(); return; }
     stop();
