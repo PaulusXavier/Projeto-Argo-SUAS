@@ -33418,3 +33418,22 @@ function argoMascoteErroAsk(msg) {
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount); else mount();
 })();
+
+
+// Cabeçalho: o mascote ao lado do nome do app. Tocar nele faz o Argo "pular".
+(function argoHeroMascot() {
+  const mount = () => {
+    const holder = document.getElementById('heroMascot');
+    if (!holder) return;
+    try {
+      if (typeof ArgoMascot === 'undefined' || !ArgoMascot.icon) return;
+      const svg = ArgoMascot.icon('info', 92);
+      if (!svg || svg.indexOf('<svg') !== 0) return;
+      holder.innerHTML = svg;
+      holder.addEventListener('click', () => {
+        try { const m = holder.querySelector('.argo-mascot-icon'); if (m && ArgoMascot.react) ArgoMascot.react(m, 'hop'); } catch (e) { /* sem reação */ }
+      });
+    } catch (e) { /* sem mascote: o cabeçalho segue só com o texto */ }
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount); else mount();
+})();
