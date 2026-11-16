@@ -32317,6 +32317,8 @@ function argoNormaRelevante(pergunta, trecho) {
   const hay = ' ' + argoNorm(trecho) + ' ';
   const acha = w => hay.indexOf(' ' + w) > -1 || (w.length >= 6 && hay.indexOf(' ' + w.slice(0, 5)) > -1);
   const fora = q.filter(w => w.length >= 3 && !acha(w));
+  // "O que é X?": o trecho precisa citar o X, sem tolerância (evita frase solta de outra norma).
+  if (/^(o que e|oque|o que sao|o que significa|qual a diferenca)\b/.test(argoNorm(pergunta)) && fora.length) return false;
   // Poucas palavras-chave: todas precisam estar no trecho. Muitas: tolera uma fora.
   return fora.length <= (q.filter(w => w.length >= 3).length >= 6 ? 1 : 0);
 }
@@ -33043,7 +33045,11 @@ function argoStreamIA(B, rawText, payload, hooks) {
     }
     // IA indisponível: se nada chegou ainda, a base de normas pode ter o trecho certo
     if (r.tipo === 'norma' && !acc) {
-      return { txt: B.cleanAI(r.texto), fontes: r.fontes || [], avisos: r.avisos || [], offline: true };
+      // O trecho "mais parecido" nem sempre responde à pergunta (ex.: "o que é o SCFV?" trazia uma frase solta de outra norma).
+      // Só vale se tratar mesmo do que foi perguntado; senão sai a resposta de reserva (verbete do glossário ou aviso honesto).
+      const trecho = B.cleanAI(r.texto);
+      if (!trecho || trecho.length < 60 || !argoNormaRelevante(rawText, trecho)) throw falha('trecho sem relação');
+      return { txt: trecho, fontes: r.fontes || [], avisos: r.avisos || [], offline: true };
     }
     // Conta pura ("quanto é 15% de 1200?"): o Paulus (v0.9.0+) resolve no aparelho, exato, sem rede e sem IA.
     if (r.tipo === 'calculo' && r.texto) {
