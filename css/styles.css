@@ -9853,3 +9853,160 @@ header.hero .hero-stat-label { color: #D5E9E3; }
   }
   #argoBgShip svg { display: block; width: 100%; height: auto; }
   :root[data-theme="dark"] #argoBgShip { opacity: 0.6; }
+
+
+/* =====================================================================
+   Eficiência: tela de login, plano de fundo e cabeçalho
+   Fica por último de propósito: vale sobre as regras anteriores.
+   1. Fundo do login mais leve   2. Formulário de login mais rápido de usar
+   3. Cabeçalho compacto         4. Barra fixa e área segura do celular
+   ===================================================================== */
+
+/* ---- 1. Fundo do login: cena estática + canvas de estrelas ----
+   As três ondas animadas (camadas enormes com máscara, animando o tempo todo) e a
+   grade em perspectiva saíram: custavam GPU/bateria e quase não se viam atrás do
+   painel. O fundo agora é só degradê + vinheta (pintados uma vez) e o canvas de
+   estrelas, que já roda a ~30 fps e para sozinho quando a aba fica escondida. */
+.login-waves { display: none !important; }
+#loginScreen {
+  background:
+    radial-gradient(ellipse 70% 45% at 50% 0%, rgba(0, 145, 194, 0.20), transparent 70%),
+    radial-gradient(ellipse 55% 40% at 100% 100%, rgba(0, 151, 57, 0.14), transparent 70%),
+    radial-gradient(ellipse 50% 40% at 0% 100%, rgba(232, 172, 61, 0.08), transparent 70%),
+    linear-gradient(180deg, #04101a 0%, #061827 55%, #03100f 100%);
+}
+#loginScreen::before { animation: none; opacity: 1; }
+.login-matrix { opacity: .7; }
+.login-shell { box-shadow: 0 30px 70px -28px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.06); }
+
+/* ---- 2. Formulário de login ---- */
+#loginScreen .login-sub { max-width: 34ch; }
+#loginScreen .login-input-wrapper input,
+#loginScreen #loginPassword {
+  font-size: 1rem;            /* 16px: o iOS não dá zoom ao tocar no campo */
+  min-height: 52px;
+}
+#loginScreen #loginPassword:focus-visible,
+#loginScreen .login-submit:focus-visible,
+#loginScreen .login-toggle-visibility:focus-visible,
+#loginScreen .login-forgot-link:focus-visible {
+  outline: 3px solid rgba(83, 217, 255, 0.85);
+  outline-offset: 2px;
+}
+#loginScreen .login-toggle-visibility { min-width: 44px; min-height: 44px; }
+#loginScreen .login-remember { min-height: 44px; display: flex; align-items: center; }
+#loginScreen .login-remember input { width: 20px; height: 20px; flex: 0 0 auto; }
+#loginScreen .login-forgot-link { min-height: 44px; padding: 0 0.25rem; }
+#loginScreen .login-submit { width: 100%; min-height: 52px; font-size: 1rem; font-weight: 700; }
+/* Atalhos secundários (site do autor, privacidade, status) ficam discretos, sem disputar com o "Entrar". */
+#loginScreen .login-vita { opacity: .92; }
+#loginScreen .login-details summary { cursor: pointer; min-height: 40px; display: flex; align-items: center; }
+@media (max-height: 640px) and (min-width: 761px) {
+  #loginScreen .login-vita, #loginScreen .login-trust-note { display: none; }
+}
+
+/* ---- 3. Cabeçalho compacto: o conteúdo (busca e equipamentos) sobe na tela ---- */
+header.hero {
+  min-height: 0;                              /* antes: 380px fixos, mesmo com pouco conteúdo */
+  padding: calc(1rem + env(safe-area-inset-top, 0px)) 0 1rem;
+  border-bottom-width: 3px;
+}
+header.hero h1 { font-size: clamp(1.9rem, 4vw, 2.5rem); }
+header.hero .hero-eyebrow { margin-bottom: 0.4rem; }
+header.hero .brand-sub { margin-top: 0.2rem; font-size: 0.9rem; }
+header.hero .hero-lead { margin-top: 0.5rem; font-size: 0.93rem; }
+header.hero .hero-stats { margin-top: 0.75rem; padding: 0.2rem; }
+header.hero .hero-stat { padding: 0.35rem 0.85rem; }
+header.hero .hero-stat-metric .hero-stat-value { font-size: 1.9rem; }
+header.hero .hero-stat-unit .hero-stat-value { font-size: 1.3rem; }
+header.hero .hero-stat-label { font-size: 0.74rem; }
+@media (max-width: 760px) {
+  header.hero .hero-lead { display: none; }
+  header.hero .hero-stat-metric .hero-stat-value { font-size: 1.5rem; }
+}
+@media (max-width: 520px) {
+  /* Celular: só os dois números principais; as unidades já aparecem na lista. */
+  header.hero .hero-stat-unit, header.hero .hero-stat-divider { display: none; }
+  header.hero .hero-stats { width: 100%; justify-content: space-around; }
+}
+/* O cabeçalho aparece de uma vez: sem a animação de "subida" que atrasava a leitura. */
+.hero .container > * { animation: none !important; }
+/* Estrelas decorativas: só as 12 primeiras brilham, sem estrela cadente, e param
+   quando o cabeçalho sai da tela (body.hero-gone) ou a aba fica em segundo plano. */
+.hero-stars i:nth-child(n+13):not(.sp) { display: none; }
+.hero-stars i.sp:nth-child(n+23) { display: none; }
+.hero-stars i.shoot { display: none !important; }
+body.hero-gone .hero-stars i { animation-play-state: paused; }
+.hero-ship-photo { opacity: 0.18; }
+
+/* ---- 4. Barra fixa: respeita a área segura do iPhone (status bar translúcida no app instalado) ---- */
+body.hero-gone .controls { padding-top: calc(0.55rem + env(safe-area-inset-top, 0px)); }
+@media print {
+  header.hero { min-height: 0; padding-top: 1rem; }
+}
+
+
+/* =====================================================================
+   Central de PDF: painel de ferramentas mais compacto e rápido de usar
+   Fica por último de propósito: vale sobre as regras anteriores.
+   ===================================================================== */
+
+/* Aviso de privacidade: uma linha discreta (antes ocupava um bloco inteiro). */
+.pdftools-card .pdftools-privacy {
+  padding: 0.45rem 0.8rem; font-size: 0.8rem; line-height: 1.35; border-radius: 10px;
+  margin-bottom: 0.75rem;
+}
+
+/* Área de arquivo: mais baixa, o botão de ação fica à vista sem rolar. */
+.pdftools-card .pdfhub-drop { padding: 0.9rem 1.2rem; margin-bottom: 0.8rem; gap: 0.9rem; }
+.pdftools-card .pdfhub-drop-icon { flex-basis: 46px; height: 46px; border-radius: 13px; }
+.pdftools-card .pdfhub-drop-icon svg { width: 24px; height: 24px; }
+.pdftools-card .pdfhub-drop-text strong { font-size: 1.02rem; }
+.pdftools-card .pdfhub-formats { margin-top: 0.3rem; }
+
+/* Busca: cola no topo ao rolar a lista, para trocar de ferramenta sem voltar ao início. */
+.pdftools-card .pdfhub-search {
+  position: sticky; top: 0; z-index: 3;
+  margin: 0 -0.25rem 0.8rem; padding: 0.35rem 0.25rem;
+  background: var(--bg-card);
+}
+.pdftools-card .pdfhub-search .tools-input { min-height: 46px; font-size: 1rem; }
+
+/* Grupos mais juntos e cartões com leitura mais rápida. */
+.pdftools-card .pdfhub-group { margin-bottom: 1.05rem; }
+.pdftools-card .pdfhub-group-title { margin-bottom: 0.5rem; }
+.pdftools-card .pdfhub-grid { gap: 0.6rem; }
+.pdftools-card .pdfhub-tool { min-height: 64px; }
+.pdftools-card .pdfhub-tool-desc {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+/* Grupo com uma ferramenta só (Editar): ocupa a linha inteira em vez de deixar um vazio ao lado. */
+.pdftools-card .pdfhub-grid:has(> .pdfhub-tool:only-child) { grid-template-columns: minmax(0, 1fr); }
+.pdftools-card .pdfhub-grid > .pdfhub-tool:only-child {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--gc) 8%, var(--bg-card)), var(--bg-card));
+  border-color: color-mix(in srgb, var(--gc) 35%, var(--border-ui));
+}
+/* Sem passar o mouse não há o que animar: menos repintura ao rolar a lista. */
+.pdftools-card .pdfhub-tool { transition: border-color 0.15s ease, background-color 0.15s ease; }
+
+/* Celular: duas colunas, ícone ao lado do nome e descrição em até 2 linhas. */
+@media (max-width: 560px) {
+  .pdftools-card .pdfhub-drop { padding: 0.8rem; gap: 0.75rem; }
+  .pdftools-card .pdfhub-formats { display: none; }
+  .pdftools-card .pdfhub-drop-text small { font-size: 0.8rem; line-height: 1.35; }
+  .pdftools-card .pdfhub-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
+  .pdftools-card .pdfhub-grid:has(> .pdfhub-tool:only-child) { grid-template-columns: minmax(0, 1fr); }
+  .pdftools-card .pdfhub-tool {
+    grid-template-columns: 36px minmax(0, 1fr);
+    grid-template-areas: "i n" "d d";
+    column-gap: 0.5rem; row-gap: 0.35rem; padding: 0.65rem 0.65rem 0.7rem; min-height: 0;
+    align-items: center;
+  }
+  .pdftools-card .pdfhub-grid > .pdfhub-tool:only-child {
+    grid-template-columns: 44px minmax(0, 1fr); grid-template-areas: "i n" "i d"; column-gap: 0.7rem; row-gap: 0.1rem;
+  }
+  .pdftools-card .pdfhub-tool-icon { width: 36px; height: 36px; border-radius: 10px; }
+  .pdftools-card .pdfhub-grid > .pdfhub-tool:only-child .pdfhub-tool-icon { width: 44px; height: 44px; border-radius: 13px; }
+  .pdftools-card .pdfhub-tool-name { font-size: 0.9rem; line-height: 1.15; }
+  .pdftools-card .pdfhub-tool-desc { font-size: 0.74rem; line-height: 1.3; }
+}
