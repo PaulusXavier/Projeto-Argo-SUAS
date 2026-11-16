@@ -11619,9 +11619,14 @@ function pdftoolsExtraToolsHtml() {
                 <div class="pdftools-tool-limit">Um PDF · até 60 MB</div>
               </div>
             </div>
-            <p class="pdftools-tool-desc">Diminui o arquivo para caber em sistemas com limite de tamanho (e-mail, portais). As páginas viram imagens, então o texto deixa de poder ser selecionado ou copiado.</p>
+            <p class="pdftools-tool-desc">Diminui o arquivo para caber em sistemas com limite de tamanho (e-mail, portais). No modo recomendado, o texto continua selecionável e só as fotos e digitalizações do arquivo são recomprimidas. Se o PDF for todo feito de imagens escaneadas, ou se precisar de um arquivo ainda menor, escolha &quot;Páginas como imagem&quot; (o texto deixa de poder ser copiado).</p>
             ${drop('Compress', 'pdftoolsCompressInput', 'Escolher um PDF', 'ideal para documentos escaneados')}
             <div class="pdftools-opts">
+              <label class="pdftools-opt-label" for="pdftoolsCompressMode">Modo</label>
+              <select id="pdftoolsCompressMode" class="tools-input">
+                <option value="texto" selected>Manter o texto (recomendado)</option>
+                <option value="imagem">Páginas como imagem (menor, sem texto copiável)</option>
+              </select>
               <label class="pdftools-opt-label" for="pdftoolsCompressLevel">Qualidade</label>
               <select id="pdftoolsCompressLevel" class="tools-input">
                 <option value="alta">Alta — leitura nítida, redução menor</option>
@@ -25281,7 +25286,98 @@ async function pdftoolsRunSplit() {
 }
 
 // Escala (pontos → pixels) e qualidade JPEG de cada nível. Escala 1 = 72 dpi.
-const PDFTOOLS_COMPRESS_PRESETS = { alta: { scale: 1.8, q: 0.8 }, media: { scale: 1.4, q: 0.65 }, maxima: { scale: 1.1, q: 0.5 } };
+const PDFTOOLS_COMPRESS_PRESETS = { alta: { scale: 1.8, q: 0.8, lado: 2600 }, media: { scale: 1.4, q: 0.65, lado: 1800 }, maxima: { scale: 1.1, q: 0.5, lado: 1300 } };
+
+// Orientação EXIF de um JPEG (1 = normal). PDFs guardam o JPEG inteiro, e recomprimir pelo canvas
+// ignoraria o giro; por isso imagens com orientação diferente de 1 ficam como estão.
+function pdftoolsJpegOrientation(u8) {
+  if (!u8 || u8.length < 12 || u8[0] !== 0xFF || u8[1] !== 0xD8) return 1;
+  let i = 2;
+  while (i + 4 < u8.length && i < 70000) {
+    if (u8[i] !== 0xFF) break;
+    const mk = u8[i + 1], len = (u8[i + 2] << 8) | u8[i + 3];
+    if (mk === 0xE1 && u8[i + 4] === 0x45 && u8[i + 5] === 0x78 && u8[i + 6] === 0x69 && u8[i + 7] === 0x66) {
+      const t = i + 10, le = u8[t] === 0x49;
+      const r16 = o => le ? u8[t + o] | (u8[t + o + 1] << 8) : (u8[t + o] << 8) | u8[t + o + 1];
+      const r32 = o => le ? (u8[t + o] | (u8[t + o + 1] << 8) | (u8[t + o + 2] << 16) | (u8[t + o + 3] << 24)) >>> 0 : ((u8[t + o] << 24) | (u8[t + o + 1] << 16) | (u8[t + o + 2] << 8) | u8[t + o + 3]) >>> 0;
+      const ifd = r32(4);
+      if (ifd + 2 > len) return 1;
+      const n = r16(ifd);
+      for (let k = 0; k < n; k++) { const e = ifd + 2 + k * 12; if (e + 12 > len) break; if (r16(e) === 0x0112) return r16(e + 8) || 1; }
+      return 1;
+    }
+    if (mk === 0xDA) break;
+    i += 2 + len;
+  }
+  return 1;
+}
+
+// Reduz um PDF SEM transformar as páginas em imagem: recomprime só as imagens JPEG grandes
+// (fotos, digitalizações) e regrava o arquivo com objetos compactados. O texto, os links e os
+// campos continuam como estavam. `recomprimir(bytesJpeg, ladoMax, qualidade)` devolve
+// { bytes, w, h } ou null (no app usa o canvas; no teste, um substituto).
+async function pdftoolsCompressKeepText(PDFLib, bytes, pre, recomprimir, onStep) {
+  const { PDFName, PDFRawStream, PDFRef, PDFArray, PDFNumber } = PDFLib;
+  const doc = await PDFLib.PDFDocument.load(bytes, { updateMetadata: false });
+  const ctx = doc.context;
+  const nome = (o) => (o && o.toString) ? o.toString() : '';
+  const corRgb = (cs) => {
+    cs = cs && ctx.lookup(cs);
+    if (!cs) return false;
+    if (nome(cs) === '/DeviceRGB') return true;
+    if (cs instanceof PDFArray && nome(cs.get(0)) === '/ICCBased') {
+      const icc = ctx.lookup(cs.get(1));
+      const n = icc && icc.dict && ctx.lookup(icc.dict.get(PDFName.of('N')));
+      return n instanceof PDFNumber && n.asNumber() === 3;
+    }
+    return false;
+  };
+  const alvo = [];
+  ctx.enumerateIndirectObjects().forEach(([ref, o]) => {
+    if (!(o instanceof PDFRawStream)) return;
+    const d = o.dict;
+    if (nome(d.get(PDFName.of('Subtype'))) !== '/Image' || nome(d.get(PDFName.of('Filter'))) !== '/DCTDecode') return;
+    if (d.has(PDFName.of('Mask')) || d.has(PDFName.of('Decode')) || d.has(PDFName.of('ImageMask'))) return;
+    if (!corRgb(d.get(PDFName.of('ColorSpace')))) return;
+    if (o.getContents().length < 40 * 1024) return;
+    alvo.push([ref, o]);
+  });
+  let trocadas = 0;
+  for (let i = 0; i < alvo.length; i++) {
+    const [ref, o] = alvo[i];
+    const orig = o.getContents();
+    if (pdftoolsJpegOrientation(orig) !== 1) continue;
+    let r = null;
+    try { r = await recomprimir(orig, pre.lado, pre.q); } catch (e) { r = null; }
+    if (r && r.bytes && r.bytes.length < orig.length * 0.9) {
+      const d = ctx.obj({ Type: 'XObject', Subtype: 'Image', Width: r.w, Height: r.h, ColorSpace: 'DeviceRGB', BitsPerComponent: 8, Filter: 'DCTDecode', Length: r.bytes.length });
+      const sm = o.dict.get(PDFName.of('SMask'));
+      if (sm) d.set(PDFName.of('SMask'), sm);
+      ctx.assign(ref, PDFRawStream.of(d, r.bytes));
+      trocadas++;
+    }
+    if (onStep) onStep(i + 1, alvo.length);
+  }
+  const out = await doc.save({ useObjectStreams: true });
+  return { bytes: out, imagens: alvo.length, trocadas };
+}
+
+// Recompressão de uma imagem JPEG no navegador: reduz o lado maior (se passar de `lado`) e regrava com a qualidade pedida.
+async function pdftoolsRecompressJpegCanvas(jpeg, lado, q) {
+  const bmp = await createImageBitmap(new Blob([jpeg], { type: 'image/jpeg' }));
+  try {
+    const k = Math.min(1, lado / Math.max(bmp.width, bmp.height));
+    const w = Math.max(1, Math.round(bmp.width * k)), h = Math.max(1, Math.round(bmp.height * k));
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const x = c.getContext('2d');
+    x.fillStyle = '#fff'; x.fillRect(0, 0, w, h);
+    x.drawImage(bmp, 0, 0, w, h);
+    const blob = await pdftoolsCanvasToBlob(c, 'image/jpeg', q);
+    c.width = c.height = 0;
+    return { bytes: new Uint8Array(await blob.arrayBuffer()), w, h };
+  } finally { if (bmp.close) bmp.close(); }
+}
 
 async function pdftoolsRunCompress() {
   const st = pdftoolsExtra.Compress;
@@ -25292,7 +25388,25 @@ async function pdftoolsRunCompress() {
   pdftoolsSetProgress('Compress', 0, 0);
   pdftoolsSetStatus(id, 'Carregando biblioteca de PDF...', 'info');
   let pdf = null;
+  const modoEl = document.getElementById('pdftoolsCompressMode');
+  const manterTexto = !modoEl || modoEl.value !== 'imagem';
   try {
+    if (manterTexto) {
+      const PDFLibK = await ensurePdfLib();
+      pdftoolsSetStatus(id, 'Procurando imagens para reduzir...', 'info');
+      const r = await pdftoolsCompressKeepText(PDFLibK, st.bytes.slice(0), pre, pdftoolsRecompressJpegCanvas, (i, n) => {
+        pdftoolsSetProgress('Compress', i, n);
+        pdftoolsSetStatus(id, 'Reduzindo imagens (' + i + '/' + n + ')...', 'info');
+      });
+      const antes = st.file.size, depois = r.bytes.length;
+      if (depois >= antes * 0.97) {
+        pdftoolsSetStatus(id, (r.imagens ? 'As imagens deste PDF já estão leves' : 'Este PDF quase não tem imagens para reduzir') + ' (ficaria com ' + pdftoolsFormatBytes(depois) + '; original: ' + pdftoolsFormatBytes(antes) + '). Nada foi baixado. Para forçar um arquivo menor, escolha o modo "Páginas como imagem" (o texto deixa de poder ser copiado).', 'warn');
+      } else {
+        pdftoolsDownloadBlob(new Blob([r.bytes], { type: 'application/pdf' }), pdftoolsBaseName(st.file) + '-reduzido.pdf');
+        pdftoolsSetStatus(id, 'De ' + pdftoolsFormatBytes(antes) + ' para ' + pdftoolsFormatBytes(depois) + ' (redução de ' + Math.round((1 - depois / antes) * 100) + '%). O texto continua selecionável' + (r.trocadas ? ' · ' + r.trocadas + (r.trocadas === 1 ? ' imagem reduzida.' : ' imagens reduzidas.') : '.'), 'success');
+      }
+      return;
+    }
     const [pdfjsLib, PDFLib] = await Promise.all([ensurePdfJs(), ensurePdfLib()]);
     // pdf.js pode "consumir" o buffer; trabalha numa cópia para manter o original.
     pdf = await pdfjsLib.getDocument({ isEvalSupported: false, data: new Uint8Array(st.bytes.slice(0)) }).promise;
@@ -26595,7 +26709,7 @@ async function pdftoolsRunText() {
 
 // Lembra, neste aparelho, as últimas opções usadas (texto da marca d'água,
 // formato da numeração, qualidade da redução, giro). Só guarda escolhas — nunca arquivos.
-const PDFTOOLS_PREF_FIELDS = ['pdftoolsMarkText', 'pdftoolsMarkOpacity', 'pdftoolsNumFmt', 'pdftoolsNumPos', 'pdftoolsCompressLevel', 'pdftoolsRotateAngle', 'pdftoolsJpgPdfPage'];
+const PDFTOOLS_PREF_FIELDS = ['pdftoolsMarkText', 'pdftoolsMarkOpacity', 'pdftoolsNumFmt', 'pdftoolsNumPos', 'pdftoolsCompressMode', 'pdftoolsCompressLevel', 'pdftoolsRotateAngle', 'pdftoolsJpgPdfPage'];
 const PDFTOOLS_PREF_KEY = 'argo_pdftools_prefs_v1';
 function pdftoolsPrefsLoad() {
   try { return JSON.parse(localStorage.getItem(PDFTOOLS_PREF_KEY) || '{}') || {}; } catch (e) { return {}; }
