@@ -883,8 +883,8 @@ let argoGreetingSlowTimer = null;
 // quem está vendo o Argo pela primeira vez); nas próximas vezes, troca por
 // uma frase mais curta — só um lembrete do que o app é, sem repetir a
 // apresentação inteira toda santo dia.
-const ARGO_INTRO_FIRST_TIME = 'Sou seu guia a bordo da Rede de Políticas Públicas de Roraima: equipamentos, ficha de encaminhamento e agenda da semana, tudo no navegador, até sem internet. Dica: tecle / para buscar e ? para me chamar.';
-const ARGO_INTRO_RETURNING = 'Bom te ver de volta a bordo! Equipamentos, ficha de encaminhamento e agenda estão a um toque — e se precisar de ajuda, tecle ? para me chamar.';
+const ARGO_INTRO_FIRST_TIME = 'Sou seu guia a bordo da Rede de Políticas Públicas de Roraima: equipamentos, fichas de encaminhamento e a agenda da semana — tudo no navegador, até sem internet. Tecle / para buscar e ? para me chamar.';
+const ARGO_INTRO_RETURNING = 'Bom te ver de volta a bordo! Veja abaixo o que a semana reserva.';
 
 function argoIntroAlreadySeen() {
   try {
@@ -1115,6 +1115,30 @@ function argoEnsureGreetingUI() {
       .argo-chip-facultativo { --chip:#d99a2b; }
       .argo-chip-pagamento { --chip:#3f9d6b; }
       .argo-chip-extra { --chip:#2f7fb8; }
+      .argo-chip-note { --chip:#0091C2; }
+      .argo-strip { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px; margin:0 0 12px; }
+      .argo-day { position:relative; touch-action:manipulation; display:flex; flex-direction:column; align-items:center; gap:1px; padding:5px 0 6px; border-radius:10px; border:1px solid var(--border-ui,#e2e8f0); background:var(--bg-card,#fff); color:var(--text-main,#1e293b); font-family:inherit; cursor:pointer; min-height:62px; }
+      .argo-day small { font-size:9.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--text-muted,#475569); }
+      .argo-day b { font-size:15px; line-height:1.2; font-variant-numeric:tabular-nums; }
+      .argo-day.is-past:not(.is-today) { opacity:.6; }
+      .argo-day.is-wknd small { color:#b8894f; }
+      .argo-day.is-today { background:linear-gradient(180deg,var(--brand-primary-light,#29ABE2),var(--brand-primary,#0091C2)); border-color:transparent; color:#fff; box-shadow:0 6px 14px -8px rgba(0,145,194,.9); }
+      .argo-day.is-today small { color:rgba(255,255,255,.85); }
+      .argo-day:hover { border-color:var(--brand-primary,#0091C2); }
+      .argo-day:focus-visible { outline:3px solid var(--brand-primary-light,#29ABE2); outline-offset:2px; }
+      .argo-day-n { min-width:16px; padding:0 4px; border-radius:999px; font-size:10px; font-weight:800; line-height:15px; text-align:center; color:#fff; background:var(--brand-primary,#0091C2); }
+      .argo-day-n.is-late { background:#c0463d; }
+      .argo-day-n.is-empty { background:transparent; }
+      .argo-day.is-today .argo-day-n:not(.is-empty) { background:#fff; color:var(--brand-primary,#0091C2); }
+      .argo-day-ok { font-size:11px; line-height:15px; font-weight:800; color:#3f9d6b; }
+      .argo-day.is-today .argo-day-ok { color:#fff; }
+      .argo-day-kind { position:absolute; top:4px; right:5px; width:6px; height:6px; border-radius:50%; background:#94a3b8; }
+      .argo-day-kind-feriado { background:#c0463d; } .argo-day-kind-facultativo { background:#d99a2b; } .argo-day-kind-pagamento { background:#3f9d6b; } .argo-day-kind-extra { background:#2f7fb8; }
+      .argo-day.is-today .argo-day-kind { box-shadow:0 0 0 1.5px #fff; }
+      .argo-prog { display:flex; align-items:center; gap:8px; margin-top:6px; }
+      .argo-prog-track { flex:1 1 auto; height:6px; border-radius:999px; background:rgba(148,163,184,.3); overflow:hidden; }
+      .argo-prog-track i { display:block; height:100%; border-radius:999px; background:linear-gradient(90deg,#3f9d6b,#6cc18f); transition:width .5s ease; }
+      .argo-prog-txt { flex:none; font-size:11.5px; font-weight:700; color:var(--text-muted,#475569); }
       .argo-note { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; font-weight:500; color:var(--text-muted,#475569); }
       .argo-chip + .argo-note { margin-top:1px; }
       .argo-when { display:block; width:fit-content; margin:3px 0 0; padding:1px 9px; border-radius:999px; font-size:11.5px; font-weight:700; color:var(--brand-primary,#0091C2); background:rgba(0,145,194,0.1); }
@@ -1123,7 +1147,10 @@ function argoEnsureGreetingUI() {
       .argo-todo-time { flex-shrink:0; min-width:40px; font-size:12px; font-weight:800; color:var(--brand-primary,#0091C2); font-variant-numeric:tabular-nums; }
       .argo-todo-text { min-width:0; overflow-wrap:anywhere; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
       .argo-todo.is-passed { opacity:.55; }
-      .argo-late { margin-top:10px; padding:6px 10px; border-radius:8px; font-size:12.5px; font-weight:700; color:#a3342c; background:rgba(192,70,61,0.1); border:1px solid rgba(192,70,61,0.3); }
+      .argo-late { display:flex; width:100%; align-items:center; justify-content:space-between; gap:8px; margin-top:10px; padding:8px 10px; border-radius:8px; font:inherit; font-size:12.5px; font-weight:700; text-align:left; color:#a3342c; background:rgba(192,70,61,0.1); border:1px solid rgba(192,70,61,0.3); cursor:pointer; touch-action:manipulation; }
+      .argo-late:hover { background:rgba(192,70,61,0.18); }
+      .argo-late:focus-visible { outline:3px solid var(--brand-primary-light,#29ABE2); outline-offset:2px; }
+      .argo-late-go { flex:none; font-size:11.5px; white-space:nowrap; }
       .argo-greeting-add { touch-action:manipulation; background:transparent; color:var(--brand-primary,#0091C2); border:1px solid var(--brand-primary,#0091C2); padding:10px; border-radius:12px; font-weight:700; cursor:pointer; font-size:14px; }
       .argo-greeting-add:hover { background:rgba(0,145,194,0.1); }
       .argo-greeting-add:focus-visible { outline:3px solid var(--brand-primary-light,#29ABE2); outline-offset:2px; }
@@ -1378,6 +1405,37 @@ function argoDayLabel(date, days) {
   return days === 1 ? 'Amanhã' : base;
 }
 
+// Faixa visual da semana: um quadradinho por dia (dom–sáb) com o número do dia
+// e um marcador — pontos azuis = anotações pendentes, tom vermelho = atrasadas,
+// bolinha colorida = feriado/pagamento. Hoje fica destacado; cada dia leva à agenda.
+function argoWeekStripHtml(now) {
+  if (typeof agendaWeekDates !== 'function') return '';
+  const todayKey = agendaIsoKey(now);
+  const cells = agendaWeekDates(now).map(d => {
+    if (d.getFullYear() !== AGENDA_YEAR) return '';
+    const key = agendaIsoKey(d), info = AGENDA_DATA_INFO[key];
+    const es = ((typeof agendaNotesCache !== 'undefined' && agendaNotesCache[key]) || []).filter(e => e && e.text);
+    const open = es.filter(e => !e.done).length, isPast = key < todayKey, isToday = key === todayKey;
+    const kind = info ? argoAgendaKind(info) : '';
+    const dots = open ? '<span class="argo-day-n' + (isPast ? ' is-late' : '') + '">' + open + '</span>'
+      : (es.length ? '<span class="argo-day-ok" aria-hidden="true">✓</span>' : '<span class="argo-day-n is-empty" aria-hidden="true"></span>');
+    const label = AGENDA_WEEKDAY_ABBR[d.getDay()] + ' ' + d.getDate() + (info ? ', ' + (ARGO_AGENDA_LABEL_NAMES[info.label] || info.label) : '') +
+      (open ? ', ' + open + (open === 1 ? ' pendente' : ' pendentes') : (es.length ? ', tudo concluído' : ', nada marcado'));
+    return '<button type="button" class="argo-day' + (isToday ? ' is-today' : '') + (isPast && !isToday ? ' is-past' : '') + (d.getDay() === 0 || d.getDay() === 6 ? ' is-wknd' : '') + '" onclick="argoOpenAgendaFromGreeting(\'day:' + key + '\')" aria-label="' + escapeHtml(label) + '">' +
+      '<small>' + escapeHtml(AGENDA_WEEKDAY_ABBR[d.getDay()].slice(0, 3)) + '</small><b>' + d.getDate() + '</b>' + dots +
+      (kind ? '<i class="argo-day-kind argo-day-kind-' + kind + '" aria-hidden="true"></i>' : '') + '</button>';
+  }).join('');
+  return '<div class="argo-strip" role="group" aria-label="Dias desta semana">' + cells + '</div>';
+}
+
+// Barra de progresso das anotações de hoje (feitas / total).
+function argoTodayProgressHtml(key) {
+  const es = ((typeof agendaNotesCache !== 'undefined' && agendaNotesCache[key]) || []).filter(e => e && e.text);
+  if (!es.length) return '';
+  const done = es.filter(e => e.done).length, pct = Math.round(done / es.length * 100);
+  return '<div class="argo-prog" role="img" aria-label="' + done + ' de ' + es.length + ' anotações de hoje concluídas"><span class="argo-prog-track"><i style="width:' + pct + '%"></i></span><span class="argo-prog-txt">' + done + ' de ' + es.length + ' concluídas</span></div>';
+}
+
 // Resumo da semana (mesma fonte do card da agenda). Hoje sempre aparece;
 // os próximos dias com algo marcado vêm em lista curta (máx. 3). Se o resto
 // da semana estiver vazio, mostra o próximo marco do ano com contagem de dias.
@@ -1397,22 +1455,23 @@ function argoGreetingWeekHtml() {
   const rest = summary.restEntries.filter(e => e.date > today0);
 
   const countBadge = total ? `<span class="argo-week-count">${total} ${total === 1 ? 'item' : 'itens'}</span>` : '';
-  let html = `<div class="argo-week-head"><span>Resumo da semana</span>${countBadge}</div>`;
+  let html = `<div class="argo-week-head"><span>Resumo da semana</span>${countBadge}</div>` + argoWeekStripHtml(now);
 
   const te = summary.todayEntry;
   const todayNotes = argoTodayNotesHtml(summary.todayKey);
   const todayInner = (te && te.info ? argoChipHtml(te.info) : '') + todayNotes;
   html += `<div class="argo-week-today"><span class="argo-week-tag">Hoje</span>` +
-    (todayInner ? `<div class="argo-entry">${todayInner}</div>` : `<span class="argo-week-empty" style="margin:0;">nada marcado</span>`) +
+    (todayInner ? `<div class="argo-entry">${todayInner}${argoTodayProgressHtml(summary.todayKey)}</div>` : `<span class="argo-week-empty" style="margin:0;">nada marcado</span>`) +
     `</div>`;
   const late = argoLateCount();
-  if (late) html += `<div class="argo-late" role="alert">⚠ ${late} ${late === 1 ? 'anotação atrasada' : 'anotações atrasadas'} — ainda não concluída${late === 1 ? '' : 's'}</div>`;
+  if (late) html += `<button type="button" class="argo-late" onclick="argoOpenAgendaFromGreeting('pend')"><span>⚠ ${late} ${late === 1 ? 'anotação atrasada' : 'anotações atrasadas'}</span><span class="argo-late-go">Ver pendências ›</span></button>`;
 
   if (rest.length) {
     const rows = rest.slice(0, 4).map(e => {
       const days = Math.round((e.date - today0) / 86400000);
-      const when = days === 1 ? 'amanhã' : `em ${days} dias`;
-      return `<li><span class="argo-week-day">${escapeHtml(argoDayLabel(e.date, days))}</span><div class="argo-entry">${argoChipHtml(e.info)}<span class="argo-when">${when}</span>${e.note ? `<div class="argo-note">${escapeHtml(e.note)}</div>` : ''}</div></li>`;
+      const when = days === 1 ? '' : `<span class="argo-when">em ${days} dias</span>`;   // "Amanhã" já está no rótulo do dia
+      const tag = e.info ? argoChipHtml(e.info) : (e.note ? '<span class="argo-chip argo-chip-note">Anotações</span>' : '');
+      return `<li><span class="argo-week-day">${escapeHtml(argoDayLabel(e.date, days))}</span><div class="argo-entry">${tag}${when}${e.note ? `<div class="argo-note">${escapeHtml(e.note)}</div>` : ''}</div></li>`;
     }).join('');
     const more = rest.length > 4 ? `<li class="argo-week-more">+ ${rest.length - 4} na agenda</li>` : '';
     html += `<div class="argo-week-label">Próximos dias</div><ul class="argo-week-list">${rows}${more}</ul>`;
@@ -1420,7 +1479,7 @@ function argoGreetingWeekHtml() {
     const next = argoNextMilestone(now);
     if (next) {
       const when = next.days === 1 ? 'amanhã' : `em ${next.days} dias`;
-      html += `<div class="argo-week-label">Próximo marco</div><ul class="argo-week-list"><li><span class="argo-week-day">${escapeHtml(argoDayLabel(next.date, next.days))}</span><div class="argo-entry">${argoChipHtml(next.info)}<span class="argo-when">${when}</span></div></li></ul>`;
+      html += `<div class="argo-week-label">Próximo marco</div><ul class="argo-week-list"><li><span class="argo-week-day">${escapeHtml(argoDayLabel(next.date, next.days))}</span><div class="argo-entry">${argoChipHtml(next.info)}${next.days === 1 ? '' : `<span class="argo-when">${when}</span>`}</div></li></ul>`;
     } else if (!total) {
       html += `<div class="argo-week-empty">Nada marcado para esta semana.</div>`;
     }
@@ -1606,6 +1665,13 @@ function argoDismissGreeting() {
 // sincronização). Sem código de sincronização, já abre a tela para defini-lo.
 function argoOpenAgendaFromGreeting(mode) {
   argoDismissGreeting();
+  // atalhos da notificação: "Ver pendências" e toque num dia da faixa da semana
+  if (mode === 'pend') { argoGoAgenda('pend'); return; }
+  if (typeof mode === 'string' && mode.indexOf('day:') === 0) {
+    argoGoAgenda();
+    setTimeout(() => { if (typeof agendaJumpToDay === 'function') agendaJumpToDay(mode.slice(4)); }, 350);
+    return;
+  }
   const chip = document.querySelector('.filter-chip[data-cat="agenda"]');
   if (chip && !chip.classList.contains('active')) chip.click();
   requestAnimationFrame(() => {
@@ -21718,6 +21784,13 @@ function agendaComputeStats(scope) {
 // Cada marca tem data-tip="texto": uma única dica flutuante (agendaStatsTipInit)
 // mostra o valor ao passar o mouse ou tocar. Os mesmos números ficam numa tabela
 // escondida (.agenda-sr-only) para leitor de tela.
+// Largura útil do gráfico: o SVG é desenhado no tamanho real do cartão (em vez de
+// 560px encolhidos), então rótulos e valores mantêm o tamanho legível no celular.
+function agendaStatsW() {
+  const b = document.getElementById('agendaStatsBody');
+  const w = b ? b.clientWidth - 24 : 0;
+  return Math.max(290, Math.min(560, w > 0 ? Math.floor(w) : 340));
+}
 const AGENDA_STATS_LABEL = { done: 'concluída(s)', pending: 'a fazer', late: 'atrasada(s)' };
 
 // Anel: concluídas / a fazer / atrasadas, com a taxa no centro.
@@ -21745,7 +21818,7 @@ function agendaStatsDonut(st) {
 // opts: { today: índice da barra de hoje (ou -1), weekend: [bool por barra] }
 function agendaStatsBarsSvg(series, labels, titles, opts) {
   const o = opts || {};
-  const W = 560, H = 210, padL = 28, padB = 26, padT = 18;
+  const W = agendaStatsW(), narrow = W < 460, H = narrow ? 200 : 210, padL = 26, padB = 26, padT = 20;
   const totals = series.map(b => b.done + b.pending + b.late);
   const max = Math.max(1, ...totals);
   const step = Math.max(1, Math.ceil(max / 4));
@@ -21782,28 +21855,32 @@ function agendaStatsBarsSvg(series, labels, titles, opts) {
     if (tot) {
       g += '<g class="ast-bar" style="--i:' + i + '" data-tip="' + escapeHtml(tip) + '">' + inner +
         '<rect x="' + (padL + i * bw).toFixed(1) + '" y="' + padT + '" width="' + bw.toFixed(1) + '" height="' + ih + '" class="ast-hit"/></g>';
-      g += '<text x="' + (padL + i * bw + bw / 2).toFixed(1) + '" y="' + (y - 3).toFixed(1) + '" text-anchor="middle" class="ast-bt' + (many ? ' ast-bt-sm' : '') + '">' + tot + '</text>';
+      // com muitas barras (visão do mês) só rotula as mais altas e a de hoje, para os números não se atropelarem
+      if (!many || tot >= max * 0.6 || o.today === i) g += '<text x="' + (padL + i * bw + bw / 2).toFixed(1) + '" y="' + (y - 3).toFixed(1) + '" text-anchor="middle" class="ast-bt' + (many ? ' ast-bt-sm' : '') + '">' + tot + '</text>';
     }
     const showLabel = !many || (i + 1) % 5 === 0 || i === 0 || o.today === i;
-    if (showLabel) g += '<text x="' + (padL + i * bw + bw / 2).toFixed(1) + '" y="' + (H - 7) + '" text-anchor="middle" class="ast-axis' + (o.today === i ? ' ast-axis-now' : '') + '">' + escapeHtml(labels[i]) + '</text>';
+    const lbl = (!many && narrow) ? labels[i].slice(0, 1).toUpperCase() : labels[i];
+    if (showLabel) g += '<text x="' + (padL + i * bw + bw / 2).toFixed(1) + '" y="' + (H - 7) + '" text-anchor="middle" class="ast-axis' + (o.today === i ? ' ast-axis-now' : '') + '">' + escapeHtml(lbl) + '</text>';
   });
   const avg = totals.reduce((a, n) => a + n, 0) / series.length;
   if (avg > 0) {
     const ay = padT + ih - (avg / top) * ih;
     g += '<line x1="' + padL + '" x2="' + (W - 6) + '" y1="' + ay.toFixed(1) + '" y2="' + ay.toFixed(1) + '" class="ast-avg"/>';
+    if (!o.noAvgLabel) g += '<text x="' + (W - 8) + '" y="' + (ay - 4).toFixed(1) + '" text-anchor="end" class="ast-avgl">média ' + (Math.round(avg * 10) / 10).toString().replace('.', ',') + '</text>';
   }
   return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Gráfico de barras: anotações por ' + (series.length === 12 ? 'mês' : 'dia') + '" class="ast-svg">' + g + '</svg>';
 }
 
 // Linha: taxa de conclusão de cada mês (só meses com anotações).
 function agendaStatsRateLine(monthRate) {
-  const W = 560, H = 150, padL = 42, padB = 24, padT = 12, iw = W - padL - 12, ih = H - padB - padT, bw = iw / 12;
+  const W = agendaStatsW(), narrow = W < 460, H = 160, padL = 40, padB = 24, padT = 18, iw = W - padL - 12, ih = H - padB - padT, bw = iw / 12;
   let g = '';
   [0, 50, 100].forEach(v => {
     const y = padT + ih - v / 100 * ih;
     g += '<line x1="' + padL + '" x2="' + (W - 12) + '" y1="' + y + '" y2="' + y + '" class="ast-grid"/><text x="' + (padL - 5) + '" y="' + (y + 3.5) + '" text-anchor="end" class="ast-axis">' + v + '%</text>';
   });
   let pts = '', area = '', run = [];
+  let lastIdx = -1; monthRate.forEach((m, i) => { if (m) lastIdx = i; });
   const base = padT + ih, flush = () => {
     if (run.length > 1) area += '<path d="M' + run[0][0].toFixed(1) + ' ' + base + ' ' + run.map(q => 'L' + q[0].toFixed(1) + ' ' + q[1].toFixed(1)).join(' ') + ' L' + run[run.length - 1][0].toFixed(1) + ' ' + base + ' Z" class="ast-area"/>';
     run = [];
@@ -21811,11 +21888,11 @@ function agendaStatsRateLine(monthRate) {
   monthRate.forEach((m, i) => {
     const x = padL + i * bw + bw / 2;
     if (m) run.push([x, padT + ih - m.rate / 100 * ih]); else flush();
-    g += '<text x="' + x.toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" class="ast-axis">' + AGENDA_MONTH_NAMES[i].slice(0, 3).toLowerCase() + '</text>';
+    g += '<text x="' + x.toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" class="ast-axis">' + (narrow ? AGENDA_MONTH_NAMES[i].slice(0, 1) : AGENDA_MONTH_NAMES[i].slice(0, 3).toLowerCase()) + '</text>';
     if (!m) return;
     const y = padT + ih - m.rate / 100 * ih;
     pts += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="4.5" class="ast-dot" data-tip="' + escapeHtml(AGENDA_MONTH_NAMES[i] + ': ' + m.rate + '% do que já venceu foi concluído (' + m.done + ' de ' + m.total + ')') + '"/>' +
-      '<text x="' + x.toFixed(1) + '" y="' + (y - 8).toFixed(1) + '" text-anchor="middle" class="ast-pt">' + m.rate + '</text>';
+      (narrow && i % 2 && i !== lastIdx ? '' : '<text x="' + x.toFixed(1) + '" y="' + (y - 8).toFixed(1) + '" text-anchor="middle" class="ast-pt">' + m.rate + '</text>');
   });
   flush();
   return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Linha: taxa de conclusão por mês" class="ast-svg"><defs><linearGradient id="astAreaG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3f7d55" stop-opacity=".30"/><stop offset="1" stop-color="#3f7d55" stop-opacity="0"/></linearGradient></defs>' + g + area + '<path d="' + monthLinePath(monthRate, padL, bw, padT, ih) + '" class="ast-line"/>' + pts + '</svg>';
@@ -21837,11 +21914,12 @@ function agendaHeatTip(key, n) {
   return d.getDate() + ' de ' + AGENDA_MONTH_NAMES[d.getMonth()].toLowerCase() + ' (' + AGENDA_WEEKDAY_ABBR[d.getDay()].toLowerCase() + '): ' + (n ? n + (n === 1 ? ' anotação' : ' anotações') : 'sem anotações');
 }
 function agendaStatsHeatYear(byDay) {
-  const cell = 11, gap = 3, step = cell + gap, padL = 24, padT = 16;
+  const cell = 13, gap = 3, step = cell + gap, padL = 24, padT = 16;
   const jan1 = new Date(AGENDA_YEAR, 0, 1), startOffset = jan1.getDay();
   const days = (new Date(AGENDA_YEAR, 11, 31) - jan1) / 86400000 + 1;
   const cols = Math.ceil((startOffset + days) / 7);
   let g = '', lastMonth = -1;
+  const nowD = new Date(), todayCol = nowD.getFullYear() === AGENDA_YEAR ? Math.floor((startOffset + Math.round((new Date(AGENDA_YEAR, nowD.getMonth(), nowD.getDate()) - jan1) / 86400000)) / 7) : 0;
   ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].forEach((l, r) => { if (r % 2) g += '<text x="' + (padL - 7) + '" y="' + (padT + r * step + cell - 1) + '" text-anchor="end" class="ast-axis ast-axis-sm">' + l + '</text>'; });
   for (let i = 0; i < days; i++) {
     const d = new Date(AGENDA_YEAR, 0, 1 + i), idx = startOffset + i, c = Math.floor(idx / 7), r = idx % 7;
@@ -21850,7 +21928,7 @@ function agendaStatsHeatYear(byDay) {
     g += '<rect x="' + (padL + c * step) + '" y="' + (padT + r * step) + '" width="' + cell + '" height="' + cell + '" rx="2.5" class="ast-h' + agendaHeatLevel(n) + (isNow ? ' ast-now' : '') + '" data-tip="' + escapeHtml(agendaHeatTip(key, n)) + '"/>';
   }
   const W = padL + cols * step, H = padT + 7 * step;
-  return '<div class="ast-scroll"><svg viewBox="0 0 ' + W + ' ' + H + '" style="min-width:' + Math.min(W, 520) + 'px" class="ast-svg" role="img" aria-label="Mapa de calor: anotações por dia do ano">' + g + '</svg></div>';
+  return '<div class="ast-scroll" data-today-col="' + todayCol + '" data-step="' + step + '"><svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" style="max-width:none;width:' + W + 'px" class="ast-svg" role="img" aria-label="Mapa de calor: anotações por dia do ano">' + g + '</svg></div>';
 }
 function agendaStatsHeatMonth(byDay) {
   const first = new Date(AGENDA_YEAR, agendaCurrentMonth, 1), n = agendaDaysInMonth(agendaCurrentMonth);
@@ -21959,7 +22037,23 @@ function agendaRenderStats() {
         { label: 'Manhã', n: per.manha }, { label: 'Tarde', n: per.tarde }, { label: 'Noite', n: per.noite }, { label: 'Sem horário', n: per.sem }], perMax) +
     '<table class="agenda-sr-only"><caption>Anotações por ' + (isMonth ? 'dia' : 'mês') + '</caption><thead><tr><th>Período</th><th>Concluídas</th><th>A fazer</th><th>Atrasadas</th></tr></thead><tbody>' + srRows + '</tbody></table>' +
     '<p class="ast-note">' + (insight || '') + (insight ? ' ' : '') + 'Em ' + st.daysWithNotes + (st.daysWithNotes === 1 ? ' dia' : ' dias') + ' com anotações. Os números contam as anotações no dia a que pertencem; "atrasadas" são as não concluídas de dias que já passaram, e a taxa por mês só conta o que já venceu. Toque ou passe o mouse nos gráficos para ver os valores. Calculado neste aparelho.</p>';
+  // mapa de calor do ano: já abre mostrando a semana de hoje (a grade é mais larga que a tela no celular)
+  const sc = body.querySelector('.ast-scroll[data-today-col]');
+  if (sc && sc.scrollWidth > sc.clientWidth) sc.scrollLeft = Math.max(0, Number(sc.dataset.todayCol) * Number(sc.dataset.step) - sc.clientWidth / 2);
 }
+// girar o aparelho / redimensionar: redesenha os gráficos na nova largura
+(function () {
+  let t = null, lastW = 0;
+  window.addEventListener('resize', () => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      const m = document.getElementById('agendaStatsModal');
+      if (!m || m.style.display !== 'flex') return;
+      const w = agendaStatsW();
+      if (w !== lastW) { lastW = w; agendaRenderStats(); }
+    }, 150);
+  });
+})();
 
 function agendaSetStatsScope(scope) { agendaStatsScope = scope; agendaRenderStats(); }
 
@@ -22090,8 +22184,8 @@ function agendaOpenStats() {
     });
   }
   agendaStatsOpener = document.activeElement;
+  m.style.display = 'flex';   // antes de desenhar: os gráficos medem a largura do cartão
   agendaRenderStats();
-  m.style.display = 'flex';
   const b = m.querySelector('.ast-scope button[aria-pressed="true"]');
   if (b) b.focus();
 }
@@ -33304,4 +33398,23 @@ function argoMascoteErroAsk(msg) {
   window.addEventListener('scroll', esconder, { passive: true, capture: true });
   window.addEventListener('resize', esconder);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') esconder(); });
+})();
+
+
+// Rodapé: o barco é o do mascote (o mesmo da notificação inicial). Se o mascote
+// não carregou, o rodapé mantém a marca d'água antiga (ver CSS .site-footer.has-mascot).
+(function argoFooterBoat() {
+  const mount = () => {
+    const holder = document.getElementById('footerBoat');
+    const footer = document.querySelector('footer.site-footer');
+    if (!holder || !footer) return;
+    try {
+      if (typeof ArgoMascot === 'undefined' || !ArgoMascot.icon) return;
+      const svg = ArgoMascot.icon('info', 150);
+      if (!svg || svg.indexOf('<svg') !== 0) return;
+      holder.insertAdjacentHTML('afterbegin', svg);
+      footer.classList.add('has-mascot');
+    } catch (e) { /* mantém a marca d'água antiga */ }
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount); else mount();
 })();
