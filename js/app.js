@@ -11195,7 +11195,7 @@ function renderPdfToolsCard() {
       <div class="card-body">
         <div class="pdftools-privacy">
           ${ICONS.info}
-          <span>Tudo acontece aqui no seu navegador — nenhum arquivo é enviado a servidor algum — e as ferramentas funcionam também sem internet.</span>
+          <span>Tudo é feito no seu navegador: nenhum arquivo é enviado a servidor. Funciona sem internet.</span>
         </div>
 
         ${pdfhubHtml()}
@@ -30031,7 +30031,7 @@ function pdfhubHtml() {
           </label>
           <div class="pdfhub-chooser" id="pdfhubChooser" hidden></div>
           <div class="pdfhub-search">
-            <input type="search" id="pdfhubSearch" class="tools-input" placeholder="Ou busque uma ferramenta: juntar, reduzir, assinar, girar…" autocomplete="off" aria-label="Buscar ferramenta" oninput="pdfhubFilter(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();pdfhubOpenFirst();}">
+            <input type="search" id="pdfhubSearch" class="tools-input" placeholder="Buscar: juntar, reduzir, assinar…" autocomplete="off" aria-label="Buscar ferramenta" oninput="pdfhubFilter(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();pdfhubOpenFirst();}">
           </div>
           <div class="pdfhub-recent" id="pdfhubRecent" hidden></div>
           <div id="pdfhubGroups">${groups}</div>
