@@ -25,6 +25,7 @@
     "test:aprendizado": "node scripts/teste-aprendizado.mjs",
     "test:rota": "node scripts/teste-rota.mjs",
     "test:rotina": "node scripts/teste-rotina.mjs",
+    "test:entende": "node scripts/teste-entende.mjs",
     "test:habilidades": "node scripts/teste-habilidades.mjs",
     "test:mascote-ia": "node scripts/teste-mascote-ia.mjs",
     "test:coordenadas": "node scripts/teste-coordenadas.mjs",
