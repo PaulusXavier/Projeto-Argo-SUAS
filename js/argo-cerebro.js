@@ -4357,7 +4357,7 @@
     });
     return best;
   }
-  var RE_MAN_PERGUNTA = /\b(como|onde|qual|quais|que aba|o que|para que|pra que|serve|funciona|funcao|usar|uso|usa|abrir|abro|acho|achar|encontro|encontrar|fica|explica|ensina|aprender|tutorial|passo a passo|consigo|posso|da para|tem como|tem (alguma|algum)|existe|quero|preciso|esqueci|perdi)\b/;
+  var RE_MAN_PERGUNTA = /\b(como|onde|qual|quais|que aba|o que|para que|pra que|serve|funciona|funcao|usar|uso|usa|abrir|abro|acho|achar|encontro|encontrar|fica|explica|ensina|aprender|tutorial|passo a passo|consigo|posso|da para|tem como|tem (alguma|algum)|existe|quero|preciso|esqueci|perdi|por que|porque|nao consigo|nao funciona|nao abre|deu erro|problema)\b/;
   var RE_MAN_DIRETORIO = /\b(telefone|fone|numero de contato|endereco|horario de funcionamento|atende|atendem|quem atende|bairro|cep|requisitos|documentos necessarios)\b/;
   function manualAsk(text) {
     var n = norm(text);
@@ -5473,6 +5473,18 @@
   }
 
   // ---------------------------------------------------------------------
+  // Palavras do app para o módulo js/argo-entende.js: "alvo" = termos certos (chaves do manual, do glossário e das bases curadas) que
+  // servem para corrigir digitação; "conhecidas" = palavras do diretório (o que existe nunca é "corrigido").
+  function vocabularioEntende() {
+    ensureIndex();
+    var alvo = {};
+    function add(k) { norm(String(k).replace(/[+!]/g, ' ')).split(' ').forEach(function (w) { if (w.length >= 4 && !/^\d/.test(w)) alvo[w] = 1; }); }
+    MANUAL.forEach(function (e) { e.keys.forEach(add); });
+    GLOSSARIO.forEach(function (e) { e.keys.forEach(add); });
+    PSI_E_PAIF.forEach(function (e) { e.keys.forEach(add); });
+    return { alvo: Object.keys(alvo), conhecidas: vocab };
+  }
+
   function init(opts) {
     opts = opts || {};
     data = Array.isArray(opts.data) ? opts.data : [];
@@ -5684,7 +5696,7 @@
 
   return {
     aprender: { feedback: aprFeedback, usou: aprUsou, resumo: aprResumo, frequentes: aprFrequentes, apagar: aprApagar, ativo: aprAtivo },
-    interpretar: interpretar, init: init, setCid: setCid, setMunicipios: setMunicipios, setCensoSuas: setCensoSuas, psiCenso: psiCensoAsk, psiCensoDados: function () { return { mun: CP_MUN, perfil: CP_PERFIL_MUN, equipe: CP_EQUIPE_MUN, interior: CP_INTERIOR, bvEquipe: CP_BV_EQUIPE }; }, bvCenso: boaVistaCensoAsk, municipiosRR: rrAsk, cid: cidAsk, norm: norm, piiBlock: piiBlock, crisis: crisis, plan: plan, planMulti: planMulti, planSeguimento: planSeguimento, contagem: contagem,
+    interpretar: interpretar, vocabularioEntende: vocabularioEntende, init: init, setCid: setCid, setMunicipios: setMunicipios, setCensoSuas: setCensoSuas, psiCenso: psiCensoAsk, psiCensoDados: function () { return { mun: CP_MUN, perfil: CP_PERFIL_MUN, equipe: CP_EQUIPE_MUN, interior: CP_INTERIOR, bvEquipe: CP_BV_EQUIPE }; }, bvCenso: boaVistaCensoAsk, municipiosRR: rrAsk, cid: cidAsk, norm: norm, piiBlock: piiBlock, crisis: crisis, plan: plan, planMulti: planMulti, planSeguimento: planSeguimento, contagem: contagem,
     directory: function (t, tabCat) { return directory(t, session, tabCat); },
     glossary: glossaryScore, compose: { directory: composeDirectory, glossary: composeGlossary },
     psi: psiScore, psiLista: PSI_E_PAIF, paifLista: PAIF_BASE, cadLista: CAD_BASE, rapsLista: RAPS_BASE, manual: manualAsk, manualLista: MANUAL, baseApp: baseApp, fichaAsk: fichaAsk, trechosDa: trechosDa, pbfPagamento: pbfPagamento,
