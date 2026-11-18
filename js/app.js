@@ -19334,9 +19334,9 @@ function argoAgDescribeMonth(m, focusBusiness) {
 // "anotar amanhã: ligar para o CRAS" → abre a anotação do dia já com o texto. Só guarda quando a pessoa confirma.
 function argoAgParseNote(raw) {
   let t = String(raw).trim();
-  t = t.replace(/^\s*(?:por favor[,\s]*)?(?:me\s+)?(?:anotar|anota|anote|lembrar|lembre-me|lembre|lembrete|agendar|adicionar|criar|colocar|incluir)\b[\s:,\-]*/i, '');
+  t = t.replace(/^\s*(?:por favor[,\s]*)?(?:me\s+)?(?:anotar|anota|anote|lembrar|lembra|lembre-me|lembre|lembrete|agendar|adicionar|criar|colocar|incluir)\b[\s:,\-]*/i, '');
   t = t.replace(/^(?:na agenda|no calend[aá]rio|uma anota[cç][aã]o|um lembrete|anota[cç][aã]o|lembrete)\b[\s:,\-]*/i, '');
-  const datePhrase = /(?:^|\s)(?:(?:para|pra|em|no dia|de)\s+)?(?:depois de amanh[ãa]|amanh[ãa]|hoje|dia \d{1,2}\s*[\/.\-]\s*\d{1,2}(?:\s*[\/.\-]\s*\d{2,4})?|\d{1,2}\s*[\/.\-]\s*\d{1,2}(?:\s*[\/.\-]\s*\d{2,4})?|dia \d{1,2}(?: de [a-zçã]+)?|(?:segunda|ter[çc]a|quarta|quinta|sexta)(?:-feira)?|s[áa]bado|domingo)(?=[\s:,.\-]|$)/i;
+  const datePhrase = /(?:^|\s)(?:(?:para|pra|em|no dia|de|na|no|nesta|nessa|neste|nesse|ate)\s+)?(?:depois de amanh[ãa]|amanh[ãa]|hoje|dia \d{1,2}\s*[\/.\-]\s*\d{1,2}(?:\s*[\/.\-]\s*\d{2,4})?|\d{1,2}\s*[\/.\-]\s*\d{1,2}(?:\s*[\/.\-]\s*\d{2,4})?|dia \d{1,2}(?: de [a-zçã]+)?|(?:segunda|ter[çc]a|quarta|quinta|sexta)(?:-feira)?|s[áa]bado|domingo)(?=[\s:,.\-]|$)/i;
   t = t.replace(datePhrase, ' ').replace(/\s{2,}/g, ' ').replace(/^[\s:,\-]+|[\s:,\-]+$/g, '').replace(/^(?:que|de|para|pra)\s+/i, '');
   return t.slice(0, 500);
 }
@@ -19347,8 +19347,8 @@ function argoAgendaAsk(rawText) {
   if (!n) return null;
 
   // 1) criar anotação
-  if (/^(por favor )?(me )?(anotar|anota|anote|lembrar|lembre me|lembre|lembrete|agendar|adicionar|criar|colocar|incluir)\b/.test(n)
-      && /\b(agenda|calendario|anotacao|lembrete|lembrar|lembre|anotar|anota|anote|agendar)\b/.test(n)) {
+  if (/^(por favor )?(me )?(anotar|anota|anote|lembrar|lembra|lembre me|lembre|lembrete|agendar|adicionar|criar|colocar|incluir)\b/.test(n)
+      && /\b(agenda|calendario|anotacao|lembrete|lembrar|lembra|lembre|anotar|anota|anote|agendar)\b/.test(n)) {
     const w = argoAgParseWhen(raw) || { date: argoAgToday(), key: agendaIsoKey(argoAgToday()) };
     const text = argoAgParseNote(raw);
     if (!w.key) return { reply: 'A Agenda cobre só ' + AGENDA_YEAR + '; essa data fica fora. Diga outra data.', mood: 'notfound', quickActions: [] };
@@ -19488,6 +19488,8 @@ function argoAssistantDefaultQuickActions() {
       { label: 'Anotar para hoje', run: () => argoAgendaNewNote(agendaIsoKey(new Date()), ''), reply: 'Abri a anotação de hoje.', mood: 'success' }
     ];
   }
+  // Rotina: o resumo do dia (agenda + prazos + anotações) a um toque, em qualquer aba.
+  list.push({ label: '📋 Resumo do meu dia', run: () => argoAssistantAskInline('resumo do meu dia') });
   if (cat !== 'all') list.push({ label: 'Dicas desta aba', run: () => argoAssistantAskInline('dicas') });
   // Mascote × IA: com a IA ligada, também oferece que o Paulus explique a aba aberta (para que serve, quando usar).
   try {
@@ -19527,6 +19529,250 @@ function argoAssistantDefaultQuickActions() {
     }
   } catch (e) { /* aprendizado é opcional */ }
   return list.slice(0, cat === 'all' ? 8 : 7);
+}
+
+/* ============================================================
+   ROTINA DO MASCOTE — "resumo do meu dia", "tem prazo vencendo?", "marcar o prazo do RMA como feito",
+   "novo prazo meu: relatório dia 30", "gerar guia para o CREAS", "quantas anotações fiz essa semana",
+   "abre o contador de atendimentos".
+   A leitura do pedido e o texto do resumo são do módulo puro js/argo-rotina.js (npm run test:rotina).
+   Aqui fica só a ligação com o app: Agenda, Prazos, Ferramentas e cards. Tudo roda neste aparelho e NADA daqui
+   vai à IA nem entra na memória da conversa (anotações e prazos próprios são dado pessoal).
+   Quem muda dado (marcar prazo, criar prazo) só age quando a pessoa toca no botão, como a anotação da Agenda.
+   ============================================================ */
+function argoRotinaMod() { return (typeof ArgoRotina !== 'undefined') ? ArgoRotina : null; }
+
+function argoRotinaPrazosPendentes(opts) {
+  if (typeof ArgoPrazos === 'undefined' || typeof argoPrazosLer !== 'function') return null;
+  const st = argoPrazosLer();
+  const lista = ArgoPrazos.filtrar(argoPrazosItens(st), st.done, new Date(), Object.assign({ janela: 'padrao', feitos: false }, opts || {}));
+  return { st, lista };
+}
+
+function argoRotinaPrazoLinha(p) {
+  return { t: p.t, quando: ArgoPrazos.quando(p.dias), faixa: p.faixa, dataCurta: ArgoPrazos.dataCurta(p.d), id: p.id, d: p.d, dias: p.dias };
+}
+
+function argoRotinaNotasDoDia(key) {
+  return ((key && agendaNotesCache[key]) || []).filter(e => e && !e.done).map(e => String(e.text || '').replace(/\s+/g, ' ').trim()).filter(Boolean);
+}
+
+function argoRotinaResumo(it) {
+  const R = argoRotinaMod();
+  const hoje = argoAgToday(), amanha = argoAgAddDays(hoje, 1);
+  const noAno = d => d.getFullYear() === AGENDA_YEAR;
+  const kHoje = noAno(hoje) ? agendaIsoKey(hoje) : null, kAmanha = noAno(amanha) ? agendaIsoKey(amanha) : null;
+  const pz = argoRotinaPrazosPendentes();
+  const prazos = pz ? pz.lista.filter(p => p.faixa === 'atrasado' || p.faixa === 'hoje' || p.faixa === 'semana').map(argoRotinaPrazoLinha) : [];
+  const ctx = {
+    saudacao: argoGreetingWord(), escopo: it.escopo,
+    dataLonga: argoAgCap(agendaLongDate(hoje)),
+    hoje: { info: kHoje ? argoAgInfoText(kHoje) : '', notas: argoRotinaNotasDoDia(kHoje), util: noAno(hoje) ? argoAgIsBusiness(hoje.getMonth(), hoje.getDate()) : undefined },
+    amanha: { info: kAmanha ? argoAgInfoText(kAmanha) : '', notas: argoRotinaNotasDoDia(kAmanha) },
+    prazos, sincronizada: !!agendaSyncCode
+  };
+  if (it.escopo === 'semana') {
+    const dias = agendaWeekDates(new Date());
+    let total = 0;
+    dias.forEach(d => { if (noAno(d)) total += argoRotinaNotasDoDia(agendaIsoKey(d)).length; });
+    const sm = agendaBuildWeekSummary(new Date());
+    ctx.semana = { notas: total, itens: sm ? sm.weekEntries.map(e => e.label + ' — ' + e.text) : [] };
+  }
+  const r = R.resumo(ctx);
+  const texto = r.linhas.join('\n');
+  const quick = [];
+  if (kHoje) quick.push({ label: 'Abrir a Agenda', run: () => argoAgendaOpenDay(kHoje), reply: 'Abri a Agenda no dia de hoje.', mood: 'success' });
+  if (typeof ArgoPrazos !== 'undefined') quick.push({ label: 'Abrir Prazos', run: () => argoAssistantGoTo('prazos'), reply: 'Abri a aba Prazos e alertas do SUAS.', mood: 'success' });
+  if (kHoje) quick.push({ label: 'Anotar para hoje', run: () => argoAgendaNewNote(kHoje, ''), reply: 'Abri a anotação de hoje.', mood: 'success' });
+  quick.push(argoHabChipCopiar(texto, '📋 Copiar resumo'));
+  return { reply: texto, mood: 'success', badge: 'Meu dia', note: 'Montado neste aparelho com a Agenda e os Prazos. Não vai para a IA.', quickActions: quick.slice(0, 4), followups: [] };
+}
+
+function argoRotinaPrazos(it) {
+  const pz = argoRotinaPrazosPendentes();
+  if (!pz) return null;
+  let lista = pz.lista.filter(p => p.faixa === 'atrasado' || p.faixa === 'hoje' || p.faixa === 'semana');
+  if (it.filtro === 'atrasados') lista = lista.filter(p => p.faixa === 'atrasado');
+  const quick = [{ label: 'Abrir Prazos', run: () => argoAssistantGoTo('prazos'), reply: 'Abri a aba Prazos e alertas do SUAS.', mood: 'success' }];
+  if (!lista.length) {
+    const prox = pz.lista.filter(p => p.faixa === 'mes')[0];
+    return { reply: (it.filtro === 'atrasados' ? 'Nenhum prazo atrasado que você não tenha marcado como feito.' : 'Nenhum prazo pendente nos próximos 7 dias.') + (prox ? '\nO próximo: ' + ArgoPrazos.dataCurta(prox.d) + ' — ' + prox.t + ' (' + ArgoPrazos.quando(prox.dias) + ').' : ''), mood: 'success', badge: 'Prazos', quickActions: quick, followups: [] };
+  }
+  const linhas = [];
+  [['atrasado', '⚠️ Já passaram (conferir):'], ['hoje', '⏰ Vencem hoje:'], ['semana', '🗓️ Próximos 7 dias:']].forEach(([f, rot]) => {
+    const g = lista.filter(p => p.faixa === f);
+    if (!g.length) return;
+    linhas.push(rot);
+    g.slice(0, 5).forEach(p => linhas.push('   – ' + ArgoPrazos.dataCurta(p.d) + ' ' + p.t + ' (' + ArgoPrazos.quando(p.dias) + ')'));
+    if (g.length > 5) linhas.push('   … e mais ' + (g.length - 5) + '.');
+  });
+  quick.push({ label: '✓ Marcar um como feito', run: () => argoAssistantAskInline('marcar prazo como feito') });
+  quick.push(argoHabChipCopiar(ArgoPrazos.resumo(argoPrazosItens(pz.st), pz.st.done, new Date(), 7), '📋 Copiar lista'));
+  return { reply: linhas.join('\n'), mood: 'info', badge: 'Prazos', note: 'Datas do calendário do MDS e prazos próprios. Confira sempre o normativo oficial.', quickActions: quick.slice(0, 4), followups: [] };
+}
+
+function argoRotinaMarcarFeito(id) {
+  const st = argoPrazosLer();
+  st.done[id] = true;
+  if (!argoPrazosGravar(st)) return false;
+  try { argoPrazosAtualizarBadge(); argoPrazosRenderLista(); } catch (e) { /* a aba pode não estar aberta */ }
+  return true;
+}
+
+function argoRotinaFeito(it) {
+  const R = argoRotinaMod(), pz = argoRotinaPrazosPendentes({ janela: 'ano' });
+  if (!pz) return null;
+  const abrir = { label: 'Abrir Prazos', run: () => argoAssistantGoTo('prazos'), reply: 'Abri a aba Prazos e alertas do SUAS.', mood: 'success' };
+  const itens = pz.lista.filter(p => p.faixa !== 'antigo');
+  const marca = p => ({
+    label: '✓ ' + ArgoPrazos.dataCurta(p.d) + ' ' + (p.t.length > 28 ? p.t.slice(0, 27) + '…' : p.t),
+    run: () => { if (!argoRotinaMarcarFeito(p.id)) throw new Error('prazo'); },
+    reply: 'Marquei como feito: ' + p.t + '.', mood: 'success'
+  });
+  const { achado, candidatos } = R.acharPrazo(it.alvo, itens.map(p => Object.assign({}, p)));
+  if (achado) {
+    const p = itens.find(x => x.id === achado.id);
+    return { reply: 'Achei este prazo:\n' + ArgoPrazos.dataCurta(p.d) + ' — ' + p.t + ' (' + ArgoPrazos.quando(p.dias) + ').\nMarco como feito? Só muda depois que você tocar no botão.', mood: 'info', badge: 'Prazos', quickActions: [marca(p), abrir], followups: [] };
+  }
+  const pool = (candidatos && candidatos.length ? candidatos.map(c => itens.find(x => x.id === c.id)).filter(Boolean) : (it.alvo ? [] : itens.filter(p => p.faixa === 'atrasado' || p.faixa === 'hoje' || p.faixa === 'semana').slice(0, 4)));
+  if (!pool.length) return { reply: it.alvo ? 'Não achei um prazo pendente com "' + it.alvo + '". Abra a aba Prazos para marcar na lista.' : 'Você não tem prazos pendentes para marcar nos próximos dias.', mood: 'notfound', badge: 'Prazos', quickActions: [abrir], followups: [] };
+  return { reply: it.alvo ? 'Mais de um prazo combina. Qual deles você já cumpriu?' : 'Qual prazo você já cumpriu? Toque para marcar como feito.', mood: 'info', badge: 'Prazos', quickActions: pool.slice(0, 4).map(marca), followups: [] };
+}
+
+function argoRotinaNovoPrazo(it) {
+  const hoje = argoAgToday();
+  const quando = it.texto ? argoAgParseWhen(it.texto) : null;
+  const titulo = it.texto ? argoAgParseNote(it.texto) : '';
+  const abrir = { label: 'Abrir Prazos', run: () => argoAssistantGoTo('prazos'), reply: 'Abri a aba Prazos e use "Novo prazo".', mood: 'success' };
+  if (!quando || !titulo) {
+    return { reply: 'Para criar o seu prazo preciso do que vence e da data. Exemplo: "novo prazo: relatório mensal dia 30".', mood: 'info', badge: 'Prazos', quickActions: [abrir], followups: [] };
+  }
+  const d = ArgoPrazos.iso(quando.date), dias = ArgoPrazos.diasAte(d, new Date());
+  return {
+    reply: 'Deixo o prazo pronto:\n“' + titulo + '” — ' + argoAgShort(quando.date) + '/' + quando.date.getFullYear() + ' (' + ArgoPrazos.quando(dias) + ').\nEle só é guardado depois que você tocar em Salvar prazo.',
+    mood: 'success', badge: 'Prazos',
+    quickActions: [{
+      label: 'Salvar prazo',
+      run: () => {
+        const st = argoPrazosLer();
+        if (st.custom.length >= 200) throw new Error('limite');
+        st.custom.push({ id: 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), d, t: titulo.slice(0, 140), obs: '', rep: '' });
+        if (!argoPrazosGravar(st)) throw new Error('gravar');
+        try { argoPrazosAtualizarBadge(); argoPrazosRenderLista(); } catch (e) { /* aba fechada */ }
+      },
+      reply: 'Prazo salvo em "Meu prazo". Ele aparece na aba Prazos e no resumo do dia.', mood: 'success'
+    }, abrir],
+    followups: []
+  };
+  void hoje;
+}
+
+function argoRotinaContarNotas(it) {
+  const hoje = argoAgToday();
+  let keys = [], rotulo = '';
+  if (it.periodo === 'hoje') { keys = [agendaIsoKey(hoje)]; rotulo = 'hoje'; }
+  else if (it.periodo === 'semana') { keys = agendaWeekDates(new Date()).filter(d => d.getFullYear() === AGENDA_YEAR).map(d => agendaIsoKey(d)); rotulo = 'nesta semana'; }
+  else { const pre = AGENDA_YEAR + '-' + argoAgPad(hoje.getMonth() + 1) + '-'; keys = Object.keys(agendaNotesCache).filter(k => k.indexOf(pre) === 0); rotulo = 'neste mês'; }
+  let total = 0, feitas = 0;
+  keys.forEach(k => (agendaNotesCache[k] || []).forEach(e => { total++; if (e && e.done) feitas++; }));
+  const quick = [{ label: 'Abrir Agenda', run: () => argoAssistantGoTo('agenda'), reply: 'Abri a Agenda Argo.', mood: 'success' }];
+  if (!agendaSyncCode && !total) return { reply: 'Não consigo contar: as suas anotações só ficam disponíveis aqui com a sincronização da Agenda ligada.', mood: 'notfound', badge: 'Agenda', quickActions: quick, followups: [] };
+  const reply = total
+    ? 'Você tem ' + total + (total === 1 ? ' anotação ' : ' anotações ') + rotulo + ': ' + feitas + ' concluída' + (feitas === 1 ? '' : 's') + ' e ' + (total - feitas) + ' a fazer.'
+    : 'Nenhuma anotação ' + rotulo + '.';
+  return { reply, mood: 'info', badge: 'Agenda', note: 'Contagem feita neste aparelho; as anotações não saem daqui.', quickActions: quick, followups: [] };
+}
+
+// Abre o card e toca no "Gerar Guia" dele (informe, BPC e unidade comum têm botões diferentes; o do card certo é o que existe).
+function argoRotinaGerarGuiaDoCard(u) {
+  argoAssistantOpenCard(u);
+  try { if (window.matchMedia && window.matchMedia('(max-width:560px)').matches && argoAssistantCtrl && argoAssistantCtrl.close) setTimeout(() => argoAssistantCtrl.close(), 500); } catch (e) { /* ignora */ }
+  let tentativas = 0;
+  const achar = () => {
+    const card = document.querySelector('.tech-card[data-unit-id="' + String(u.id).replace(/["\\]/g, '\\$&') + '"]');
+    const btn = card && Array.prototype.find.call(card.querySelectorAll('button[onclick]'), b => /print(?:Informe)?Guide\(/.test(b.getAttribute('onclick') || ''));
+    if (btn) { try { btn.click(); } catch (e) { /* o botão do card continua ali */ } return; }
+    if (++tentativas < 15) setTimeout(achar, 150);
+  };
+  setTimeout(achar, 350);
+}
+
+function argoRotinaGuia(it) {
+  if (typeof DATA === 'undefined' || typeof argoResolveCardRequest !== 'function') return null;
+  const short = u => { const t = u.name || ''; return t.length > 34 ? t.slice(0, 33) + '…' : t; };
+  if (!it.alvo) {
+    return { reply: 'Para qual unidade é a guia? Diga, por exemplo: "gerar guia para o CREAS" ou "guia para o CAPS". A guia é a Ficha de Encaminhamento Técnico, com espaço para fotos e PDFs.', mood: 'info', badge: 'Guia', quickActions: [{ label: 'Ir para a busca', run: () => argoAssistantFocusSearch(), reply: 'Pronto! O cursor já está na busca.', mood: 'success' }], followups: [] };
+  }
+  let hit = argoResolveCardRequest('abrir ' + it.alvo, DATA);
+  if (!hit || (!hit.exact && !(hit.list && hit.list.length))) {
+    // nome genérico ("CREAS", "CAPS AD"): todas as unidades cujo nome tem todas as palavras, as de Boa Vista primeiro
+    const toks = argoNorm(it.alvo).split(' ').filter(w => w.length >= 2 && !ARGO_CARD_STOP.has(w));
+    const bv = u => /boa vista/i.test(u.address || '') ? 0 : 1;
+    const achadas = toks.length ? DATA.filter(u => { const h = ' ' + argoNorm((u.name || '') + ' ' + (u.fullName || '')) + ' '; return toks.every(t => h.indexOf(' ' + t) > -1); }) : [];
+    achadas.sort((a, b) => bv(a) - bv(b) || String(a.name).localeCompare(String(b.name), 'pt-BR'));
+    hit = achadas.length === 1 ? { exact: achadas[0], list: achadas } : (achadas.length ? { exact: null, list: achadas } : null);
+  }
+  if (!hit) return { reply: 'Não achei a unidade "' + it.alvo + '" no diretório. Tente o nome como aparece no card (ex.: "CREAS", "CAPS AD", "Conselho Tutelar") ou busque na lista.', mood: 'notfound', badge: 'Guia', quickActions: [{ label: 'Buscar "' + it.alvo.slice(0, 22) + '"', run: () => argoAssistantSearch(it.alvo), reply: 'Joguei a busca no diretório.', mood: 'success' }], followups: [] };
+  if (hit.exact) {
+    const u = hit.exact;
+    return {
+      reply: 'Achei **' + u.name + '**. Posso abrir o card e gerar a Ficha de Encaminhamento Técnico. Se quiser preencher os dados antes, abra só o card.',
+      mood: 'success', badge: 'Guia',
+      quickActions: [
+        { label: '🖨️ Gerar guia de ' + short(u), run: () => argoRotinaGerarGuiaDoCard(u), reply: 'Abri o card e pedi a guia. Confira os dados antes de imprimir.', mood: 'success' },
+        { label: 'Só abrir o card', run: () => argoAssistantOpenCard(u), reply: 'Abri o card. O botão "Gerar Guia" está nele.', mood: 'success' }
+      ], followups: []
+    };
+  }
+  return {
+    reply: 'Achei ' + hit.list.length + ' unidades com esse nome' + (hit.list.length > 5 ? ' (mostro as primeiras, de Boa Vista antes; diga o bairro ou o município para filtrar)' : '') + '. Para qual delas é a guia?', mood: 'info', badge: 'Guia',
+    quickActions: hit.list.slice(0, 5).map(u => ({ label: 'Guia: ' + short(u), run: () => argoRotinaGerarGuiaDoCard(u), reply: 'Abri o card de "' + short(u) + '" e pedi a guia.', mood: 'success' })), followups: []
+  };
+}
+
+// O pedido é da rotina (resumo, prazos, guia, contar anotações, abrir ferramenta)? Então não passa pela reescrita da pergunta pela IA:
+// ele é resolvido no aparelho, com as palavras da pessoa, e nada dele sai daqui.
+function argoRotinaReconhece(texto) {
+  const R = argoRotinaMod();
+  if (!R) return false;
+  try {
+    const it = R.intencao(texto);
+    if (!it) return false;
+    if (it.tipo !== 'abrir') return true;
+    return typeof TOOLS_CATALOG === 'object' && !!R.acharFerramenta(it.alvo, Object.entries(TOOLS_CATALOG).map(([titulo, m]) => ({ id: m.id, titulo })));
+  } catch (e) { return false; }
+}
+
+function argoRotinaAsk(rawText) {
+  const R = argoRotinaMod();
+  if (!R || typeof document === 'undefined') return null;
+  const it = R.intencao(rawText);
+  if (!it) return null;
+  try {
+    if (it.tipo === 'resumo') return argoRotinaResumo(it);
+    if (it.tipo === 'prazos') return argoRotinaPrazos(it);
+    if (it.tipo === 'feito') return argoRotinaFeito(it);
+    if (it.tipo === 'novoPrazo') return argoRotinaNovoPrazo(it);
+    if (it.tipo === 'contarNotas') return argoRotinaContarNotas(it);
+    if (it.tipo === 'guia') return argoRotinaGuia(it);
+  } catch (e) { return null; }   // qualquer falha cai no caminho de sempre do mascote
+  return null;
+}
+
+// "abre o contador de atendimentos": casa pelo NOME da ferramenta (não pelas palavras-chave) e só depois de a aba e o card não casarem.
+function argoRotinaAbrirFerramenta(rawText) {
+  const R = argoRotinaMod();
+  if (!R || typeof TOOLS_CATALOG !== 'object') return null;
+  const it = R.intencao(rawText);
+  if (!it || it.tipo !== 'abrir') return null;
+  const cat = Object.entries(TOOLS_CATALOG).map(([titulo, m]) => ({ id: m.id, titulo }));
+  const hit = R.acharFerramenta(it.alvo, cat);
+  if (!hit) return null;
+  const go = () => {
+    argoAssistantOpenTool(hit.id);
+    try { if (window.matchMedia && window.matchMedia('(max-width:560px)').matches && argoAssistantCtrl && argoAssistantCtrl.close) setTimeout(() => argoAssistantCtrl.close(), 700); } catch (e) { /* ignora */ }
+  };
+  return { reply: argoPick(['Pronto, abri "' + hit.titulo + '".', 'Abrindo "' + hit.titulo + '" para você.', 'Feito! "' + hit.titulo + '" está aberta.']), mood: 'success', quickActions: [], autoRun: go };
 }
 
 /* ============================================================
@@ -32031,7 +32277,7 @@ function argoAssistantAskHybrid(rawText, meta) {
   const aguardando = !!(B && B.session && B.session.aguardando);
   if (B && B.session) B.session.aguardando = false;
   const pular = !B || typeof B.interpretar !== 'function' || !B.aiOn() || meta.forceAI || meta.regen || meta.semInterpretar ||
-    (texto.length < 4 && !aguardando) || texto.length > 300 || _ubsPsiAguarda || B.crisis(texto) || B.piiBlock(texto) || !!argoAprendizadoKind(texto) || argoAgendaAsk(texto) || argoThemeAsk(texto) || argoOpenTabAsk(texto) ||
+    (texto.length < 4 && !aguardando) || texto.length > 300 || _ubsPsiAguarda || B.crisis(texto) || B.piiBlock(texto) || !!argoAprendizadoKind(texto) || argoAgendaAsk(texto) || argoRotinaReconhece(texto) || argoThemeAsk(texto) || argoOpenTabAsk(texto) ||
     (() => { const t = argoConversaTipo(texto); return !!t && argoConversaLocal(t); })() ||
     // traduzir, medir distância e calcular têm leitura própria: a reescrita da pergunta poderia mexer no texto a traduzir ou nos números
     argoHabReconhece(texto) ||
@@ -32172,6 +32418,10 @@ function argoAssistantAskHybridCore(rawText, meta) {
   const terrAnswer = argoTerritorioAsk(rawText);
   if (terrAnswer) return terrAnswer;
 
+  // Rotina de trabalho (resumo do dia, prazos, guia de encaminhamento, contar anotações): dados do aparelho, sem IA e fora da memória da conversa.
+  const rotinaAnswer = argoRotinaAsk(rawText);
+  if (rotinaAnswer) return rotinaAnswer;
+
   // Perguntas sobre a Agenda são respondidas aqui, com os dados do aparelho: nunca vão à IA
   // nem entram na memória da conversa (podem citar anotações pessoais).
   const agendaAnswer = argoAgendaAsk(rawText);
@@ -32203,6 +32453,10 @@ function argoAssistantAskHybridCore(rawText, meta) {
   // Pedido claro para abrir uma aba ("abre o mapa"): abre na hora, sem passar pela IA.
   const tabOpen = argoOpenTabAsk(rawText);
   if (tabOpen) return tabOpen;
+
+  // "abre o contador de atendimentos": ferramenta da aba Ferramentas, pelo nome.
+  const ferrOpen = argoRotinaAbrirFerramenta(rawText);
+  if (ferrOpen) return ferrOpen;
 
   // Pedido sobre a última resposta ("continue", "tem certeza?", "de onde tirou isso?"): vai direto ao Paulus, com as palavras da pessoa;
   // as fichas e a base do app saem da pergunta anterior (ver buildPayload). Sem IA (offline ou desligada), segue o fluxo de sempre.
