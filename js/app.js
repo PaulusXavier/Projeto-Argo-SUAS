@@ -1016,6 +1016,173 @@ function argoSceneSvg() {
   </svg>`;
 }
 
+// ===== Relógio do Argo: anéis de dia, mês e dia da semana + relógio analógico =====
+// Usado na notificação de abertura e na ferramenta "Relógio". Roda só no aparelho
+// (sem rede, sem dado de pessoa). Horário padrão: Boa Vista (UTC−4), o mesmo das Ferramentas.
+// Uso: const r = ArgoRelogio.montar(elemento, { tz: 'America/Boa_Vista', digital: true }); r.parar();
+// O próprio relógio para quando o elemento sai da tela (removido do documento) e
+// só se mexe enquanto está visível. Os estilos ficam em css/styles.css (".ar-").
+const ArgoRelogio = (function () {
+  const NS = 'http://www.w3.org/2000/svg';
+  const TZ_PADRAO = 'America/Boa_Vista';
+  const MESES = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+  const SEMANA = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+  const MESES_LONGOS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  const SEMANA_LONGA = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  const DIAS = [];
+  for (let d = 1; d <= 31; d++) DIAS.push(String(d));
+  const formatadores = {};
+  const dois = n => (n < 10 ? '0' : '') + n;
+
+  // Data e hora em um fuso, em números. O formatador é guardado: criar um por quadro seria pesado.
+  function partes(d, tz) {
+    let f = formatadores[tz];
+    if (f === undefined) {
+      try {
+        f = new Intl.DateTimeFormat('en-GB', { timeZone: tz, year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric', hourCycle: 'h23' });
+      } catch (e) { f = null; }
+      formatadores[tz] = f;
+    }
+    let a, mes, dia, h, m, s;
+    if (f) {
+      const o = {};
+      f.formatToParts(d).forEach(p => { o[p.type] = p.value; });
+      a = +o.year; mes = +o.month; dia = +o.day; h = (+o.hour) % 24; m = +o.minute; s = +o.second;
+    } else {
+      a = d.getFullYear(); mes = d.getMonth() + 1; dia = d.getDate(); h = d.getHours(); m = d.getMinutes(); s = d.getSeconds();
+    }
+    return { a: a, mes: mes, dia: dia, h: h, m: m, s: s, sem: new Date(Date.UTC(a, mes - 1, dia)).getUTCDay() };
+  }
+
+  function no(nome, attrs, pai) {
+    const e = document.createElementNS(NS, nome);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (pai) pai.appendChild(e);
+    return e;
+  }
+
+  // Um anel de rótulos igualmente espaçados; o anel gira para deixar o item atual no topo.
+  function criarAnel(svg, raio, itens, classe) {
+    const g = no('g', { 'class': 'ar-anel ' + classe }, svg);
+    const passo = 360 / itens.length;
+    const nos = itens.map(function (rotulo, i) {
+      const t = no('text', { x: 200, y: 200 - raio + 4, 'text-anchor': 'middle', transform: 'rotate(' + (i * passo) + ' 200 200)' }, g);
+      t.textContent = rotulo;
+      return t;
+    });
+    return { g: g, nos: nos, passo: passo, atual: -1, ang: null };
+  }
+
+  // Gira pelo caminho mais curto (de dezembro para janeiro não dá a volta ao contrário).
+  function ajustarAnel(anel, indice) {
+    if (anel.atual === indice) return;
+    if (anel.atual >= 0) anel.nos[anel.atual].classList.remove('ar-atual');
+    anel.nos[indice].classList.add('ar-atual');
+    anel.atual = indice;
+    const alvo = -indice * anel.passo;
+    if (anel.ang === null) anel.ang = alvo;
+    else anel.ang += ((alvo - anel.ang + 540) % 360) - 180;
+    anel.g.style.transform = 'rotate(' + anel.ang + 'deg)';
+  }
+
+  function montar(host, opc) {
+    if (!host) return { parar: function () {} };
+    opc = opc || {};
+    const tz = opc.tz || TZ_PADRAO;
+    if (host.__argoRelogio) host.__argoRelogio.parar();
+    host.textContent = '';
+    host.classList.add('ar-relogio', 'ar-parado');
+
+    const svg = no('svg', { viewBox: '0 0 400 400', role: 'img', 'aria-label': 'Relógio', focusable: 'false' });
+    host.appendChild(svg);
+    no('circle', { 'class': 'ar-fundo', cx: 200, cy: 200, r: 196 }, svg);
+    [178, 148, 118].forEach(r => no('circle', { 'class': 'ar-trilha', cx: 200, cy: 200, r: r }, svg));
+    [191, 165, 135].forEach(r => no('circle', { 'class': 'ar-borda', cx: 200, cy: 200, r: r }, svg));
+    no('circle', { 'class': 'ar-face', cx: 200, cy: 200, r: 103 }, svg);
+    const aneis = {
+      dia: criarAnel(svg, 178, DIAS, 'ar-anel-dia'),
+      mes: criarAnel(svg, 148, MESES, 'ar-anel-mes'),
+      sem: criarAnel(svg, 118, SEMANA, 'ar-anel-sem')
+    };
+    for (let i = 0; i < 60; i++) {
+      const forte = i % 5 === 0;
+      no('line', { 'class': 'ar-marca' + (forte ? ' ar-forte' : ''), x1: 200, x2: 200, y1: 101, y2: forte ? 112 : 106, transform: 'rotate(' + (i * 6) + ' 200 200)' }, svg);
+    }
+    for (let n = 1; n <= 12; n++) {
+      const ang = n * Math.PI / 6;
+      const t = no('text', {
+        'class': 'ar-num' + (n % 3 === 0 ? ' ar-forte' : ''),
+        x: (200 + 71 * Math.sin(ang)).toFixed(2), y: (200 - 71 * Math.cos(ang) + 5).toFixed(2), 'text-anchor': 'middle'
+      }, svg);
+      t.textContent = String(n);
+    }
+    const mHora = no('line', { 'class': 'ar-mao ar-mao-hora', x1: 200, y1: 212, x2: 200, y2: 150 }, svg);
+    const mMin = no('line', { 'class': 'ar-mao ar-mao-min', x1: 200, y1: 214, x2: 200, y2: 122 }, svg);
+    const mSeg = no('line', { 'class': 'ar-mao ar-mao-seg', x1: 200, y1: 218, x2: 200, y2: 112 }, svg);
+    no('circle', { 'class': 'ar-eixo', cx: 200, cy: 200, r: 5 }, svg);
+    no('circle', { 'class': 'ar-eixo-centro', cx: 200, cy: 200, r: 2 }, svg);
+
+    let digital = null;
+    if (opc.digital) {
+      digital = document.createElement('div');
+      digital.className = 'ar-digital';
+      digital.setAttribute('aria-hidden', 'true');
+      host.appendChild(digital);
+    }
+
+    const reduzir = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    let parado = false, raf = 0, timer = 0, segAtual = -1, p = null, primeiro = true, minutoRotulo = -1;
+
+    function quadro() {
+      raf = 0; timer = 0;
+      if (parado || !host.isConnected) return;
+      // Escondido (aba em segundo plano, janela fechada): só confere de vez em quando.
+      if (document.hidden || !host.getClientRects().length) { timer = setTimeout(quadro, 400); return; }
+      const agora = Date.now();
+      const seg = Math.floor(agora / 1000);
+      if (seg !== segAtual) {
+        segAtual = seg;
+        p = partes(new Date(agora), tz);
+        ajustarAnel(aneis.dia, p.dia - 1);
+        ajustarAnel(aneis.mes, p.mes - 1);
+        ajustarAnel(aneis.sem, p.sem);
+        if (digital) digital.textContent = dois(p.h) + ':' + dois(p.m) + ':' + dois(p.s);
+        if (p.m !== minutoRotulo) {
+          minutoRotulo = p.m;
+          svg.setAttribute('aria-label', 'Relógio: ' + SEMANA_LONGA[p.sem] + ', ' + p.dia + ' de ' + MESES_LONGOS[p.mes - 1] + ', ' + dois(p.h) + ':' + dois(p.m));
+        }
+        if (primeiro) {
+          primeiro = false;
+          // Os anéis já abrem na posição certa; só os giros seguintes são animados.
+          requestAnimationFrame(function () { requestAnimationFrame(function () { host.classList.remove('ar-parado'); }); });
+        }
+      }
+      const s = p.s + (reduzir ? 0 : (agora % 1000) / 1000);
+      const m = p.m + s / 60;
+      const h = (p.h % 12) + m / 60;
+      mSeg.setAttribute('transform', 'rotate(' + (s * 6).toFixed(2) + ' 200 200)');
+      mMin.setAttribute('transform', 'rotate(' + (m * 6).toFixed(2) + ' 200 200)');
+      mHora.setAttribute('transform', 'rotate(' + (h * 30).toFixed(2) + ' 200 200)');
+      if (reduzir) timer = setTimeout(quadro, 250);
+      else raf = requestAnimationFrame(quadro);
+    }
+    quadro();
+
+    const ctl = {
+      parar: function () {
+        parado = true;
+        if (raf) cancelAnimationFrame(raf);
+        if (timer) clearTimeout(timer);
+        if (host.__argoRelogio === ctl) host.__argoRelogio = null;
+      }
+    };
+    host.__argoRelogio = ctl;
+    return ctl;
+  }
+
+  return { montar: montar };
+})();
+
 function argoEnsureGreetingUI() {
   if (document.getElementById('argoGreetingModal')) return;
   const wrap = document.createElement('div');
@@ -1028,6 +1195,7 @@ function argoEnsureGreetingUI() {
           <button type="button" class="argo-greeting-x" onclick="event.stopPropagation(); argoDismissGreeting()" aria-label="Fechar notificação">✕</button>
         </div>
         <div class="argo-greeting-content">
+          <div class="argo-greeting-clock" id="argoGreetingClock" role="group" aria-label="Relógio com dia, mês e dia da semana"></div>
           <p class="argo-greeting-date" id="argoGreetingDate"></p>
           <h3 id="argoGreetingTitle">Olá! Meu nome é Argo</h3>
           <p class="argo-greeting-intro" id="argoGreetingIntro"></p>
@@ -1064,7 +1232,9 @@ function argoEnsureGreetingUI() {
       .argo-greeting-box { overscroll-behavior:contain; position:relative; background:var(--bg-card,#fff); color:var(--text-main,#1e293b); width:100%; max-width:440px; max-height:calc(100vh - 36px); max-height:calc(100dvh - 36px); overflow-y:auto; border-radius:20px; box-shadow:0 30px 64px -12px rgba(0,0,0,0.6), 0 0 0 1px rgba(184,137,79,0.4); animation:argoGreetingPop .4s cubic-bezier(.2,.8,.2,1); }
       @keyframes argoGreetingPop { from { transform:translateY(16px) scale(.96); opacity:0; } to { transform:none; opacity:1; } }
 
-      .argo-scene { position:relative; height:210px; background:#050f22; overflow:hidden; }
+      .argo-scene { position:relative; height:150px; background:#050f22; overflow:hidden; }
+      /* o relógio abre a notificação: fica logo abaixo da cena do barquinho */
+      .argo-greeting-clock { width:min(100%, 250px); margin:2px auto 12px; }
       .argo-scene-svg { display:block; width:100%; height:100%; }
       .argo-scene::after { content:''; position:absolute; left:0; right:0; bottom:0; height:2px; background:linear-gradient(90deg, transparent, #f3d58a, transparent); opacity:.7; }
       .argo-scene-pill { position:absolute; top:12px; left:12px; display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.04em; color:#f6e7bd; background:rgba(5,15,34,0.55); border:1px solid rgba(243,213,138,0.4); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); }
@@ -1203,13 +1373,15 @@ function argoEnsureGreetingUI() {
       .argo-greeting-overlay.visible .argo-greeting-content > *:nth-child(5) { animation-delay:.2s; }
       .argo-greeting-overlay.visible .argo-greeting-content > *:nth-child(6) { animation-delay:.25s; }
       @keyframes argoRise { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
-      @media (max-width: 420px) { .argo-greeting-content { padding:16px 18px 20px; } .argo-scene { height:190px; } }
+      @media (max-width: 420px) { .argo-greeting-content { padding:16px 18px 20px; } .argo-scene { height:130px; } .argo-greeting-clock { width:min(100%, 220px); } }
       @media (prefers-reduced-motion: reduce) {
         .argo-greeting-box, .argo-greeting-content > *, .argo-ship, .argo-wave, .argo-twinkle, .argo-glint, .argo-sync-row .argo-sync-dot { animation:none !important; }
       }
     </style>
   `;
   document.body.appendChild(wrap);
+  // Relógio da notificação (só se mexe enquanto o cartão está visível).
+  try { ArgoRelogio.montar(document.getElementById('argoGreetingClock'), { digital: true }); } catch (e) { /* sem relógio: o resto do cartão segue normal */ }
   // Se a internet cair/voltar enquanto o cartão está aberto, atualiza a
   // mensagem de sincronização na hora (argoRefreshGreeting já verifica
   // sozinho se o cartão está visível antes de mexer em qualquer coisa).
@@ -7844,12 +8016,6 @@ function renderToolsCard() {
     'MC': 'Limpar memória', 'MR': 'Usar valor da memória', 'M+': 'Somar à memória', 'M−': 'Subtrair da memória', '√': 'Raiz quadrada', 'x²': 'Elevar ao quadrado', '1/x': 'Inverso (1 dividido pelo número)' };
   const btns = keys.map(k => '<button type="button" class="calc-k' + (k.length === 1 && /[÷×−+]/.test(k) ? ' is-op' : '') + (/^(MC|MR|M\+|M−|√|x²|1\/x|CE)$/.test(k) ? ' calc-fn' : '') + (k === '=' ? ' is-eq' : '')
     + '" data-k="' + k + '"' + (names[k] ? ' aria-label="' + names[k] + '"' : '') + '>' + k + '</button>').join('');
-  let ticks = '';
-  for (let i = 0; i < 60; i++) {
-    const major = i % 5 === 0, a = i * Math.PI / 30, r1 = major ? 45 : 49, r2 = 53;
-    ticks += '<line class="an-tick' + (major ? ' is-major' : '') + '" x1="' + (60 + r1 * Math.sin(a)).toFixed(2) + '" y1="' + (60 - r1 * Math.cos(a)).toFixed(2)
-      + '" x2="' + (60 + r2 * Math.sin(a)).toFixed(2) + '" y2="' + (60 - r2 * Math.cos(a)).toFixed(2) + '"/>';
-  }
   const tabs = [['clock', 'Relógio'], ['sw', 'Cronômetro'], ['tm', 'Temporizador'], ['al', 'Alarme']].map(t =>
     '<button type="button" role="tab" class="tools-tab" data-tt="' + t[0] + '" id="toolTab-' + t[0] + '" aria-controls="toolPane-' + t[0] + '">' + t[1] + '</button>').join('');
   const zoneSaved = toolsZoneSaved();
@@ -7865,9 +8031,7 @@ function renderToolsCard() {
     + '<div class="tools-tabs" role="tablist" aria-label="Relógio, cronômetro e temporizador">' + tabs + '</div>'
     + '<div class="tools-pane" role="tabpanel" id="toolPane-clock" aria-labelledby="toolTab-clock">'
     +   '<div class="tools-clock-row">'
-    +     '<svg class="tools-analog" viewBox="0 0 120 120" role="img" aria-label="Relógio analógico"><circle class="an-face" cx="60" cy="60" r="57"/>' + ticks
-    +       '<line id="toolHandH" class="an-h" x1="60" y1="60" x2="60" y2="35"/><line id="toolHandM" class="an-m" x1="60" y1="60" x2="60" y2="21"/>'
-    +       '<line id="toolHandS" class="an-s" x1="60" y1="68" x2="60" y2="16"/><circle class="an-dot" cx="60" cy="60" r="3.2"/></svg>'
+    +     '<div id="toolsAnelRelogio" class="tools-ar" role="group" aria-label="Relógio com dia, mês e dia da semana"></div>'
     +     '<div class="tools-clock-text"><div id="toolsClock" class="tools-time" role="timer" aria-live="off">--:--:--</div><div id="toolsDate" class="tools-date"></div>'
     +       '<div class="tools-hint">Horário de Boa Vista (RR)</div>'
     +       '<div class="tools-hint tools-br"><label for="toolsZoneSel" class="sr-only">Comparar com outro fuso</label><select id="toolsZoneSel" class="tools-select">' + zoneOpts + '</select><strong id="toolsBr">--:--</strong></div></div>'
@@ -8372,10 +8536,9 @@ function initToolsPanel() {
     try { dt = d.toLocaleDateString('pt-BR', { timeZone: TOOLS_TZ_BV, weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }); }
     catch (e) { dt = d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }); }
     $('toolsDate').textContent = dt;
-    $('toolHandH').setAttribute('transform', 'rotate(' + ((p.h % 12) * 30 + p.m * 0.5) + ' 60 60)');
-    $('toolHandM').setAttribute('transform', 'rotate(' + (p.m * 6 + p.s * 0.1) + ' 60 60)');
-    $('toolHandS').setAttribute('transform', 'rotate(' + (p.s * 6) + ' 60 60)');
   };
+  // Relógio de anéis (dia, mês e dia da semana) na hora de Boa Vista; para sozinho se o cartão sair da tela.
+  try { ArgoRelogio.montar($('toolsAnelRelogio'), { tz: TOOLS_TZ_BV }); } catch (e) { /* sem o desenho: a hora em texto continua */ }
   clearInterval(TOOLS_STATE.clockTimer);
   TOOLS_STATE.clockTimer = setInterval(tick, 1000); tick();
   TOOLS_STATE.tickClock = tick;
