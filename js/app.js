@@ -32388,11 +32388,36 @@ function argoConversaAsk(rawText) {
 }
 
 // Fluxo local + IA de resposta (recebe a pergunta já interpretada).
+/* ============================================================
+   ARGO ENTENDE — fala do dia a dia, erro de digitação, verbos de comando e associação de palavras (js/argo-entende.js).
+   Roda ANTES dos roteadores locais do mascote e só ajuda: cada roteador lê primeiro a pergunta como foi escrita e,
+   se não reconhecer, lê a versão corrigida ("pq vc nao abre a agenda" → "porque voce nao abre a agenda"). A pergunta
+   que vai à IA, à memória da conversa e aos filtros de socorro e de dado pessoal é SEMPRE a original.
+   ============================================================ */
+let argoEntendeVocab = false;
+function argoEntende(texto) {
+  const sem = { original: texto, comando: texto, consulta: texto, mudou: false, trocas: [], associadas: [], tipo: '' };
+  try {
+    if (typeof ArgoEntende === 'undefined') return sem;
+    const B = argoBrain();
+    if (!argoEntendeVocab && B && typeof B.vocabularioEntende === 'function') { ArgoEntende.usarVocabulario(B.vocabularioEntende()); argoEntendeVocab = true; }
+    return ArgoEntende.entender(texto);
+  } catch (e) { return sem; }
+}
+// roteador local: primeiro o texto como foi escrito, depois a versão corrigida
+function argoTentaEntendido(fn, rawText, ent) {
+  const r = fn(rawText);
+  if (r || !ent || ent.comando === rawText) return r;
+  return fn(ent.comando);
+}
+
 function argoAssistantAskHybridCore(rawText, meta) {
   const B = argoBrain();
   if (!B) return argoAssistantAsk(rawText);
   meta = meta || {};
   const tab = argoActiveTabInfo();
+  const ent = argoEntende(rawText);
+  const tenta = fn => argoTentaEntendido(fn, rawText, ent);
   const keep = (res, units) => { B.remember(rawText, res.reply, units); return res; };
   const questionLike = /\?|^(como|o que|qual|quais|quando|posso|devo|por que|porque|quem|existe|ha|há)\b/i.test(rawText.trim()) || rawText.trim().split(/\s+/).length >= 6;
 
@@ -32415,31 +32440,31 @@ function argoAssistantAskHybridCore(rawText, meta) {
   if (rotaAnswer) return rotaAnswer;
 
   // "Qual CRAS atende o Caimbé?" / "moro na Rua X, qual o meu CRAS?": resposta no aparelho (lista oficial de bairros) e botões que abrem o mapa.
-  const terrAnswer = argoTerritorioAsk(rawText);
+  const terrAnswer = tenta(argoTerritorioAsk);
   if (terrAnswer) return terrAnswer;
 
   // Rotina de trabalho (resumo do dia, prazos, guia de encaminhamento, contar anotações): dados do aparelho, sem IA e fora da memória da conversa.
-  const rotinaAnswer = argoRotinaAsk(rawText);
+  const rotinaAnswer = tenta(argoRotinaAsk);
   if (rotinaAnswer) return rotinaAnswer;
 
   // Perguntas sobre a Agenda são respondidas aqui, com os dados do aparelho: nunca vão à IA
   // nem entram na memória da conversa (podem citar anotações pessoais).
-  const agendaAnswer = argoAgendaAsk(rawText);
+  const agendaAnswer = tenta(argoAgendaAsk);
   if (agendaAnswer) return agendaAnswer;
 
   // "O que você aprendeu?" / "apague o que aprendeu": resposta local, sobre o aprendizado deste aparelho.
-  const aprAnswer = argoAprendizadoAsk(rawText);
+  const aprAnswer = tenta(argoAprendizadoAsk);
   if (aprAnswer) return aprAnswer;
 
   // Pedido para trocar o tema ("modo escuro"): troca na hora, sem passar pela IA.
-  const themeAnswer = argoThemeAsk(rawText);
+  const themeAnswer = tenta(argoThemeAsk);
   if (themeAnswer) return themeAnswer;
-  const closeAnswer = argoCloseAppAsk(rawText);
+  const closeAnswer = tenta(argoCloseAppAsk);
   if (closeAnswer) return closeAnswer;
 
   // Conversa solta ("quero desabafar", "repete", "resume", "me conta uma curiosidade", "previsão do tempo")
   if (!meta.forceAI) {
-    const conv = argoConversaAsk(rawText);
+    const conv = tenta(argoConversaAsk);
     if (conv) { B.remember(rawText, conv.reply, []); return conv; }
   }
 
@@ -32451,11 +32476,11 @@ function argoAssistantAskHybridCore(rawText, meta) {
   }
 
   // Pedido claro para abrir uma aba ("abre o mapa"): abre na hora, sem passar pela IA.
-  const tabOpen = argoOpenTabAsk(rawText);
+  const tabOpen = tenta(argoOpenTabAsk);
   if (tabOpen) return tabOpen;
 
   // "abre o contador de atendimentos": ferramenta da aba Ferramentas, pelo nome.
-  const ferrOpen = argoRotinaAbrirFerramenta(rawText);
+  const ferrOpen = tenta(argoRotinaAbrirFerramenta);
   if (ferrOpen) return ferrOpen;
 
   // Pedido sobre a última resposta ("continue", "tem certeza?", "de onde tirou isso?"): vai direto ao Paulus, com as palavras da pessoa;
@@ -32468,7 +32493,7 @@ function argoAssistantAskHybridCore(rawText, meta) {
   // Relato de violência contra criança ou adolescente em fala natural ("o padrasto mexe com ele"): proteção em primeiro lugar,
   // com os verbetes curados (ECA, Lei 13.431), na hora e mesmo com a IA ligada. A IA fica a um toque, em "Aprofundar com a IA".
   if (!meta.forceAI && !meta.regen && typeof B.planRelato === 'function') {
-    const rel = B.planRelato(rawText);
+    const rel = tenta(t => B.planRelato(t));
     if (rel) return keep(argoAssistantToUi(rel.result, rawText, true), rel.result.units);
   }
 
@@ -32476,31 +32501,34 @@ function argoAssistantAskHybridCore(rawText, meta) {
   // Mensagem longa (mais de 300 caracteres: um caso descrito, um pedido de texto) vai à IA com as palavras da pessoa;
   // citar uma unidade ou um bairro no meio dela não pode virar resposta pronta do diretório.
   const longMsg = rawText.trim().length > 300 && B.aiOn();
-  const ubsPsi = longMsg ? null : argoUbsPsicoAsk(rawText);
+  const ubsPsi = longMsg ? null : tenta(argoUbsPsicoAsk);
   if (ubsPsi) return keep(ubsPsi, ubsPsi.units);
 
   // Pergunta com duas partes de contato ("telefone do CRAS e do CREAS"): cada parte é respondida pelo diretório.
   if (!meta.forceAI && !meta.regen && !longMsg && typeof B.planMulti === 'function') {
-    const multi = B.planMulti(rawText, { tabCat: tab.cat });
+    const multi = tenta(t => B.planMulti(t, { tabCat: tab.cat }));
     if (multi) return keep(argoAssistantToUi(multi.result, rawText, false), multi.result.units);
   }
   // "e do Conselho Tutelar?" depois de um pedido de contato: mantém o que se pedia (telefone, endereço, horário).
   if (!meta.forceAI && !meta.regen && !longMsg && typeof B.planSeguimento === 'function') {
-    const seg = B.planSeguimento(rawText, { tabCat: tab.cat });
+    const seg = tenta(t => B.planSeguimento(t, { tabCat: tab.cat }));
     if (seg) return keep(argoAssistantToUi(seg.result, rawText, false), seg.result.units);
   }
 
   // Pergunta com várias partes ("qual CRAS atende o Caimbé e o que levo para o CadÚnico?"): cada parte é respondida com o que o app já sabe,
   // e o que não tem resposta pronta é dito. Com IA e alguma parte sem resposta pronta, a IA recebe a pergunta inteira com o roteiro das partes.
   if (!meta.forceAI && !meta.regen && !longMsg && typeof B.planPartes === 'function') {
-    const pp = B.planPartes(rawText, { tabCat: tab.cat });
+    const pp = tenta(t => B.planPartes(t, { tabCat: tab.cat }));
     if (pp) return keep(argoAssistantToUi(pp.result, rawText, true), pp.result.units);
   }
 
   let plan = { kind: 'none' };
   let local = null;
   if (!meta.forceAI && !meta.regen) {
-    plan = B.plan(rawText, { tabCat: tab.cat });
+    // 1) como foi escrito; 2) corrigido (gíria, digitação); 3) com as palavras associadas. Só troca uma lista fraca do diretório por resposta curada.
+    plan = typeof ArgoEntende !== 'undefined' && ArgoEntende.tentar
+      ? ArgoEntende.tentar(t => B.plan(t, { tabCat: tab.cat }), rawText, ArgoEntende.planoFraco, { aceita: ArgoEntende.planoAceito })
+      : B.plan(rawText, { tabCat: tab.cat });
     // Pergunta de CASO ("como organizo o atendimento de um idoso negligenciado?") não se responde com uma lista de unidades:
     // com IA, ela responde com o roteiro de caso e a lista fica de reserva; sem IA, vale o roteiro com a lista logo abaixo.
     if (plan.lista && !longMsg && typeof B.ehCaso === 'function' && B.ehCaso(rawText)) {
