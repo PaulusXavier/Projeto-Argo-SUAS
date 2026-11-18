@@ -359,7 +359,15 @@
   /* ---------------------------------------------------------------- renda per capita */
 
   function rendaPerCapita(n, opc) {
-    if (!/\bper ?capita\b/.test(n)) return null;
+    if (!/\bper ?capita\b/.test(n)) {
+      // Triagem em fala natural, sem a expressão "per capita": "família de 3 pessoas, renda 1000, tem direito ao Bolsa Família?"
+      // Só vale com os TRÊS sinais juntos (pergunta de direito + nº de pessoas + valor de renda) e sem "salário mínimo" na frase.
+      var pergunta = /\b(?:bolsa familia|bpc|loas|cadunico|cad unico|baixa renda|direito|enquadra\w*|eleg\w+|pode receber|posso receber|tenho direito|tem direito)\b/.test(n);
+      var temPessoas = /\b(?:\d+|um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez)\s+(?:pessoas?|membros?|moradores?|integrantes?)\b|\b(?:familia|casa|moram|composta)\s+(?:de|por|com)\s+\d+\b/.test(n);
+      var temRenda = /\d/.test(n) && /\b(?:renda|ganha|ganham|recebe|recebem|salario|r\$|reais)\b/.test(n);
+      if (!(pergunta && temPessoas && temRenda) || /\bsalarios? minimos?\b/.test(n)) return null;
+      n = n + ' per capita';
+    }
     var R = refs(opc), N = NUM_SRC, m;
     var pessoas = null;
     var sobra = n;
