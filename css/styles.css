@@ -7038,15 +7038,6 @@ details.card-fold[open] > *:not(summary) + *:not(summary) { margin-top: 1rem; }
 .tools-tab:focus-visible, .tools-chip:focus-visible, .notes-item:focus-visible, .calc-log-item:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 2px; }
 .tools-pane[hidden] { display: none; }
 .tools-clock-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 1rem 1.4rem; }
-.tools-analog { width: 132px; height: 132px; flex: 0 0 auto; }
-.an-face { fill: var(--bg-main); stroke: var(--border-ui); stroke-width: 1.5; }
-.an-tick { stroke: var(--text-muted); stroke-width: 0.8; stroke-linecap: round; opacity: 0.55; }
-.an-tick.is-major { stroke: var(--text-main); stroke-width: 1.8; opacity: 0.9; }
-.an-h, .an-m { stroke: var(--text-main); stroke-linecap: round; }
-.an-h { stroke-width: 4; }
-.an-m { stroke-width: 2.8; }
-.an-s { stroke: #E8AC3D; stroke-width: 1.4; stroke-linecap: round; }
-.an-dot { fill: var(--brand-primary); }
 .tools-clock-text { text-align: center; min-width: 0; }
 .tools-time { font-size: 2.2rem; font-weight: 800; line-height: 1.15; font-variant-numeric: tabular-nums; color: var(--text-main); }
 .tools-time-sm { font-size: 2.6rem; text-align: center; padding: 0.4rem 0 0.2rem; }
@@ -8918,13 +8909,7 @@ button.card-quick-btn { font-family: inherit; cursor: pointer; }
     linear-gradient(160deg, var(--deck-2), var(--deck));
   box-shadow: inset 0 0 0 1px var(--deck-line), 0 10px 24px -14px rgba(8, 18, 36, 0.7);
 }
-#toolsRoot .tools-analog { width: 150px; height: 150px; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.4)); }
-#toolsRoot .tools-clock-row .an-face { fill: #0E2240; stroke: var(--brass); stroke-width: 2; }
-#toolsRoot .tools-clock-row .an-tick { stroke: #AFC0D8; opacity: 0.5; }
-#toolsRoot .tools-clock-row .an-tick.is-major { stroke: var(--brass-soft); opacity: 1; stroke-width: 2; }
-#toolsRoot .tools-clock-row .an-h, #toolsRoot .tools-clock-row .an-m { stroke: #F3EBDA; }
-#toolsRoot .tools-clock-row .an-s { stroke: var(--brass); stroke-width: 1.6; }
-#toolsRoot .tools-clock-row .an-dot { fill: var(--brass); }
+#toolsRoot .tools-ar { width: 230px; filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4)); }
 #toolsRoot .tools-clock-text { text-align: left; }
 #toolsRoot .tools-clock-row .tools-time { font-size: clamp(2.3rem, 7vw, 3rem); font-weight: 700; letter-spacing: 0.01em; color: #FFF8E6; text-shadow: 0 0 18px rgba(230, 201, 138, 0.25); }
 #toolsRoot .tools-clock-row .tools-date { font-size: 0.92rem; font-weight: 600; color: var(--brass-soft); }
@@ -10057,3 +10042,37 @@ header.hero .brand-sub::after { content:''; position:absolute; left:0; top:0; wi
   .hero-waves { height:40px; }
 }
 @media (prefers-reduced-motion: reduce) { .hero-wave path { animation:none !important; } }
+
+/* ---------- Relógio do Argo: anéis de dia, mês e dia da semana (js/app.js › ArgoRelogio) ---------- */
+/* Mostrador sempre escuro (azul-marinho com latão), em qualquer tema; cores do dia, mês e semana vêm das variáveis --ar-*. */
+.ar-relogio {
+  --ar-dia: #FF5A6A; --ar-mes: #5AAEFF; --ar-sem: #4FE3A8; --ar-ouro: #E6C98A;
+  --ar-texto: #9FB2CF; --ar-mao: #F3EBDA;
+  display: flex; flex-direction: column; align-items: center; gap: 0.5rem; min-width: 0; max-width: 100%;
+}
+.ar-relogio svg { display: block; width: 100%; height: auto; max-width: 100%; font-family: inherit; }
+.ar-fundo { fill: #08142A; stroke: rgba(230, 201, 138, 0.5); stroke-width: 1.5; }
+.ar-trilha { fill: none; stroke: #13284B; stroke-width: 26; }
+.ar-borda { fill: none; stroke: rgba(230, 201, 138, 0.22); stroke-width: 1; }
+.ar-face { fill: #0A1A33; stroke: rgba(230, 201, 138, 0.3); stroke-width: 1; }
+.ar-anel { transform-origin: 200px 200px; transition: transform 1.2s cubic-bezier(0.3, 0.8, 0.2, 1); }
+.ar-parado .ar-anel { transition: none; }
+.ar-anel text { font-size: 11px; font-weight: 600; fill: var(--ar-texto); letter-spacing: 0.12em; }
+.ar-anel-dia text { font-size: 12px; letter-spacing: 0; }
+.ar-anel text.ar-atual { font-weight: 800; }
+.ar-anel-dia text.ar-atual { fill: var(--ar-dia); }
+.ar-anel-mes text.ar-atual { fill: var(--ar-mes); }
+.ar-anel-sem text.ar-atual { fill: var(--ar-sem); }
+.ar-marca { stroke: var(--ar-texto); stroke-width: 1.4; stroke-linecap: round; opacity: 0.55; }
+.ar-marca.ar-forte { stroke: var(--ar-ouro); stroke-width: 2.4; opacity: 1; }
+.ar-num { font-size: 14px; font-weight: 600; fill: var(--ar-texto); }
+.ar-num.ar-forte { font-size: 17px; font-weight: 700; fill: var(--ar-mao); }
+.ar-mao { stroke: var(--ar-mao); stroke-linecap: round; fill: none; }
+.ar-mao-hora { stroke-width: 7; }
+.ar-mao-min { stroke-width: 5; }
+.ar-mao-seg { stroke: var(--ar-ouro); stroke-width: 1.6; }
+.ar-eixo { fill: var(--ar-mao); }
+.ar-eixo-centro { fill: #0A1A33; }
+.ar-digital { font-size: 1.5rem; font-weight: 700; line-height: 1; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; color: var(--text-main); }
+@media (max-width: 480px) { #toolsRoot .tools-ar { width: min(100%, 250px); } }
+@media (prefers-reduced-motion: reduce) { .ar-anel { transition: none; } }
