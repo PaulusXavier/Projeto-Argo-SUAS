@@ -71,25 +71,58 @@
   }
   function cut(s, n) { s = String(s || ''); return s.length > n ? s.slice(0, n - 1).replace(/\s+\S*$/, '') + '…' : s; }
 
+  // distância de Damerau-Levenshtein (a troca de duas letras vizinhas, como "bofnim", conta 1), com limite
   function lev(a, b, max) {
     if (a === b) return 0;
     var la = a.length, lb = b.length;
     if (Math.abs(la - lb) > max) return max + 1;
-    var prev = [], cur = [], i, j;
+    var pp = [], prev = [], cur = [], i, j;
     for (j = 0; j <= lb; j++) prev[j] = j;
     for (i = 1; i <= la; i++) {
       cur[0] = i;
       var rowMin = cur[0];
       for (j = 1; j <= lb; j++) {
         var c = a.charCodeAt(i - 1) === b.charCodeAt(j - 1) ? 0 : 1;
-        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + c);
-        if (cur[j] < rowMin) rowMin = cur[j];
+        var v = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + c);
+        if (i > 1 && j > 1 && a.charCodeAt(i - 1) === b.charCodeAt(j - 2) && a.charCodeAt(i - 2) === b.charCodeAt(j - 1)) v = Math.min(v, pp[j - 2] + 1);
+        cur[j] = v;
+        if (v < rowMin) rowMin = v;
       }
       if (rowMin > max) return max + 1;
-      var t = prev; prev = cur; cur = t;
+      var t = pp; pp = prev; prev = cur; cur = t;
     }
     return prev[lb];
   }
+
+  // chave "pelo som" de uma palavra (português): "pasagem"/"passagem", "mecejana"/"messejana", "xapada"/"chapada"
+  function fon(w) {
+    w = String(w || '');
+    if (w.length < 4 || /\d/.test(w)) return '';
+    w = w.replace(/^h/, '').replace(/ph/g, 'f').replace(/[ck]h|sh/g, 'x')
+      .replace(/lh/g, 'li').replace(/nh/g, 'ni')
+      .replace(/qu(?=[ei])/g, 'k').replace(/gu(?=[ei])/g, 'g').replace(/q/g, 'k')
+      .replace(/c(?=[eiy])/g, 's').replace(/s?c(?=[eiy])/g, 's').replace(/ck?/g, 'k')
+      .replace(/g(?=[eiy])/g, 'j').replace(/[zç]/g, 's').replace(/w/g, 'v').replace(/y/g, 'i')
+      .replace(/ss/g, 's').replace(/x/g, 'x')
+      .replace(/h/g, '')
+      .replace(/(.)\1+/g, '$1')                 // letra dobrada
+      .replace(/([aeiou])m(?=[^aeiou]|$)/g, '$1n')  // m/n depois de vogal (bom/bon)
+      .replace(/([aeiou])l$/, '$1u')                // brasil/brasiu
+      .replace(/[eo]$/, function (m) { return m === 'e' ? 'i' : 'u'; })  // vogal final átona
+      .replace(/ao$|am$/, 'au');
+    return w.length >= 3 ? w : '';
+  }
+  var fonIdx = null;
+  function fonVocab() {
+    if (fonIdx) return fonIdx;
+    fonIdx = {};
+    for (var w in vocab) { if (w === '__N') continue; var k = fon(w); if (k) (fonIdx[k] || (fonIdx[k] = [])).push(w); }
+    return fonIdx;
+  }
+  // abreviações comuns de nomes de unidades
+  var ABREV = { dr: ['doutor'], dra: ['doutora'], hosp: ['hospital'], esc: ['escola'], est: ['estadual'], mun: ['municipal'],
+    cons: ['conselho'], def: ['defensoria'], prof: ['professor', 'professora'], profa: ['professora'], pq: ['parque'], jd: ['jardim'],
+    vl: ['vila'], av: ['avenida'], sta: ['santa'], sto: ['santo'], gov: ['governador'], pres: ['presidente'], cmei: ['creche'] };
 
   // ---------------------------------------------------------------------
   // Privacidade: nada de dados pessoais indo para a IA
@@ -191,11 +224,20 @@
         if (w.length > q.length && w.length <= q.length + 6 && w.indexOf(q) === 0) { out[w] = 0.8; if (++n > 14) break; }
       }
     }
-    if (!out[q] && q.length >= 5 && !/^\d+$/.test(q)) {
+    if (ABREV[q]) ABREV[q].forEach(function (f) { if (vocab[f] && !out[f]) out[f] = 0.9; });
+    if (!out[q] && q.length >= 4 && !/^\d+$/.test(q)) {
       var max = q.length >= 9 ? 2 : 1;
+      var curto = q.length === 4;   // palavra curta: só troca/transposição de letra (mesmo tamanho), para não confundir siglas
       for (var v in vocab) {
         if (v === '__N' || out[v] || v.length < 4) continue;
-        if (Math.abs(v.length - q.length) <= max && lev(q, v, max) <= max) out[v] = 0.6;
+        if (curto && (v.length !== 4 || v.charAt(0) !== q.charAt(0))) continue;
+        if (Math.abs(v.length - q.length) <= max && lev(q, v, max) <= max) out[v] = curto ? 0.5 : 0.6;
+      }
+      // escrita pelo som
+      var fk = fon(q);
+      if (fk && !Object.keys(out).some(function (k) { return out[k] >= 0.6; })) {
+        var fx = fonVocab()[fk];
+        if (fx && fx.length <= 6) fx.forEach(function (v) { if (!out[v]) out[v] = 0.55; });
       }
     }
     expCache[q] = out;
@@ -262,6 +304,23 @@
   // ---------------------------------------------------------------------
   // Busca no diretório
   // ---------------------------------------------------------------------
+  // "bon fim" -> "bonfim" e "vilabrasil" -> "vila brasil": junta ou separa palavras quando o resultado existe no diretório
+  function colaSepara(tokens) {
+    ensureIndex();
+    var out = [], i, t;
+    for (i = 0; i < tokens.length; i++) {
+      t = tokens[i];
+      var nx = tokens[i + 1];
+      if (nx && !/\d/.test(t + nx) && vocab[t + nx] && !(vocab[t] && vocab[nx] && vocab[t] > 3 && vocab[nx] > 3)) { out.push(t + nx); i++; continue; }
+      if (!vocab[t] && t.length >= 7 && !/\d/.test(t)) {
+        var parts = null;
+        for (var k = 3; k <= t.length - 3 && !parts; k++) if (vocab[t.slice(0, k)] && vocab[t.slice(k)]) parts = [t.slice(0, k), t.slice(k)];
+        if (parts) { out.push(parts[0], parts[1]); continue; }
+      }
+      out.push(t);
+    }
+    return out;
+  }
   function parseQuery(text) {
     var n = norm(text);
     var all = n ? n.split(' ').map(function (t) { return ROMANO[t] || t; }) : [];
@@ -271,6 +330,7 @@
       if (t.length < 2 && !/\d/.test(t)) return;
       if (SOFT[t]) soft.push(t); else strong.push(t);
     });
+    strong = colaSepara(strong);
     var syn = [];
     SINONIMOS.forEach(function (r) { if (r[0].test(n)) syn = syn.concat(r[1]); });
     syn = syn.concat(aprApelidos(strong));   // palavras que a pessoa usa e que o Argo aprendeu com o uso
@@ -332,6 +392,21 @@
     return { rows: rows, bairro: bairro };
   }
 
+  // palavras digitadas que o Argo não tem, mas que casam (por erro de letra ou pelo som) com uma palavra do NOME da unidade
+  // encontrada: serve para avisar "Entendi X como Y". Só avisa o que de fato mudou o resultado.
+  function corrigidos(q, picked) {
+    var out = [];
+    if (!picked || !picked.length) return out;
+    var nomes = {};
+    picked.slice(0, 3).forEach(function (x) { x.u.nameT.forEach(function (w) { nomes[w] = 1; }); });
+    q.strong.forEach(function (t) {
+      if (t.length < 4 || /\d/.test(t) || vocab[t] || SMALLTALK[t] || APP_WORDS[t] || ABREV[t]) return;
+      var ex = expand(t), best = '', bv = 0;
+      for (var w in ex) if (nomes[w] && ex[w] < 0.9 && ex[w] > bv) { bv = ex[w]; best = w; }
+      if (best) out.push({ de: t, para: best });
+    });
+    return out.slice(0, 2);
+  }
   // Decide entre "uma unidade", "lista" ou nada, com um nível de confiança.
   function directory(text, session, tabCat) {
     var q = parseQuery(text);
@@ -384,6 +459,7 @@
     res.units = picked.map(function (x) { return slim(x.u.d); });
     if (res.mode === 'list' && res.units.length === 1) res.mode = 'single';
     res.bairro = r.bairro;
+    res.corrige = corrigidos(q, picked);
     res.aprendido = picked.some(function (x) { return x.lb >= 0.3; });   // a ordem veio, em parte, do que o uso ensinou
     return res;
   }
@@ -392,12 +468,17 @@
   // Texto das respostas do diretório
   // ---------------------------------------------------------------------
   function first(a) { return a && a.length ? a[0] : ''; }
+  function avisoCorrecao(res) {
+    if (!res.corrige || !res.corrige.length) return '';
+    return 'Entendi ' + res.corrige.map(function (c) { return '"' + c.de + '" como **' + c.para + '**'; }).join(' e ') + '.';
+  }
   function composeDirectory(res, session) {
     var q = res.q, u = res.units[0];
     var followups = [], lines = [], mood = 'success';
     if (res.mode === 'single') {
       var wantAny = q.fone || q.end || q.hora || q.serv;
       var title = '**' + u.name + '**' + (u.group ? ' · ' + u.group : '');
+      var aviso = avisoCorrecao(res);
       if (res.follow) lines.push('Sobre ' + title + ':');
       else if (res.confidence < 0.85) lines.push('Encontrei esta unidade para "' + cut(String(res.raw || '').replace(/[?!.]+$/, '').trim(), 60) + '":');
       if (q.fone) lines.push(u.phones.length ? 'Telefone: ' + u.phones.join(' · ') : 'Não há telefone cadastrado no diretório para esta unidade. Confirme pelo endereço ou com a coordenação.');
@@ -412,6 +493,7 @@
       } else if (!res.follow) {
         lines.unshift(title);
       }
+      if (aviso) lines.unshift(aviso);
       if (!q.fone) followups.push('Qual o telefone?');
       if (!q.end) followups.push('Como chegar?');
       if (!q.hora) followups.push('Qual o horário?');
@@ -419,10 +501,12 @@
     } else {
       var n = res.total || res.units.length;
       var tema = cut(String(res.raw || '').replace(/[?!.]+$/, '').trim(), 60) || q.strong.join(' ');
+      var avl = avisoCorrecao(res);
+      if (avl) lines.push(avl);
       lines.push('Encontrei **' + n + '** ' + (n === 1 ? 'unidade' : 'unidades') + ' para "' + tema + '". Toque numa delas para ver o contato ou refine com o nome ou o bairro.');
       res.units.slice(0, 5).forEach(function (x) { var b = bairroBruto(x.address); lines.push('- **' + (x.name || '') + '**' + (b ? ' · ' + b : '')); });
       mood = res.confidence >= 0.45 ? 'success' : 'notfound';
-      if (res.confidence < 0.45) lines[0] = 'Não achei uma unidade com esse nome, mas estas são as mais próximas do que você pediu. Se não for isso, tente o nome completo ou o bairro.';
+      if (res.confidence < 0.45) lines[avl ? 1 : 0] = 'Não achei uma unidade com esse nome exato. Você quis dizer **' + res.units[0].name + '**? Se não for, estas são as mais próximas; tente também o nome completo ou o bairro.';
     }
     return { reply: lines.join('\n'), mood: mood, followups: followups.slice(0, 3), badge: 'Diretório' };
   }
