@@ -36,9 +36,10 @@
  * com polegar, luz de contorno e a cabeça do comandante que também vira para o cursor.
  * Tocar no mascote (ou comemorar) levanta respingos de água.
  *
- * ÍCONE AVULSO: ArgoMascot.icon('info', 48). Abaixo de 48 px o desenho troca
- * sozinho para uma versão compacta (cabeça maior, menos detalhes) que continua
- * legível em avisos, chat e botão flutuante.
+ * ÍCONE AVULSO: ArgoMascot.icon('info', 48). O desenho troca sozinho conforme o tamanho:
+ *   · 72 px ou mais ..... completo (com remos);
+ *   · 42 a 71 px ........ compacto (cabeça maior, 3 escudos, sem filigranas e, abaixo de 72, sem remos);
+ *   · abaixo de 42 px ... mini (só o essencial, sem animações de enfeite), legível em avisos, chat e botão flutuante.
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -114,11 +115,11 @@
     var shirtGradId = 'argoMascot' + mascotUid + 'Shirt';
     var sailShadeId = 'argoMascot' + mascotUid + 'SailShade';
     var hullShadeId = 'argoMascot' + mascotUid + 'HullShade';
+    var lanternGlowId = 'argoMascot' + mascotUid + 'Lantern';
     // Abaixo de 48 px o desenho vira a versão compacta: cabeça maior, escudos maiores
     // e sem filigranas (trilhas de circuito, pinos do chip, costuras) que viram só borrão.
     if (size < 42) return miniSVG(mood, size, accent, flagSymbol);
     var compact = size < 48;
-    var lite = size < 36; // ícones pequenos: sem enfeites animados (leve para listas/chat)
     var HULL_D = 'M9 49 Q36 63 65 63 Q94 63 121 47 Q121 82 98 97 Q86 103 65 103 Q44 103 32 97 Q9 82 9 49 Z';
 
     function stroke(d, w, col) {
@@ -175,17 +176,17 @@
         '<g class="argo-fx">' + [[12, 0, GOLD, 0], [30, -4, '#FF8FA3', .35], [52, -6, SEA, .7], [74, -4, '#7ED9A0', 1.05], [96, -6, GOLD, 1.4], [118, 0, '#FF8FA3', .2], [104, 2, SEA, .9]].map(function (c) {
           return '<rect class="argo-mascot-confetti" x="' + c[0] + '" y="' + c[1] + '" width="3.2" height="5.4" rx="1" fill="' + c[2] + '" stroke="' + NAVY + '" stroke-width=".6" style="animation-delay:' + c[3] + 's"/>';
         }).join('') + '</g>' +
-        '<path class="argo-mascot-pop" d="M14 18 Q15 23 20 24 Q15 25 14 30 Q13 25 8 24 Q13 23 14 18 Z" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width="1" stroke-linejoin="round"/>' +
+        '<path class="argo-mascot-pop" d="M26 3 Q27 7.5 31.5 8.5 Q27 9.5 26 14 Q25 9.5 20.5 8.5 Q25 7.5 26 3 Z" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width="1" stroke-linejoin="round"/>' +
         '<path class="argo-mascot-pop" style="animation-delay:.5s" d="M78 5 Q79 9 83 10 Q79 11 78 15 Q77 11 73 10 Q77 9 78 5 Z" fill="' + GOLD + '" stroke="' + GOLD_DK + '" stroke-width="1" stroke-linejoin="round"/>';
     } else if (mood === 'error') {
-      face = '<g class="argo-mascot-look"><g class="argo-mascot-blink">' + eye(36.5, 39, 2.6) + eye(47.5, 39, 2.6) + '</g></g>' +
+      face = '<g class="argo-mascot-look"><g class="argo-mascot-blink">' + eye(36.5, 39, 2.6) + '<g class="argo-mascot-eyeR">' + eye(47.5, 39, 2.6) + '</g></g></g>' +
         stroke('M32 35.4 L39.6 32.4', 2) + stroke('M52 35.4 L44.4 32.4', 2) +
         stroke('M38.6 48 Q42 45.6 45.4 48', 2) +
         '<path d="M33 43.4 Q30.4 47 33 49.4 Q35.6 47 33 43.4 Z" fill="#8FD3F4" stroke="' + EYE + '" stroke-width="1" stroke-opacity=".5"/>';
       arms = arm(23, 63, 21, 61) + arm(61, 63, 63, 61);
       extra = '<path class="argo-mascot-drip" d="M58 22 Q55.6 26 58 28.6 Q60.4 26 58 22 Z" fill="#8FD3F4" stroke="' + EYE + '" stroke-width="1" stroke-opacity=".5"/>';
     } else if (mood === 'notfound') {
-      face = '<g class="argo-mascot-look"><g class="argo-mascot-blink">' + eye(36.5, 39, 2.3) + eye(47.5, 38.6, 3.2) + '</g></g>' +
+      face = '<g class="argo-mascot-look"><g class="argo-mascot-blink">' + eye(36.5, 39, 2.3) + '<g class="argo-mascot-eyeR">' + eye(47.5, 38.6, 3.2) + '</g></g></g>' +
         stroke('M44 32.6 Q47.6 29.4 51.6 32.6', 2) +
         '<ellipse cx="42" cy="46.4" rx="2.3" ry="2.9" fill="' + MOUTH + '" stroke="' + EYE + '" stroke-width="1.8"/>';
       // luneta de latão: o comandante procura no horizonte (o braço sobe até a luneta)
@@ -204,7 +205,7 @@
         '<text x="76" y="6.6" font-size="9.4" font-weight="800" fill="' + accent + '" text-anchor="middle" font-family="Trebuchet MS,Verdana,sans-serif">?</text></g>';
     } else if (mood === 'thinking') {
       // olhar para cima e para o lado, sobrancelha levantada, mão no queixo e balão com "..." pulsando
-      face = '<g class="argo-mascot-look"><g class="argo-mascot-blink">' + eye(37.8, 37.6, 2.6) + eye(48.8, 37.6, 2.6) + '</g></g>' +
+      face = '<g class="argo-mascot-look"><g class="argo-mascot-blink">' + eye(37.8, 37.6, 2.6) + '<g class="argo-mascot-eyeR">' + eye(48.8, 37.6, 2.6) + '</g></g></g>' +
         '<path d="M39.6 47.6 Q42.6 45.8 45.8 47.4" fill="none" stroke="' + EYE + '" stroke-width="2" stroke-linecap="round"/>';
       brows = brow('M32 34.2 Q36 33 40.4 34.2') + brow('M43.6 30.8 Q48 28.4 52.6 31.4');
       arms = arm(23, 63, 21, 61) + arm(61, 62, 52.4, 51.6);
@@ -262,7 +263,7 @@
     var HULL_DY = 8; // casco um pouco mais baixo: o comandante aparece da cintura para cima
 
     return (
-      '<svg class="argo-mascot-icon' + bob + (lite ? ' argo-mascot-lite' : '') + ' argo-mascot-m-' + mood + '" width="' + size + '" height="' + size +
+      '<svg class="argo-mascot-icon' + bob + ' argo-mascot-m-' + mood + '" width="' + size + '" height="' + size +
       '" viewBox="0 0 130 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">' +
         '<defs>' +
           '<linearGradient id="' + hullGradId + '" x1="0" y1="0" x2="0" y2="1">' +
@@ -298,6 +299,9 @@
           '<linearGradient id="' + hullShadeId + '" x1="0" y1="0" x2="0" y2="1">' +
             '<stop offset="55%" stop-color="#0A1F28" stop-opacity="0"/><stop offset="100%" stop-color="#0A1F28" stop-opacity=".38"/>' +
           '</linearGradient>' +
+          '<radialGradient id="' + lanternGlowId + '" cx=".5" cy=".5" r=".5">' +
+            '<stop offset="0%" stop-color="#FFD76A" stop-opacity=".75"/><stop offset="55%" stop-color="#FFC857" stop-opacity=".28"/><stop offset="100%" stop-color="#FFC857" stop-opacity="0"/>' +
+          '</radialGradient>' +
           '<clipPath id="' + hullClipId + '"><path d="' + HULL_D + '"/></clipPath>' +
         '</defs>' +
         // aura suave na cor do humor + gaivota passando ao fundo
@@ -331,7 +335,7 @@
         '</g>' +
         // lanterna de bordo pendurada na ponta direita da retranca: brilha como um LED quente e balança com o barco
         (compact ? '' : '<g class="argo-mascot-lantern">' +
-          '<circle class="argo-fx argo-mascot-lglow" cx="112" cy="25.4" r="9" fill="#FFC857" opacity=".35"/>' +
+          '<circle class="argo-fx argo-mascot-lglow" cx="112" cy="25.4" r="10" fill="url(#' + lanternGlowId + ')"/>' +
           '<path d="M112 15.6 V19.6" stroke="' + NAVY + '" stroke-width="1.1" stroke-linecap="round"/>' +
           '<path d="M109.4 21.8 L112 19.4 L114.6 21.8 Z" fill="' + GOLD + '" stroke="' + NAVY + '" stroke-width="1.1" stroke-linejoin="round"/>' +
           '<rect x="109.8" y="21.8" width="4.4" height="6.2" rx="1.5" fill="#FFD76A" stroke="' + NAVY + '" stroke-width="1.1"/>' +
@@ -560,15 +564,22 @@
   // Reação do mascote: 'hop' (pulinho + estrelas), 'wink' (piscadinha) ou 'love' (corações).
   // Cinco toques seguidos viram uma voltinha completa do barco (e dispara o evento
   // "argo-mascot:easter" no document, caso o app queira dar um prêmio).
+  // Remove uma classe depois de `ms`. O temporizador fica guardado no próprio elemento: um novo toque/reação
+  // reinicia a contagem em vez de ter a classe arrancada no meio por um temporizador antigo.
+  function flash(el, cls, ms) {
+    var t = el.__argoT || (el.__argoT = {});
+    clearTimeout(t[cls]);
+    t[cls] = setTimeout(function () { el.classList.remove(cls); }, ms);
+  }
   var pokeCount = 0, pokeTimes = [];
   function poke(svg, kind) {
     if (!svg || !svg.classList || calmMotion()) return;
     var kinds = ['hop', 'wink', 'love'];
     kind = kind || kinds[pokeCount++ % kinds.length];
     svg.classList.remove('argo-mascot-poked'); void svg.getBoundingClientRect(); svg.classList.add('argo-mascot-poked');
-    setTimeout(function () { svg.classList.remove('argo-mascot-poked'); }, 650);
+    flash(svg, 'argo-mascot-poked', 650);
     var compactIcon = svg.classList.contains('argo-mascot-lite');
-    if (kind === 'wink') { svg.classList.add('argo-mascot-winking'); setTimeout(function () { svg.classList.remove('argo-mascot-winking'); }, 900); }
+    if (kind === 'wink') { svg.classList.add('argo-mascot-winking'); flash(svg, 'argo-mascot-winking', 900); }
     else if (!compactIcon && kind === 'love') burst(svg, '♥', '#E5486B', 3);
     else if (!compactIcon) burst(svg, '★', '#F2B84B', 3);
     if (!compactIcon && kind !== 'wink') splash(svg, 5);
@@ -579,7 +590,7 @@
       pokeTimes = [];
       svg.classList.add('argo-mascot-spun');
       if (!compactIcon) burst(svg, '✶', '#5EE6FF', 5);
-      setTimeout(function () { svg.classList.remove('argo-mascot-spun'); }, 1100);
+      flash(svg, 'argo-mascot-spun', 1100);
       try { document.dispatchEvent(new CustomEvent('argo-mascot:easter')); } catch (e) { /* navegador antigo */ }
     }
   }
@@ -593,7 +604,7 @@
     var cls = REACT_CLASS[kind] || REACT_CLASS.hop;
     Object.keys(REACT_CLASS).forEach(function (k) { svg.classList.remove(REACT_CLASS[k]); });
     void svg.getBoundingClientRect(); svg.classList.add(cls);
-    setTimeout(function () { svg.classList.remove(cls); }, 900);
+    flash(svg, cls, 900);
     if (kind === 'cheer' && !svg.classList.contains('argo-mascot-lite')) { burst(svg, '★', '#F2B84B', 4); splash(svg, 7); }
   }
   // Mascotes que a pessoa está vendo agora (dentro da janela). `fullOnly` ignora os minis.
@@ -619,6 +630,8 @@
   function swapMood(host, mood, sz) {
     var old = host && host.querySelector('svg.argo-mascot-icon');
     if (!old) return;
+    // sem `sz`, mantém o tamanho do desenho atual (antes caía em 40 px e trocava o desenho grande pela versão mini)
+    if (!sz) sz = parseFloat(old.getAttribute('width')) || old.getBoundingClientRect().width || 40;
     var tmp = document.createElement('span');
     tmp.innerHTML = boatSVG(mood, sz);
     var fresh = tmp.firstChild;
@@ -648,6 +661,7 @@
         var am = svg.querySelector('.argo-mascot-aim');
         if (mx === null) { el.style.transform = ''; if (am) am.style.transform = ''; continue; }
         var r = svg.getBoundingClientRect(); if (!r.width) continue;
+        if (r.bottom < 0 || r.top > (window.innerHeight || 0)) continue;   // fora da janela: não gasta conta
         var dx = mx - (r.left + r.width * 0.32), dy = my - (r.top + r.height * 0.33);
         var d = Math.sqrt(dx * dx + dy * dy) || 1, k = Math.min(1, d / 150);
         el.style.transform = 'translate(' + (dx / d * k * 2.2).toFixed(2) + 'px,' + (dy / d * k * 1.6).toFixed(2) + 'px)';
@@ -718,7 +732,7 @@
         return;
       }
       if (roll < 0.45) glance(svg);
-      else if (roll < 0.75) { svg.classList.add('argo-mascot-winking'); setTimeout(function () { svg.classList.remove('argo-mascot-winking'); }, 700); }
+      else if (roll < 0.75) { svg.classList.add('argo-mascot-winking'); flash(svg, 'argo-mascot-winking', 700); }
       else react(svg, 'hop');
     }
     setTimeout(idleTick, 6000 + Math.random() * 6000);
@@ -899,7 +913,7 @@
       '.argo-assistant-fab:hover .argo-mascot-wave,.argo-assistant-fab:hover .argo-mascot-wave2{animation-duration:.55s}' +
       '.argo-assistant-fab:hover .argo-mascot-rock{animation-duration:1.4s}' +
       '.argo-mascot-look{transition:transform .14s ease-out}' +
-      '@media (prefers-reduced-motion: reduce){.argo-mascot-icon,.argo-mascot-icon *,.argo-mascot-toast-icon{animation:none!important}.argo-mascot-bob,.argo-mascot-flag,.argo-mascot-wave,.argo-mascot-wave2,.argo-mascot-blink,.argo-mascot-rock,.argo-mascot-swell{animation:none}.argo-mascot-look{transition:none;transform:none!important}.argo-mascot-toast{transition:none}}' +
+      '@media (prefers-reduced-motion: reduce){.argo-mascot-icon,.argo-mascot-icon *,.argo-mascot-toast-icon{animation:none!important}.argo-mascot-bob,.argo-mascot-flag,.argo-mascot-wave,.argo-mascot-wave2,.argo-mascot-blink,.argo-mascot-rock,.argo-mascot-swell{animation:none}.argo-mascot-bubble{display:none}.argo-mascot-look{transition:none;transform:none!important}.argo-mascot-toast{transition:none}}' +
       '@media print{.argo-mascot-toast{display:none!important}}' +
       'body:has(#argoUpdateToast) .argo-mascot-toast{bottom:calc(76px + env(safe-area-inset-bottom,0px))}' +
 
@@ -1164,7 +1178,7 @@
   /**
    * Mostra um aviso flutuante com o mascote.
    * @param {string} message
-   * @param {{type?:'info'|'error'|'notfound'|'success', duration?:number, actionLabel?:string, onAction?:Function}} [options]
+   * @param {{type?:'info'|'error'|'notfound'|'success'|'thinking', duration?:number, actionLabel?:string, onAction?:Function}} [options]
    */
   var lastMsg = null;
   function notify(message, options) {
