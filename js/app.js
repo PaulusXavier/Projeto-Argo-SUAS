@@ -24460,6 +24460,8 @@ async function ensureMammoth() {
 let pdftoolsLastOut = null;
 function pdftoolsDownloadBlob(blob, filename) {
   pdftoolsLastOut = { blob, name: filename, t: Date.now(), used: false };
+  // Pedido feito pelo chat (argoPdfCentralEtapa): o arquivo não baixa sozinho, vira botão na resposta do mascote.
+  if (window.__argoPdfCaptura) { window.__argoPdfCaptura.saidas.push({ blob, name: filename }); return; }
   pdftoolsTriggerDownload(blob, filename);
 }
 function pdftoolsTriggerDownload(blob, filename) {
@@ -33257,7 +33259,7 @@ function argoPdfLerPedido(rawText, temArquivo) {
   } catch (e) { return null; }
 }
 function argoPdfReconhece(rawText) {
-  return !!argoPdfLerPedido(rawText, !!pdftoolsEdit.bytes);
+  return !!argoPdfLerPedido(rawText, !!pdftoolsEdit.bytes) || !!argoPdfCentralLer(rawText, argoPdfTemArquivo());
 }
 
 // Abre a Central de PDF já na ferramenta pedida (chave do PDFHUB_TOOLS, ex.: 'Edit', 'Merge') ou numa aba ('#criptografia').
@@ -33276,11 +33278,17 @@ function argoPdfAsk(rawText) {
   const st = pdftoolsEdit;
   const temArquivo = !!(st.pdf && st.bytes);
   const pedido = argoPdfLerPedido(rawText, temArquivo);
-  if (!pedido) return null;
-  const juntar = (pedido.operacoes || []).some(o => o && o.op === 'juntar');
+  const central = argoPdfCentralLer(rawText, argoPdfTemArquivo());   // reduzir, recortar, PDF→Word/JPG, senha, tarja... (ver "CENTRAL DE PDF PELO CHAT")
+  if (!pedido && !central) return null;
+  const juntar = !!pedido && (pedido.operacoes || []).some(o => o && o.op === 'juntar');
   const irEditar = { label: '✏️ Abrir Editar PDF', run: () => argoPdfIrPara(juntar ? 'Merge' : 'Edit'), reply: juntar ? 'Abri a ferramenta Unir.' : 'Abri a aba Editar PDF.', mood: 'success' };
+  // Só ferramentas da Central (nada que o Paulus faça sozinho): o app aciona a ferramenta e devolve o arquivo.
+  // (Fotos soltas viram PDF melhor em "Fotos → PDF", que tem filtro e corte: o Paulus leria "juntar fotos" só como união.)
+  const soJuntar = !!pedido && (pedido.operacoes || []).length > 0 && (pedido.operacoes || []).every(o => o && o.op === 'juntar');
+  const soFotos = !!central && central.etapas.some(e => e.ferramenta === 'JpgPdf') && !temArquivo;
+  if (central && (!(pedido && (pedido.operacoes || []).length) || (soJuntar && soFotos))) return argoPdfCentralAsk(rawText, central, irEditar);
   const avisos = (pedido.avisosDoPedido || []).filter(Boolean);
-  const encaminhar = (pedido.naoSuporta || []).map(c => ARGO_PDF_ENCAMINHA[c]).filter(Boolean).slice(0, 2)
+  const encaminhar = central ? [] : (pedido.naoSuporta || []).map(c => ARGO_PDF_ENCAMINHA[c]).filter(Boolean).slice(0, 2)
     .map(([chave, nome]) => ({ label: '🧰 ' + nome, run: () => argoPdfIrPara(chave), reply: 'Abri "' + nome + '" na Central de PDF.', mood: 'success' }));
   const dicaCentral = encaminhar.length ? '\n\nAqui no Argo, a Central de PDF faz isso por outro caminho: use o botão abaixo.' : '';
 
@@ -33302,10 +33310,10 @@ function argoPdfAsk(rawText) {
       !confirm('O PDF aberto tem edições feitas na aba que ainda não foram baixadas. Aplicar o pedido do chat as descarta. Continuar?')) {
     return { reply: 'Tudo bem, não mexi no arquivo. Baixe as edições da aba (ou continue nelas) e peça de novo.', mood: 'info', quickActions: [irEditar] };
   }
-  return argoPdfExecutar(rawText, pedido, irEditar, encaminhar);
+  return argoPdfExecutar(rawText, pedido, irEditar, encaminhar, central);
 }
 
-async function argoPdfExecutar(rawText, pedido, irEditar, encaminhar) {
+async function argoPdfExecutar(rawText, pedido, irEditar, encaminhar, central) {
   const st = pdftoolsEdit;
   const antes = { bytes: st.bytes, nome: st.file ? st.file.name : 'documento.pdf', pagina: st.page };
   let r = null;
@@ -33334,8 +33342,278 @@ async function argoPdfExecutar(rawText, pedido, irEditar, encaminhar) {
     label: '↩️ Desfazer', reply: 'Voltei ao PDF de antes do pedido.', mood: 'success',
     run: () => { pdftoolsEditLoadBytes(antes.bytes, antes.nome, antes.pagina).catch(() => argoAviso('Não consegui restaurar o PDF anterior.', 'error')); }
   };
-  return { reply: texto + (extra || '') + '\n\nO resultado já está aberto na aba **Editar PDF**.', mood: 'success', badge: 'PDF', note, quickActions: [baixar(a), irEditar, desfazer].concat(encaminhar) };
+  const primeira = { reply: texto + (extra || '') + '\n\nO resultado já está aberto na aba **Editar PDF**.', mood: 'success', badge: 'PDF', note, quickActions: [baixar(a), irEditar, desfazer].concat(encaminhar) };
+  // Pedido misto ("remover a página 2 e reduzir o tamanho"): o que o Paulus fez já está na aba; a Central continua sobre esse resultado.
+  const autos = central ? (central.etapas || []).filter(e => e.modo === 'auto') : [];
+  if (!autos.length) return primeira;
+  const depois = await argoPdfCentralAsk(rawText, { etapas: autos, avisos: [], recusas: central.recusas || [] }, irEditar);
+  const desfazerTudo = Object.assign({}, desfazer, { label: '↩️ Desfazer tudo' });
+  return { reply: texto + '\n\n' + depois.reply, mood: depois.mood || 'success', badge: 'PDF', note: depois.note || note, quickActions: (depois.quickActions || []).concat([desfazerTudo]) };
 }
+
+/* ============================================================
+   CENTRAL DE PDF PELO CHAT
+   O Paulus (Paulus.pdf) edita no aparelho o PDF aberto em "Editar PDF": juntar, dividir, excluir, girar, numerar, marca d'água,
+   formulários. O RESTO da Central (reduzir, recortar margens, dados ocultos, extrair texto, PDF → Word/JPG, e as ferramentas que
+   dependem da pessoa: senha, tarja, assinatura, Word → PDF, fotos → PDF, organizar, unir) é acionado aqui.
+   A leitura do pedido é pura (js/argo-pdf-central.js, teste: npm run test:pdf-central). A execução NÃO refaz conta nenhuma: entrega
+   o arquivo à própria ferramenta da Central (pdfhubSend), preenche as opções dela e aperta o botão dela. Assim o chat e a aba
+   fazem sempre a mesma coisa, e o que se corrige numa ferramenta vale para os dois.
+   Regras: o arquivo não sai do aparelho; o download é capturado (window.__argoPdfCaptura, lido em pdftoolsDownloadBlob) e vira botão
+   na resposta; senha nunca passa pelo chat (a pessoa digita no campo da ferramenta); o resultado em PDF volta para a aba de onde veio.
+   ============================================================ */
+function argoPdfCentralLer(rawText, temArquivo) {
+  try {
+    if (typeof ArgoPdfCentral === 'undefined' || typeof ArgoPdfCentral.ler !== 'function') return null;
+    return ArgoPdfCentral.ler(rawText, { temArquivo: !!temArquivo });
+  } catch (e) { return null; }
+}
+
+// Há um PDF para trabalhar? O aberto em "Editar PDF" ou o escolhido em "Comece pelo arquivo".
+function argoPdfTemArquivo() {
+  const st = pdftoolsEdit;
+  if (st && st.pdf && st.bytes) return true;
+  return typeof pdfhub === 'object' && (pdfhub.files || []).some(f => pdftoolsIsPdfFile(f));
+}
+
+function argoPdfEsperar(cond, ms) {
+  return new Promise(ok => {
+    const t0 = Date.now();
+    const passo = () => {
+      let v = false;
+      try { v = !!cond(); } catch (e) { v = false; }
+      if (v || Date.now() - t0 > ms) ok(v); else setTimeout(passo, 80);
+    };
+    passo();
+  });
+}
+
+async function argoPdfCentralArquivo() {
+  const st = pdftoolsEdit;
+  if (st && st.pdf && st.bytes) {
+    return { origem: 'edit', bytes: new Uint8Array(st.bytes.slice(0)), nome: (st.file && st.file.name) || 'documento.pdf', pagina: st.page };
+  }
+  const f = typeof pdfhub === 'object' ? (pdfhub.files || []).find(x => pdftoolsIsPdfFile(x)) : null;
+  if (f) return { origem: 'hub', bytes: new Uint8Array(await f.arrayBuffer()), nome: f.name || 'documento.pdf' };
+  return null;
+}
+
+function argoPdfCentralOcupado() {
+  return !!pdftoolsExtra.busy || Object.keys(pdftoolsConvBusy).some(k => pdftoolsConvBusy[k]);
+}
+
+// Abre a Central na ferramenta e espera ela estar na tela (a aba pode levar um instante para desenhar).
+async function argoPdfCentralAbrir(chave) {
+  argoPdfIrPara(chave);
+  const def = PDFHUB_TOOLS.find(t => t.key === chave);
+  if (!def || !def.tool) return true;
+  const ok = await argoPdfEsperar(() => document.getElementById('pdfhub') && document.getElementById(def.tool), 6000);
+  if (ok) { try { pdfhubOpen(chave); } catch (e) { /* segue */ } }
+  return ok;
+}
+
+// Mensagem que a própria ferramenta mostrou (sem os botões que ela acrescenta) e o tipo: success, error, warn ou info.
+function argoPdfStatusTexto(chave) {
+  const el = document.getElementById('pdftools' + chave + 'Status');
+  if (!el) return { texto: '', tipo: '' };
+  const c = el.cloneNode(true);
+  c.querySelectorAll('button, .pdfhub-next').forEach(x => x.remove());
+  const m = /\bis-(success|error|warn|info)\b/.exec(el.className || '');
+  return { texto: c.textContent.replace(/\s+/g, ' ').trim(), tipo: m ? m[1] : '' };
+}
+
+// Preenche os campos da ferramenta com as opções lidas do pedido.
+function argoPdfCentralOpcoes(chave, o) {
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = String(v); };
+  if (chave === 'Compress') {
+    set('pdftoolsCompressLevel', o.nivel || 'media');
+    set('pdftoolsCompressMode', o.modo || 'texto');
+  } else if (chave === 'Crop') {
+    const manual = o.modo === 'manual';
+    const r = document.querySelector('input[name="pdftoolsCropMode"][value="' + (manual ? 'manual' : 'auto') + '"]');
+    if (r) r.checked = true;
+    if (typeof pdftoolsCropMode === 'function') pdftoolsCropMode();
+    if (manual) { set('pdftoolsCropT', o.t); set('pdftoolsCropB', o.b); set('pdftoolsCropL', o.l); set('pdftoolsCropR', o.r); }
+    else set('pdftoolsCropPad', o.pad != null ? o.pad : 6);
+  }
+}
+
+const ARGO_PDF_RODA = {
+  Compress: () => pdftoolsRunCompress(),
+  Crop: () => pdftoolsRunCrop(),
+  Meta: () => pdftoolsRunMeta(),
+  Text: () => pdftoolsRunText()
+};
+
+// Roda UMA ferramenta da Central sobre o arquivo { bytes, nome }.
+// Devolve { ok, tipo, texto, saida: { blob, name } | null, fatal }.
+async function argoPdfCentralEtapa(e, arq) {
+  const chave = e.ferramenta, o = e.opcoes || {};
+  if (!(await argoPdfCentralAbrir(chave))) return { ok: false, fatal: true, tipo: 'error', texto: 'Não consegui abrir a ferramenta "' + e.rotulo + '" na Central de PDF.' };
+  if (!(await argoPdfEsperar(() => !argoPdfCentralOcupado(), 120000))) return { ok: false, fatal: true, tipo: 'error', texto: 'A Central de PDF ainda está terminando outra operação. Espere acabar e peça de novo.' };
+  const file = new File([arq.bytes], arq.nome, { type: 'application/pdf' });
+  const cap = window.__argoPdfCaptura = { saidas: [] };
+  const idStatus = 'pdftools' + chave + 'Status';
+  try {
+    pdftoolsSetStatus(idStatus, '', 'info');
+    if (chave === 'PdfWord') await pdftoolsRunPdfToWord(file);
+    else if (chave === 'PdfJpg') await pdftoolsRunPdfToJpg(file);
+    else {
+      pdfhubSend(chave, [file]);   // abre a ferramenta e entrega o arquivo, como se a pessoa o tivesse escolhido
+      const pronto = await argoPdfEsperar(() => (pdftoolsExtra[chave] && pdftoolsExtra[chave].file === file) || argoPdfStatusTexto(chave).tipo === 'error', 20000);
+      if (!pronto || !pdftoolsExtra[chave] || pdftoolsExtra[chave].file !== file) {
+        const s = argoPdfStatusTexto(chave);
+        return { ok: false, tipo: 'error', texto: s.texto || 'Não consegui ler este PDF. Ele pode estar protegido por senha ou danificado.' };
+      }
+      argoPdfCentralOpcoes(chave, o);
+      await ARGO_PDF_RODA[chave]();
+    }
+    const s = argoPdfStatusTexto(chave);
+    const saida = cap.saidas.length ? cap.saidas[cap.saidas.length - 1] : null;
+    return { ok: !!saida || s.tipo === 'success', tipo: s.tipo, texto: s.texto, saida, saidas: cap.saidas.slice() };
+  } catch (err) {
+    return { ok: false, tipo: 'error', texto: 'Não consegui concluir: ' + String((err && err.message) || err).slice(0, 160) };
+  } finally {
+    window.__argoPdfCaptura = null;
+  }
+}
+
+// Reduzir com meta de tamanho ("até 2 MB"): tenta o nível pedido e, se passar da meta, a compressão máxima mantendo o texto.
+// Não troca sozinho para "páginas como imagem": isso tira a possibilidade de copiar o texto, então fica como botão.
+async function argoPdfCentralComprimir(e, arq) {
+  const o = e.opcoes || {};
+  const alvo = (o.alvoMB || 0) * 1048576;
+  let r = await argoPdfCentralEtapa(e, arq);
+  if (alvo && r.saida && r.saida.blob.size > alvo && o.modo !== 'imagem' && o.nivel !== 'maxima') {
+    const r2 = await argoPdfCentralEtapa(Object.assign({}, e, { opcoes: Object.assign({}, o, { nivel: 'maxima' }) }), arq);
+    if (r2.saida && r2.saida.blob.size < r.saida.blob.size) r = r2;
+  }
+  r.alvo = alvo;
+  r.passouDaMeta = !!alvo && !!r.saida && r.saida.blob.size > alvo;
+  return r;
+}
+
+// Roda as etapas automáticas em sequência, cada uma sobre o PDF que a anterior devolveu.
+async function argoPdfCentralRodar(etapas, arq) {
+  const passos = [], saidas = [];
+  let atual = arq, mudou = false;
+  for (const e of etapas) {
+    const r = e.ferramenta === 'Compress' ? await argoPdfCentralComprimir(e, atual) : await argoPdfCentralEtapa(e, atual);
+    passos.push({ etapa: e, r });
+    if (r.saida) {
+      const ehPdf = /\.pdf$/i.test(r.saida.name || '');
+      if (ehPdf) { atual = { origem: arq.origem, bytes: new Uint8Array(await r.saida.blob.arrayBuffer()), nome: r.saida.name, pagina: arq.pagina }; mudou = true; }
+      else saidas.push(r.saida);
+    }
+    if (r.fatal) break;
+    if (!r.ok && r.tipo === 'error') break;   // não segue para a próxima etapa sobre um arquivo que não saiu
+  }
+  return { passos, saidas, pdf: mudou ? atual : null, ultimoArquivo: atual };
+}
+
+// Prepara uma ferramenta que depende da pessoa (senha, tarja, assinatura, fotos, .docx...) e deixa tudo pronto na tela.
+async function argoPdfCentralPreparar(e) {
+  const chave = e.ferramenta, o = e.opcoes || {};
+  if (chave === 'Protect') { argoAssistantGoTo('criptografia'); return; }
+  await argoPdfCentralAbrir(chave);
+  const arq = (chave === 'Unlock' || chave === 'Organize') ? await argoPdfCentralArquivo() : null;
+  if (arq) pdfhubSend(chave, [new File([arq.bytes], arq.nome, { type: 'application/pdf' })]);
+  if (chave === 'Edit') {
+    if (!pdftoolsEdit.pdf) {
+      const hubPdf = typeof pdfhub === 'object' ? (pdfhub.files || []).find(x => pdftoolsIsPdfFile(x)) : null;
+      if (hubPdf) { pdfhubSend('Edit', [hubPdf]); await argoPdfEsperar(() => !!pdftoolsEdit.pdf, 20000); }
+    }
+    if (pdftoolsEdit.pdf && o.ferramenta) {
+      try {
+        pdftoolsEditSetTool(o.ferramenta);
+        if (o.ferramenta === 'hl' && o.realce) { const sel = document.getElementById('pdfEditHlMode'); if (sel) { sel.value = o.realce; pdftoolsEditHlModeChange(); } }
+      } catch (err) { /* a pessoa escolhe a ferramenta na barra */ }
+    }
+  }
+  if (chave === 'Merge' && typeof pdfhub === 'object' && (pdfhub.files || []).length) pdfhubSend('Merge', pdfhub.files);
+  if (chave === 'WordPdf' && typeof pdfhub === 'object' && (pdfhub.files || []).length === 1 && /\.docx$/i.test(pdfhub.files[0].name)) pdfhubSend('WordPdf', pdfhub.files);
+  if (chave === 'JpgPdf' && typeof pdfhub === 'object') {
+    const imgs = (pdfhub.files || []).filter(x => pdftoolsIsImageFile(x));
+    if (imgs.length) pdfhubSend('JpgPdf', imgs);
+  }
+}
+
+function argoPdfCentralTexto(passos) {
+  return passos.map(({ etapa, r }) => {
+    const sinal = r.ok ? '✅' : (r.tipo === 'error' ? '⚠️' : 'ℹ️');
+    return sinal + ' **' + etapa.rotulo + '**: ' + (r.texto || (r.ok ? 'pronto.' : 'não deu certo.'));
+  }).join('\n\n');
+}
+
+async function argoPdfCentralAsk(rawText, central, irEditar) {
+  const st = pdftoolsEdit;
+  const etapas = central.etapas || [];
+  const autos = etapas.filter(e => e.modo === 'auto');
+  const interativa = etapas.find(e => e.modo === 'abrir') || null;
+  const partes = [], acoes = [];
+  let nota = '', mood = 'info';
+  const botaoCentral = { label: '🧰 Abrir a Central de PDF', run: () => argoAssistantGoTo('pdftools'), reply: 'Abri a Central de PDF.', mood: 'success' };
+
+  (central.recusas || []).forEach(x => partes.push(x.texto));
+  (central.avisos || []).forEach(x => partes.push(x));
+  if ((central.recusas || []).length && !etapas.length) {
+    const cod = central.recusas.map(x => x.codigo);
+    if (cod.indexOf('quebrar-senha') >= 0) acoes.push({ label: '🔓 Remover senha (eu sei a senha)', run: () => argoPdfIrPara('Unlock'), reply: 'Abri "Remover senha" na Central de PDF.', mood: 'success' });
+    if (cod.indexOf('ocr') >= 0) acoes.push({ label: '📝 Extrair texto', run: () => argoPdfIrPara('Text'), reply: 'Abri "Extrair texto".', mood: 'success' });
+    if (cod.indexOf('paginas-branco') >= 0) acoes.push({ label: '🗂️ Organizar páginas', run: () => argoPdfIrPara('Organize'), reply: 'Abri "Organizar".', mood: 'success' });
+    return { reply: partes.join('\n\n'), mood: 'notfound', badge: 'PDF', quickActions: acoes.concat([botaoCentral]) };
+  }
+
+  let desfazer = null;
+  if (autos.length) {
+    const arq = await argoPdfCentralArquivo();
+    if (!arq) {
+      partes.unshift('Consigo fazer isso aqui no aparelho (' + autos.map(e => e.resumo).join('; depois ') + '), mas preciso do PDF. Abra-o na aba **Editar PDF** ou escolha-o em **Comece pelo arquivo**, na Central de PDF, e peça de novo.');
+      acoes.push(botaoCentral);
+    } else {
+      if (arq.origem === 'edit' && (st.items.length || Object.keys(st.formValues).length) &&
+          !confirm('O PDF aberto tem edições feitas na aba que ainda não foram baixadas. Aplicar o pedido do chat as descarta. Continuar?')) {
+        return { reply: 'Tudo bem, não mexi no arquivo. Baixe as edições da aba (ou continue nelas) e peça de novo.', mood: 'info', quickActions: [irEditar].filter(Boolean) };
+      }
+      const res = await argoPdfCentralRodar(autos, arq);
+      partes.push(argoPdfCentralTexto(res.passos));
+      if (res.passos.some(p => p.r.ok)) mood = 'success'; else mood = 'notfound';
+      nota = 'Feito neste aparelho, sem IA: o PDF não foi enviado a nenhum servidor. Confira o resultado antes de usar.';
+      const baixar = a => ({ label: '⬇️ ' + (/\.pdf$/i.test(a.name) ? 'Baixar PDF' : 'Baixar ' + a.name), run: () => pdftoolsTriggerDownload(a.blob, a.name), reply: 'Baixando ' + a.name + '.', mood: 'success' });
+      // o PDF final volta para onde estava: a aba Editar PDF (dá para continuar editando e desfazer) ou a lista da Central
+      if (res.pdf) {
+        const blobPdf = new Blob([res.pdf.bytes], { type: 'application/pdf' });
+        acoes.push(baixar({ blob: blobPdf, name: res.pdf.nome }));
+        if (arq.origem === 'edit') {
+          try {
+            await pdftoolsEditLoadBytes(res.pdf.bytes, res.pdf.nome, arq.pagina);
+            partes.push('O resultado já está aberto na aba **Editar PDF**.');
+            desfazer = { label: '↩️ Desfazer', reply: 'Voltei ao PDF de antes do pedido.', mood: 'success', run: () => { pdftoolsEditLoadBytes(arq.bytes, arq.nome, arq.pagina).catch(() => argoAviso('Não consegui restaurar o PDF anterior.', 'error')); } };
+          } catch (err) { partes.push('O arquivo ficou pronto, mas não consegui abri-lo na aba. Baixe pelo botão.'); }
+        } else if (typeof pdfhub === 'object') {
+          pdfhub.files = [new File([res.pdf.bytes], res.pdf.nome, { type: 'application/pdf' })];
+        }
+      }
+      res.saidas.slice(0, 5).forEach(a => acoes.push(baixar(a)));
+      // meta de tamanho não atingida: oferece o caminho mais forte, dizendo o preço
+      const comp = res.passos.find(p => p.etapa.ferramenta === 'Compress' && p.r.passouDaMeta);
+      if (comp) {
+        partes.push('O arquivo ficou com ' + pdftoolsFormatBytes(comp.r.saida.blob.size) + ', acima da meta de ' + String(comp.etapa.opcoes.alvoMB).replace('.', ',') + ' MB. Posso tentar **páginas como imagem**, que reduz mais, mas o texto deixa de poder ser copiado.');
+        acoes.push({ label: '🗜️ Tentar páginas como imagem', reply: 'Vou tentar de novo, agora com as páginas como imagem.', mood: 'success', run: () => argoAssistantAskInline('reduzir o pdf com as páginas como imagem para até ' + String(comp.etapa.opcoes.alvoMB).replace('.', ',') + ' MB') });
+      }
+    }
+  }
+
+  if (interativa) {
+    try { await argoPdfCentralPreparar(interativa); } catch (err) { /* a pessoa abre pela Central */ }
+    partes.push('Deixei **' + interativa.rotulo + '** pronta na Central de PDF. ' + ArgoPdfCentral.instrucao(interativa, argoPdfTemArquivo()));
+    if (!mood || mood === 'info') mood = 'success';
+    acoes.push({ label: '🧰 Ir para ' + interativa.rotulo, run: () => (interativa.ferramenta === 'Protect' ? argoAssistantGoTo('criptografia') : argoPdfIrPara(interativa.ferramenta)), reply: 'Abri "' + interativa.rotulo + '".', mood: 'success' });
+  }
+  if (desfazer) acoes.push(desfazer);
+  return { reply: partes.join('\n\n'), mood, badge: 'PDF', note: nota, quickActions: acoes };
+}
+
 
 // Pedido de rota para o mascote. Devolve o resultado no formato da interface do mascote ou null (a pergunta segue o fluxo normal).
 // Só assume pedido com duas paradas ou mais, ou recusa de endereço de residência; "como chegar ao CRAS X" continua com o cartão do diretório.
