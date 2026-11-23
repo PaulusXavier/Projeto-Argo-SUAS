@@ -34,6 +34,7 @@ const JS_FILES = [
   'js/argo-cerebro.js',
   'js/argo-habilidades.js',
   'js/argo-rotina.js',
+  'js/argo-pdf-central.js',
   'js/argo-entende.js',
   'js/paulus.v1.js',
   'js/grafia-link.js',
