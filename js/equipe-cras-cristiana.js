@@ -7,7 +7,7 @@ const EQUIPE_CRAS_CRISTIANA = {
   fixedTeam: [
     { name: "Fernanda Gomes", role: "Psicóloga", bairros: "Buritis e Caimbé" },
     { name: "Cléo Sousa", role: "Assistente Social", bairros: "Liberdade e Pricumã" },
-    { name: "Bárbara Parente", role: "Assistente Social", bairros: "Tancredo Neves, Cambará e Olímpico" },
+    { name: "Marina Silvestre", role: "Assistente Social", bairros: "Tancredo Neves, Cambará e Olímpico" },
     { name: "Susy Andrade", role: "Pedagoga", bairros: "Centenário e Nova Canaã" },
     { name: "Paloma de Assis", role: "Assistente Social", bairros: "Cinturão Verde e Jóquei Clube" },
     { name: "Rafaela Garcia", role: "Assistente Social", bairros: "Asa Branca" }
