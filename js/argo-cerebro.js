@@ -3903,7 +3903,7 @@
   }
   var TAG_GRUPO = {
     'Rede Estadual': 'escola estadual', 'Rede Municipal - Escolas': 'escola municipal',
-    'Rede Municipal - Creches e Proinfância': 'creche', 'Ensino Superior': 'ensino superior',
+    'Rede Municipal - Creches e Proinfância': 'creche', 'Rede Particular': 'escola particular', 'Ensino Superior': 'ensino superior',
     'UBS (Boa Vista)': 'UBS', 'Atenção Básica': 'UBS', 'CAPS (Boa Vista)': 'CAPS', 'Hospitais': 'hospital',
     'CRAS (Boa Vista)': 'CRAS', 'CREAS (Boa Vista)': 'CREAS'
   };
