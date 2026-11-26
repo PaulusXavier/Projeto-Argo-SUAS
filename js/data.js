@@ -3215,6 +3215,18 @@ const DATA = [
     desc: "Escola de educação geral da rede estadual. Localização: bairro/comunidade São Vicente, Boa Vista-RR (fonte: Censo Escolar/INEP; endereço com número ainda não confirmado)."
   },
   {
+    id: "ee-presidente-costa-e-silva",
+    name: "E.E. Presidente Costa e Silva",
+    fullName: "Escola Estadual Presidente Costa e Silva",
+    cat: ["educacao"],
+    group: "Rede Estadual",
+    address: "Rua Dr. Arnaldo Brandão, 777 - São Francisco, Boa Vista-RR",
+    hours: "N/A",
+    phones: ["(95) 3623-1704"],
+    services: "Educação Estadual - Ensino Geral.",
+    desc: "Escola de educação geral da rede estadual, localizada no bairro São Francisco (consta na lista de escolas estaduais de Boa Vista do Governo de Roraima; endereço e telefone conforme ficha pública - confirmar com a SEED)."
+  },
+  {
     id: "escola-cantinho-feliz",
     name: "E.M. Cantinho Feliz",
     fullName: "Escola Municipal Cantinho Feliz - Educação Infantil e Ensino Fundamental",
@@ -3321,18 +3333,6 @@ const DATA = [
     phones: ["N/A"],
     services: "Educação Infantil (Pré-escola).",
     desc: "Escola pública municipal de Educação Infantil localizada no bairro Centenário."
-  },
-  {
-    id: "cem-wanda-david-aguiar",
-    name: "CEM Profa. Wanda David Aguiar",
-    fullName: "Colégio Estadual Militarizado Professora Wanda David Aguiar - CEM",
-    cat: ["educacao"],
-    group: "Rede Municipal - Escolas",
-    address: "Rua Estrela D'Alva, 736 - Raiar do Sol, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["N/A"],
-    services: "Educação Estadual Militarizada - Ensino Fundamental e Médio.",
-    desc: "Colégio estadual em regime de gestão compartilhada militarizada, localizado no bairro Raiar do Sol."
   },
   {
     id: "escola-joquei-clube",
@@ -3789,18 +3789,6 @@ const DATA = [
     phones: ["(95) 98404-0647"],
     services: "Educação Municipal - Ensino Geral.",
     desc: "Escola pública municipal localizada no Jardim Equatorial (Cruviana)."
-  },
-  {
-    id: "cem-luiz-rittler-brito-lucena",
-    name: "CEM Dr. Luiz Rittler Brito de Lucena",
-    fullName: "Colégio Estadual Militarizado Dr. Luiz Rittler Brito de Lucena",
-    cat: ["educacao"],
-    group: "Rede Municipal - Escolas",
-    address: "Rua João Pessoa, s/n - Nova Cidade, Boa Vista-RR",
-    hours: "N/A",
-    phones: ["N/A"],
-    services: "Educação Estadual Militarizada - Ensino Fundamental e Médio.",
-    desc: "Colégio estadual em regime de gestão compartilhada militarizada, localizado no bairro Nova Cidade."
   },
   {
     id: "proinfancia-valderleide-barauna-brandao",
