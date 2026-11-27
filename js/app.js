@@ -2781,7 +2781,7 @@ const CATEGORY_LABELS_PRINT = {
   hospitalar: 'Rede Hospitalar e Atenção Básica', saude: 'Rede de Atenção Psicossocial (RAPS)', tea: 'Rede de Atenção à Pessoa com Deficiência e TEA', social: 'Proteção Social Básica e Especial (SUAS)', educacao: 'Educação Básica',
   juridico: 'Poder Judiciário', conselho: 'Conselho Tutelar (Proteção à Criança e ao Adolescente)', delegacias: 'Segurança Pública (Distritos Policiais)', bancos: 'Rede Bancária e Correspondentes',
   previdencia: 'Previdência Social (INSS)', trabalho: 'Trabalho, Emprego e Renda', habitacao: 'Habitação e Moradia', mobilidade: 'Mobilidade Urbana', interior: 'CRAS/CREAS Interior', informes: 'Programas, Projetos e Serviços',
-  cas: 'Registro de Atendimento (CAS)', cras: 'Registro de Atendimento (CRAS)', documentacao: 'Documentação Civil e Fiscal', idoso: 'Pessoa Idosa',
+  cas: 'Painel (CAS - Vila Jardim)', cras: 'Painel (CRAS - CVN)', documentacao: 'Documentação Civil e Fiscal', idoso: 'Pessoa Idosa',
   migracao: 'Serviço de Migração (Política Migratória e Rede de Apoio ao Migrante)', alimentar: 'Segurança Alimentar e Nutricional',
   mulher: 'Rede de Enfrentamento à Violência contra a Mulher', cultura: 'Cultura, Esporte e Lazer', defesacivil: 'Defesa Civil e Situações de Emergência', conselhosdireitos: 'Conselhos Municipais de Direitos'
 };
@@ -3503,7 +3503,7 @@ function renderCasCard(i, query) {
           </div>
           ${statusHtml}
         </div>
-        <span class="subtitle">🗂️ Atendimento CAS · Acesso Rápido a Sistemas e Arquivos</span>
+        <span class="subtitle">🗂️ Painel (CAS - Vila Jardim) · Acesso Rápido a Sistemas e Arquivos</span>
       </div>
       <div class="card-body">
         ${navHtml}
@@ -3821,7 +3821,7 @@ function renderCrasCard(i, query) {
           </div>
           ${statusHtml}
         </div>
-        <span class="subtitle">🏢 Equipe Técnica e Atendimento CRAS · Sistemas Municipais, Federais e RMA</span>
+        <span class="subtitle">🏢 Equipe Técnica e Painel (CRAS - CVN) · Sistemas Municipais, Federais e RMA</span>
       </div>
       <div class="card-body">
         ${navHtml}
@@ -19211,7 +19211,7 @@ const ARGO_ASSISTANT_INTENTS = [
   },
   {
     keys: ['equipe tecnica', 'tecnico de referencia', 'quem atende', 'meu bairro', 'equipe volante', 'cras'],
-    reply: 'Em "Registro de Atendimento (CRAS)" há um link para consultar, em tela cheia, a equipe técnica de referência por bairro.',
+    reply: 'Em "Painel (CRAS - CVN)" há um link para consultar, em tela cheia, a equipe técnica de referência por bairro.',
     action: { label: 'Abrir CRAS', run: () => argoAssistantGoTo('cras'), reply: 'Abri o painel do CRAS.', mood: 'success' }
   },
   {
@@ -20088,7 +20088,7 @@ function argoCloseAppAsk(rawText) {
 
 /* ============================================================
    ARGO ↔ SISTEMAS DE TRABALHO — "abra o SIBEC", "abre o Sicon", "abrir o Cidade Social"...
-   Atalhos dos sistemas que a equipe do CRAS usa todo dia (mesmos links do painel de Atendimento CRAS).
+   Atalhos dos sistemas que a equipe do CRAS usa todo dia (mesmos links do Painel (CRAS - CVN)).
    O SIBEC usa o endereço de entrada do sistema (o link de login da Caixa traz um "state" de sessão
    que expira e não serve de atalho). Pede um verbo de abrir (ou "site/link/portal"), para
    "o que é o Sicon?" continuar sendo explicação e não abrir página.
@@ -32819,8 +32819,8 @@ const ARGO_ACOES_IA = [
   { id: 'prazos', cat: 'prazos', rotulo: 'Prazos e alertas do SUAS', descricao: 'Prazos do CadÚnico, Bolsa Família, Censo SUAS e prazos próprios' },
   { id: 'recentes', cat: 'recentes', rotulo: 'Recentes', descricao: 'Últimas unidades abertas' },
   { id: 'ferramentas', cat: 'ferramentas', rotulo: 'Ferramentas e Anotações', descricao: 'Relógio, cálculos, planilha e bloco de notas' },
-  { id: 'cras', cat: 'cras', rotulo: 'Registro de Atendimento (CRAS)', descricao: 'Registro de atendimentos do CRAS' },
-  { id: 'cas', cat: 'cas', rotulo: 'Registro de Atendimento (CAS)', descricao: 'Registro de atendimentos do CAS' },
+  { id: 'cras', cat: 'cras', rotulo: 'Painel (CRAS - CVN)', descricao: 'Painel do CRAS Cristiana Vicente Nunes' },
+  { id: 'cas', cat: 'cas', rotulo: 'Painel (CAS - Vila Jardim)', descricao: 'Painel do CAS Vila Jardim' },
   { id: 'pdftools', cat: 'pdftools', rotulo: 'Central de PDF', descricao: 'Ferramentas para PDF' },
   { id: 'tradutor', cat: 'tradutor', rotulo: 'Tradutor', descricao: 'Tradutor Es/En/Fr' },
   { id: 'noticias', cat: 'noticias', rotulo: 'Notícias', descricao: 'Notícias do MDS, MEC, Saúde e Roraima' },
