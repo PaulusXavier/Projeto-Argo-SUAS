@@ -5805,7 +5805,7 @@ const DATA = [
   },
   {
     id: "atendimento-cras",
-    name: "Atendimento CRAS",
+    name: "Painel (CRAS - CVN)",
     fullName: "CRAS Cristiana Vicente Nunes - Equipe Técnica e Painel de Atendimento",
     cat: ["cras"],
     address: "Rua Santo Agostinho, 193 - Centenário, Boa Vista-RR (CRAS Cristiana Vicente Nunes)",
@@ -5856,8 +5856,8 @@ const DATA = [
   },
   {
     id: "atendimento-cas",
-    name: "Atendimento CAS",
-    fullName: "Painel de Atendimento CAS - Acesso Rápido a Sistemas e Arquivos",
+    name: "Painel (CAS - Vila Jardim)",
+    fullName: "Painel (CAS - Vila Jardim) - Acesso Rápido a Sistemas e Arquivos",
     cat: ["cas"],
     address: "R. James Meirelles Sobreiro Júnior, 1876 - Cidade Satélite, Boa Vista-RR, 69317-530",
     hours: "Segunda a sábado, 08:00 às 22:00",
@@ -5873,7 +5873,8 @@ const DATA = [
       { label: "Registro Diário", icon: "form", url: "https://docs.google.com/forms/d/e/1FAIpQLScTIV1jwi-p1RpyNM-_4_IET4MQXVwkP0zFPodbvJkvF7uw8Q/viewform", desc: "Formulário do Google para registrar os atendimentos do dia." },
       { label: "RMA (CAS)", icon: "barchart", url: "https://docs.google.com/spreadsheets/d/1e90rJQms6E6mbOPWbtnEk76y101ntYKmn2mpC74R0Og/edit?gid=261916308#gid=261916308", desc: "Planilha do Google com o registro mensal de atendimentos do CAS." },
       { label: "Matrículas", icon: "table", url: "https://docs.google.com/spreadsheets/d/1qH4Jnv0ElOBet4u9wzjmM5x_HekjHLo-eNJh_Nry5lc/edit?gid=1280155602#gid=1280155602", desc: "Planilha do Google com as matrículas de 2026." },
-      { label: "Perfil Socioeconômico (Responsáveis/Família)", icon: "table", url: "https://docs.google.com/spreadsheets/d/1wJRiXA-jCIoT9lXsRYDNBi6M2vBrynz0TLxCxhBsdPY/edit?gid=106275944#gid=106275944", desc: "Planilha do Google com o perfil socioeconômico dos responsáveis e das famílias." }
+      { label: "Perfil Socioeconômico (Responsáveis/Família)", icon: "table", url: "https://docs.google.com/spreadsheets/d/1wJRiXA-jCIoT9lXsRYDNBi6M2vBrynz0TLxCxhBsdPY/edit?gid=106275944#gid=106275944", desc: "Planilha do Google com o perfil socioeconômico dos responsáveis e das famílias." },
+      { label: "Oficinas CAS Vila Jardim", icon: "table", url: "https://docs.google.com/spreadsheets/d/1wJRiXA-jCIoT9lXsRYDNBi6M2vBrynz0TLxCxhBsdPY/edit?gid=106275944#gid=106275944", desc: "Planilha do Google — banco de dados das oficinas do CAS Vila Jardim." }
     ],
     driveLinks: [
       { label: "Pasta Geral", url: "https://drive.google.com/drive/folders/1YGruf7xXsUTcwYhE0Ibte1g9nvmJojs6?usp=drive_link" },
